@@ -17,6 +17,7 @@ Vielen Dank für dein Interesse an RechnungsFee! Wir freuen uns über jeden Beit
 - [Entwicklungsumgebung einrichten](#-entwicklungsumgebung-einrichten)
 - [Pull Requests](#pull-requests)
 - [Coding Standards](#coding-standards)
+- [Design Language](#design-language)
 - [Commit-Nachrichten](#commit-nachrichten)
 - [Fragen & Support](#fragen--support)
 
@@ -214,6 +215,7 @@ cd RechnungsFee
 - [ ] Code läuft lokal ohne Fehler
 - [ ] Tests geschrieben (falls zutreffend)
 - [ ] Dokumentation aktualisiert
+- [ ] UI-Änderungen halten sich an die [Design Language](docs/14-design-language.md)
 - [ ] Commit-Nachrichten sind aussagekräftig
 - [ ] Branch ist aktuell mit `main`
 
@@ -278,6 +280,24 @@ export function Invoice({ id, amount }: InvoiceProps) {
 - **Funktionen**: Verben (z.B. `calculateTotal`, `fetchInvoices`)
 - **Klassen**: PascalCase (z.B. `InvoiceManager`)
 - **Konstanten**: `UPPER_SNAKE_CASE`
+
+---
+
+## 🎨 Design Language
+
+Alle UI-Beiträge müssen die festgelegte Designsprache einhalten.
+
+➡️ **[docs/14-design-language.md](docs/14-design-language.md)**
+
+Dort sind verbindlich definiert:
+- Farben (Primär, Status, Dark Mode)
+- Typografie-Hierarchie
+- Seiten-Layout-Muster
+- Tabellen, Buttons, Formulare, Modals
+- Badges, Info-Boxen, Tooltips
+- Dos & Don'ts
+
+Neue Komponenten und Seiten dürfen keine eigenen Farben oder Abstände erfinden, sondern nutzen ausschließlich die dort beschriebenen Muster.
 
 ---
 
