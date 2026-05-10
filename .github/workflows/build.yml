@@ -317,12 +317,14 @@ jobs:
             ARCH="x64"
           fi
 
-          BASE="${GITHUB_WORKSPACE}/src-tauri/target/${TARGET}/release/bundle/macos"
-          TAR="$BASE/RechnungsFee_${V}_${ARCH}.app.tar.gz"
+          BUNDLE_BASE="${GITHUB_WORKSPACE}/src-tauri/target/${TARGET}/release/bundle"
+          MACOS_DIR="$BUNDLE_BASE/macos"
+          DMG_DIR="$BUNDLE_BASE/dmg"
+          TAR="$MACOS_DIR/RechnungsFee_${V}_${ARCH}.app.tar.gz"
           SIG="${TAR}.sig"
 
-          echo "=== bundle/macos Inhalt ==="
-          ls -la "$BASE/" || echo "(leer)"
+          echo "=== bundle/macos Inhalt ===" && ls -la "$MACOS_DIR/" || echo "(leer)"
+          echo "=== bundle/dmg Inhalt ===" && ls -la "$DMG_DIR/" || echo "(leer)"
 
           if [ -f "$SIG" ]; then
             echo "Signatur bereits vorhanden, direkt hochladen"
@@ -330,9 +332,17 @@ jobs:
             exit 0
           fi
 
-          # .app.tar.gz erstellen falls Tauri es nicht angelegt hat
+          # .app.tar.gz erstellen – .app aus DMG extrahieren wenn nötig
           if [ ! -f "$TAR" ]; then
-            tar -czf "$TAR" -C "$BASE" "RechnungsFee.app"
+            if [ ! -d "$MACOS_DIR/RechnungsFee.app" ]; then
+              echo ".app nicht in macos/ – extrahiere aus DMG …"
+              DMG=$(ls "$DMG_DIR"/RechnungsFee_*.dmg 2>/dev/null | head -1)
+              MOUNTPOINT=$(mktemp -d)
+              hdiutil attach "$DMG" -mountpoint "$MOUNTPOINT" -nobrowse -quiet
+              cp -R "$MOUNTPOINT/RechnungsFee.app" "$MACOS_DIR/"
+              hdiutil detach "$MOUNTPOINT" -quiet || true
+            fi
+            tar -czf "$TAR" -C "$MACOS_DIR" "RechnungsFee.app"
           fi
 
           brew install minisign

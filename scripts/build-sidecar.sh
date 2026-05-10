@@ -51,7 +51,7 @@ pyinstaller \
     --hidden-import api.konten \
     --hidden-import api.kategorien \
     --hidden-import api.setup \
-    --hidden-import api.kassenbuch \
+    --hidden-import api.journal \
     --hidden-import api.kunden \
     --hidden-import api.lieferanten \
     --hidden-import api.tagesabschluss \
