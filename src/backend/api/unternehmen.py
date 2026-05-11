@@ -54,7 +54,8 @@ def update_unternehmen(data: UnternehmenUpdate, db: Session = Depends(get_db)):
     unternehmen = db.query(Unternehmen).first()
     if not unternehmen:
         raise HTTPException(status_code=404, detail="Unternehmensdaten noch nicht angelegt.")
-    for key, value in data.model_dump(exclude_unset=True).items():
+    # logo_pfad wird ausschließlich über POST/DELETE /logo verwaltet – nie überschreiben
+    for key, value in data.model_dump(exclude_unset=True, exclude={"logo_pfad"}).items():
         setattr(unternehmen, key, value)
     db.commit()
     db.refresh(unternehmen)

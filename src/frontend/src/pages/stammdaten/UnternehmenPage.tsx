@@ -127,7 +127,10 @@ function LogoSektion({
 
 function FirmendatenSektion({ data }: { data: Unternehmen }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState<Partial<Unternehmen>>({ ...data })
+  const [form, setForm] = useState<Partial<Unternehmen>>(() => {
+    const { logo_pfad: _logo, ...rest } = data
+    return rest
+  })
   const [gespeichert, setGespeichert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
 
