@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.1.63',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Unternehmensdaten: Logo verschwindet nicht mehr nach dem Speichern – logo_pfad wird beim Speichern der Firmendaten nie überschrieben, da er ausschließlich über den Logo-Upload/-Löschen-Endpunkt verwaltet wird (Issue #85)' },
+    ],
+  },
+  {
     version: 'v0.1.62',
     datum: 'Mai 2026',
     eintraege: [
