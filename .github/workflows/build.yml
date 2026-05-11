@@ -25,9 +25,6 @@ jobs:
           - platform: macos-latest
             target: aarch64-apple-darwin
             sidecar_ext: ''
-          - platform: macos-13
-            target: x86_64-apple-darwin
-            sidecar_ext: ''
 
     runs-on: ${{ matrix.platform }}
 
@@ -405,17 +402,16 @@ jobs:
               'url': f'{base}/RechnungsFee_{v}_amd64.AppImage.tar.gz',
             },
           }
-          # macOS – optional, nur wenn Signaturen vorhanden
-          for arch, platform_key in [('aarch64', 'darwin-aarch64'), ('x64', 'darwin-x86_64')]:
-            sig_path = f'sigs/RechnungsFee_{v}_{arch}.app.tar.gz.sig'
-            if os.path.exists(sig_path):
-              platforms[platform_key] = {
-                'signature': sig_b64(sig_path),
-                'url': f'{base}/RechnungsFee_{v}_{arch}.app.tar.gz',
-              }
-              print(f'{platform_key} zur latest.json hinzugefügt')
-            else:
-              print(f'{platform_key}: keine Signatur gefunden, übersprungen')
+          # macOS Apple Silicon – optional, nur wenn Signatur vorhanden
+          sig_path = f'sigs/RechnungsFee_{v}_aarch64.app.tar.gz.sig'
+          if os.path.exists(sig_path):
+            platforms['darwin-aarch64'] = {
+              'signature': sig_b64(sig_path),
+              'url': f'{base}/RechnungsFee_{v}_aarch64.app.tar.gz',
+            }
+            print('darwin-aarch64 zur latest.json hinzugefügt')
+          else:
+            print('darwin-aarch64: keine Signatur gefunden, übersprungen')
 
           data = {
             'version': v,
@@ -444,12 +440,10 @@ jobs:
           lin_img      = 'RechnungsFee_amd64.AppImage'
           lin_img_ver  = f'RechnungsFee_{v}_amd64.AppImage'
           mac_arm      = 'RechnungsFee_aarch64.dmg'
-          mac_x64      = 'RechnungsFee_x64.dmg'
           win_url      = f'{base}/{win_exe}'
           lin_url      = f'{base}/{lin_img}'
           lin_url_ver  = f'{base}/{lin_img_ver}'
           mac_arm_url  = f'{base}/{mac_arm}'
-          mac_x64_url  = f'{base}/{mac_x64}'
           install_sh   = 'install-linux.sh'
           install_url  = f'{base}/{install_sh}'
 
@@ -467,8 +461,7 @@ jobs:
           | **Linux** | [⬇ {lin_img}]({lin_url}) | **Empfohlen** – Dateiname bleibt nach Auto-Updates korrekt |
           | **Linux (versioniert)** | [⬇ {lin_img_ver}]({lin_url_ver}) | Alternative mit Versionsnummer im Dateinamen |
           | **Linux: Menü-Integration** | [⬇ {install_sh}]({install_url}) | Einmalig ausführen → Icon + Starter im Anwendungsmenü |
-          | **macOS (Apple Silicon)** | [⬇ {mac_arm}]({mac_arm_url}) | M1/M2/M3/M4 – siehe Hinweis unten |
-          | **macOS (Intel)** | [⬇ {mac_x64}]({mac_x64_url}) | Ältere Macs – siehe Hinweis unten |
+          | 🍎 **macOS (Apple Silicon)** | [⬇ {mac_arm}]({mac_arm_url}) | M1/M2/M3/M4 – siehe Hinweis unten |
 
           **Auto-Update:** Wer v0.1.3 oder neuer installiert hat, bekommt das Update automatisch beim nächsten App-Start angeboten.
 
