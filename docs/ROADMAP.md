@@ -49,6 +49,24 @@ Features, die nach dem v0.1-Release umgesetzt wurden.
 
 ---
 
+## ✅ Anlage EKS *(Mai 2026)*
+
+Einkommenserklärung für Selbstständige (Jobcenter / Bürgergeld).
+
+**Backend**
+- [x] `GET /api/eks/berechnen` – summiert Journalbuchungen nach `eks_kategorie` (abschließend) oder berechnet Halbjahres-Prognose aus Vorjahresdaten (vorläufig)
+- [x] `POST /api/eks/pdf` – PDF-Export (fpdf2) mit Tabellen A/B/C, Summen, Ergebniszeile; speichert Export in `eks_exporte`
+- [x] Vorläufige EKS: aggregiert monatliche Abschlüsse des Vorjahres-Halbjahres, skaliert auf angeforderten Zeitraum (÷ 6 × N Monate); keine Vorjahresdaten → 0 EUR
+
+**Frontend**
+- [x] EksPage (`/eks`): Monats- und Zeitraumauswahl, Vorläufig/Abschließend-Umschalter
+- [x] Auto-Felder (aus Journal) vorausgefüllt, manuelle Felder editierbar
+- [x] Ergebnis (A − B − C) live berechnet mit farbiger Darstellung
+- [x] Quelle-Banner: zeigt Basis der Prognose (Anzahl Vorjahres-Exporte, Skalierung) oder Hinweis bei fehlenden Daten
+- [x] DSGVO-Datenauskunft als PDF-Export für Kunden und Lieferanten (`/dsgvo-export-pdf`)
+
+---
+
 ## v0.2 – Bank-Import *(Ziel: Juni 2026)*
 
 CSV-Import von Kontoauszügen, automatisches Matching.
@@ -146,3 +164,4 @@ Rechnungs-PDF ausgeben und elektronische Rechnungsformate importieren.
 - [x] 27 EU-Länder mit USt-Sätzen (Seed-Daten)
 - [x] **v0.1 Kassenbuch** – Released Februar 2026 ([Release-Notes](https://github.com/nicolettas-muggelbude/RechnungsFee/releases/tag/v0.1))
 - [x] **Post-v0.1**: Split-Buchung, GoBD-Export, Rechnungen (Eingang/Ausgang) mit Kassenbuch-Verknüpfung
+- [x] **Anlage EKS** (Mai 2026): Einkommenserklärung für Selbstständige – abschließend (monatlich aus Journal) und vorläufig (Halbjahres-Prognose aus Vorjahr)
