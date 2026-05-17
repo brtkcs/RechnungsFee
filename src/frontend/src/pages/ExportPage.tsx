@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { downloadGobdExport } from '../api/client'
+import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { downloadGobdExport, getUnternehmen } from '../api/client'
 
 const AKTUELLES_JAHR = new Date().getFullYear()
 const JAHRE = Array.from({ length: 5 }, (_, i) => AKTUELLES_JAHR - i)
@@ -9,6 +11,13 @@ export function ExportPage() {
   const [laedt, setLaedt] = useState(false)
   const [erfolg, setErfolg] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
+  const navigate = useNavigate()
+
+  const { data: unternehmen } = useQuery({
+    queryKey: ['unternehmen'],
+    queryFn: getUnternehmen,
+    staleTime: 1000 * 60 * 10,
+  })
 
   async function handleExport() {
     setLaedt(true)
@@ -32,6 +41,28 @@ export function ExportPage() {
           Daten für Steuerberater, Betriebsprüfung und Archivierung exportieren.
         </p>
       </div>
+
+      {/* Anlage EKS – nur bei Transferleistungen */}
+      {unternehmen?.bezieht_transferleistungen && (
+        <button
+          onClick={() => navigate('/eks')}
+          className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
+        >
+          <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-white font-bold text-lg">Anlage EKS</h2>
+              <p className="text-blue-100 text-sm mt-0.5">
+                Einkommenserklärung für Selbstständige (Jobcenter / Bürgergeld)
+              </p>
+            </div>
+            <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+          <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
+            <span>📄 Abschließend – monatlich aus Journaldaten</span>
+            <span>📊 Vorläufig – Prognose aus Vorjahr</span>
+          </div>
+        </button>
+      )}
 
       {/* GoBD-Export-Card */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
