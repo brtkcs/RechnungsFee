@@ -26,13 +26,35 @@ import main
 OLD_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS kunden (
     id INTEGER PRIMARY KEY,
-    name VARCHAR(200) NOT NULL
+    kundennummer VARCHAR(50),
+    firmenname VARCHAR(200),
+    vorname VARCHAR(100),
+    nachname VARCHAR(100),
+    aktiv BOOLEAN NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS lieferanten (
+    id INTEGER PRIMARY KEY,
+    lieferantennummer VARCHAR(50),
+    firmenname VARCHAR(200),
+    vorname VARCHAR(100),
+    nachname VARCHAR(100),
+    aktiv BOOLEAN NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS rechnungen (
     id INTEGER PRIMARY KEY,
     rechnungsnummer VARCHAR(50) NOT NULL,
     typ VARCHAR(10) NOT NULL,
     gesamtbetrag NUMERIC(12,2) NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS rechnungspositionen (
+    id INTEGER PRIMARY KEY,
+    rechnung_id INTEGER NOT NULL,
+    beschreibung VARCHAR(500) NOT NULL,
+    menge NUMERIC(10,3) NOT NULL DEFAULT 1,
+    einheit VARCHAR(50),
+    netto NUMERIC(12,2) NOT NULL,
+    ust_satz NUMERIC(5,2) NOT NULL DEFAULT 19,
+    brutto NUMERIC(12,2) NOT NULL
 );
 CREATE TABLE IF NOT EXISTS kassenbuch (
     id INTEGER PRIMARY KEY,
@@ -42,7 +64,7 @@ CREATE TABLE IF NOT EXISTS kassenbuch (
     art VARCHAR(10) NOT NULL,
     immutable BOOLEAN NOT NULL DEFAULT 0
 );
-/* Hinweis: kassenbuch wird durch Migration 17 zu journal umbenannt */
+/* kassenbuch wird durch Migration 17 zu journal umbenannt */
 CREATE TABLE IF NOT EXISTS tagesabschluesse (
     id INTEGER PRIMARY KEY,
     datum DATE NOT NULL,
@@ -60,6 +82,15 @@ CREATE TABLE IF NOT EXISTS kategorien (
     id INTEGER PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     kontenart VARCHAR(20) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS nummernkreise (
+    id INTEGER PRIMARY KEY,
+    typ VARCHAR(50) NOT NULL,
+    bezeichnung VARCHAR(100),
+    format VARCHAR(100),
+    naechste_nr INTEGER NOT NULL DEFAULT 1,
+    reset_jaehrlich BOOLEAN NOT NULL DEFAULT 1,
+    letztes_jahr INTEGER
 );
 """
 
@@ -176,12 +207,12 @@ class TestMigrationen:
         assert len(list(backup_dir.glob("rechnungsfee_*.db"))) == 1
 
     def test_aktuelle_db_early_return_kein_backup(self, tmp_path, monkeypatch):
-        """DB auf version=2 → Early-Return, kein Backup erstellt."""
+        """DB auf SCHEMA_VERSION → Early-Return, kein Backup erstellt."""
         db_path = tmp_path / "current.db"
         backup_dir = tmp_path / "backups"
 
         con = sqlite3.connect(str(db_path))
-        con.execute("PRAGMA user_version = 2")
+        con.execute(f"PRAGMA user_version = {main.SCHEMA_VERSION}")
         con.commit()
         con.close()
 
@@ -191,7 +222,7 @@ class TestMigrationen:
 
         main._run_migrations()
 
-        assert get_user_version(db_path) == 2
+        assert get_user_version(db_path) == main.SCHEMA_VERSION
         assert not backup_dir.exists() or not any(backup_dir.glob("rechnungsfee_*.db"))
 
     def test_backup_rotation_max_5(self, tmp_path, monkeypatch):
@@ -230,5 +261,5 @@ class TestMigrationen:
         main._run_migrations()           # Erster Aufruf: Migration + Backup
         main._run_migrations()           # Zweiter Aufruf: Early-Return
 
-        assert get_user_version(db_path) == 2
+        assert get_user_version(db_path) == main.SCHEMA_VERSION
         assert len(list(backup_dir.glob("rechnungsfee_*.db"))) == 1

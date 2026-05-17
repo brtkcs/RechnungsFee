@@ -104,6 +104,19 @@ def _run_migrations() -> None:
     if version >= SCHEMA_VERSION:
         return  # Fast-Path: DB ist aktuell
 
+    # Frische DB: create_all hat bereits das aktuelle Schema angelegt (journal, nicht kassenbuch).
+    # user_version ist noch 0, aber die ALTER-Migrationen wären falsch → direkt auf SCHEMA_VERSION.
+    with engine.connect() as conn:
+        hat_kassenbuch = conn.execute(text(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='kassenbuch'"
+        )).scalar()
+    if version == 0 and not hat_kassenbuch:
+        _backup_datenbank()
+        with engine.connect() as conn:
+            conn.execute(text(f"PRAGMA user_version = {SCHEMA_VERSION}"))
+            conn.commit()
+        return
+
     _backup_datenbank()
 
     with engine.connect() as conn:
