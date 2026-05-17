@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, or_
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
@@ -111,22 +111,32 @@ def monat_statistik(monat: str = Query(..., description="Format: YYYY-MM"), db: 
     except (ValueError, AttributeError):
         raise HTTPException(status_code=422, detail="monat muss im Format YYYY-MM sein")
 
+    # Privateinlagen/-entnahmen (kontenart="Privat") gehören nicht zu den
+    # betrieblichen Einnahmen/Ausgaben und werden herausgefiltert.
+    betrieb_filter = or_(
+        Journaleintrag.kategorie_id.is_(None),
+        Kategorie.kontenart != "Privat",
+    )
     einnahmen = (
         db.query(func.sum(Journaleintrag.brutto_betrag))
+        .outerjoin(Journaleintrag.kategorie)
         .filter(
             extract("year", Journaleintrag.datum) == jahr_int,
             extract("month", Journaleintrag.datum) == mon_int,
             Journaleintrag.art == "Einnahme",
+            betrieb_filter,
         )
         .scalar()
         or Decimal("0")
     )
     ausgaben = (
         db.query(func.sum(Journaleintrag.brutto_betrag))
+        .outerjoin(Journaleintrag.kategorie)
         .filter(
             extract("year", Journaleintrag.datum) == jahr_int,
             extract("month", Journaleintrag.datum) == mon_int,
             Journaleintrag.art == "Ausgabe",
+            betrieb_filter,
         )
         .scalar()
         or Decimal("0")
