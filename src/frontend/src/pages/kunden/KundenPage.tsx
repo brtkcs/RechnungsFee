@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   getKunden, createKunde, updateKunde, deleteKunde,
-  anonymisiereKunde, dsgvoExportKunde, getRechnungen,
+  anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen,
   type Kunde, type AnonymisierungResult, type Rechnung,
 } from '../../api/client'
 
@@ -516,9 +516,13 @@ export function KundenPage() {
                   <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Datenschutz (DSGVO)</p>
                   {!showDsgvoBestaetigung ? (
                     <div className="flex gap-2">
+                      <button type="button" onClick={() => dsgvoExportKundePdf(editKunde.id!)}
+                        className="flex-1 text-xs border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">
+                        📄 Datenauskunft (PDF)
+                      </button>
                       <button type="button" onClick={() => dsgvoExportKunde(editKunde.id!)}
                         className="flex-1 text-xs border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">
-                        📥 Datenauskunft exportieren
+                        📥 Datenauskunft (JSON)
                       </button>
                       <button type="button" onClick={() => setShowDsgvoBestaetigung(true)}
                         className="flex-1 text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg py-1.5 hover:bg-red-50 dark:hover:bg-red-950">

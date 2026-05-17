@@ -6,13 +6,15 @@ import json as _json
 from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import Response as _Response
+from fastapi.responses import Response as _Response, StreamingResponse
+from io import BytesIO
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import Lieferant, Rechnung, Nummernkreis
 from .journal import _belegnr_aus_format
 from .schemas import LieferantCreate, LieferantUpdate, LieferantResponse
+from utils.pdf_dsgvo import generate_dsgvo_pdf
 
 
 def _naechste_nummer(typ: str, db: Session) -> str | None:
@@ -121,6 +123,58 @@ def dsgvo_export(lieferant_id: int, db: Session = Depends(get_db)):
     return _Response(
         content=content.encode("utf-8"),
         media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{lieferant_id}/dsgvo-export-pdf")
+def dsgvo_export_pdf(lieferant_id: int, db: Session = Depends(get_db)):
+    """DSGVO Art. 15: Datenauskunft als lesbare PDF-Datei."""
+    lieferant = db.query(Lieferant).filter(Lieferant.id == lieferant_id).first()
+    if not lieferant:
+        raise HTTPException(status_code=404, detail="Lieferant nicht gefunden.")
+
+    rechnungen = (
+        db.query(Rechnung)
+        .filter(Rechnung.lieferant_id == lieferant_id)
+        .order_by(Rechnung.datum)
+        .all()
+    )
+
+    name = lieferant.firmenname or " ".join(
+        t for t in [lieferant.vorname, lieferant.nachname] if t
+    ) or f"Lieferant-{lieferant_id}"
+
+    stammdaten = {
+        "id": lieferant.id, "lieferantennummer": lieferant.lieferantennummer,
+        "firmenname": lieferant.firmenname, "vorname": lieferant.vorname,
+        "nachname": lieferant.nachname, "strasse": lieferant.strasse,
+        "hausnummer": lieferant.hausnummer, "plz": lieferant.plz,
+        "ort": lieferant.ort, "land": lieferant.land, "email": lieferant.email,
+        "telefon": lieferant.telefon, "ust_idnr": lieferant.ust_idnr,
+        "notizen": lieferant.notizen,
+    }
+    rechnungen_dicts = [
+        {
+            "rechnungsnummer": r.rechnungsnummer, "datum": str(r.datum),
+            "leistungsdatum": str(r.leistungsdatum) if r.leistungsdatum else None,
+            "brutto_gesamt": str(r.brutto_gesamt), "zahlungsstatus": r.zahlungsstatus,
+            "storniert": r.storniert,
+            "positionen": [
+                {"beschreibung": p.beschreibung, "menge": str(p.menge),
+                 "einheit": p.einheit, "netto": str(p.netto),
+                 "ust_satz": str(p.ust_satz), "brutto": str(p.brutto)}
+                for p in r.positionen
+            ],
+        }
+        for r in rechnungen
+    ]
+
+    pdf_bytes = generate_dsgvo_pdf(stammdaten, rechnungen_dicts, None, "Lieferant")
+    filename = f"dsgvo-{name.replace(' ', '-')}-{_date.today()}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   getLieferanten, createLieferant, updateLieferant, deleteLieferant,
-  anonymisiereLieferant, dsgvoExportLieferant,
+  anonymisiereLieferant, dsgvoExportLieferant, dsgvoExportLieferantPdf,
   type Lieferant, type AnonymisierungResult,
 } from '../../api/client'
 
@@ -427,10 +427,17 @@ export function LieferantenPage() {
                     <div className="flex gap-2">
                       <button
                         type="button"
+                        onClick={() => dsgvoExportLieferantPdf(editLieferant.id!)}
+                        className="flex-1 text-xs border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      >
+                        📄 Datenauskunft (PDF)
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => dsgvoExportLieferant(editLieferant.id!)}
                         className="flex-1 text-xs border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700"
                       >
-                        📥 Datenauskunft exportieren
+                        📥 Datenauskunft (JSON)
                       </button>
                       <button
                         type="button"

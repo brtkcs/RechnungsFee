@@ -6,13 +6,15 @@ import json as _json
 from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import Response as _Response
+from fastapi.responses import Response as _Response, StreamingResponse
+from io import BytesIO
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import Kunde, Journaleintrag, Rechnung, Nummernkreis
 from .journal import _belegnr_aus_format
 from .schemas import KundeCreate, KundeUpdate, KundeResponse
+from utils.pdf_dsgvo import generate_dsgvo_pdf
 
 
 def _naechste_nummer(typ: str, db: Session) -> str | None:
@@ -141,6 +143,68 @@ def dsgvo_export(kunde_id: int, db: Session = Depends(get_db)):
     return _Response(
         content=content.encode("utf-8"),
         media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{kunde_id}/dsgvo-export-pdf")
+def dsgvo_export_pdf(kunde_id: int, db: Session = Depends(get_db)):
+    """DSGVO Art. 15: Datenauskunft als lesbare PDF-Datei."""
+    kunde = db.query(Kunde).filter(Kunde.id == kunde_id).first()
+    if not kunde:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden.")
+
+    eintraege = (
+        db.query(Journaleintrag)
+        .filter(Journaleintrag.kunde_id == kunde_id)
+        .order_by(Journaleintrag.datum)
+        .all()
+    )
+    rechnungen = (
+        db.query(Rechnung)
+        .filter(Rechnung.kunde_id == kunde_id)
+        .order_by(Rechnung.datum)
+        .all()
+    )
+
+    name_teile = [kunde.firmenname, kunde.vorname, kunde.nachname]
+    name = " ".join(t for t in name_teile if t) or f"Kunde-{kunde_id}"
+
+    stammdaten = {
+        "id": kunde.id, "kundennummer": kunde.kundennummer,
+        "firmenname": kunde.firmenname, "vorname": kunde.vorname,
+        "nachname": kunde.nachname, "strasse": kunde.strasse,
+        "hausnummer": kunde.hausnummer, "plz": kunde.plz,
+        "ort": kunde.ort, "land": kunde.land, "email": kunde.email,
+        "telefon": kunde.telefon, "ust_idnr": kunde.ust_idnr,
+        "notizen": kunde.notizen,
+    }
+    rechnungen_dicts = [
+        {
+            "rechnungsnummer": r.rechnungsnummer, "datum": str(r.datum),
+            "leistungsdatum": str(r.leistungsdatum) if r.leistungsdatum else None,
+            "brutto_gesamt": str(r.brutto_gesamt), "zahlungsstatus": r.zahlungsstatus,
+            "storniert": r.storniert,
+            "positionen": [
+                {"beschreibung": p.beschreibung, "menge": str(p.menge),
+                 "einheit": p.einheit, "netto": str(p.netto),
+                 "ust_satz": str(p.ust_satz), "brutto": str(p.brutto)}
+                for p in r.positionen
+            ],
+        }
+        for r in rechnungen
+    ]
+    journal_dicts = [
+        {"datum": str(e.datum), "belegnr": e.belegnr, "beschreibung": e.beschreibung,
+         "art": e.art, "brutto_betrag": str(e.brutto_betrag), "zahlungsart": e.zahlungsart}
+        for e in eintraege
+    ]
+
+    pdf_bytes = generate_dsgvo_pdf(stammdaten, rechnungen_dicts, journal_dicts, "Kunde")
+    filename = f"dsgvo-{name.replace(' ', '-')}-{_date.today()}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

@@ -414,6 +414,10 @@ export async function dsgvoExportKunde(id: number) {
   const base = await getBaseUrl()
   await openUrl(`${base}/kunden/${id}/dsgvo-export`)
 }
+export async function dsgvoExportKundePdf(id: number) {
+  const base = await getBaseUrl()
+  await openUrl(`${base}/kunden/${id}/dsgvo-export-pdf`)
+}
 
 // --- Lieferanten ---
 export type Lieferant = {
@@ -446,6 +450,10 @@ export const anonymisiereLieferant = (id: number) =>
 export async function dsgvoExportLieferant(id: number) {
   const base = await getBaseUrl()
   await openUrl(`${base}/lieferanten/${id}/dsgvo-export`)
+}
+export async function dsgvoExportLieferantPdf(id: number) {
+  const base = await getBaseUrl()
+  await openUrl(`${base}/lieferanten/${id}/dsgvo-export-pdf`)
 }
 
 // --- Export ---
