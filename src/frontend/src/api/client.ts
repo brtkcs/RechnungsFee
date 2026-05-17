@@ -456,6 +456,43 @@ export async function dsgvoExportLieferantPdf(id: number) {
   await openUrl(`${base}/lieferanten/${id}/dsgvo-export-pdf`)
 }
 
+// --- EKS ---
+export type EksFeld = {
+  tabelle: string
+  code: string
+  label: string
+  auto: boolean
+  wert: string
+}
+
+export type EksBerechnenResult = {
+  zeitraum_von: string
+  zeitraum_bis: string
+  felder: EksFeld[]
+}
+
+export async function eksBerechnen(von: string, bis: string): Promise<EksBerechnenResult> {
+  return request<EksBerechnenResult>(`/eks/berechnen?von=${von}&bis=${bis}`)
+}
+
+export async function eksPdfExport(params: {
+  zeitraum_von: string
+  zeitraum_bis: string
+  art: string
+  felder: Record<string, string>
+}): Promise<void> {
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/eks/pdf`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) throw new Error('EKS-PDF-Export fehlgeschlagen')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  await openUrl(url)
+}
+
 // --- Export ---
 export async function downloadGobdExport(jahr: number): Promise<string> {
   const base = await getBaseUrl()

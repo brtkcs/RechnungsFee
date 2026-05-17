@@ -17,6 +17,7 @@ import { KontenPage } from './pages/stammdaten/KontenPage'
 import { KategorienPage } from './pages/stammdaten/KategorienPage'
 import { UnternehmenPage } from './pages/stammdaten/UnternehmenPage'
 import { ExportPage } from './pages/ExportPage'
+import { EksPage } from './pages/eks/EksPage'
 import { RechnungenPage } from './pages/rechnungen/RechnungenPage'
 import { BackupPage } from './pages/backup/BackupPage'
 import { InfoPage } from './pages/info/InfoPage'
@@ -78,6 +79,7 @@ function AppRoutes() {
           <Route path="/unternehmen" element={<UnternehmenPage />} />
           <Route path="/rechnungen" element={<RechnungenPage />} />
           <Route path="/exporte" element={<ExportPage />} />
+          <Route path="/eks" element={<EksPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/info" element={<InfoPage />} />
         </Route>

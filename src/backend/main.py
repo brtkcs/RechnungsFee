@@ -30,7 +30,7 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen, eks
 
 SCHEMA_VERSION = 19
 
@@ -58,6 +58,7 @@ app.include_router(backup.router)
 app.include_router(artikel.router)
 app.include_router(ust_saetze.router)
 app.include_router(pdf_vorlagen.router)
+app.include_router(eks.router)
 
 
 @app.post("/api/shutdown")
