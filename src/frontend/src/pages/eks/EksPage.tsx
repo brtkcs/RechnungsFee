@@ -64,7 +64,7 @@ export function EksPage() {
   const [art, setArt] = useState<'vorlaeufig' | 'abschliessend'>('abschliessend')
 
   const [felder, setFelder] = useState<EksFeld[]>([])
-  const [werte, setWerte] = useState<Record<string, string>>({})
+  const [werte, setWerte] = useState<Record<string, string>>({})  // read-only nach Berechnen
   const [quelle, setQuelle] = useState<EksQuelle | null | undefined>(undefined)
   const [laedt, setLaedt] = useState(false)
   const [exportiert, setExportiert] = useState(false)
@@ -243,7 +243,7 @@ export function EksPage() {
               <p className="font-medium">Keine Vorjahresdaten vorhanden</p>
               <p className="mt-0.5 text-xs">
                 Für das Vorjahres-Halbjahr wurden keine abschließenden EKS gefunden.
-                Alle Beträge sind 0,00 €. Bitte manuell ausfüllen oder zuerst monatliche Abschlüsse erstellen.
+                Alle Beträge sind 0,00 €. Erstelle zuerst monatliche abschließende EKS für das Vorjahr.
               </p>
             </div>
           </div>
@@ -268,10 +268,9 @@ export function EksPage() {
                 </div>
 
                 {/* Spaltenheader */}
-                <div className="hidden sm:grid grid-cols-[70px_1fr_60px_140px] gap-2 px-5 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-500 dark:text-slate-400">
+                <div className="hidden sm:grid grid-cols-[70px_1fr_140px] gap-2 px-5 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-500 dark:text-slate-400">
                   <span>Code</span>
                   <span>Bezeichnung</span>
-                  <span className="text-center">Auto</span>
                   <span className="text-right">Betrag (EUR)</span>
                 </div>
 
@@ -279,13 +278,10 @@ export function EksPage() {
                   {felderT.map((f) => {
                     const wert = werte[f.code] ?? '0'
                     const hatWert = Math.abs(parseFloat(wert) || 0) >= 0.005
-                    // Vorläufig + Vorjahresdaten vorhanden → alles kommt aus gespeicherten Exporten
-                    // Vorläufig + keine Vorjahresdaten → alles manuell (alles 0)
-                    const istAuto = art === 'vorlaeufig' ? quelle !== null : f.auto
                     return (
                       <div
                         key={f.code}
-                        className="grid grid-cols-1 sm:grid-cols-[70px_1fr_60px_140px] gap-x-2 gap-y-1 px-5 py-2.5 items-center hover:bg-slate-50 dark:hover:bg-slate-750"
+                        className="grid grid-cols-1 sm:grid-cols-[70px_1fr_140px] gap-x-2 gap-y-1 px-5 py-2.5 items-center"
                       >
                         <span className="font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
                           {f.code}
@@ -293,32 +289,13 @@ export function EksPage() {
                         <span className="text-sm text-slate-700 dark:text-slate-200">
                           {f.label}
                         </span>
-                        <span className="text-center">
-                          {istAuto ? (
-                            <span className="inline-block text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded px-1.5 py-0.5">
-                              Auto
-                            </span>
-                          ) : (
-                            <span className="inline-block text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 rounded px-1.5 py-0.5">
-                              Manuell
-                            </span>
-                          )}
+                        <span className={`text-right text-sm font-medium ${
+                          hatWert
+                            ? 'text-slate-800 dark:text-slate-100'
+                            : 'text-slate-400 dark:text-slate-500'
+                        }`}>
+                          {fmtEuro(wert)}
                         </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={wert === '0' || wert === '0.00' ? '' : wert}
-                          placeholder="0,00"
-                          onChange={(e) =>
-                            setWerte((prev) => ({ ...prev, [f.code]: e.target.value || '0' }))
-                          }
-                          className={`text-right border rounded-lg px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow
-                            ${
-                              hatWert
-                                ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 font-medium'
-                                : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                            }`}
-                        />
                       </div>
                     )
                   })}
@@ -397,8 +374,8 @@ export function EksPage() {
           <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex gap-2">
             <span className="text-amber-500 dark:text-amber-400 shrink-0">⚠</span>
             <p className="text-xs text-amber-800 dark:text-amber-300">
-              <strong>Hinweis:</strong> Felder mit „Auto" werden direkt aus deinen Journalbuchungen berechnet.
-              Manuelle Felder (z.&nbsp;B. Privatentnahmen, Versicherungsbeiträge) musst du selbst eintragen.
+              <strong>Hinweis:</strong> Alle Beträge werden ausschließlich aus deinen Journalbuchungen berechnet.
+              Felder ohne passende Buchung zeigen 0,00 €.
               Dieses PDF ersetzt nicht das offizielle EKS-Formular des Jobcenters.
             </p>
           </div>
