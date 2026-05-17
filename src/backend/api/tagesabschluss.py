@@ -21,8 +21,13 @@ router = APIRouter(prefix="/api/tagesabschluss", tags=["Kassenbuch"])
 
 
 def _berechne_vorschau(datum: date, db: Session) -> dict:
-    """Berechnet Anfangsbestand und Bargeldbewegungen für ein Datum."""
-    # Letzter Tagesabschluss vor dem Datum
+    """Berechnet Anfangsbestand und Bargeldbewegungen für ein Datum.
+
+    Zeitraum: vom Tag nach dem letzten TA bis einschließlich datum.
+    Gibt es keinen vorherigen TA, werden alle Buchungen seit Beginn gezählt.
+    So ist soll_endbestand immer der reale Kassenstand – auch wenn TAs
+    nicht täglich erstellt wurden (GoBD-Anforderung).
+    """
     letzter = (
         db.query(Tagesabschluss)
         .filter(Tagesabschluss.datum < datum)
@@ -30,12 +35,13 @@ def _berechne_vorschau(datum: date, db: Session) -> dict:
         .first()
     )
     anfangsbestand = letzter.ist_endbestand if letzter else Decimal("0")
+    seit = (letzter.datum + timedelta(days=1)) if letzter else date.min
 
-    # Nur Barbuchungen des Tages
     einnahmen = (
         db.query(func.sum(Journaleintrag.brutto_betrag))
         .filter(
-            Journaleintrag.datum == datum,
+            Journaleintrag.datum >= seit,
+            Journaleintrag.datum <= datum,
             Journaleintrag.art == "Einnahme",
             Journaleintrag.zahlungsart == "Bar",
         )
@@ -45,7 +51,8 @@ def _berechne_vorschau(datum: date, db: Session) -> dict:
     ausgaben = (
         db.query(func.sum(Journaleintrag.brutto_betrag))
         .filter(
-            Journaleintrag.datum == datum,
+            Journaleintrag.datum >= seit,
+            Journaleintrag.datum <= datum,
             Journaleintrag.art == "Ausgabe",
             Journaleintrag.zahlungsart == "Bar",
         )
@@ -54,7 +61,10 @@ def _berechne_vorschau(datum: date, db: Session) -> dict:
     )
     anzahl = (
         db.query(func.count(Journaleintrag.id))
-        .filter(Journaleintrag.datum == datum)
+        .filter(
+            Journaleintrag.datum >= seit,
+            Journaleintrag.datum <= datum,
+        )
         .scalar()
         or 0
     )
