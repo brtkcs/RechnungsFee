@@ -230,7 +230,9 @@ export function EksPage() {
             <div className="text-sm text-blue-800 dark:text-blue-200">
               <p className="font-medium">Prognose aus Vorjahres-EKS</p>
               <p className="mt-0.5 text-xs">
-                Basis: abschließende EKS {fmtDatum(quelle.zeitraum_von)} – {fmtDatum(quelle.zeitraum_bis)} ÷ 6
+                {quelle.anzahl_exporte} monatliche Abschlüsse aus{' '}
+                {fmtDatum(quelle.zeitraum_von)} – {fmtDatum(quelle.zeitraum_bis)} summiert,
+                dann ÷ 6 × {quelle.n_monate} {quelle.n_monate === 1 ? 'Monat' : 'Monate'}
               </p>
             </div>
           </div>
@@ -240,8 +242,8 @@ export function EksPage() {
             <div className="text-sm text-amber-800 dark:text-amber-300">
               <p className="font-medium">Keine Vorjahresdaten vorhanden</p>
               <p className="mt-0.5 text-xs">
-                Für das entsprechende Halbjahr des Vorjahres wurde keine abschließende EKS gefunden.
-                Alle Beträge sind 0,00 €. Bitte manuell ausfüllen.
+                Für das Vorjahres-Halbjahr wurden keine abschließenden EKS gefunden.
+                Alle Beträge sind 0,00 €. Bitte manuell ausfüllen oder zuerst monatliche Abschlüsse erstellen.
               </p>
             </div>
           </div>

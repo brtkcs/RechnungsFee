@@ -101,38 +101,49 @@ def eks_berechnen(
     quelle: dict | None = None
 
     if art == "vorlaeufig":
-        # Halbjahr des Vorjahres bestimmen (bezogen auf von-Datum)
+        # Vorjahres-Halbjahr bestimmen (H1 = Jan–Jun, H2 = Jul–Dez)
         hj_von, hj_bis = _halbjahr_grenzen(von)
         vj_von = date(hj_von.year - 1, hj_von.month, hj_von.day)
         vj_bis = date(hj_bis.year - 1, hj_bis.month, hj_bis.day)
 
-        eks_vj = (
+        # Alle monatlichen abschließenden EKS-Exporte im Vorjahres-Halbjahr aggregieren
+        exports_vj = (
             db.query(EksExport)
             .filter(
                 EksExport.art == "abschliessend",
-                EksExport.zeitraum_von == vj_von,
-                EksExport.zeitraum_bis == vj_bis,
+                EksExport.zeitraum_von >= vj_von,
+                EksExport.zeitraum_bis <= vj_bis,
             )
-            .order_by(EksExport.exportiert_am.desc())
-            .first()
+            .all()
         )
 
-        if eks_vj is None:
+        if not exports_vj:
             felder_werte: dict[str, str] = {}
             quelle = None
         else:
-            rohdaten: dict = json.loads(eks_vj.daten_json or "{}")
+            # Feldwerte aus allen gefundenen Exporten summieren
+            summen: dict[str, Decimal] = {}
+            for exp in exports_vj:
+                rohdaten: dict = json.loads(exp.daten_json or "{}")
+                for _, code, _, _ in EKS_FELDER_META:
+                    summen[code] = summen.get(code, Decimal("0")) + Decimal(
+                        str(rohdaten.get(code, "0"))
+                    )
+
+            # Auf angeforderte Monate skalieren: (Summe ÷ 6) × N
+            n_monate = (bis.year - von.year) * 12 + (bis.month - von.month) + 1
             felder_werte = {
                 code: str(
-                    (Decimal(str(rohdaten.get(code, "0"))) / 6)
+                    (summen.get(code, Decimal("0")) / 6 * n_monate)
                     .quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 )
                 for _, code, _, _ in EKS_FELDER_META
             }
             quelle = {
-                "zeitraum_von": str(eks_vj.zeitraum_von),
-                "zeitraum_bis": str(eks_vj.zeitraum_bis),
-                "exportiert_am": str(eks_vj.exportiert_am),
+                "zeitraum_von": str(vj_von),
+                "zeitraum_bis": str(vj_bis),
+                "anzahl_exporte": len(exports_vj),
+                "n_monate": n_monate,
             }
 
     else:

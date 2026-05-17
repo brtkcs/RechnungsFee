@@ -468,7 +468,8 @@ export type EksFeld = {
 export type EksQuelle = {
   zeitraum_von: string
   zeitraum_bis: string
-  exportiert_am: string
+  anzahl_exporte: number
+  n_monate: number
 }
 
 export type EksBerechnenResult = {
