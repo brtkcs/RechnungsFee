@@ -11,8 +11,21 @@ Open-Source-Buchhaltungssoftware für Freiberufler & Kleinunternehmer (§19 UStG
 - **Nie `git push`** ohne explizite Nachfrage
 - Skripte mit neuer Version: Änderungen nicht einzeln nachfragen
 
+## Dev-Start (lokal)
+
+Zwei Terminals:
+```bash
+# Terminal 1 – Backend
+cd src/backend && .venv/bin/uvicorn main:app --port 8002
+
+# Terminal 2 – Frontend
+cd src/frontend && npm run dev
+```
+Dann Browser: http://localhost:5173
+
 ## Ports & Pfade
-- Backend: Port **8002** – `cd src/backend && .venv/bin/uvicorn main:app --port 8002`
+- Backend: Port **8002**
+- Frontend Dev: Port **5173** (Vite) – `cd src/frontend && npm run dev`
 - DB: `~/.local/share/RechnungsFee/rechnungsfee.db`
 - Uploads: `~/.local/share/RechnungsFee/uploads/`
 - Backups: `~/.local/share/RechnungsFee/backups/`
