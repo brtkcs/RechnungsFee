@@ -214,9 +214,10 @@ export function JournalPage() {
         {hatAktiveFilter && (
           <button
             onClick={resetFilter}
-            className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-2 transition-colors"
+            title="Filter zurücksetzen"
+            className="border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 rounded-lg px-2.5 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
-            Filter zurücksetzen
+            ✕
           </button>
         )}
       </div>
