@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { eksBerechnen, eksPdfExport, type EksFeld } from '../../api/client'
+import { eksBerechnen, eksPdfExport, type EksFeld, type EksQuelle } from '../../api/client'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,6 +16,11 @@ function monatZuRange(monat: string): { von: string; bis: string } {
   const letzterTag = new Date(y, m, 0).getDate()
   const bis = `${y}-${String(m).padStart(2, '0')}-${String(letzterTag).padStart(2, '0')}`
   return { von, bis }
+}
+
+function fmtDatum(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}.${y}`
 }
 
 function fmtEuro(v: string | number): string {
@@ -60,6 +65,7 @@ export function EksPage() {
 
   const [felder, setFelder] = useState<EksFeld[]>([])
   const [werte, setWerte] = useState<Record<string, string>>({})
+  const [quelle, setQuelle] = useState<EksQuelle | null | undefined>(undefined)
   const [laedt, setLaedt] = useState(false)
   const [exportiert, setExportiert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -73,8 +79,9 @@ export function EksPage() {
     setFehler(null)
     setExportiert(false)
     try {
-      const res = await eksBerechnen(zeitraumVon, zeitraumBis)
+      const res = await eksBerechnen(zeitraumVon, zeitraumBis, art)
       setFelder(res.felder)
+      setQuelle(res.quelle)
       const neueWerte: Record<string, string> = {}
       for (const f of res.felder) neueWerte[f.code] = f.wert
       setWerte(neueWerte)
@@ -214,6 +221,32 @@ export function EksPage() {
           </div>
         )}
       </div>
+
+      {/* Quelle-Banner (nur nach Berechnen) */}
+      {berechnet && art === 'vorlaeufig' && (
+        quelle ? (
+          <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3">
+            <span className="text-blue-500 dark:text-blue-400 shrink-0 mt-0.5">ℹ</span>
+            <div className="text-sm text-blue-800 dark:text-blue-200">
+              <p className="font-medium">Prognose aus Vorjahres-EKS</p>
+              <p className="mt-0.5 text-xs">
+                Basis: abschließende EKS {fmtDatum(quelle.zeitraum_von)} – {fmtDatum(quelle.zeitraum_bis)} ÷ 6
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3">
+            <span className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5">⚠</span>
+            <div className="text-sm text-amber-800 dark:text-amber-300">
+              <p className="font-medium">Keine Vorjahresdaten vorhanden</p>
+              <p className="mt-0.5 text-xs">
+                Für das entsprechende Halbjahr des Vorjahres wurde keine abschließende EKS gefunden.
+                Alle Beträge sind 0,00 €. Bitte manuell ausfüllen.
+              </p>
+            </div>
+          </div>
+        )
+      )}
 
       {/* Felder */}
       {berechnet && felder.length > 0 && (

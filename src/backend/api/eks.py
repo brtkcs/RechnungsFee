@@ -1,10 +1,14 @@
 """
 Anlage EKS – Einkommenserklärung für Selbstständige (Jobcenter/Bürgergeld).
 Berechnet EKS-Felder aus vorhandenen Journalbuchungen und exportiert als PDF.
+
+Vorläufige EKS: Prognose = Vorjahres-Halbjahr (abschliessend) ÷ 6.
+Abschließende EKS: Echte Journalsummen für den Zeitraum.
 """
 
+import json
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
 
 from fastapi import APIRouter, Depends, Query
@@ -14,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Journaleintrag, Kategorie, Unternehmen
+from database.models import EksExport, Journaleintrag, Kategorie, Unternehmen
 from utils.pdf_eks import generate_eks_pdf
 
 router = APIRouter(prefix="/api/eks", tags=["EKS"])
@@ -66,6 +70,19 @@ class EksPdfRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Hilfsfunktion: Halbjahr ermitteln
+# ---------------------------------------------------------------------------
+
+def _halbjahr_grenzen(monat_datum: date) -> tuple[date, date]:
+    """Gibt (erster_tag, letzter_tag) des Halbjahres zurück, in dem das Datum liegt."""
+    y = monat_datum.year
+    if monat_datum.month <= 6:
+        return date(y, 1, 1), date(y, 6, 30)
+    else:
+        return date(y, 7, 1), date(y, 12, 31)
+
+
+# ---------------------------------------------------------------------------
 # Endpunkte
 # ---------------------------------------------------------------------------
 
@@ -73,41 +90,91 @@ class EksPdfRequest(BaseModel):
 def eks_berechnen(
     von: date = Query(...),
     bis: date = Query(...),
+    art: str = Query("abschliessend"),
     db: Session = Depends(get_db),
 ):
-    """Summiert Journalbuchungen pro EKS-Kategorie für den Zeitraum."""
-    rows = (
-        db.query(
-            Kategorie.eks_kategorie,
-            func.sum(Journaleintrag.brutto_betrag).label("summe"),
-        )
-        .join(Journaleintrag.kategorie)
-        .filter(
-            Journaleintrag.datum >= von,
-            Journaleintrag.datum <= bis,
-            Kategorie.eks_kategorie.isnot(None),
-        )
-        .group_by(Kategorie.eks_kategorie)
-        .all()
-    )
+    """Berechnet EKS-Felder für den Zeitraum.
 
-    felder = {row.eks_kategorie: str(row.summe or Decimal("0")) for row in rows}
+    art=abschliessend: Echte Journalsummen.
+    art=vorlaeufig: Prognose = abschließende EKS des Vorjahres-Halbjahres ÷ 6.
+    """
+    quelle: dict | None = None
+
+    if art == "vorlaeufig":
+        # Halbjahr des Vorjahres bestimmen (bezogen auf von-Datum)
+        hj_von, hj_bis = _halbjahr_grenzen(von)
+        vj_von = date(hj_von.year - 1, hj_von.month, hj_von.day)
+        vj_bis = date(hj_bis.year - 1, hj_bis.month, hj_bis.day)
+
+        eks_vj = (
+            db.query(EksExport)
+            .filter(
+                EksExport.art == "abschliessend",
+                EksExport.zeitraum_von == vj_von,
+                EksExport.zeitraum_bis == vj_bis,
+            )
+            .order_by(EksExport.exportiert_am.desc())
+            .first()
+        )
+
+        if eks_vj is None:
+            felder_werte: dict[str, str] = {}
+            quelle = None
+        else:
+            rohdaten: dict = json.loads(eks_vj.daten_json or "{}")
+            felder_werte = {
+                code: str(
+                    (Decimal(str(rohdaten.get(code, "0"))) / 6)
+                    .quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                )
+                for _, code, _, _ in EKS_FELDER_META
+            }
+            quelle = {
+                "zeitraum_von": str(eks_vj.zeitraum_von),
+                "zeitraum_bis": str(eks_vj.zeitraum_bis),
+                "exportiert_am": str(eks_vj.exportiert_am),
+            }
+
+    else:
+        # Abschließend: echte Journalsummen
+        rows = (
+            db.query(
+                Kategorie.eks_kategorie,
+                func.sum(Journaleintrag.brutto_betrag).label("summe"),
+            )
+            .join(Journaleintrag.kategorie)
+            .filter(
+                Journaleintrag.datum >= von,
+                Journaleintrag.datum <= bis,
+                Kategorie.eks_kategorie.isnot(None),
+            )
+            .group_by(Kategorie.eks_kategorie)
+            .all()
+        )
+        felder_werte = {row.eks_kategorie: str(row.summe or Decimal("0")) for row in rows}
+
     meta = [
         {
             "tabelle": t,
             "code": code,
             "label": label,
             "auto": auto,
-            "wert": felder.get(code, "0.00"),
+            "wert": felder_werte.get(code, "0.00"),
         }
         for t, code, label, auto in EKS_FELDER_META
     ]
-    return {"zeitraum_von": str(von), "zeitraum_bis": str(bis), "felder": meta}
+    return {
+        "zeitraum_von": str(von),
+        "zeitraum_bis": str(bis),
+        "art": art,
+        "felder": meta,
+        "quelle": quelle,
+    }
 
 
 @router.post("/pdf")
 def eks_pdf(req: EksPdfRequest, db: Session = Depends(get_db)):
-    """Generiert EKS-Zusammenfassung als PDF."""
+    """Generiert EKS-Zusammenfassung als PDF und speichert den Export."""
     unt = db.query(Unternehmen).first()
     unt_dict: dict = {}
     if unt:
@@ -139,6 +206,17 @@ def eks_pdf(req: EksPdfRequest, db: Session = Depends(get_db)):
         felder=felder_mit_meta,
         unternehmen=unt_dict,
     )
+
+    # Export in DB speichern (abschliessende EKS als Basis für spätere Prognosen)
+    eks_export = EksExport(
+        zeitraum_von=req.zeitraum_von,
+        zeitraum_bis=req.zeitraum_bis,
+        art=req.art,
+        daten_json=json.dumps({code: req.felder.get(code, "0.00") for _, code, _, _ in EKS_FELDER_META}),
+    )
+    db.add(eks_export)
+    db.commit()
+
     dateiname = f"EKS_{req.zeitraum_von}_{req.zeitraum_bis}.pdf"
     return StreamingResponse(
         BytesIO(pdf_bytes),

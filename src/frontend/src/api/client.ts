@@ -465,14 +465,22 @@ export type EksFeld = {
   wert: string
 }
 
+export type EksQuelle = {
+  zeitraum_von: string
+  zeitraum_bis: string
+  exportiert_am: string
+}
+
 export type EksBerechnenResult = {
   zeitraum_von: string
   zeitraum_bis: string
+  art: string
   felder: EksFeld[]
+  quelle: EksQuelle | null
 }
 
-export async function eksBerechnen(von: string, bis: string): Promise<EksBerechnenResult> {
-  return request<EksBerechnenResult>(`/eks/berechnen?von=${von}&bis=${bis}`)
+export async function eksBerechnen(von: string, bis: string, art: string): Promise<EksBerechnenResult> {
+  return request<EksBerechnenResult>(`/eks/berechnen?von=${von}&bis=${bis}&art=${art}`)
 }
 
 export async function eksPdfExport(params: {
