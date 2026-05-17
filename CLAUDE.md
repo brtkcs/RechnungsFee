@@ -120,8 +120,11 @@ sonst findet GitHub Actions die Workflow-Datei nicht.
 | 🐧 **Linux** (x86_64, versioniert) | [⬇ RechnungsFee_X.X.X_amd64.AppImage](.../RechnungsFee_X.X.X_amd64.AppImage) |
 | 🐧 **Linux** (x86_64, via install.sh) | [⬇ RechnungsFee_amd64.AppImage](.../RechnungsFee_amd64.AppImage) |
 | 🐧 **Linux** Installer | [⬇ install-linux.sh](.../install-linux.sh) |
+| 🍎 **macOS** (Apple Silicon, versioniert) | [⬇ RechnungsFee_X.X.X_aarch64.dmg](.../RechnungsFee_X.X.X_aarch64.dmg) |
+| 🍎 **macOS** (Apple Silicon) | [⬇ RechnungsFee_aarch64.dmg](.../RechnungsFee_aarch64.dmg) |
 ```
-Tauri verwendet Unterstriche und `amd64` (nicht Bindestriche/`x86_64`). Installer heißt `install-linux.sh`.
+Tauri verwendet Unterstriche und `amd64`/`aarch64` (nicht Bindestriche/`x86_64`). Installer heißt `install-linux.sh`.
+macOS: kein Apple-Zertifikat → Hinweis `xattr -cr` in Release-Notes ergänzen.
 
 ### Tauri Updater (`tauri-plugin-updater`)
 - Signing-Key lokal: `~/.tauri/rechnungsfee.key` (privat, nie committen!)
