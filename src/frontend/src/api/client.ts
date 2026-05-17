@@ -491,15 +491,13 @@ export async function eksPdfExport(params: {
   felder: Record<string, string>
 }): Promise<void> {
   const base = await getBaseUrl()
-  const res = await fetch(`${base}/eks/pdf`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+  const q = new URLSearchParams({
+    zeitraum_von: params.zeitraum_von,
+    zeitraum_bis: params.zeitraum_bis,
+    art: params.art,
+    felder: JSON.stringify(params.felder),
   })
-  if (!res.ok) throw new Error('EKS-PDF-Export fehlgeschlagen')
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
-  await openUrl(url)
+  await openUrl(`${base}/eks/pdf?${q}`)
 }
 
 // --- Export ---

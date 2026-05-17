@@ -183,9 +183,13 @@ def eks_berechnen(
     }
 
 
-@router.post("/pdf")
-def eks_pdf(req: EksPdfRequest, db: Session = Depends(get_db)):
-    """Generiert EKS-Zusammenfassung als PDF und speichert den Export."""
+def _eks_pdf_generieren(
+    zeitraum_von: date,
+    zeitraum_bis: date,
+    art: str,
+    felder: dict[str, str],
+    db: Session,
+) -> StreamingResponse:
     unt = db.query(Unternehmen).first()
     unt_dict: dict = {}
     if unt:
@@ -200,37 +204,48 @@ def eks_pdf(req: EksPdfRequest, db: Session = Depends(get_db)):
         }
 
     felder_mit_meta = [
-        {
-            "tabelle": t,
-            "code": code,
-            "label": label,
-            "auto": auto,
-            "wert": req.felder.get(code, "0.00"),
-        }
+        {"tabelle": t, "code": code, "label": label, "auto": auto, "wert": felder.get(code, "0.00")}
         for t, code, label, auto in EKS_FELDER_META
     ]
 
     pdf_bytes = generate_eks_pdf(
-        zeitraum_von=req.zeitraum_von,
-        zeitraum_bis=req.zeitraum_bis,
-        art=req.art,
+        zeitraum_von=zeitraum_von,
+        zeitraum_bis=zeitraum_bis,
+        art=art,
         felder=felder_mit_meta,
         unternehmen=unt_dict,
     )
 
-    # Export in DB speichern (abschliessende EKS als Basis für spätere Prognosen)
     eks_export = EksExport(
-        zeitraum_von=req.zeitraum_von,
-        zeitraum_bis=req.zeitraum_bis,
-        art=req.art,
-        daten_json=json.dumps({code: req.felder.get(code, "0.00") for _, code, _, _ in EKS_FELDER_META}),
+        zeitraum_von=zeitraum_von,
+        zeitraum_bis=zeitraum_bis,
+        art=art,
+        daten_json=json.dumps({code: felder.get(code, "0.00") for _, code, _, _ in EKS_FELDER_META}),
     )
     db.add(eks_export)
     db.commit()
 
-    dateiname = f"EKS_{req.zeitraum_von}_{req.zeitraum_bis}.pdf"
+    dateiname = f"EKS_{zeitraum_von}_{zeitraum_bis}.pdf"
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{dateiname}"'},
     )
+
+
+@router.get("/pdf")
+def eks_pdf_get(
+    zeitraum_von: date = Query(...),
+    zeitraum_bis: date = Query(...),
+    art: str = Query("abschliessend"),
+    felder: str = Query(...),   # JSON-kodiertes dict: {"A1":"100.00",...}
+    db: Session = Depends(get_db),
+):
+    """GET-Variante für direktes Öffnen per openUrl (Tauri-kompatibel)."""
+    return _eks_pdf_generieren(zeitraum_von, zeitraum_bis, art, json.loads(felder), db)
+
+
+@router.post("/pdf")
+def eks_pdf(req: EksPdfRequest, db: Session = Depends(get_db)):
+    """POST-Variante (API-Nutzung)."""
+    return _eks_pdf_generieren(req.zeitraum_von, req.zeitraum_bis, req.art, req.felder, db)
