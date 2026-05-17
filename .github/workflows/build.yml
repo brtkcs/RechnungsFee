@@ -363,6 +363,7 @@ jobs:
   # ── latest.json generieren + Release-Notes aktualisieren ──────────────────
   updater-json:
     needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
