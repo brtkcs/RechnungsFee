@@ -279,6 +279,9 @@ export function EksPage() {
                   {felderT.map((f) => {
                     const wert = werte[f.code] ?? '0'
                     const hatWert = Math.abs(parseFloat(wert) || 0) >= 0.005
+                    // Vorläufig + Vorjahresdaten vorhanden → alles kommt aus gespeicherten Exporten
+                    // Vorläufig + keine Vorjahresdaten → alles manuell (alles 0)
+                    const istAuto = art === 'vorlaeufig' ? quelle !== null : f.auto
                     return (
                       <div
                         key={f.code}
@@ -291,7 +294,7 @@ export function EksPage() {
                           {f.label}
                         </span>
                         <span className="text-center">
-                          {f.auto ? (
+                          {istAuto ? (
                             <span className="inline-block text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded px-1.5 py-0.5">
                               Auto
                             </span>
