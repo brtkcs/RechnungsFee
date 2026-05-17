@@ -175,7 +175,7 @@ def dsgvo_export_pdf(lieferant_id: int, db: Session = Depends(get_db)):
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
 
 
