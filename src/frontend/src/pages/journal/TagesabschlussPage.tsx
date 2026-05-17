@@ -414,7 +414,7 @@ export function TagesabschlussPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             Tagesabschlüsse
-            <InfoTooltip text="Der Tagesabschluss dokumentiert den Kassenstand am Tagesende. Er ist nach §146 AO für jeden Tag vorgeschrieben, an dem Bargeschäfte stattfanden, und nach dem Erstellen unveränderlich. Bei einer Betriebsprüfung dient er als lückenloser Nachweis." side="bottom" />
+            <InfoTooltip text="Der Tagesabschluss dokumentiert den Kassenstand am Tagesende. Er ist nach §146 AO und den GoBD für jeden Tag vorgeschrieben, an dem Bargeschäfte stattfanden, und nach dem Erstellen unveränderlich. Bei einer Betriebsprüfung dient er als lückenloser Nachweis." side="bottom" />
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {abschluesse.length > 0
