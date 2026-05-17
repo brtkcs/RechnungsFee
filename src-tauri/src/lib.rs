@@ -2,7 +2,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 
 /// Globaler State: wurde das Schließen vom User bestätigt?
 struct CloseConfirmed(AtomicBool);
@@ -150,9 +150,35 @@ pub fn run() {
                 .expect("Backend-Sidecar nicht gefunden")
                 .args(["--port", &port.to_string()]);
 
-            let (_rx, child) = sidecar_cmd
+            let (rx, child) = sidecar_cmd
                 .spawn()
                 .expect("Backend-Sidecar konnte nicht gestartet werden");
+
+            // Backend-Output in separatem Task loggen – so sehen wir Crashes und Fehler
+            tauri::async_runtime::spawn(async move {
+                let mut rx = rx;
+                while let Some(event) = rx.recv().await {
+                    match event {
+                        CommandEvent::Stdout(bytes) => {
+                            log::info!("[Backend] {}", String::from_utf8_lossy(&bytes).trim_end());
+                        }
+                        CommandEvent::Stderr(bytes) => {
+                            log::warn!("[Backend] {}", String::from_utf8_lossy(&bytes).trim_end());
+                        }
+                        CommandEvent::Error(e) => {
+                            log::error!("[Backend] Fehler: {}", e);
+                        }
+                        CommandEvent::Terminated(payload) => {
+                            log::warn!(
+                                "[Backend] Prozess beendet – Exit-Code: {:?}, Signal: {:?}",
+                                payload.code,
+                                payload.signal
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            });
 
             app.manage(BackendChild(Mutex::new(Some(child))));
             app.manage(CloseConfirmed(AtomicBool::new(false)));
