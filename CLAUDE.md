@@ -114,6 +114,15 @@ sonst findet GitHub Actions die Workflow-Datei nicht.
 - Ergebnis: Draft-Release mit `.AppImage`, `.msi`, `.dmg` (arm64+x64), `latest.json`
 - Release manuell auf GitHub veröffentlichen → erst dann ist Updater aktiv
 
+### Release-Notes Download-Tabelle – echte Dateinamen (Tauri-Namensschema)
+```markdown
+| 🪟 **Windows** (x64) | [⬇ RechnungsFee_X.X.X_x64-setup.exe](.../RechnungsFee_X.X.X_x64-setup.exe) |
+| 🐧 **Linux** (x86_64, versioniert) | [⬇ RechnungsFee_X.X.X_amd64.AppImage](.../RechnungsFee_X.X.X_amd64.AppImage) |
+| 🐧 **Linux** (x86_64, via install.sh) | [⬇ RechnungsFee_amd64.AppImage](.../RechnungsFee_amd64.AppImage) |
+| 🐧 **Linux** Installer | [⬇ install-linux.sh](.../install-linux.sh) |
+```
+Tauri verwendet Unterstriche und `amd64` (nicht Bindestriche/`x86_64`). Installer heißt `install-linux.sh`.
+
 ### Tauri Updater (`tauri-plugin-updater`)
 - Signing-Key lokal: `~/.tauri/rechnungsfee.key` (privat, nie committen!)
 - Public Key in `src-tauri/tauri.conf.json` unter `plugins.updater.pubkey`
