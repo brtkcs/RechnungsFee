@@ -166,12 +166,12 @@ export function JournalPage() {
         <select
           value={art}
           onChange={(e) => setArt(e.target.value as '' | 'Einnahme' | 'Ausgabe')}
-          className={`rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 border transition-colors dark:bg-slate-700 dark:text-slate-100 ${
+          className={`rounded-lg px-3 py-1.5 text-sm focus:outline-none border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 transition-shadow ${
             art === 'Einnahme'
-              ? 'border-green-500 bg-green-50 text-green-800 focus:ring-green-400 dark:bg-green-900/20 dark:border-green-500 dark:text-green-300'
+              ? 'ring-2 ring-green-500'
               : art === 'Ausgabe'
-              ? 'border-red-500 bg-red-50 text-red-800 focus:ring-red-400 dark:bg-red-900/20 dark:border-red-500 dark:text-red-300'
-              : 'border-slate-300 dark:border-slate-600 focus:ring-blue-500'
+              ? 'ring-2 ring-red-500'
+              : 'focus:ring-2 focus:ring-blue-500'
           }`}
         >
           <option value="">Alle Arten</option>
@@ -183,10 +183,10 @@ export function JournalPage() {
         <select
           value={kategorieId}
           onChange={(e) => setKategorieId(e.target.value)}
-          className={`rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 border transition-colors dark:bg-slate-700 dark:text-slate-100 ${
+          className={`rounded-lg px-3 py-1.5 text-sm focus:outline-none border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 transition-shadow ${
             kategorieId !== ''
-              ? 'border-blue-500 bg-blue-50 text-blue-800 focus:ring-blue-400 dark:bg-blue-900/20 dark:border-blue-500 dark:text-blue-300'
-              : 'border-slate-300 dark:border-slate-600 focus:ring-blue-500'
+              ? 'ring-2 ring-blue-500'
+              : 'focus:ring-2 focus:ring-blue-500'
           }`}
         >
           <option value="">Alle Kategorien</option>
@@ -199,10 +199,10 @@ export function JournalPage() {
         <select
           value={zahlungsartTyp}
           onChange={(e) => setZahlungsartTyp(e.target.value as '' | 'bar' | 'unbar')}
-          className={`rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 border transition-colors dark:bg-slate-700 dark:text-slate-100 ${
+          className={`rounded-lg px-3 py-1.5 text-sm focus:outline-none border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 transition-shadow ${
             zahlungsartTyp !== ''
-              ? 'border-blue-500 bg-blue-50 text-blue-800 focus:ring-blue-400 dark:bg-blue-900/20 dark:border-blue-500 dark:text-blue-300'
-              : 'border-slate-300 dark:border-slate-600 focus:ring-blue-500'
+              ? 'ring-2 ring-blue-500'
+              : 'focus:ring-2 focus:ring-blue-500'
           }`}
         >
           <option value="">Bar &amp; Unbar</option>
