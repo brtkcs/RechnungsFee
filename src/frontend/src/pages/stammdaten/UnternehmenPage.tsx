@@ -316,6 +316,30 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
           </div>
         </label>
 
+        {form.bezieht_transferleistungen && (
+          <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 space-y-4">
+            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
+              Angaben für Anlage EKS (Jobcenter-Formular)
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Geburtsdatum">
+                <input
+                  type="date"
+                  value={form.geburtsdatum ?? ''}
+                  onChange={ev => set('geburtsdatum', ev.target.value || null)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label={<>BG-Nummer <InfoTooltip text="Nummer der Bedarfsgemeinschaft aus deinem Bewilligungsbescheid des Jobcenters." /></>}>
+                {inp('bg_nummer', 'z.B. 12345678')}
+              </Field>
+            </div>
+            <Field label="Jobcenter">
+              {inp('jobcenter_name', 'z.B. Jobcenter Berlin-Mitte')}
+            </Field>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <Field label={<>Versteuerungsart <InfoTooltip text="Ist-Versteuerung: USt wird fällig wenn der Kunde zahlt. Soll-Versteuerung: USt ist bereits bei Rechnungsstellung fällig. Für die meisten Freiberufler und Kleinunternehmer gilt die Ist-Versteuerung – sie muss einmalig beim Finanzamt beantragt werden." /></>}>
             <select

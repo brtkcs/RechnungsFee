@@ -55,6 +55,10 @@ class Unternehmen(Base):
     # Status
     ist_kleinunternehmer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     bezieht_transferleistungen: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Bürgergeld / Transferleistungen (für Anlage EKS)
+    geburtsdatum: Mapped[date | None] = mapped_column(Date)
+    bg_nummer: Mapped[str | None] = mapped_column(String(50))       # Bedarfsgemeinschaftsnummer
+    jobcenter_name: Mapped[str | None] = mapped_column(String(200)) # z.B. "Jobcenter Berlin-Mitte"
     # Buchführung
     versteuerungsart: Mapped[str] = mapped_column(String(4), default="ist", nullable=False)  # ist|soll
     kontenrahmen: Mapped[str] = mapped_column(String(10), default="SKR03", nullable=False)  # SKR03|SKR04|SKR49

@@ -27,6 +27,9 @@ class UnternehmenBase(BaseModel):
     finanzamt: Optional[str] = None
     ist_kleinunternehmer: bool = False
     bezieht_transferleistungen: bool = False
+    geburtsdatum: Optional[date] = None
+    bg_nummer: Optional[str] = None
+    jobcenter_name: Optional[str] = None
     versteuerungsart: str = "ist"
     kontenrahmen: str = "SKR03"
     taetigkeitsart: str = "freiberuflich"

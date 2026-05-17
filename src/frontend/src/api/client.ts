@@ -122,6 +122,9 @@ export type Unternehmen = {
   finanzamt?: string
   ist_kleinunternehmer: boolean
   bezieht_transferleistungen: boolean
+  geburtsdatum?: string | null
+  bg_nummer?: string | null
+  jobcenter_name?: string | null
   versteuerungsart: 'ist' | 'soll'
   kontenrahmen: 'SKR03' | 'SKR04' | 'SKR49'
   taetigkeitsart: string
