@@ -465,30 +465,55 @@ def _run_migrations() -> None:
         if version < 22:
             # konten-Tabelle neu aufbauen: kontoart + kennung ergänzen, IBAN nullable,
             # Spalte bank → anbieter umbenennen, privat aus kontotyp entfernen
-            conn.execute(text("""
-                CREATE TABLE konten_new (
-                    id          INTEGER PRIMARY KEY,
-                    name        VARCHAR(100) NOT NULL,
-                    anbieter    VARCHAR(100) NOT NULL,
-                    kontoart    VARCHAR(30)  NOT NULL DEFAULT 'bank',
-                    iban        VARCHAR(34),
-                    bic         VARCHAR(11),
-                    kennung     VARCHAR(200),
-                    kontotyp    VARCHAR(20)  NOT NULL DEFAULT 'geschaeftlich',
-                    ist_standard BOOLEAN     NOT NULL DEFAULT 0,
-                    aktiv       BOOLEAN      NOT NULL DEFAULT 1,
-                    erstellt_am DATETIME     DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
-                )
-            """))
-            conn.execute(text("""
-                INSERT INTO konten_new (id, name, anbieter, kontoart, iban, bic, kontotyp, ist_standard, aktiv, erstellt_am)
-                SELECT id, name, bank, 'bank', iban, bic,
-                    CASE WHEN kontotyp = 'privat' THEN 'mischkonto' ELSE kontotyp END,
-                    ist_standard, aktiv, erstellt_am
-                FROM konten
-            """))
-            conn.execute(text("DROP TABLE konten"))
-            conn.execute(text("ALTER TABLE konten_new RENAME TO konten"))
+            tables = {r[0] for r in conn.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )).fetchall()}
+            konten_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(konten)")).fetchall()} \
+                if "konten" in tables else set()
+            if "bank" in konten_cols:
+                # Alte Schema-Version: bank → anbieter, kontoart + kennung ergänzen
+                conn.execute(text("""
+                    CREATE TABLE konten_new (
+                        id          INTEGER PRIMARY KEY,
+                        name        VARCHAR(100) NOT NULL,
+                        anbieter    VARCHAR(100) NOT NULL,
+                        kontoart    VARCHAR(30)  NOT NULL DEFAULT 'bank',
+                        iban        VARCHAR(34),
+                        bic         VARCHAR(11),
+                        kennung     VARCHAR(200),
+                        kontotyp    VARCHAR(20)  NOT NULL DEFAULT 'geschaeftlich',
+                        ist_standard BOOLEAN     NOT NULL DEFAULT 0,
+                        aktiv       BOOLEAN      NOT NULL DEFAULT 1,
+                        erstellt_am DATETIME     DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
+                    )
+                """))
+                conn.execute(text("""
+                    INSERT INTO konten_new (id, name, anbieter, kontoart, iban, bic, kontotyp, ist_standard, aktiv, erstellt_am)
+                    SELECT id, name, bank, 'bank', iban, bic,
+                        CASE WHEN kontotyp = 'privat' THEN 'mischkonto' ELSE kontotyp END,
+                        ist_standard, aktiv, erstellt_am
+                    FROM konten
+                """))
+                conn.execute(text("DROP TABLE konten"))
+                conn.execute(text("ALTER TABLE konten_new RENAME TO konten"))
+            elif "konten" not in tables:
+                # Ganz alte DB ohne konten-Tabelle: frisch anlegen
+                conn.execute(text("""
+                    CREATE TABLE konten (
+                        id          INTEGER PRIMARY KEY,
+                        name        VARCHAR(100) NOT NULL,
+                        anbieter    VARCHAR(100) NOT NULL,
+                        kontoart    VARCHAR(30)  NOT NULL DEFAULT 'bank',
+                        iban        VARCHAR(34),
+                        bic         VARCHAR(11),
+                        kennung     VARCHAR(200),
+                        kontotyp    VARCHAR(20)  NOT NULL DEFAULT 'geschaeftlich',
+                        ist_standard BOOLEAN     NOT NULL DEFAULT 0,
+                        aktiv       BOOLEAN      NOT NULL DEFAULT 1,
+                        erstellt_am DATETIME     DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
+                    )
+                """))
+            # else: Tabelle existiert bereits mit neuem Schema (create_all) → nur Index + Version
             conn.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS uix_konten_iban ON konten(iban) WHERE iban IS NOT NULL"
             ))
