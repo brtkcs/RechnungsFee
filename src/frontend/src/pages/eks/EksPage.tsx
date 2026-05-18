@@ -39,11 +39,6 @@ const TABELLEN_FARBE: Record<string, string> = {
   B: 'bg-orange-500',
   C: 'bg-violet-600',
 }
-const TABELLEN_RAND: Record<string, string> = {
-  A: 'border-emerald-200 dark:border-emerald-800',
-  B: 'border-orange-200 dark:border-orange-800',
-  C: 'border-violet-200 dark:border-violet-800',
-}
 
 // ---------------------------------------------------------------------------
 // Tabellen-Matrix (A und B)
@@ -56,7 +51,7 @@ function MatrixTabelle({
   felder: EksFeld[]
   res: EksHalbjahr
 }) {
-  const { monate, werte, spaltensummen_a, spaltensummen_b, zeilensummen } = res
+  const { monate, werte, spaltensummen_a, spaltensummen_b } = res
   const spaltensummen = tabelle === 'A' ? spaltensummen_a : spaltensummen_b
   const gesamt = felder.reduce((s, f) => s + zeilenSumme(res, f.code), 0)
 

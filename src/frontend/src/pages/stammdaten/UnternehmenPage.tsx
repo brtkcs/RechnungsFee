@@ -326,7 +326,7 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
                 <input
                   type="date"
                   value={form.geburtsdatum ?? ''}
-                  onChange={ev => set('geburtsdatum', ev.target.value || null)}
+                  onChange={ev => set('geburtsdatum', ev.target.value)}
                   className={inputCls}
                 />
               </Field>
