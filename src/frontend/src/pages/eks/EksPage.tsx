@@ -498,7 +498,7 @@ export function EksPage() {
             <p className="text-xs text-amber-800 dark:text-amber-300">
               <strong>Hinweis:</strong> Alle Beträge stammen ausschließlich aus deinen Journalbuchungen.
               Felder ohne Buchung zeigen 0,00 €.
-              Dieses Dokument ersetzt nicht das offizielle EKS-Formular des Jobcenters – es dient als Arbeitshilfe.
+              Das erzeugte PDF ist ein vollständiger Formularnachbau des offiziellen EKS-Formulars des Jobcenters und ersetzt dieses – entbindet aber nicht von der Pflicht, alle Angaben auf Richtigkeit und Vollständigkeit zu prüfen.
               Das ✓ in der Summen-Spalte zeigt, dass Zeilen- und Spaltensummen übereinstimmen (Kreuzprüfung).
             </p>
           </div>
