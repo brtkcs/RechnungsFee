@@ -210,6 +210,11 @@ export type Kategorie = {
   id: number
   name: string
   kontenart: string
+  konto_skr03?: string
+  konto_skr04?: string
+  konto_skr49?: string
+  eks_kategorie?: string
+  euer_zeile?: number
   vorsteuer_prozent: string
   ust_satz_standard: number
   ist_system: boolean
