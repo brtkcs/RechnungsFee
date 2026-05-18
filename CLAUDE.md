@@ -124,8 +124,6 @@ sonst findet GitHub Actions die Workflow-Datei nicht.
 | 🐧 **Linux** Installer | [⬇ install-linux.sh](.../install-linux.sh) |
 | 🍎 **macOS** (Apple Silicon, versioniert) | [⬇ RechnungsFee_X.X.X_aarch64.dmg](.../RechnungsFee_X.X.X_aarch64.dmg) |
 | 🍎 **macOS** (Apple Silicon) | [⬇ RechnungsFee_aarch64.dmg](.../RechnungsFee_aarch64.dmg) |
-| 🍎 **macOS** (Intel x64, versioniert) | [⬇ RechnungsFee_X.X.X_x64.dmg](.../RechnungsFee_X.X.X_x64.dmg) |
-| 🍎 **macOS** (Intel x64) | [⬇ RechnungsFee_x64.dmg](.../RechnungsFee_x64.dmg) |
 ```
 Tauri verwendet Unterstriche und `amd64`/`aarch64` (nicht Bindestriche/`x86_64`). Installer heißt `install-linux.sh`.
 macOS: kein Apple-Zertifikat → Hinweis `xattr -cr` in Release-Notes ergänzen.
