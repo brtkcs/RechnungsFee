@@ -104,7 +104,7 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 - [ ] Vorlagen-Tabelle: Betrag, Kategorie, Intervall (monatlich/quartalsweise/jährlich), nächstes Fälligkeitsdatum
 - [ ] Beim App-Start: Hinweis auf fällige Buchungen („3 Buchungen bereit")
-- [ ] Ein-Klick-Bestätigung → Journaleintrag wird erstellt, nächstes Fälligkeitsdatum rückt vor
+- [ ] Ein-Klick-Bestätigung → Buchung wird als **unbezahlt** angelegt (Zahlungsstatus offen); Bank-Import (v0.3) matcht und schließt sie ab
 - [ ] Vorlagen verwalten (anlegen, pausieren, löschen)
 
 ---
