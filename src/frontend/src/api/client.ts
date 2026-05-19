@@ -70,10 +70,6 @@ export async function getApiBase(): Promise<string> {
   return getBaseUrl()
 }
 
-function _isLinux(): boolean {
-  return navigator.userAgent.includes('Linux') && !navigator.userAgent.includes('Android')
-}
-
 /** Öffnet eine URL in Tauri per Shell-Plugin (Systembrowser), im Browser per window.open. */
 export async function openUrl(url: string) {
   if (isTauri()) {
