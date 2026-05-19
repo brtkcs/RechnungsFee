@@ -23,6 +23,44 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.1',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Beleganhang für Eingangsrechnungen – PDF, JPG oder PNG direkt an eine Eingangsrechnung anhängen, im eingebetteten Viewer öffnen und bei Bedarf löschen; SHA256-Hash wird für die GoBD-Nachweisbarkeit gespeichert' },
+      { typ: 'fix', text: 'PDF-Doppelöffnung behoben – auf Windows öffnete ein Klick auf eine lokale Datei gleichzeitig den Systembrowser und Acrobat; lokale Dokumente werden jetzt plattformübergreifend (Windows, Linux, macOS) im eingebetteten Viewer angezeigt' },
+    ],
+  },
+  {
+    version: 'v0.1.67',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Bankkonten-Verwaltung in Stammdaten – Konten anlegen, bearbeiten und löschen; Unterscheidung zwischen Bankkonto und Zahlungsdienstleister (PayPal, Stripe usw.) mit IBAN, BIC, Kontoinhaber und Notizfeld' },
+      { typ: 'neu', text: 'Kontoart-Unterscheidung – Bankkonto (IBAN Pflicht) vs. Zahlungsdienstleister (Kennung statt IBAN); Partial Unique Index verhindert doppelte Einträge' },
+      { typ: 'neu', text: 'Kategorien-Übersicht in Stammdaten – alle Buchungskategorien auf einen Blick mit EÜR-Zuordnung, USt-Satz und EKS-Kategorie; Inline-Bearbeitung direkt in der Tabelle' },
+    ],
+  },
+  {
+    version: 'v0.1.65',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'verbesserung', text: 'Anlage EKS: vollständiger 9-seitiger Formular-Nachbau nach offiziellem Jobcenter-Formular 04/2025 – Tabellen A/B/C, Abschnitte D/F/Seite 9, Übertrag zwischen Tabellenteilen, Textumbrüche in Zellen' },
+      { typ: 'neu', text: 'EKS: Persistente Formularfelder (Abschnitte D, F 23–41, Seite 9 52–58) per Modal – Eingaben bleiben über Sitzungen hinweg gespeichert' },
+      { typ: 'fix', text: 'EKS: Auto/Manuell-Badge bei vorläufiger EKS korrekt gesetzt; EKS-PDF öffnet sich zuverlässig im Inline-Viewer' },
+    ],
+  },
+  {
+    version: 'v0.1.64',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Anlage EKS – Einkommenserklärung für Selbstständige (Jobcenter / Bürgergeld): abschließend (summiert Journalbuchungen nach EKS-Kategorie) und vorläufig (Halbjahres-Prognose aus Vorjahresdaten); PDF-Export; nur sichtbar wenn Transferleistungen aktiviert' },
+      { typ: 'neu', text: 'DSGVO-Datenauskunft als PDF-Export – strukturierter Bericht mit allen gespeicherten Daten zu einem Kunden oder Lieferanten (Art. 15 DSGVO)' },
+      { typ: 'fix', text: 'Tagesabschluss-Saldo berücksichtigt jetzt alle Buchungen seit dem letzten Abschluss (nicht nur den aktuellen Tag)' },
+      { typ: 'fix', text: 'Dashboard-Statistik schließt Privateinlagen und -entnahmen aus – nur betriebliche Buchungen fließen in Einnahmen/Ausgaben ein' },
+      { typ: 'fix', text: 'Benutzerdefinierte USt-Sätze werden bei Rechnungen und Journal-Buchungen jetzt akzeptiert' },
+      { typ: 'fix', text: 'Journal-Filter: Highlighting und Reset-Button; Zahlungsart als Select mit farbiger Markierung wenn aktiv' },
+    ],
+  },
+  {
     version: 'v0.1.63',
     datum: 'Mai 2026',
     eintraege: [
