@@ -562,6 +562,37 @@ export const updateNummernkreis = (id: number, data: Partial<Nummernkreis>) =>
 export const getNummernkreisVorschau = (id: number, format: string) =>
   request<{ vorschau: string }>(`/nummernkreise/vorschau/${id}?format=${encodeURIComponent(format)}`)
 
+// --- Belege ---
+export type Beleg = {
+  id: number
+  dateiname: string
+  original_name: string
+  mime_type: string | null
+  dateigroesse: number | null
+  sha256: string | null
+  hochgeladen_am: string
+}
+
+export async function uploadBeleg(rechnungId: number, datei: File): Promise<Beleg> {
+  const base = await getBaseUrl()
+  const form = new FormData()
+  form.append('datei', datei)
+  const res = await fetch(`${base}/rechnungen/${rechnungId}/beleg`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail ?? 'Beleg-Upload fehlgeschlagen')
+  }
+  return res.json()
+}
+
+export async function getBelegUrl(rechnungId: number): Promise<string> {
+  const base = await getBaseUrl()
+  return `${base}/rechnungen/${rechnungId}/beleg`
+}
+
+export const deleteBeleg = (rechnungId: number) =>
+  request<void>(`/rechnungen/${rechnungId}/beleg`, { method: 'DELETE' })
+
 // --- Rechnungen ---
 export type Rechnungsposition = {
   id: number
@@ -623,6 +654,7 @@ export type Rechnung = {
   externe_belegnr: string | null
   positionen: Rechnungsposition[]
   zahlungen: ZahlungKompakt[]
+  beleg: Beleg | null
   ist_entwurf: boolean
   ausgegeben: boolean
   immutable: boolean

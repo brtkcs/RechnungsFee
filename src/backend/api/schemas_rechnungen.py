@@ -10,6 +10,22 @@ from pydantic import BaseModel, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
+# Beleg
+# ---------------------------------------------------------------------------
+
+class BelegResponse(BaseModel):
+    id: int
+    dateiname: str
+    original_name: str
+    mime_type: Optional[str]
+    dateigroesse: Optional[int]
+    sha256: Optional[str]
+    hochgeladen_am: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
 # Rechnungspositionen
 # ---------------------------------------------------------------------------
 
@@ -158,6 +174,7 @@ class RechnungResponse(BaseModel):
     ausgegeben: bool
     positionen: List[RechnungspositionResponse] = []
     zahlungen: List[ZahlungKompakt] = []
+    beleg: Optional[BelegResponse] = None
     immutable: bool
     storniert: bool
     erstellt_am: datetime
@@ -190,6 +207,8 @@ class RechnungResponse(BaseModel):
             )
             for e in obj.journaleintraege
         ]
+        if obj.beleg_id and hasattr(obj, "beleg") and obj.beleg:
+            data.beleg = BelegResponse.model_validate(obj.beleg)
         return data
 
 

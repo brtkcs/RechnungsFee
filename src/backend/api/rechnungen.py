@@ -2,18 +2,22 @@
 Rechnungen-API (Eingang + Ausgang) mit Journal-Verknüpfung.
 """
 
+import hashlib
+import shutil
+import uuid
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 
-from database.connection import get_db
+from database.connection import get_db, APP_DATA_DIR
 from database.models import (
-    Rechnung, Rechnungsposition, Journaleintrag,
+    Beleg, Rechnung, Rechnungsposition, Journaleintrag,
     Kategorie, Unternehmen, Nummernkreis,
 )
 from utils.signatur import signatur_journaleintrag
@@ -21,9 +25,12 @@ from utils.pdf_rechnung import generate_rechnung_pdf
 from utils.pdf_rechnung_vorlage1 import generate_rechnung_pdf_vorlage1
 from utils.zugferd import generate_zugferd_pdf
 from .schemas_rechnungen import (
-    RechnungCreate, RechnungUpdate, RechnungResponse,
+    BelegResponse, RechnungCreate, RechnungUpdate, RechnungResponse,
     BarZahlungCreate, BarZahlungResult, ZahlungKompakt,
 )
+
+BELEG_DIR = APP_DATA_DIR / "uploads" / "belege"
+ERLAUBTE_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/tiff"}
 
 router = APIRouter(prefix="/api/rechnungen", tags=["Rechnungen"])
 
@@ -702,3 +709,92 @@ def get_rechnung_zahlungen(rechnung_id: int, db: Session = Depends(get_db)):
         )
         for e in rechnung.journaleintraege
     ]
+
+
+# ---------------------------------------------------------------------------
+# Beleg-Upload / Download / Löschen
+# ---------------------------------------------------------------------------
+
+@router.post("/{rechnung_id}/beleg", response_model=BelegResponse, status_code=201)
+async def upload_beleg(rechnung_id: int, datei: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Dateianhang (PDF/Bild) an eine Rechnung hängen."""
+    rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
+    if not rechnung:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
+
+    mime = datei.content_type or ""
+    if mime not in ERLAUBTE_MIME_TYPES:
+        raise HTTPException(status_code=422, detail=f"Dateityp '{mime}' nicht erlaubt. Erlaubt: PDF, JPEG, PNG, TIFF.")
+
+    inhalt = await datei.read()
+    sha256 = hashlib.sha256(inhalt).hexdigest()
+
+    jetzt = datetime.now()
+    ziel_dir = BELEG_DIR / str(jetzt.year) / jetzt.strftime("%m")
+    ziel_dir.mkdir(parents=True, exist_ok=True)
+
+    original = Path(datei.filename or "beleg")
+    stem = original.stem[:50]
+    suffix = original.suffix.lower() or ".bin"
+    dateiname_lokal = f"{stem}_{uuid.uuid4().hex[:8]}{suffix}"
+    rel_pfad = f"belege/{jetzt.year}/{jetzt.strftime('%m')}/{dateiname_lokal}"
+
+    (ziel_dir / dateiname_lokal).write_bytes(inhalt)
+
+    # Alten Beleg ersetzen wenn vorhanden
+    if rechnung.beleg_id:
+        alter_beleg = db.query(Beleg).filter(Beleg.id == rechnung.beleg_id).first()
+        if alter_beleg:
+            alter_pfad = APP_DATA_DIR / "uploads" / alter_beleg.dateiname
+            if alter_pfad.exists():
+                alter_pfad.unlink()
+            db.delete(alter_beleg)
+
+    beleg = Beleg(
+        dateiname=rel_pfad,
+        original_name=datei.filename or "beleg",
+        mime_type=mime,
+        dateigroesse=len(inhalt),
+        sha256=sha256,
+    )
+    db.add(beleg)
+    db.flush()
+    rechnung.beleg_id = beleg.id
+    db.commit()
+    db.refresh(beleg)
+    return beleg
+
+
+@router.get("/{rechnung_id}/beleg")
+def download_beleg(rechnung_id: int, db: Session = Depends(get_db)):
+    """Angehängte Datei einer Rechnung herunterladen."""
+    rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
+    if not rechnung or not rechnung.beleg_id:
+        raise HTTPException(status_code=404, detail="Kein Beleg vorhanden.")
+    beleg = db.query(Beleg).filter(Beleg.id == rechnung.beleg_id).first()
+    if not beleg:
+        raise HTTPException(status_code=404, detail="Beleg-Datensatz nicht gefunden.")
+    pfad = APP_DATA_DIR / "uploads" / beleg.dateiname
+    if not pfad.exists():
+        raise HTTPException(status_code=404, detail="Beleg-Datei nicht gefunden.")
+    return FileResponse(
+        path=str(pfad),
+        media_type=beleg.mime_type or "application/octet-stream",
+        filename=beleg.original_name,
+    )
+
+
+@router.delete("/{rechnung_id}/beleg", status_code=204)
+def delete_beleg(rechnung_id: int, db: Session = Depends(get_db)):
+    """Beleg von einer Rechnung entfernen und Datei löschen."""
+    rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
+    if not rechnung or not rechnung.beleg_id:
+        raise HTTPException(status_code=404, detail="Kein Beleg vorhanden.")
+    beleg = db.query(Beleg).filter(Beleg.id == rechnung.beleg_id).first()
+    rechnung.beleg_id = None
+    if beleg:
+        pfad = APP_DATA_DIR / "uploads" / beleg.dateiname
+        if pfad.exists():
+            pfad.unlink()
+        db.delete(beleg)
+    db.commit()

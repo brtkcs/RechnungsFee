@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 22
+SCHEMA_VERSION = 23
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -520,6 +520,29 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 22"))
             conn.commit()
             print("[Migration] Schema auf Version 22 gebracht (konten: kontoart, kennung, IBAN nullable)")
+
+        if version < 23:
+            # belege-Tabelle anlegen, beleg_id-FK zu rechnungen und journal
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS belege (
+                    id           INTEGER PRIMARY KEY,
+                    dateiname    VARCHAR(500) NOT NULL,
+                    original_name VARCHAR(255) NOT NULL,
+                    mime_type    VARCHAR(100),
+                    dateigroesse INTEGER,
+                    sha256       VARCHAR(64),
+                    hochgeladen_am TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            rechnungen_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "beleg_id" not in rechnungen_cols:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN beleg_id INTEGER REFERENCES belege(id)"))
+            journal_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(journal)")).fetchall()}
+            if "beleg_id" not in journal_cols:
+                conn.execute(text("ALTER TABLE journal ADD COLUMN beleg_id INTEGER REFERENCES belege(id)"))
+            conn.execute(text("PRAGMA user_version = 23"))
+            conn.commit()
+            print("[Migration] Schema auf Version 23 gebracht (belege-Tabelle, beleg_id in rechnungen + journal)")
 
 
 def _migrate_kategorien() -> None:

@@ -193,6 +193,7 @@ class Journaleintrag(Base):
     vorsteuerabzug: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     steuerbefreiung_grund: Mapped[str | None] = mapped_column(String(100))  # z.B. "§19 UStG"
     rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))
+    beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id"))
     # GoBD
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     signatur: Mapped[str | None] = mapped_column(String(64))
@@ -326,6 +327,23 @@ class Artikel(Base):
 
 
 # ---------------------------------------------------------------------------
+# Belege (Dateianhänge an Rechnungen und Journaleinträge)
+# ---------------------------------------------------------------------------
+
+class Beleg(Base):
+    """Dateianhang (PDF, Bild) – verknüpfbar mit Rechnungen und Journaleinträgen."""
+    __tablename__ = "belege"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    dateiname: Mapped[str] = mapped_column(String(500), nullable=False)         # relativer Pfad im uploads-Verzeichnis
+    original_name: Mapped[str] = mapped_column(String(255), nullable=False)     # Dateiname beim Upload
+    mime_type: Mapped[str | None] = mapped_column(String(100))
+    dateigroesse: Mapped[int | None] = mapped_column(Integer)                   # Bytes
+    sha256: Mapped[str | None] = mapped_column(String(64))                      # GoBD: Unveränderlichkeit prüfbar
+    hochgeladen_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+# ---------------------------------------------------------------------------
 # Rechnungen
 # ---------------------------------------------------------------------------
 
@@ -370,6 +388,7 @@ class Rechnung(Base):
     # Dateianhang
     datei_pfad: Mapped[str | None] = mapped_column(String(500))
     datei_name: Mapped[str | None] = mapped_column(String(200))
+    beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id"))
     notizen: Mapped[str | None] = mapped_column(Text)
     externe_belegnr: Mapped[str | None] = mapped_column(String(100))  # Lieferanten-Rechnungsnr. (nur Eingang)
     leistungsdatum: Mapped[date | None] = mapped_column(Date)
@@ -384,6 +403,7 @@ class Rechnung(Base):
     kunde: Mapped["Kunde | None"] = relationship(back_populates="rechnungen")
     lieferant: Mapped["Lieferant | None"] = relationship(back_populates="rechnungen")
     kategorie: Mapped["Kategorie | None"] = relationship(back_populates="rechnungen")
+    beleg: Mapped["Beleg | None"] = relationship(foreign_keys=[beleg_id])
     positionen: Mapped[list["Rechnungsposition"]] = relationship(back_populates="rechnung", cascade="all, delete-orphan")
     anlagegueter: Mapped[list["Anlagegut"]] = relationship(back_populates="rechnung")
     journaleintraege: Mapped[list["Journaleintrag"]] = relationship(back_populates="rechnung")

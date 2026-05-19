@@ -87,6 +87,8 @@ def _run_migrations():
 | 19 | Unique-Indizes uix_kunden_kundennummer + uix_lieferanten_lieferantennummer (WHERE NOT NULL) |
 | 20 | unternehmen (geburtsdatum DATE, bg_nummer VARCHAR(50), jobcenter_name VARCHAR(200)) – Pflichtfelder für Anlage EKS bei Transferleistungen |
 | 21 | eks_einstellungen-Tabelle (Singleton id=1): persistente Formularfelder Abschnitt D / F 23–41 / Seite 9 52–58 |
+| 22 | konten-Tabelle neu aufgebaut: bank → anbieter, neue Felder kontoart + kennung, IBAN nullable, Partial Unique Index |
+| 23 | belege-Tabelle (id, dateiname, original_name, mime_type, dateigroesse, sha256, hochgeladen_am); beleg_id FK in rechnungen + journal |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
