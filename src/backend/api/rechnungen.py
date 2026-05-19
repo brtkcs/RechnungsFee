@@ -781,6 +781,7 @@ def download_beleg(rechnung_id: int, db: Session = Depends(get_db)):
         path=str(pfad),
         media_type=beleg.mime_type or "application/octet-stream",
         filename=beleg.original_name,
+        content_disposition_type="inline",
     )
 
 
