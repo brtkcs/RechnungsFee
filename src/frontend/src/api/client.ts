@@ -78,9 +78,9 @@ function _isLinux(): boolean {
 export async function openUrl(url: string) {
   if (isTauri()) {
     const isLocal = url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')
-    if (isLocal && _isLinux()) {
-      // Linux AppImage: xdg-open öffnet lokale HTTP-URLs nicht zuverlässig.
-      // Stattdessen: DOM-Event → App.tsx zeigt PDF/Dokument in eingebettetem iframe.
+    if (isLocal) {
+      // Lokale Dokumente immer im eingebetteten Inline-Viewer anzeigen (App.tsx iframe).
+      // Verhindert doppeltes Öffnen (Systembrowser + Acrobat) auf Windows und macOS.
       window.dispatchEvent(new CustomEvent('rechnungsfee:inline-viewer', { detail: { url } }))
       return
     }
