@@ -67,7 +67,11 @@ Einkommenserklärung für Selbstständige (Jobcenter / Bürgergeld).
 
 ---
 
-## v0.2 – Bank-Import *(Ziel: Juni 2026)*
+## v0.2 – *(frei)*
+
+---
+
+## v0.3 – Bank-Import *(Ziel: Juni 2026)*
 
 CSV-Import von Kontoauszügen, automatisches Matching.
 
@@ -79,7 +83,7 @@ CSV-Import von Kontoauszügen, automatisches Matching.
 
 ---
 
-## v0.3 – Auswertungen *(Ziel: August 2026)*
+## v0.4 – Auswertungen *(Ziel: August 2026)*
 
 Steuerliche Auswertungen für Finanzamt und Steuerberater.
 
@@ -91,7 +95,7 @@ Steuerliche Auswertungen für Finanzamt und Steuerberater.
 
 ---
 
-## v0.4 – Eingangsrechnungen digitalisieren *(Ziel: offen)*
+## v0.5 – Eingangsrechnungen digitalisieren *(Ziel: offen)*
 
 OCR-gestützte Erkennung und automatische Erfassung von Eingangsrechnungen per PDF- oder Foto-Upload.
 
