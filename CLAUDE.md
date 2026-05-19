@@ -99,6 +99,16 @@ def _run_migrations():
 
 Version kommt aus Git-Tag – **nie manuell** in `package.json` ändern.
 
+### Checkliste vor jedem Release (PFLICHT)
+
+Bevor Tag gesetzt und gepusht wird:
+
+1. **`src/frontend/src/data/changelog.ts`** – neuen Versionsblock ganz oben eintragen  
+   (alle `neu` / `verbesserung` / `fix` seit dem letzten Tag)
+2. **`docs/ROADMAP.md`** – erledigte Items abhaken, neue Stufen ergänzen
+3. **`CLAUDE.md`** – `SCHEMA_VERSION` und Versionstabelle aktuell?
+4. Commit dieser Dateien → dann Tag setzen
+
 ### Neues Release erstellen
 ```bash
 git tag v0.x.y
