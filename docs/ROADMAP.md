@@ -67,7 +67,34 @@ Einkommenserklärung für Selbstständige (Jobcenter / Bürgergeld).
 
 ---
 
-## v0.2 – *(frei)*
+## v0.2 – Beleganhang & E-Rechnungs-Import *(In Arbeit)*
+
+Eingangsrechnungen mit Beleg belegen, ZUGFeRD/XRechnung automatisch einlesen.
+
+**Stufe 1 – Beleganhang** ✅ *v0.2.1*
+- [x] PDF/JPG/PNG an Eingangsrechnung anhängen (Drag & Drop, Datei-Dialog)
+- [x] Beleg im eingebetteten Inline-Viewer öffnen
+- [x] Beleg löschen
+- [x] SHA256-Hash in DB (GoBD-Vorbereitung)
+
+**Stufe 2 – ZUGFeRD/XRechnung-Parsing** *(offen)*
+- [ ] `POST /api/rechnungen/analysieren` – liest strukturierte Felder aus E-Rechnung
+- [ ] `factur-x` + `lxml` als Backend-Abhängigkeiten
+- [ ] Frontend: „Rechnung importieren"-Workflow mit Vorschau
+
+**Stufe 3 – Validierung & Feld-Mapping** *(offen)*
+- [ ] Erkannte Felder in Erfassungsformular vorausfüllen
+- [ ] Niedrige Konfidenz visuell markieren
+- [ ] Abgleich Lieferantenname mit Lieferantenstamm
+
+**Stufe 4 – OCR-Fallback** *(offen)*
+- [ ] `pdfplumber` für maschinenlesbare PDFs
+- [ ] `pytesseract` für Scans/Fotos
+- [ ] Regex-/Heuristik-Extraktion für DE/AT/CH-Formate
+
+**Stufe 5 – GoBD-Export-Erweiterung** *(offen)*
+- [ ] `belege.csv` (Manifest mit SHA256) im GoBD-ZIP
+- [ ] `belege/`-Ordner mit Original-Dateien im ZIP
 
 ---
 
@@ -95,35 +122,12 @@ Steuerliche Auswertungen für Finanzamt und Steuerberater.
 
 ---
 
-## v0.5 – Eingangsrechnungen digitalisieren *(Ziel: offen)*
+## v0.5 – Erweiterte Digitalisierung *(Ziel: offen)*
 
-OCR-gestützte Erkennung und automatische Erfassung von Eingangsrechnungen per PDF- oder Foto-Upload.
+Opt-in LLM-gestützte Felderkennung und Sonderfälle.
 
-**Upload**
-- [ ] PDF-Upload per Drag & Drop oder Datei-Dialog
-- [ ] Foto-Upload (JPG/PNG) als Alternative zu PDF
-- [ ] Vorschau der hochgeladenen Datei im Erfassungs-Dialog
-
-**Automatische Felderkennung (OCR)**
-- [ ] Lieferantenname und Adresse
-- [ ] Rechnungsnummer (externe Belegnr.)
-- [ ] Rechnungsdatum und Fälligkeitsdatum
-- [ ] Rechnungsbetrag (Brutto, Netto, USt)
-- [ ] IBAN des Lieferanten (für Zahlungshinweis)
-- [ ] Abgleich erkannter Lieferant mit Lieferantenstamm
-
-**Erfassungs-Workflow**
-- [ ] Erkannte Felder werden im Formular vorausgefüllt (editierbar)
-- [ ] Niedrige Konfidenz wird visuell markiert (gelbe Hervorhebung)
-- [ ] Original-Beleg wird gespeichert und mit der Rechnung verknüpft
-- [ ] Gespeicherter Beleg abrufbar im Detail-Panel
-
-**Technische Umsetzung**
-- [ ] `pdfplumber` für maschinenlesbare PDFs, `pytesseract` als Fallback für Scans/Fotos
-- [ ] Regex-/Heuristik-basierte Feldextraktion für DE/AT/CH-Rechnungsformate
-- [ ] Optional: lokales LLM (ollama) für bessere Feldzuordnung als Opt-in
-- [ ] `POST /api/rechnungen/digitalisieren` → gibt erkannte Felder + Dateipfad zurück
-- [ ] `GET /api/rechnungen/{id}/beleg` → gibt gespeicherte PDF/Bild-Datei zurück
+- [ ] Lokales LLM (ollama) für bessere Feldzuordnung als Opt-in
+- [ ] Unterstützung ausländischer Rechnungsformate (AT/CH/EU)
 
 ---
 
@@ -169,3 +173,4 @@ Rechnungs-PDF ausgeben und elektronische Rechnungsformate importieren.
 - [x] **v0.1 Kassenbuch** – Released Februar 2026 ([Release-Notes](https://github.com/nicolettas-muggelbude/RechnungsFee/releases/tag/v0.1))
 - [x] **Post-v0.1**: Split-Buchung, GoBD-Export, Rechnungen (Eingang/Ausgang) mit Kassenbuch-Verknüpfung
 - [x] **Anlage EKS** (Mai 2026): Einkommenserklärung für Selbstständige – abschließend (monatlich aus Journal) und vorläufig (Halbjahres-Prognose aus Vorjahr)
+- [x] **v0.2 Stufe 1** (Mai 2026): Beleganhang für Eingangsrechnungen – Upload, Inline-Viewer, Löschen, SHA256 ([v0.2.1](https://github.com/nicolettas-muggelbude/RechnungsFee/releases/tag/v0.2.1))
