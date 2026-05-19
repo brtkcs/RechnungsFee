@@ -98,6 +98,17 @@ Eingangsrechnungen mit Beleg belegen, ZUGFeRD/XRechnung automatisch einlesen.
 
 ---
 
+## v0.2.x – Wiederkehrende Buchungen *(Ziel: offen)*
+
+Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
+
+- [ ] Vorlagen-Tabelle: Betrag, Kategorie, Intervall (monatlich/quartalsweise/jährlich), nächstes Fälligkeitsdatum
+- [ ] Beim App-Start: Hinweis auf fällige Buchungen („3 Buchungen bereit")
+- [ ] Ein-Klick-Bestätigung → Journaleintrag wird erstellt, nächstes Fälligkeitsdatum rückt vor
+- [ ] Vorlagen verwalten (anlegen, pausieren, löschen)
+
+---
+
 ## v0.3 – Bank-Import *(Ziel: Juni 2026)*
 
 CSV-Import von Kontoauszügen, automatisches Matching.
