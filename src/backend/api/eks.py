@@ -36,7 +36,7 @@ EKS_FELDER_META = [
     ("A", "A3",    "Sonstige betriebliche Einnahmen",                          True),
     ("A", "A4",    "Zuwendungen von Dritten",                                  True),
     ("A", "A5_1",  "Vereinnahmte Umsatzsteuer",                                True),
-    ("A", "A5_2",  "Umsatzsteuer auf Privatentnahmen von Waren",               False),
+    ("A", "A5_2",  "Umsatzsteuer auf Privatentnahmen von Waren",               True),
     ("A", "A5_3",  "Vom Finanzamt erstattete Umsatzsteuer",                    True),
     # ── Tabelle B Teil 1: Betriebsausgaben ───────────────────────────────
     ("B", "B1",    "Wareneinkauf",                                              True),
@@ -126,6 +126,7 @@ def _journal_summen_pro_monat(von: date, bis: date, db: Session) -> dict[str, st
         db.query(
             Kategorie.eks_kategorie,
             func.sum(Journaleintrag.brutto_betrag).label("summe"),
+            func.sum(Journaleintrag.ust_betrag).label("ust_summe"),
         )
         .join(Journaleintrag.kategorie)
         .filter(
@@ -136,7 +137,27 @@ def _journal_summen_pro_monat(von: date, bis: date, db: Session) -> dict[str, st
         .group_by(Kategorie.eks_kategorie)
         .all()
     )
-    return {row.eks_kategorie: str(row.summe or Decimal("0")) for row in rows}
+    result = {row.eks_kategorie: str(row.summe or Decimal("0")) for row in rows}
+
+    # A5_1: vereinnahmte USt aus allen Einnahmen (A1, A3, A4) automatisch ableiten
+    # A5_2: USt auf Eigenverbrauch von Waren (A2) automatisch ableiten
+    # Nur addieren wenn nicht bereits manuell gebucht (manuelle A5_x-Buchungen bleiben erhalten)
+    ust_a1 = sum(
+        Decimal(row.ust_summe or 0)
+        for row in rows if row.eks_kategorie in ("A1", "A3", "A4")
+    )
+    ust_a2 = sum(
+        Decimal(row.ust_summe or 0)
+        for row in rows if row.eks_kategorie == "A2"
+    )
+    if ust_a1:
+        existing = Decimal(result.get("A5_1", "0"))
+        result["A5_1"] = str((existing + ust_a1).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    if ust_a2:
+        existing = Decimal(result.get("A5_2", "0"))
+        result["A5_2"] = str((existing + ust_a2).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+    return result
 
 
 def _zeilensummen(werte_pro_monat: dict, monate_keys: list[str]) -> dict[str, str]:
