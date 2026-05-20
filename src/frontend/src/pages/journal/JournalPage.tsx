@@ -60,7 +60,7 @@ export function JournalPage() {
 
   const { data: kategorien } = useQuery({
     queryKey: ['kategorien'],
-    queryFn: getKategorien,
+    queryFn: () => getKategorien(),
   })
 
   const hatAktiveFilter = art !== '' || kategorieId !== '' || zahlungsartTyp !== '' || filterModus !== 'monat'
