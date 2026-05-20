@@ -183,6 +183,7 @@ class KategorieResponse(BaseModel):
     vorsteuer_prozent: Decimal
     ust_satz_standard: int
     ist_system: bool
+    aktiv: bool
 
     model_config = {"from_attributes": True}
 

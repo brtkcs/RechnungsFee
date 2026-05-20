@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { getKategorien } from '../../api/client'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getKategorien, toggleKategorieAktiv } from '../../api/client'
 
 const KONTENART_META: Record<string, { label: string; cls: string; beschreibung: string }> = {
   Erlös:   { label: 'Erlöse',   cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300', beschreibung: 'Betriebseinnahmen' },
@@ -24,17 +24,26 @@ function UstBadge({ satz }: { satz: number }) {
 
 export function KategorienPage() {
   const [filter, setFilter] = useState('')
+  const [nurAktive, setNurAktive] = useState(false)
+  const qc = useQueryClient()
   const { data: kategorien = [], isLoading } = useQuery({
     queryKey: ['kategorien'],
-    queryFn: getKategorien,
+    queryFn: () => getKategorien(false),
+  })
+  const toggleMutation = useMutation({
+    mutationFn: (id: number) => toggleKategorieAktiv(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['kategorien'] })
+    },
   })
 
   const suchtext = filter.toLowerCase()
   const gefiltert = kategorien.filter(k =>
-    k.name.toLowerCase().includes(suchtext) ||
+    (nurAktive ? k.aktiv : true) &&
+    (k.name.toLowerCase().includes(suchtext) ||
     (k.konto_skr03 ?? '').includes(suchtext) ||
     (k.konto_skr04 ?? '').includes(suchtext) ||
-    (k.eks_kategorie ?? '').toLowerCase().includes(suchtext)
+    (k.eks_kategorie ?? '').toLowerCase().includes(suchtext))
   )
 
   const gruppen = REIHENFOLGE
@@ -51,8 +60,8 @@ export function KategorienPage() {
         </p>
       </div>
 
-      {/* Suche */}
-      <div className="mb-5">
+      {/* Suche + Filter */}
+      <div className="mb-5 flex items-center gap-3">
         <input
           type="search"
           value={filter}
@@ -60,6 +69,17 @@ export function KategorienPage() {
           placeholder="Name, SKR-Konto oder EKS-Feld suchen …"
           className="w-full max-w-sm border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        <button
+          type="button"
+          onClick={() => setNurAktive(v => !v)}
+          className={`shrink-0 text-sm px-3 py-2 rounded-lg border transition-colors ${
+            nurAktive
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+          }`}
+        >
+          {nurAktive ? 'Nur aktive' : 'Alle'}
+        </button>
       </div>
 
       {isLoading && <p className="text-slate-400 text-sm">Lade…</p>}
@@ -91,15 +111,16 @@ export function KategorienPage() {
                       <th className="text-left px-3 py-2.5 font-medium w-20">EKS</th>
                       <th className="text-left px-3 py-2.5 font-medium w-24">USt-Satz</th>
                       <th className="text-left px-3 py-2.5 font-medium w-16">VSt %</th>
+                      <th className="px-3 py-2.5 w-10" />
                     </tr>
                   </thead>
                   <tbody>
                     {liste.map((k, i) => (
                       <tr
                         key={k.id}
-                        className={`border-b border-slate-100 dark:border-slate-700 last:border-0 ${
-                          i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'
-                        }`}
+                        className={`border-b border-slate-100 dark:border-slate-700 last:border-0 transition-opacity ${
+                          !k.aktiv ? 'opacity-40' : ''
+                        } ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
                       >
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
@@ -107,6 +128,11 @@ export function KategorienPage() {
                             {!k.ist_system && (
                               <span className="text-xs bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium">
                                 Eigene
+                              </span>
+                            )}
+                            {!k.aktiv && (
+                              <span className="text-xs bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 px-1.5 py-0.5 rounded font-medium">
+                                Inaktiv
                               </span>
                             )}
                           </div>
@@ -137,6 +163,20 @@ export function KategorienPage() {
                             ? '100 %'
                             : <span className="text-amber-600 dark:text-amber-400">{k.vorsteuer_prozent} %</span>
                           }
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <button
+                            type="button"
+                            title={k.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                            onClick={() => toggleMutation.mutate(k.id)}
+                            className={`text-xs px-2 py-1 rounded border transition-colors ${
+                              k.aktiv
+                                ? 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-red-300 hover:text-red-500 dark:hover:text-red-400'
+                                : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
+                            }`}
+                          >
+                            {k.aktiv ? 'Aus' : 'Ein'}
+                          </button>
                         </td>
                       </tr>
                     ))}

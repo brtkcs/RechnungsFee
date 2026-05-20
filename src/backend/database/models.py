@@ -135,6 +135,7 @@ class Kategorie(Base):
     vorsteuer_prozent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=100, nullable=False)
     ust_satz_standard: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0|7|19
     ist_system: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     journaleintraege: Mapped[list["Journaleintrag"]] = relationship(back_populates="kategorie")

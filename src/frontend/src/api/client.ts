@@ -214,8 +214,12 @@ export type Kategorie = {
   vorsteuer_prozent: string
   ust_satz_standard: number
   ist_system: boolean
+  aktiv: boolean
 }
-export const getKategorien = () => request<Kategorie[]>('/kategorien')
+export const getKategorien = (nurAktive = false) =>
+  request<Kategorie[]>(`/kategorien${nurAktive ? '?nur_aktive=true' : ''}`)
+export const toggleKategorieAktiv = (id: number) =>
+  request<Kategorie>(`/kategorien/${id}/aktiv`, { method: 'PATCH' })
 
 // --- Journal ---
 export type JournalEintrag = {

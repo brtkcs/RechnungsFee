@@ -77,7 +77,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
   const [isSplit, setIsSplit] = useState(false)
   const [eingabeModus, setEingabeModus] = useState<'brutto' | 'netto'>('brutto')
 
-  const { data: kategorien } = useQuery({ queryKey: ['kategorien'], queryFn: getKategorien })
+  const { data: kategorien } = useQuery({ queryKey: ['kategorien', 'aktiv'], queryFn: () => getKategorien(true) })
   const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
   const { data: kassenstandData } = useQuery({ queryKey: ['kassenstand'], queryFn: getKassenstand })
