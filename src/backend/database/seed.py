@@ -31,6 +31,8 @@ STANDARD_KATEGORIEN = [
     {"name": "Wareneinkauf EU",                "kontenart": "Aufwand", "konto_skr03": "3400", "konto_skr04": "5400", "eks_kategorie": "B1",    "euer_zeile": 26,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Wareneinkauf Nicht-EU",          "kontenart": "Aufwand", "konto_skr03": "3500", "konto_skr04": "5500", "eks_kategorie": "B1",    "euer_zeile": 26,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Löhne & Gehälter",              "kontenart": "Aufwand", "konto_skr03": "4120", "konto_skr04": "6010", "eks_kategorie": "B2_1",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+    {"name": "Löhne & Gehälter Teilzeit",    "kontenart": "Aufwand", "konto_skr03": "4120", "konto_skr04": "6010", "eks_kategorie": "B2_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+    {"name": "AG-Anteil Sozialversicherung", "kontenart": "Aufwand", "konto_skr03": "4140", "konto_skr04": "6110", "eks_kategorie": "B2_1",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Minijob / geringfügige Beschäftigung", "kontenart": "Aufwand", "konto_skr03": "4130", "konto_skr04": "6030", "eks_kategorie": "B2_3", "euer_zeile": 44, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
     {"name": "Fremdleistungen",               "kontenart": "Aufwand", "konto_skr03": "3100", "konto_skr04": "5900", "eks_kategorie": "B14_5", "euer_zeile": 45,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Miete Büro (19%)",              "kontenart": "Aufwand", "konto_skr03": "4210", "konto_skr04": "6310", "eks_kategorie": "B3",    "euer_zeile": 46,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
