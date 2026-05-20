@@ -48,6 +48,7 @@ STANDARD_KATEGORIEN = [
     {"name": "KFZ-Versicherung",              "kontenart": "Aufwand", "konto_skr03": "4520", "konto_skr04": "6510", "eks_kategorie": "B6_2",  "euer_zeile": 48,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "KFZ-Kosten",                    "kontenart": "Aufwand", "konto_skr03": "4530", "konto_skr04": "6520", "eks_kategorie": "B6_3",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "KFZ-Leasing",                   "kontenart": "Aufwand", "konto_skr03": "4570", "konto_skr04": "6560", "eks_kategorie": "B6_3",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+    {"name": "KFZ-Reparatur",                 "kontenart": "Aufwand", "konto_skr03": "4540", "konto_skr04": "6530", "eks_kategorie": "B6_4",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Reisekosten",                   "kontenart": "Aufwand", "konto_skr03": "4660", "konto_skr04": "6640", "eks_kategorie": "B7_1",  "euer_zeile": 49,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Anlagevermögen (Kauf)",         "kontenart": "Anlage",  "konto_skr03": "0400", "konto_skr04": "0400", "eks_kategorie": "B8",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Büromaterial",                  "kontenart": "Aufwand", "konto_skr03": "4910", "konto_skr04": "6815", "eks_kategorie": "B10",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
