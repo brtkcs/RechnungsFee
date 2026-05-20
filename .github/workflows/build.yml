@@ -436,71 +436,35 @@ jobs:
               changelog_lines.append(f'- {typ_emoji.get(typ, "•")} {text}')
           changelog_md = '\n'.join(changelog_lines) if changelog_lines else '_Keine Einträge gefunden._'
 
-          # ── Release-Body zusammenbauen ──────────────────────────────────────
+          # ── Release-Body zusammenbauen (Downloadtabelle zuerst, dann Changelog) ──
           win_exe      = f'RechnungsFee_{v}_x64-setup.exe'
-          lin_img      = 'RechnungsFee_amd64.AppImage'
           lin_img_ver  = f'RechnungsFee_{v}_amd64.AppImage'
+          lin_img      = 'RechnungsFee_amd64.AppImage'
+          mac_arm_ver  = f'RechnungsFee_{v}_aarch64.dmg'
           mac_arm      = 'RechnungsFee_aarch64.dmg'
-          win_url      = f'{base}/{win_exe}'
-          lin_url      = f'{base}/{lin_img}'
-          lin_url_ver  = f'{base}/{lin_img_ver}'
-          mac_arm_url  = f'{base}/{mac_arm}'
           install_sh   = 'install-linux.sh'
-          install_url  = f'{base}/{install_sh}'
 
-          body = f"""## Was ist neu in {tag}
+          body = f"""## 💾 Downloads
 
-          {changelog_md}
+| Plattform | Download |
+|-----------|----------|
+| 🪟 **Windows** (x64) | [⬇ {win_exe}]({base}/{win_exe}) |
+| 🐧 **Linux** (x86_64, versioniert) | [⬇ {lin_img_ver}]({base}/{lin_img_ver}) |
+| 🐧 **Linux** (x86_64, via install.sh) | [⬇ {lin_img}]({base}/{lin_img}) |
+| 🐧 **Linux** Installer | [⬇ {install_sh}]({base}/{install_sh}) |
+| 🍎 **macOS** (Apple Silicon, versioniert) | [⬇ {mac_arm_ver}]({base}/{mac_arm_ver}) |
+| 🍎 **macOS** (Apple Silicon) | [⬇ {mac_arm}]({base}/{mac_arm}) |
 
-          ---
+> 🍎 macOS ist nicht signiert → beim ersten Start: Rechtsklick → Öffnen, oder `xattr -cr RechnungsFee_{v}_aarch64.dmg`
 
-          ## Download & Installation
+> ℹ️ Dateien mit `.tar.gz`, `.nsis.zip`, `.app.tar.gz` und `.sig` sind für den eingebauten Auto-Updater – nicht manuell herunterladen.
 
-          | Betriebssystem | Download | Hinweis |
-          |---|---|---|
-          | **Windows** | [⬇ {win_exe}]({win_url}) | NSIS-Installer, einfach ausführen |
-          | **Linux** | [⬇ {lin_img}]({lin_url}) | **Empfohlen** – Dateiname bleibt nach Auto-Updates korrekt |
-          | **Linux (versioniert)** | [⬇ {lin_img_ver}]({lin_url_ver}) | Alternative mit Versionsnummer im Dateinamen |
-          | **Linux: Menü-Integration** | [⬇ {install_sh}]({install_url}) | Einmalig ausführen → Icon + Starter im Anwendungsmenü |
-          | 🍎 **macOS (Apple Silicon)** | [⬇ {mac_arm}]({mac_arm_url}) | M1/M2/M3/M4 – siehe Hinweis unten |
+---
 
-          **Auto-Update:** Wer v0.1.3 oder neuer installiert hat, bekommt das Update automatisch beim nächsten App-Start angeboten.
+## ✨ Was ist neu in {tag}
 
-          ### Linux: Starter ins Anwendungsmenü integrieren
-
-          Damit RechnungsFee in GNOME Activities, KDE Launcher, XFCE-Menü usw. erscheint:
-
-          ```bash
-          # 1. AppImage herunterladen und ausführbar machen
-          chmod +x RechnungsFee_amd64.AppImage
-
-          # 2. Integrations-Skript ausführen (einmalig)
-          wget -qO install-linux.sh {base}/install-linux.sh
-          chmod +x install-linux.sh
-          ./install-linux.sh ./RechnungsFee_amd64.AppImage
-          ```
-
-          ### macOS: Gatekeeper-Hinweis
-
-          Da RechnungsFee kein kostenpflichtiges Apple-Entwicklerzertifikat besitzt, zeigt macOS beim ersten Start eine Warnung. So öffnest du die App trotzdem:
-
-          **Methode 1 (einfach):** Rechtsklick auf `RechnungsFee.app` → „Öffnen" → im Dialog erneut „Öffnen" klicken.
-
-          **Methode 2 (Terminal):**
-          ```bash
-          xattr -cr /Applications/RechnungsFee.app
-          ```
-
-          Danach startet die App normal und die Warnung erscheint nicht mehr.
-
-          > ℹ️ Die Dateien `.tar.gz`, `.nsis.zip`, `.app.tar.gz` und `.sig` sind für den eingebauten Auto-Updater – **nicht manuell herunterladen**.
-
-          ---
-
-          ## Mitwirken
-
-          Fehler gefunden oder Feature-Wunsch? → [Issue erstellen](https://github.com/{repo}/issues/new)
-          """
+{changelog_md}
+"""
           body = '\n'.join(line.lstrip() for line in body.splitlines())
 
           open('release_body.md', 'w').write(body)
