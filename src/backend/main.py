@@ -562,7 +562,7 @@ def _migrate_kategorien() -> None:
         # ── Korrekturen: alte Codes → neue Codes (offizielles Formular) ──────
         korrekturen = [
             # Tabelle A
-            ("Privatentnahme",               "A2"),    # war NULL
+            ("Privatentnahme",               None),    # Bargeld-Entnahme ist kein EKS-Feld; war fälschlich A2
             ("Privateinlage",                None),    # nicht im EKS-Formular
             ("Umsatzsteuer-Erstattung FA",   "A5_3"),  # war A5_2
             ("Vorsteuererstattung FA",       "A5_3"),  # war B17 – ist Einnahme
@@ -638,6 +638,9 @@ def _migrate_kategorien() -> None:
             {"name": "Wareneinkauf Nicht-EU",                "kontenart": "Aufwand", "konto_skr03": "3500", "konto_skr04": "5500", "eks_kategorie": "B1",    "euer_zeile": 26,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "Miete Büro (0%)",                      "kontenart": "Aufwand", "konto_skr03": "4210", "konto_skr04": "6310", "eks_kategorie": "B3",    "euer_zeile": 46,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "KFZ-Leasing",                          "kontenart": "Aufwand", "konto_skr03": "4570", "konto_skr04": "6560", "eks_kategorie": "B6_3",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Eigenverbrauch von Waren (19%)",       "kontenart": "Erlös",   "konto_skr03": "8910", "konto_skr04": "4640", "eks_kategorie": "A2",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
+            {"name": "Eigenverbrauch von Waren (7%)",        "kontenart": "Erlös",   "konto_skr03": "8911", "konto_skr04": "4641", "eks_kategorie": "A2",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 7},
+            {"name": "USt auf Eigenverbrauch",               "kontenart": "Aufwand", "konto_skr03": "1776", "konto_skr04": "1776", "eks_kategorie": "A5_2",  "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Sonstige Einnahmen",                   "kontenart": "Erlös",   "konto_skr03": "8900", "konto_skr04": "4900", "eks_kategorie": "A3",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Zuwendungen von Dritten",              "kontenart": "Erlös",   "konto_skr03": "8910", "konto_skr04": "4910", "eks_kategorie": "A4",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Umsatzsteuer (vereinnahmt)",           "kontenart": "Aufwand", "konto_skr03": "1776", "konto_skr04": "1776", "eks_kategorie": "A5_1",  "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
