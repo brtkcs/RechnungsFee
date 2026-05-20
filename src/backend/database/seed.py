@@ -53,6 +53,7 @@ STANDARD_KATEGORIEN = [
     {"name": "Reisekosten – Nebenkosten",     "kontenart": "Aufwand", "konto_skr03": "4663", "konto_skr04": "6643", "eks_kategorie": "B7_2",  "euer_zeile": 49,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Reisekosten – ÖPNV",           "kontenart": "Aufwand", "konto_skr03": "4664", "konto_skr04": "6644", "eks_kategorie": "B7_3",  "euer_zeile": 49,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Anlagevermögen (Kauf)",         "kontenart": "Anlage",  "konto_skr03": "0400", "konto_skr04": "0400", "eks_kategorie": "B8",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+    {"name": "Investition aus Zuwendung Dritter", "kontenart": "Anlage", "konto_skr03": "0435", "konto_skr04": "0435", "eks_kategorie": "B9",   "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Büromaterial",                  "kontenart": "Aufwand", "konto_skr03": "4910", "konto_skr04": "6815", "eks_kategorie": "B10",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Büroausstattung",               "kontenart": "Aufwand", "konto_skr03": "4920", "konto_skr04": "6820", "eks_kategorie": "B10",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Porto & Versand",               "kontenart": "Aufwand", "konto_skr03": "4930", "konto_skr04": "6825", "eks_kategorie": "B10",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
