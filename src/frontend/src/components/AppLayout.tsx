@@ -73,7 +73,7 @@ export function AppLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 py-3">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {/* Hauptnavigation */}
           {hauptNav.map(({ to, label, icon, end }) => (
             <NavLink key={to} to={to} end={end} className={navLinkClass}>

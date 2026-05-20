@@ -100,11 +100,11 @@ export function KategorienPage() {
               </div>
 
               {/* Tabelle */}
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left px-4 py-2.5 font-medium">Bezeichnung</th>
+                      <th className="text-left px-4 py-2.5 font-medium sticky left-0 bg-slate-50 dark:bg-slate-900 z-10">Bezeichnung</th>
                       <th className="text-left px-3 py-2.5 font-medium w-20">SKR03</th>
                       <th className="text-left px-3 py-2.5 font-medium w-20">SKR04</th>
                       <th className="text-left px-3 py-2.5 font-medium w-24">EÜR-Zeile</th>
@@ -122,7 +122,7 @@ export function KategorienPage() {
                           !k.aktiv ? 'opacity-40' : ''
                         } ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
                       >
-                        <td className="px-4 py-2.5">
+                        <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-slate-800 z-10">
                           <div className="flex items-center gap-2">
                             <span className="text-slate-800 dark:text-slate-100">{k.name}</span>
                             {!k.ist_system && (
