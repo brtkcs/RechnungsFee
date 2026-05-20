@@ -200,6 +200,9 @@ Rechnungs-PDF ausgeben und elektronische Rechnungsformate importieren.
 Lose Ideen ohne festen Versionsplan.
 
 - [ ] **Fahrtenbuch-App (Android/iOS)** – Fahrten erfassen (Start/Ziel/km/Zweck), GoBD-konformes Fahrtenbuch führen, Export an RechnungsFee (Kategorie KFZ-Kosten, direkt als Buchung oder Eingangsrechnung)
+  - km-Erfassung via GPS (kein Zusatz-Hardware, für GoBD ausreichend)
+  - Optional: OBD-II-Bluetooth-Dongle (~15–30 €) für exakten Tacho-Kilometerstand
+  - CarPlay / Android Auto: UI-Oberfläche zum Starten/Stoppen per Knopf/Sprache möglich, aber kein direkter Tacho-Zugriff (CarPlay/Auto sind reine Display-Protokolle)
 
 ---
 
