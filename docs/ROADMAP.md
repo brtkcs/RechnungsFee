@@ -122,6 +122,27 @@ CSV-Import von Kontoauszügen, automatisches Matching.
 
 ---
 
+## v0.3.x – Automatische USt-Zuordnung *(Ziel: offen)*
+
+Jeder Journal-Eintrag speichert bereits `ust_betrag`. Dieses Feld soll systemweit
+automatisch den richtigen USt-Kategorien zugeordnet werden – ohne manuelle Zusatzbuchungen.
+
+**Prinzip:**
+- Einnahmen (A1, A2, …): `ust_betrag` → A5_1 (vereinnahmte USt) bzw. A5_2 (USt auf Eigenverbrauch)
+- Ausgaben: `ust_betrag` → Vorsteuer-Auswertung
+- Basis ist immer das gebuchte `ust_betrag`-Feld, nicht eine separate Buchung
+
+**Betroffene Auswertungen:**
+- [ ] EKS: A5_1 / A5_2 automatisch aus `ust_betrag` der A1/A2-Einträge ableiten
+- [ ] GoBD-Export CSV: USt-Spalte korrekt je Einnahmen-/Ausgaben-Typ befüllen
+- [ ] EÜR: USt-Beträge in die richtigen Zeilen der Anlage EÜR einordnen
+- [ ] UStVA (v0.4): Voranmeldungs-Kennziffern direkt aus `ust_betrag` + Kategorie befüllen
+
+**Kategorien `USt auf Eigenverbrauch` und `Umsatzsteuer (vereinnahmt)`** bleiben für
+manuelle Korrekturbuchungen erhalten, sind im Normalfall aber nicht mehr nötig.
+
+---
+
 ## v0.4 – Auswertungen *(Ziel: August 2026)*
 
 Steuerliche Auswertungen für Finanzamt und Steuerberater.
