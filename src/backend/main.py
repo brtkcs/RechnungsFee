@@ -612,6 +612,7 @@ def _migrate_kategorien() -> None:
         # ── Umbenennungen ─────────────────────────────────────────────────────
         umbenennungen = [
             ("Miete Büro", "Miete Büro (19%)"),
+            ("Reisekosten", "Reisekosten – Übernachtung"),
         ]
         for alt, neu in umbenennungen:
             kat = db.query(Kategorie).filter(Kategorie.name == alt).first()
@@ -653,6 +654,8 @@ def _migrate_kategorien() -> None:
             {"name": "Buchführungskosten",                   "kontenart": "Aufwand", "konto_skr03": "4975", "konto_skr04": "6845", "eks_kategorie": "B12",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "KFZ-Steuer",                           "kontenart": "Aufwand", "konto_skr03": "4510", "konto_skr04": "6500", "eks_kategorie": "B6_1",  "euer_zeile": 48,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "KFZ-Reparatur",                        "kontenart": "Aufwand", "konto_skr03": "4540", "konto_skr04": "6530", "eks_kategorie": "B6_4",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Reisekosten – Nebenkosten",            "kontenart": "Aufwand", "konto_skr03": "4663", "konto_skr04": "6643", "eks_kategorie": "B7_2",  "euer_zeile": 49,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Reisekosten – ÖPNV",                  "kontenart": "Aufwand", "konto_skr03": "4664", "konto_skr04": "6644", "eks_kategorie": "B7_3",  "euer_zeile": 49,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Zinsen & Darlehenskosten",             "kontenart": "Aufwand", "konto_skr03": "4315", "konto_skr04": "7310", "eks_kategorie": "B15",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Kredittilgung",                        "kontenart": "Aufwand", "konto_skr03": "2100", "konto_skr04": "3150", "eks_kategorie": "B16",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Umsatzsteuer-Zahlung FA",              "kontenart": "Aufwand", "konto_skr03": "1780", "konto_skr04": "1780", "eks_kategorie": "B18",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
