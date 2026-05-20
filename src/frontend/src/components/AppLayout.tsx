@@ -62,9 +62,9 @@ export function AppLayout() {
     }`
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-56 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+      <aside className="w-56 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
           <img src="/logo.svg" alt="RechnungsFee" className="w-8 h-8 flex-shrink-0" />
           <div>
