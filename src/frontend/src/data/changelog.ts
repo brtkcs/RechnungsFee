@@ -26,9 +26,16 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.2.2',
     datum: 'Mai 2026',
     eintraege: [
+      { typ: 'verbesserung', text: 'Scrollen: Sidebar und Hauptinhalt scrollen jetzt unabhängig voneinander – die Navigation bleibt beim Scrollen langer Listen immer sichtbar' },
+      { typ: 'verbesserung', text: 'Kategorien-Tabelle: erste Spalte bleibt beim horizontalen Scrollen sichtbar (sticky)' },
+      { typ: 'neu', text: 'Kategorien ein-/ausblenden – einzelne Buchungskategorien können deaktiviert werden und erscheinen dann nicht mehr in Buchungsformularen' },
+      { typ: 'neu', text: 'EKS-Zuordnung automatisch: USt-Betrag aus Einnahmen wird automatisch A5_1 (vereinnahmt) und A5_2 (Eigenverbrauch) zugeordnet – kein manueller Eintrag mehr nötig' },
+      { typ: 'neu', text: 'Reisekosten in drei EKS-Unterkategorien aufgeteilt: B7_1 Übernachtung, B7_2 Nebenkosten, B7_3 ÖPNV' },
+      { typ: 'neu', text: 'Neue Buchungskategorien: KFZ-Reparatur (B6_4), Investition aus Zuwendung Dritter (B9), Personalkosten Familienangehörige (B2_4), Löhne & Gehälter Teilzeit (B2_2), AG-Anteil Sozialversicherung, Eigenverbrauch von Waren (19%/7%), Wareneinkauf EU/Nicht-EU, Miete Büro (0%), KFZ-Leasing' },
       { typ: 'neu', text: 'Buchungskategorie „Reparatur Anlagevermögen" (B14.1) – Reparatur- und Instandhaltungskosten für Betriebsanlagen und Maschinen (außer KFZ); SKR03 4855 / SKR04 6805' },
       { typ: 'neu', text: 'Buchungskategorie „Miete Einrichtung" (B14.2) – Mietkosten für bewegliche Wirtschaftsgüter und Einrichtungsgegenstände; SKR03 4240 / SKR04 6830' },
       { typ: 'neu', text: 'Buchungskategorie „Betriebliche Abfallbeseitigung" (B14.4) – Entsorgungskosten; SKR03 4830 / SKR04 6810' },
+      { typ: 'fix', text: 'Build-Fehler behoben – TypeScript-Fehler in der Journal-Kategorienauswahl verhinderte den Release-Build' },
     ],
   },
   {
