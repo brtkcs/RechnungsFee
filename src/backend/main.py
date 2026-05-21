@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 24
+SCHEMA_VERSION = 25
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -552,6 +552,60 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 24 gebracht (kategorien.aktiv)")
 
+        if version < 25:
+            # Kontonummern SKR03/SKR04 auf DATEV-Kontenrahmen 2026 korrigieren
+            korrekturen = [
+                # SKR03-Korrekturen
+                ("AG-Anteil Sozialversicherung",        "konto_skr03", "4130"),
+                ("Minijob / geringfügige Beschäftigung","konto_skr03", "4120"),
+                ("Nebenkosten Büro",                    "konto_skr03", "4228"),
+                ("Miete Einrichtung",                   "konto_skr03", "4200"),
+                ("Betriebliche Abfallbeseitigung",       "konto_skr03", "4969"),
+                ("Reparatur Anlagevermögen",             "konto_skr03", "4260"),
+                ("Geringwertige Wirtschaftsgüter (GWG)","konto_skr03", "4855"),
+                ("Telefon & Internet",                  "konto_skr03", "4920"),
+                ("Büromaterial",                        "konto_skr03", "4930"),
+                ("Porto & Versand",                     "konto_skr03", "4910"),
+                ("Büroausstattung",                     "konto_skr03", "4985"),
+                ("Steuerberatung",                      "konto_skr03", "4950"),
+                ("Rechts- & Beratungskosten",           "konto_skr03", "4950"),
+                ("Buchführungskosten",                  "konto_skr03", "4955"),
+                ("Zinsen & Darlehenskosten",            "konto_skr03", "2140"),
+                # SKR04-Korrekturen
+                ("Berufsgenossenschaft",                "konto_skr04", "6120"),
+                ("Betriebsversicherungen",              "konto_skr04", "6400"),
+                ("Nebenkosten Büro",                    "konto_skr04", "6318"),
+                ("Arbeitszimmer (anteilig)",             "konto_skr04", "6348"),
+                ("Miete Einrichtung",                   "konto_skr04", "6318"),
+                ("KFZ-Versicherung",                    "konto_skr04", "6520"),
+                ("KFZ-Kosten",                          "konto_skr04", "6530"),
+                ("KFZ-Reparatur",                       "konto_skr04", "6450"),
+                ("Bewirtungskosten",                    "konto_skr04", "6640"),
+                ("Reisekosten – Nebenkosten",           "konto_skr04", "6644"),
+                ("Telefon & Internet",                  "konto_skr04", "6805"),
+                ("Porto & Versand",                     "konto_skr04", "6800"),
+                ("Büroausstattung",                     "konto_skr04", "6845"),
+                ("Software & Abonnements",              "konto_skr04", "6820"),
+                ("Fortbildung & Fachliteratur",          "konto_skr04", "6821"),
+                ("Steuerberatung",                      "konto_skr04", "6825"),
+                ("Rechts- & Beratungskosten",           "konto_skr04", "6825"),
+                ("Buchführungskosten",                  "konto_skr04", "6830"),
+                ("Reparatur Anlagevermögen",             "konto_skr04", "6335"),
+                ("Betriebliche Abfallbeseitigung",       "konto_skr04", "6859"),
+                ("Geringwertige Wirtschaftsgüter (GWG)","konto_skr04", "6845"),
+                ("Sonstige Betriebsausgaben",           "konto_skr04", "6850"),
+                ("Zinsen & Darlehenskosten",            "konto_skr04", "7330"),
+                ("Personalkosten Familienangehörige",   "konto_skr04", "6050"),
+            ]
+            for name, spalte, wert in korrekturen:
+                conn.execute(
+                    text(f"UPDATE kategorien SET {spalte} = :w WHERE name = :n"),
+                    {"w": wert, "n": name},
+                )
+            conn.execute(text("PRAGMA user_version = 25"))
+            conn.commit()
+            print("[Migration] Schema auf Version 25 gebracht (Kontonummern SKR03/SKR04 auf DATEV 2026 korrigiert)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -647,19 +701,19 @@ def _migrate_kategorien() -> None:
             {"name": "Umsatzsteuer (vereinnahmt)",           "kontenart": "Aufwand", "konto_skr03": "1776", "konto_skr04": "1776", "eks_kategorie": "A5_1",  "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Umsatzsteuer-Erstattung FA",           "kontenart": "Erlös",   "konto_skr03": "1779", "konto_skr04": "1779", "eks_kategorie": "A5_3",  "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Löhne & Gehälter Teilzeit",           "kontenart": "Aufwand", "konto_skr03": "4120", "konto_skr04": "6010", "eks_kategorie": "B2_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "AG-Anteil Sozialversicherung",        "kontenart": "Aufwand", "konto_skr03": "4140", "konto_skr04": "6110", "eks_kategorie": "B2_1",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "Minijob / geringfügige Beschäftigung", "kontenart": "Aufwand", "konto_skr03": "4130", "konto_skr04": "6030", "eks_kategorie": "B2_3",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "Personalkosten Familienangehörige",  "kontenart": "Aufwand", "konto_skr03": "4120", "konto_skr04": "6010", "eks_kategorie": "B2_4",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "Rechts- & Beratungskosten",           "kontenart": "Aufwand", "konto_skr03": "4970", "konto_skr04": "6840", "eks_kategorie": "B12",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-            {"name": "Buchführungskosten",                   "kontenart": "Aufwand", "konto_skr03": "4975", "konto_skr04": "6845", "eks_kategorie": "B12",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "AG-Anteil Sozialversicherung",        "kontenart": "Aufwand", "konto_skr03": "4130", "konto_skr04": "6110", "eks_kategorie": "B2_1",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Minijob / geringfügige Beschäftigung", "kontenart": "Aufwand", "konto_skr03": "4120", "konto_skr04": "6030", "eks_kategorie": "B2_3",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Personalkosten Familienangehörige",  "kontenart": "Aufwand", "konto_skr03": "4120", "konto_skr04": "6050", "eks_kategorie": "B2_4",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Rechts- & Beratungskosten",           "kontenart": "Aufwand", "konto_skr03": "4950", "konto_skr04": "6825", "eks_kategorie": "B12",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Buchführungskosten",                   "kontenart": "Aufwand", "konto_skr03": "4955", "konto_skr04": "6830", "eks_kategorie": "B12",   "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "KFZ-Steuer",                           "kontenart": "Aufwand", "konto_skr03": "4510", "konto_skr04": "6500", "eks_kategorie": "B6_1",  "euer_zeile": 48,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "KFZ-Reparatur",                        "kontenart": "Aufwand", "konto_skr03": "4540", "konto_skr04": "6530", "eks_kategorie": "B6_4",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-            {"name": "Reparatur Anlagevermögen",              "kontenart": "Aufwand", "konto_skr03": "4855", "konto_skr04": "6805", "eks_kategorie": "B14_1", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-            {"name": "Miete Einrichtung",                     "kontenart": "Aufwand", "konto_skr03": "4240", "konto_skr04": "6830", "eks_kategorie": "B14_2", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-            {"name": "Betriebliche Abfallbeseitigung",        "kontenart": "Aufwand", "konto_skr03": "4830", "konto_skr04": "6810", "eks_kategorie": "B14_4", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-            {"name": "Reisekosten – Nebenkosten",            "kontenart": "Aufwand", "konto_skr03": "4663", "konto_skr04": "6643", "eks_kategorie": "B7_2",  "euer_zeile": 49,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "KFZ-Reparatur",                        "kontenart": "Aufwand", "konto_skr03": "4540", "konto_skr04": "6450", "eks_kategorie": "B6_4",  "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Reparatur Anlagevermögen",              "kontenart": "Aufwand", "konto_skr03": "4260", "konto_skr04": "6335", "eks_kategorie": "B14_1", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Miete Einrichtung",                     "kontenart": "Aufwand", "konto_skr03": "4200", "konto_skr04": "6318", "eks_kategorie": "B14_2", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Betriebliche Abfallbeseitigung",        "kontenart": "Aufwand", "konto_skr03": "4969", "konto_skr04": "6859", "eks_kategorie": "B14_4", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Reisekosten – Nebenkosten",            "kontenart": "Aufwand", "konto_skr03": "4663", "konto_skr04": "6644", "eks_kategorie": "B7_2",  "euer_zeile": 49,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "Reisekosten – ÖPNV",                  "kontenart": "Aufwand", "konto_skr03": "4664", "konto_skr04": "6644", "eks_kategorie": "B7_3",  "euer_zeile": 49,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "Zinsen & Darlehenskosten",             "kontenart": "Aufwand", "konto_skr03": "4315", "konto_skr04": "7310", "eks_kategorie": "B15",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Zinsen & Darlehenskosten",             "kontenart": "Aufwand", "konto_skr03": "2140", "konto_skr04": "7330", "eks_kategorie": "B15",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Kredittilgung",                        "kontenart": "Aufwand", "konto_skr03": "2100", "konto_skr04": "3150", "eks_kategorie": "B16",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Umsatzsteuer-Zahlung FA",              "kontenart": "Aufwand", "konto_skr03": "1780", "konto_skr04": "1780", "eks_kategorie": "B18",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Anlagevermögen (Kauf)",                "kontenart": "Anlage",  "konto_skr03": "0400", "konto_skr04": "0400", "eks_kategorie": "B8",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
