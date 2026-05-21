@@ -8,3 +8,5 @@ Pillow==12.1.1
 segno==1.6.1
 drafthorse
 factur-x
+lxml
+pypdf

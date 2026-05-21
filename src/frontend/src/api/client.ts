@@ -593,6 +593,49 @@ export async function getBelegUrl(rechnungId: number): Promise<string> {
 export const deleteBeleg = (rechnungId: number) =>
   request<void>(`/rechnungen/${rechnungId}/beleg`, { method: 'DELETE' })
 
+export type AnalysePosition = {
+  beschreibung: string
+  menge: string
+  einheit: string
+  netto: string
+  ust_satz: string
+}
+
+export type AnalyseFelder = {
+  externe_belegnr?: string
+  datum?: string
+  faellig_am?: string
+  gesamt_netto?: string
+  gesamt_ust?: string
+  gesamt_brutto?: string
+  ust_satz?: string
+  lieferant_name?: string
+  lieferant_ust_id?: string
+  lieferant_email?: string
+  lieferant_strasse?: string
+  lieferant_plz?: string
+  lieferant_ort?: string
+}
+
+export type AnalyseErgebnis = {
+  format: 'zugferd' | 'xrechnung' | 'pdf' | 'unbekannt' | string
+  felder: AnalyseFelder
+  positionen: AnalysePosition[]
+  warnungen: string[]
+}
+
+export async function analysiereRechnung(datei: File): Promise<AnalyseErgebnis> {
+  const base = await getBaseUrl()
+  const form = new FormData()
+  form.append('datei', datei)
+  const res = await fetch(`${base}/rechnungen/analysieren`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail ?? 'Analyse fehlgeschlagen')
+  }
+  return res.json()
+}
+
 // --- Rechnungen ---
 export type Rechnungsposition = {
   id: number

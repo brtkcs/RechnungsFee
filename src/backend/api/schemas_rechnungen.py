@@ -213,6 +213,41 @@ class RechnungResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Analyse-Ergebnis (Stufe 2 – ZUGFeRD/XRechnung-Import)
+# ---------------------------------------------------------------------------
+
+class AnalysePositionResponse(BaseModel):
+    beschreibung: str
+    menge: str
+    einheit: str
+    netto: str
+    ust_satz: str
+
+
+class AnalyseFelder(BaseModel):
+    externe_belegnr: Optional[str] = None
+    datum: Optional[str] = None
+    faellig_am: Optional[str] = None
+    gesamt_netto: Optional[str] = None
+    gesamt_ust: Optional[str] = None
+    gesamt_brutto: Optional[str] = None
+    ust_satz: Optional[str] = None
+    lieferant_name: Optional[str] = None
+    lieferant_ust_id: Optional[str] = None
+    lieferant_email: Optional[str] = None
+    lieferant_strasse: Optional[str] = None
+    lieferant_plz: Optional[str] = None
+    lieferant_ort: Optional[str] = None
+
+
+class AnalyseResponse(BaseModel):
+    format: str   # zugferd | xrechnung | pdf | unbekannt
+    felder: AnalyseFelder
+    positionen: List[AnalysePositionResponse]
+    warnungen: List[str]
+
+
+# ---------------------------------------------------------------------------
 # Bar-Zahlung
 # ---------------------------------------------------------------------------
 

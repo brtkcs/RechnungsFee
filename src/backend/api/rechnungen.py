@@ -24,9 +24,10 @@ from utils.signatur import signatur_journaleintrag
 from utils.pdf_rechnung import generate_rechnung_pdf
 from utils.pdf_rechnung_vorlage1 import generate_rechnung_pdf_vorlage1
 from utils.zugferd import generate_zugferd_pdf
+from utils.rechnungs_parser import analysiere_datei
 from .schemas_rechnungen import (
     BelegResponse, RechnungCreate, RechnungUpdate, RechnungResponse,
-    BarZahlungCreate, BarZahlungResult, ZahlungKompakt,
+    BarZahlungCreate, BarZahlungResult, ZahlungKompakt, AnalyseResponse,
 )
 
 BELEG_DIR = APP_DATA_DIR / "uploads" / "belege"
@@ -117,6 +118,20 @@ def _partner_name(rechnung: Rechnung) -> str:
 # ---------------------------------------------------------------------------
 # Endpunkte
 # ---------------------------------------------------------------------------
+
+@router.post("/analysieren", response_model=AnalyseResponse)
+async def analysiere_rechnung(datei: UploadFile = File(...)):
+    """ZUGFeRD / XRechnung aus PDF oder XML extrahieren (keine DB-Änderung)."""
+    inhalt = await datei.read()
+    ergebnis = analysiere_datei(datei.filename or "", inhalt)
+    from .schemas_rechnungen import AnalyseFelder, AnalysePositionResponse
+    return AnalyseResponse(
+        format=ergebnis.format,
+        felder=AnalyseFelder(**ergebnis.felder),
+        positionen=[AnalysePositionResponse(**p.__dict__) for p in ergebnis.positionen],
+        warnungen=ergebnis.warnungen,
+    )
+
 
 @router.get("/faellig", response_model=list[RechnungResponse])
 def get_faellige_rechnungen(tage: int = Query(7, ge=0, le=365), db: Session = Depends(get_db)):

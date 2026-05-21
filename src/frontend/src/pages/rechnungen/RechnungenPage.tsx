@@ -5,9 +5,9 @@ import {
   stornoRechnung, finalisiereRechnung,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl,
   sucheArtikel, getUstSaetze, getKassenstand,
-  uploadBeleg, getBelegUrl, deleteBeleg,
+  uploadBeleg, getBelegUrl, deleteBeleg, analysiereRechnung,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate,
-  type ArtikelSuche,
+  type ArtikelSuche, type AnalyseErgebnis,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
 
@@ -1091,14 +1091,20 @@ const leerPosition = (defaultUst = '19'): Positionszeile => ({
 function RechnungForm({
   typ,
   initial,
+  prefillFromAnalyse,
   onSave,
   onCancel,
 }: {
   typ: 'eingang' | 'ausgang'
   initial?: Rechnung
+  prefillFromAnalyse?: AnalyseErgebnis
   onSave: (data: RechnungCreate) => void
   onCancel: () => void
 }) {
+  const pf = prefillFromAnalyse?.felder
+  const formatLabel: Record<string, string> = {
+    zugferd: 'ZUGFeRD', xrechnung: 'XRechnung', pdf: 'PDF', unbekannt: 'Unbekannt', xml: 'XML',
+  }
   const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
   const { data: lieferanten } = useQuery({ queryKey: ['lieferanten'], queryFn: getLieferanten })
   const { data: kategorien } = useQuery({ queryKey: ['kategorien', 'aktiv'], queryFn: () => getKategorien(true) })
@@ -1114,15 +1120,16 @@ function RechnungForm({
         : '19')
 
   const [rechnungsnummer, setRechnungsnummer] = useState(initial?.rechnungsnummer ?? '')
-  const [datum, setDatum] = useState(initial?.datum ?? heuteIso())
+  const [datum, setDatum] = useState(pf?.datum ?? initial?.datum ?? heuteIso())
   const [leistungsdatum, setLeistungsdatum] = useState(initial?.leistungsdatum ?? initial?.datum ?? heuteIso())
   const [leistungsdatumManuell, setLeistungsdatumManuell] = useState(
     !!(initial?.leistungsdatum && initial.leistungsdatum !== initial.datum)
   )
   const zahlungsziel = unternehmen?.standard_zahlungsziel ?? 14
   const [faelligAm, setFaelligAm] = useState(() => {
+    if (pf?.faellig_am) return pf.faellig_am
     if (initial?.faellig_am) return initial.faellig_am
-    if (initial) return ''  // Bearbeiten ohne Fälligkeitsdatum → leer lassen
+    if (initial) return ''
     const d = new Date(heuteIso())
     d.setDate(d.getDate() + (unternehmen?.standard_zahlungsziel ?? 14))
     return d.toISOString().slice(0, 10)
@@ -1132,28 +1139,54 @@ function RechnungForm({
       ? String(initial?.kunde_id ?? '')
       : String(initial?.lieferant_id ?? '')
   )
-  const [partnerFreitext, setPartnerFreitext] = useState(initial?.partner_freitext ?? '')
+  const [partnerFreitext, setPartnerFreitext] = useState(
+    pf?.lieferant_name ?? initial?.partner_freitext ?? ''
+  )
   const [kategorieId, setKategorieId] = useState<string>(String(initial?.kategorie_id ?? ''))
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
-  const [externeBelegnr, setExterneBelegnr] = useState(initial?.externe_belegnr ?? '')
+  const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
   const [positionen, setPositionen] = useState<Positionszeile[]>(
-    initial?.positionen?.map((p) => ({
-      beschreibung: p.beschreibung,
-      menge: String(parseFloat(p.menge)),  // Decimal-Trailing-Zeros entfernen (z.B. "10.000" → "10")
-      einheit: p.einheit,
-      netto: p.brutto,  // eingabeModus startet als 'brutto' → Bruttowert vorbefüllen
-      ust_satz: String(parseFloat(p.ust_satz)),
-      artikel_id: p.artikel_id ?? undefined,
-      kategorie_id: p.kategorie_id != null ? String(p.kategorie_id) : undefined,
-    })) ?? [leerPosition(defaultUstGlobal)]
+    prefillFromAnalyse?.positionen?.length
+      ? prefillFromAnalyse.positionen.map((p) => ({
+          beschreibung: p.beschreibung,
+          menge: String(parseFloat(p.menge)),
+          einheit: p.einheit || 'Stück',
+          netto: p.netto,
+          ust_satz: p.ust_satz,
+        }))
+      : initial?.positionen?.map((p) => ({
+          beschreibung: p.beschreibung,
+          menge: String(parseFloat(p.menge)),
+          einheit: p.einheit,
+          netto: p.brutto,  // eingabeModus startet als 'brutto' → Bruttowert vorbefüllen
+          ust_satz: String(parseFloat(p.ust_satz)),
+          artikel_id: p.artikel_id ?? undefined,
+          kategorie_id: p.kategorie_id != null ? String(p.kategorie_id) : undefined,
+        })) ?? [leerPosition(defaultUstGlobal)]
   )
-  const [eingabeModus, setEingabeModus] = useState<'netto' | 'brutto'>('brutto')
+  const [eingabeModus, setEingabeModus] = useState<'netto' | 'brutto'>(
+    prefillFromAnalyse?.positionen?.length ? 'netto' : 'brutto'
+  )
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
   const [schnellmodus, setSchnellmodus] = useState(
     typ === 'eingang' && (!initial || initial.positionen.length <= 1)
   )
 
   const partnerListe = typ === 'ausgang' ? (kunden ?? []) : (lieferanten ?? [])
+
+  // Lieferant aus Analyse-Prefill per Name matchen
+  useEffect(() => {
+    if (!prefillFromAnalyse || !pf?.lieferant_name || !lieferanten?.length) return
+    const name = pf.lieferant_name.toLowerCase()
+    const match = lieferanten.find(
+      (l) => (l.firmenname || `${l.vorname ?? ''} ${l.nachname ?? ''}`).toLowerCase().includes(name)
+        || name.includes((l.firmenname || '').toLowerCase())
+    )
+    if (match?.id) {
+      setPartnerId(String(match.id))
+      setPartnerFreitext('')
+    }
+  }, [lieferanten])
 
   // Default-Kategorie vorwählen (nur neue Rechnung, nicht beim Bearbeiten)
   useEffect(() => {
@@ -1334,6 +1367,18 @@ function RechnungForm({
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
+      {/* Import-Warnungen */}
+      {prefillFromAnalyse && prefillFromAnalyse.warnungen.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 space-y-1">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1">
+            Hinweise aus dem Import ({formatLabel[prefillFromAnalyse.format] ?? prefillFromAnalyse.format}):
+          </p>
+          {prefillFromAnalyse.warnungen.map((w, i) => (
+            <p key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠️ {w}</p>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
@@ -1714,6 +1759,184 @@ function RechnungForm({
 }
 
 // ---------------------------------------------------------------------------
+// Import-Dialog (Stufe 2 – ZUGFeRD/XRechnung)
+// ---------------------------------------------------------------------------
+
+function ImportDialog({
+  onClose,
+  onWeiter,
+}: {
+  onClose: () => void
+  onWeiter: (ergebnis: AnalyseErgebnis) => void
+}) {
+  const [schritt, setSchritt] = useState<'upload' | 'ergebnis'>('upload')
+  const [ergebnis, setErgebnis] = useState<AnalyseErgebnis | null>(null)
+  const [ladeFehler, setLadeFehler] = useState<string | null>(null)
+  const [laedt, setLaedt] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleDatei(datei: File) {
+    setLaedt(true)
+    setLadeFehler(null)
+    try {
+      const res = await analysiereRechnung(datei)
+      setErgebnis(res)
+      setSchritt('ergebnis')
+    } catch (e: any) {
+      setLadeFehler(e.message)
+    } finally {
+      setLaedt(false)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const datei = e.dataTransfer.files[0]
+    if (datei) handleDatei(datei)
+  }
+
+  const formatLabel: Record<string, string> = {
+    zugferd: 'ZUGFeRD',
+    xrechnung: 'XRechnung',
+    pdf: 'PDF (kein XML)',
+    unbekannt: 'Unbekannt',
+    xml: 'XML',
+  }
+
+  const felder = ergebnis?.felder
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Rechnung importieren</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
+        </div>
+
+        <div className="p-6">
+          {schritt === 'upload' && (
+            <>
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => inputRef.current?.click()}
+                className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
+              >
+                <span className="text-4xl">{laedt ? '⏳' : '📄'}</span>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {laedt ? 'Analysiere…' : 'PDF oder XML hier ablegen'}
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">oder klicken zum Auswählen</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">ZUGFeRD · XRechnung · normales PDF</p>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".pdf,.xml"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDatei(f) }}
+                />
+              </div>
+              {ladeFehler && (
+                <p className="mt-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+                  {ladeFehler}
+                </p>
+              )}
+            </>
+          )}
+
+          {schritt === 'ergebnis' && ergebnis && (
+            <div className="space-y-4">
+              {/* Format-Badge */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                  ergebnis.format === 'zugferd' || ergebnis.format === 'xrechnung'
+                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'
+                }`}>
+                  {formatLabel[ergebnis.format] ?? ergebnis.format}
+                </span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  {ergebnis.format === 'zugferd' || ergebnis.format === 'xrechnung'
+                    ? 'Strukturierte Daten erkannt'
+                    : 'Keine strukturierten Daten – bitte manuell ausfüllen'}
+                </span>
+              </div>
+
+              {/* Warnungen */}
+              {ergebnis.warnungen.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 space-y-1">
+                  {ergebnis.warnungen.map((w, i) => (
+                    <p key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠️ {w}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Erkannte Felder */}
+              {felder && Object.keys(felder).some(k => (felder as any)[k]) && (
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-2 text-sm">
+                  {felder.lieferant_name && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">Lieferant</span>
+                      <span className="font-medium dark:text-slate-200">{felder.lieferant_name}</span>
+                    </div>
+                  )}
+                  {felder.externe_belegnr && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">Rechnungsnr.</span>
+                      <span className="font-medium dark:text-slate-200">{felder.externe_belegnr}</span>
+                    </div>
+                  )}
+                  {felder.datum && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">Datum</span>
+                      <span className="font-medium dark:text-slate-200">{formatDatum(felder.datum)}</span>
+                    </div>
+                  )}
+                  {felder.faellig_am && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">Fällig am</span>
+                      <span className="font-medium dark:text-slate-200">{formatDatum(felder.faellig_am)}</span>
+                    </div>
+                  )}
+                  {felder.gesamt_brutto && (
+                    <div className="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-2 mt-2 font-semibold">
+                      <span className="text-slate-600 dark:text-slate-300">Brutto</span>
+                      <span className="dark:text-slate-100">{formatEuro(felder.gesamt_brutto)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ergebnis.positionen.length > 0 && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {ergebnis.positionen.length} Position{ergebnis.positionen.length !== 1 ? 'en' : ''} erkannt
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setSchritt('upload'); setErgebnis(null) }}
+                  className="flex-1 px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300"
+                >
+                  Andere Datei
+                </button>
+                <button
+                  onClick={() => onWeiter(ergebnis)}
+                  className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Rechnung erstellen →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// ---------------------------------------------------------------------------
 // Haupt-Seite
 // ---------------------------------------------------------------------------
 
@@ -1733,6 +1956,8 @@ export function RechnungenPage() {
   const [formModus, setFormModus] = useState<'neu' | 'bearbeiten' | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [sortFaellig, setSortFaellig] = useState<'asc' | 'desc' | null>(null)
+  const [zeigImport, setZeigImport] = useState(false)
+  const [importPrefill, setImportPrefill] = useState<AnalyseErgebnis | null>(null)
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams =
@@ -1816,17 +2041,39 @@ export function RechnungenPage() {
 
   return (
     <div className="flex h-full">
+      {zeigImport && (
+        <ImportDialog
+          onClose={() => setZeigImport(false)}
+          onWeiter={(ergebnis) => {
+            setZeigImport(false)
+            setImportPrefill(ergebnis)
+            setTyp('eingang')
+            setFormModus('neu')
+            setSelectedId(null)
+          }}
+        />
+      )}
       {/* Linke Spalte */}
       <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 transition-all`}>
         <div className="p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Rechnungen</h2>
-            <button
-              onClick={() => { setFormModus('neu'); setSelectedId(null) }}
-              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              + Neue Rechnung
-            </button>
+            <div className="flex gap-2">
+              {typ === 'eingang' && (
+                <button
+                  onClick={() => setZeigImport(true)}
+                  className="px-4 py-2 text-sm font-medium border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors"
+                >
+                  ↑ Importieren
+                </button>
+              )}
+              <button
+                onClick={() => { setFormModus('neu'); setSelectedId(null); setImportPrefill(null) }}
+                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                + Neue Rechnung
+              </button>
+            </div>
           </div>
 
           {/* Tabs + Filter */}
@@ -2042,6 +2289,7 @@ export function RechnungenPage() {
             <RechnungForm
               typ={formModus === 'bearbeiten' && selectedRechnung ? selectedRechnung.typ : typ}
               initial={formModus === 'bearbeiten' ? selectedRechnung ?? undefined : undefined}
+              prefillFromAnalyse={formModus === 'neu' ? importPrefill ?? undefined : undefined}
               onSave={(data) => {
                 if (formModus === 'bearbeiten' && selectedId) {
                   updateMutation.mutate({ id: selectedId, data })
