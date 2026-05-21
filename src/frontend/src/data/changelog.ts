@@ -23,6 +23,20 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.4',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Eingangsrechnungen importieren – ZUGFeRD/XRechnung werden automatisch erkannt und Felder vorausgefüllt' },
+      { typ: 'neu', text: 'Eingangsrechnung-Import: plain PDF öffnet sich automatisch zum Abschreiben, Originaldatei wird als Beleganhang gespeichert' },
+      { typ: 'neu', text: 'Kategorien: SKR03/SKR04-Kontonummern im Bearbeitungsmodus editierbar, Reset auf Standardwert möglich' },
+      { typ: 'neu', text: 'Kategorien: eigene Kategorien anlegen und nicht verwendete löschen' },
+      { typ: 'verbesserung', text: 'EÜR-Zeilennummern auf Anlage EÜR 2025 aktualisiert (44 Korrekturen)' },
+      { typ: 'verbesserung', text: 'SKR03/SKR04-Kontonummern auf DATEV-Kontenrahmen 2026 korrigiert (39 Korrekturen)' },
+      { typ: 'fix', text: 'Mausrad-Scrollen im Setup-Wizard unter Linux Mint Cinnamon (WebKit2GTK)' },
+      { typ: 'fix', text: 'Reset-Button in Kategorien aktualisiert den angezeigten Wert sofort' },
+    ],
+  },
+  {
     version: 'v0.2.3',
     datum: 'Mai 2026',
     eintraege: [
