@@ -132,7 +132,7 @@ async def analysiere_rechnung(datei: UploadFile = File(...)):
         _bereinige_temp_dir()
         token = str(uuid.uuid4())
         (TEMP_DIR / f"{token}.pdf").write_bytes(inhalt)
-        temp_url = f"/api/rechnungen/temp/{token}"
+        temp_url = f"/rechnungen/temp/{token}"
 
     from .schemas_rechnungen import AnalyseFelder, AnalysePositionResponse
     return AnalyseResponse(

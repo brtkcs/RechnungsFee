@@ -1923,17 +1923,6 @@ function ImportDialog({
                 </p>
               )}
 
-              {/* PDF öffnen bei plain PDF */}
-              {istPlainPdf && ergebnis.temp_url && (
-                <button
-                  type="button"
-                  onClick={handlePdfOeffnen}
-                  className="w-full px-4 py-2 text-sm border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
-                >
-                  PDF öffnen zum Abschreiben
-                </button>
-              )}
-
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => { setSchritt('upload'); setErgebnis(null); setDatei(null) }}
@@ -1942,7 +1931,10 @@ function ImportDialog({
                   Andere Datei
                 </button>
                 <button
-                  onClick={() => datei && onWeiter(ergebnis, datei)}
+                  onClick={() => {
+                    if (istPlainPdf) handlePdfOeffnen()
+                    if (datei) onWeiter(ergebnis, datei)
+                  }}
                   className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Rechnung erstellen →
