@@ -381,6 +381,7 @@ export function KategorienPage() {
                         <td className="px-3 py-2">
                           {editModus ? (
                             <KontoCellEdit
+                              key={`${k.id}-skr03-${k.konto_skr03 ?? ''}`}
                               value={k.konto_skr03}
                               defaultValue={k.konto_skr03_default}
                               isModified={k.user_modified_skr03}
@@ -398,6 +399,7 @@ export function KategorienPage() {
                         <td className="px-3 py-2">
                           {editModus ? (
                             <KontoCellEdit
+                              key={`${k.id}-skr04-${k.konto_skr04 ?? ''}`}
                               value={k.konto_skr04}
                               defaultValue={k.konto_skr04_default}
                               isModified={k.user_modified_skr04}
