@@ -70,7 +70,10 @@ export function SetupWizard() {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div
+      className="h-screen overflow-y-auto bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+      onWheel={(e) => { e.currentTarget.scrollTop += e.deltaY }}
+    >
       <div className="min-h-full flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Header */}
