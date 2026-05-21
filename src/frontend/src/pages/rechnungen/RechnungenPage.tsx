@@ -1767,19 +1767,31 @@ function ImportDialog({
   onWeiter,
 }: {
   onClose: () => void
-  onWeiter: (ergebnis: AnalyseErgebnis) => void
+  onWeiter: (ergebnis: AnalyseErgebnis, datei: File) => void
 }) {
   const [schritt, setSchritt] = useState<'upload' | 'ergebnis'>('upload')
   const [ergebnis, setErgebnis] = useState<AnalyseErgebnis | null>(null)
   const [ladeFehler, setLadeFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(false)
+  const [datei, setDatei] = useState<File | null>(null)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  async function handleDatei(datei: File) {
+  useEffect(() => {
+    if (datei?.type === 'application/pdf') {
+      const url = URL.createObjectURL(datei)
+      setBlobUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    setBlobUrl(null)
+  }, [datei])
+
+  async function handleDatei(f: File) {
+    setDatei(f)
     setLaedt(true)
     setLadeFehler(null)
     try {
-      const res = await analysiereRechnung(datei)
+      const res = await analysiereRechnung(f)
       setErgebnis(res)
       setSchritt('ergebnis')
     } catch (e: any) {
@@ -1791,8 +1803,8 @@ function ImportDialog({
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
-    const datei = e.dataTransfer.files[0]
-    if (datei) handleDatei(datei)
+    const f = e.dataTransfer.files[0]
+    if (f) handleDatei(f)
   }
 
   const formatLabel: Record<string, string> = {
@@ -1805,9 +1817,11 @@ function ImportDialog({
 
   const felder = ergebnis?.felder
 
+  const istPlainPdf = ergebnis?.format === 'pdf' || ergebnis?.format === 'unbekannt'
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
+      <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full ${istPlainPdf && blobUrl ? 'max-w-3xl' : 'max-w-lg'}`}>
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <h3 className="font-semibold text-slate-800 dark:text-slate-100">Rechnung importieren</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
@@ -1845,7 +1859,16 @@ function ImportDialog({
           )}
 
           {schritt === 'ergebnis' && ergebnis && (
-            <div className="space-y-4">
+            <div className={istPlainPdf && blobUrl ? 'flex gap-4' : 'space-y-4'}>
+
+              {/* PDF-Vorschau links bei plain PDF */}
+              {istPlainPdf && blobUrl && (
+                <div className="flex-1 min-w-0 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700" style={{ height: '420px' }}>
+                  <iframe src={blobUrl} className="w-full h-full" title="PDF-Vorschau" />
+                </div>
+              )}
+
+              <div className={`space-y-4 ${istPlainPdf && blobUrl ? 'w-64 shrink-0' : ''}`}>
               {/* Format-Badge */}
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
@@ -1915,17 +1938,18 @@ function ImportDialog({
 
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => { setSchritt('upload'); setErgebnis(null) }}
+                  onClick={() => { setSchritt('upload'); setErgebnis(null); setDatei(null) }}
                   className="flex-1 px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300"
                 >
                   Andere Datei
                 </button>
                 <button
-                  onClick={() => onWeiter(ergebnis)}
+                  onClick={() => datei && onWeiter(ergebnis, datei)}
                   className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Rechnung erstellen →
                 </button>
+              </div>
               </div>
             </div>
           )}
@@ -1958,6 +1982,7 @@ export function RechnungenPage() {
   const [sortFaellig, setSortFaellig] = useState<'asc' | 'desc' | null>(null)
   const [zeigImport, setZeigImport] = useState(false)
   const [importPrefill, setImportPrefill] = useState<AnalyseErgebnis | null>(null)
+  const [importDatei, setImportDatei] = useState<File | null>(null)
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams =
@@ -1978,7 +2003,11 @@ export function RechnungenPage() {
 
   const createMutation = useMutation({
     mutationFn: createRechnung,
-    onSuccess: (r) => {
+    onSuccess: async (r) => {
+      if (importDatei) {
+        try { await uploadBeleg(r.id, importDatei) } catch {}
+        setImportDatei(null)
+      }
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
       setFormModus(null)
       setSelectedId(r.id)
@@ -2044,9 +2073,10 @@ export function RechnungenPage() {
       {zeigImport && (
         <ImportDialog
           onClose={() => setZeigImport(false)}
-          onWeiter={(ergebnis) => {
+          onWeiter={(ergebnis, datei) => {
             setZeigImport(false)
             setImportPrefill(ergebnis)
+            setImportDatei(datei)
             setTyp('eingang')
             setFormModus('neu')
             setSelectedId(null)
