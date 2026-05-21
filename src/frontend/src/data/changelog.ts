@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.3',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Setup-Wizard scrollbar in Tauri – langer Inhalt war abgeschnitten, Wizard ist jetzt vollständig scrollbar' },
+    ],
+  },
+  {
     version: 'v0.2.2',
     datum: 'Mai 2026',
     eintraege: [
