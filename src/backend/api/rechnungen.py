@@ -31,6 +31,7 @@ from .schemas_rechnungen import (
 )
 
 BELEG_DIR = APP_DATA_DIR / "uploads" / "belege"
+TEMP_DIR = APP_DATA_DIR / "uploads" / "tmp"
 ERLAUBTE_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/tiff"}
 
 router = APIRouter(prefix="/api/rechnungen", tags=["Rechnungen"])
@@ -124,13 +125,49 @@ async def analysiere_rechnung(datei: UploadFile = File(...)):
     """ZUGFeRD / XRechnung aus PDF oder XML extrahieren (keine DB-Änderung)."""
     inhalt = await datei.read()
     ergebnis = analysiere_datei(datei.filename or "", inhalt)
+
+    temp_url = None
+    if datei.content_type == "application/pdf":
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        _bereinige_temp_dir()
+        token = str(uuid.uuid4())
+        (TEMP_DIR / f"{token}.pdf").write_bytes(inhalt)
+        temp_url = f"/api/rechnungen/temp/{token}"
+
     from .schemas_rechnungen import AnalyseFelder, AnalysePositionResponse
     return AnalyseResponse(
         format=ergebnis.format,
         felder=AnalyseFelder(**ergebnis.felder),
         positionen=[AnalysePositionResponse(**p.__dict__) for p in ergebnis.positionen],
         warnungen=ergebnis.warnungen,
+        temp_url=temp_url,
     )
+
+
+@router.get("/temp/{token}")
+def get_temp_pdf(token: str):
+    """Temporäre PDF-Vorschau nach Import-Analyse."""
+    import re
+    if not re.fullmatch(r"[0-9a-f\-]{36}", token):
+        raise HTTPException(status_code=404)
+    pfad = TEMP_DIR / f"{token}.pdf"
+    if not pfad.exists():
+        raise HTTPException(status_code=404)
+    return FileResponse(pfad, media_type="application/pdf", content_disposition_type="inline")
+
+
+def _bereinige_temp_dir():
+    """Temp-PDFs die älter als 2h sind löschen."""
+    import time
+    jetzt = time.time()
+    if not TEMP_DIR.exists():
+        return
+    for f in TEMP_DIR.glob("*.pdf"):
+        try:
+            if jetzt - f.stat().st_mtime > 7200:
+                f.unlink()
+        except OSError:
+            pass
 
 
 @router.get("/faellig", response_model=list[RechnungResponse])

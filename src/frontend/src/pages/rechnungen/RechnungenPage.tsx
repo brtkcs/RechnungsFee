@@ -1774,17 +1774,7 @@ function ImportDialog({
   const [ladeFehler, setLadeFehler] = useState<string | null>(null)
   const [laedt, setLaedt] = useState(false)
   const [datei, setDatei] = useState<File | null>(null)
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (datei?.type === 'application/pdf') {
-      const url = URL.createObjectURL(datei)
-      setBlobUrl(url)
-      return () => URL.revokeObjectURL(url)
-    }
-    setBlobUrl(null)
-  }, [datei])
 
   async function handleDatei(f: File) {
     setDatei(f)
@@ -1807,6 +1797,12 @@ function ImportDialog({
     if (f) handleDatei(f)
   }
 
+  async function handlePdfOeffnen() {
+    if (!ergebnis?.temp_url) return
+    const base = await getApiBase()
+    openUrl(`${base}${ergebnis.temp_url}`)
+  }
+
   const formatLabel: Record<string, string> = {
     zugferd: 'ZUGFeRD',
     xrechnung: 'XRechnung',
@@ -1816,12 +1812,11 @@ function ImportDialog({
   }
 
   const felder = ergebnis?.felder
-
   const istPlainPdf = ergebnis?.format === 'pdf' || ergebnis?.format === 'unbekannt'
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full ${istPlainPdf && blobUrl ? 'max-w-3xl' : 'max-w-lg'}`}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <h3 className="font-semibold text-slate-800 dark:text-slate-100">Rechnung importieren</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
@@ -1859,16 +1854,8 @@ function ImportDialog({
           )}
 
           {schritt === 'ergebnis' && ergebnis && (
-            <div className={istPlainPdf && blobUrl ? 'flex gap-4' : 'space-y-4'}>
+            <div className="space-y-4">
 
-              {/* PDF-Vorschau links bei plain PDF */}
-              {istPlainPdf && blobUrl && (
-                <div className="flex-1 min-w-0 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700" style={{ height: '420px' }}>
-                  <iframe src={blobUrl} className="w-full h-full" title="PDF-Vorschau" />
-                </div>
-              )}
-
-              <div className={`space-y-4 ${istPlainPdf && blobUrl ? 'w-64 shrink-0' : ''}`}>
               {/* Format-Badge */}
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
@@ -1936,6 +1923,17 @@ function ImportDialog({
                 </p>
               )}
 
+              {/* PDF öffnen bei plain PDF */}
+              {istPlainPdf && ergebnis.temp_url && (
+                <button
+                  type="button"
+                  onClick={handlePdfOeffnen}
+                  className="w-full px-4 py-2 text-sm border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950"
+                >
+                  PDF öffnen zum Abschreiben
+                </button>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => { setSchritt('upload'); setErgebnis(null); setDatei(null) }}
@@ -1949,7 +1947,6 @@ function ImportDialog({
                 >
                   Rechnung erstellen →
                 </button>
-              </div>
               </div>
             </div>
           )}

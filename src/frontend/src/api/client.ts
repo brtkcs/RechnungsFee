@@ -644,6 +644,7 @@ export type AnalyseErgebnis = {
   felder: AnalyseFelder
   positionen: AnalysePosition[]
   warnungen: string[]
+  temp_url?: string
 }
 
 export async function analysiereRechnung(datei: File): Promise<AnalyseErgebnis> {

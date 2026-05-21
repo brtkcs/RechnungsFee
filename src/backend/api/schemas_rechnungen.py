@@ -245,6 +245,7 @@ class AnalyseResponse(BaseModel):
     felder: AnalyseFelder
     positionen: List[AnalysePositionResponse]
     warnungen: List[str]
+    temp_url: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
