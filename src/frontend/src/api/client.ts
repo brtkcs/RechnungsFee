@@ -209,6 +209,10 @@ export type Kategorie = {
   konto_skr03?: string
   konto_skr04?: string
   konto_skr49?: string
+  konto_skr03_default?: string
+  konto_skr04_default?: string
+  user_modified_skr03: boolean
+  user_modified_skr04: boolean
   eks_kategorie?: string
   euer_zeile?: number
   vorsteuer_prozent: string
@@ -216,10 +220,28 @@ export type Kategorie = {
   ist_system: boolean
   aktiv: boolean
 }
+export type KategorieCreate = {
+  name: string
+  kontenart: string
+  konto_skr03?: string
+  konto_skr04?: string
+  euer_zeile?: number
+  eks_kategorie?: string
+  vorsteuer_prozent?: number
+  ust_satz_standard?: number
+}
 export const getKategorien = (nurAktive = false) =>
   request<Kategorie[]>(`/kategorien${nurAktive ? '?nur_aktive=true' : ''}`)
 export const toggleKategorieAktiv = (id: number) =>
   request<Kategorie>(`/kategorien/${id}/aktiv`, { method: 'PATCH' })
+export const updateKategorieKonten = (id: number, data: { konto_skr03?: string; konto_skr04?: string }) =>
+  request<Kategorie>(`/kategorien/${id}/konten`, { method: 'PATCH', body: JSON.stringify(data) })
+export const resetKategorieKonten = (id: number) =>
+  request<Kategorie>(`/kategorien/${id}/konten/reset`, { method: 'POST' })
+export const createKategorie = (data: KategorieCreate) =>
+  request<Kategorie>(`/kategorien`, { method: 'POST', body: JSON.stringify(data) })
+export const deleteKategorie = (id: number) =>
+  request<void>(`/kategorien/${id}`, { method: 'DELETE' })
 
 // --- Journal ---
 export type JournalEintrag = {

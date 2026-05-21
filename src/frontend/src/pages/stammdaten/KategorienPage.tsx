@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getKategorien, toggleKategorieAktiv } from '../../api/client'
+import {
+  getKategorien, toggleKategorieAktiv,
+  updateKategorieKonten, resetKategorieKonten, createKategorie, deleteKategorie,
+  type KategorieCreate,
+} from '../../api/client'
 
 const KONTENART_META: Record<string, { label: string; cls: string; beschreibung: string }> = {
   Erlös:   { label: 'Erlöse',   cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300', beschreibung: 'Betriebseinnahmen' },
@@ -19,22 +23,230 @@ function UstBadge({ satz }: { satz: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// Neues-Kategorie-Dialog
+// ---------------------------------------------------------------------------
+
+const LEER: KategorieCreate = {
+  name: '', kontenart: 'Aufwand', konto_skr03: '', konto_skr04: '',
+  euer_zeile: undefined, eks_kategorie: '', vorsteuer_prozent: 100, ust_satz_standard: 19,
+}
+
+function NeuDialog({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState<KategorieCreate>(LEER)
+  const [err, setErr] = useState('')
+  const qc = useQueryClient()
+  const mut = useMutation({
+    mutationFn: createKategorie,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['kategorien'] }); onClose() },
+    onError: (e: Error) => setErr(e.message),
+  })
+
+  const set = (k: keyof KategorieCreate, v: string | number | undefined) =>
+    setForm(f => ({ ...f, [k]: v }))
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Neue Kategorie</h3>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Bezeichnung *</label>
+            <input
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              value={form.name}
+              onChange={e => set('name', e.target.value)}
+              placeholder="z.B. Fachzeitschriften"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Kontenart *</label>
+            <select
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              value={form.kontenart}
+              onChange={e => set('kontenart', e.target.value)}
+            >
+              <option>Aufwand</option>
+              <option>Erlös</option>
+              <option>Anlage</option>
+              <option>Privat</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">USt-Satz Standard</label>
+            <select
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              value={form.ust_satz_standard}
+              onChange={e => set('ust_satz_standard', Number(e.target.value))}
+            >
+              <option value={0}>0 % (§19 / steuerfrei)</option>
+              <option value={7}>7 %</option>
+              <option value={19}>19 %</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">SKR03-Konto</label>
+            <input
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+              value={form.konto_skr03 ?? ''}
+              onChange={e => set('konto_skr03', e.target.value)}
+              placeholder="z.B. 4945"
+              maxLength={10}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">SKR04-Konto</label>
+            <input
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+              value={form.konto_skr04 ?? ''}
+              onChange={e => set('konto_skr04', e.target.value)}
+              placeholder="z.B. 6821"
+              maxLength={10}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">EÜR-Zeile</label>
+            <input
+              type="number"
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              value={form.euer_zeile ?? ''}
+              onChange={e => set('euer_zeile', e.target.value ? Number(e.target.value) : undefined)}
+              placeholder="optional"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">EKS-Feld</label>
+            <input
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+              value={form.eks_kategorie ?? ''}
+              onChange={e => set('eks_kategorie', e.target.value)}
+              placeholder="z.B. B13 (optional)"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Vorsteuer %</label>
+            <input
+              type="number"
+              min={0} max={100}
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              value={form.vorsteuer_prozent ?? 100}
+              onChange={e => set('vorsteuer_prozent', Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        {err && <p className="text-xs text-red-500">{err}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            disabled={!form.name || mut.isPending}
+            onClick={() => mut.mutate(form)}
+            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            Anlegen
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// KontoCellEdit – Inline-Eingabefeld für SKR-Konto
+// ---------------------------------------------------------------------------
+
+function KontoCellEdit({
+  value, defaultValue, isModified, onSave, onReset,
+}: {
+  value: string | undefined
+  defaultValue: string | undefined
+  isModified: boolean
+  onSave: (v: string) => void
+  onReset: () => void
+}) {
+  const [local, setLocal] = useState(value ?? '')
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        className={`w-16 font-mono text-xs border rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 ${
+          isModified
+            ? 'border-amber-400 dark:border-amber-500'
+            : 'border-slate-300 dark:border-slate-600'
+        }`}
+        value={local}
+        maxLength={10}
+        onChange={e => setLocal(e.target.value)}
+        onBlur={() => { if (local !== (value ?? '')) onSave(local) }}
+        onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
+      />
+      {isModified && (
+        <button
+          type="button"
+          title={`Zurück auf Standard (${defaultValue ?? '—'})`}
+          onClick={onReset}
+          className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 text-xs"
+        >
+          ↩
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // KategorienPage
 // ---------------------------------------------------------------------------
 
 export function KategorienPage() {
   const [filter, setFilter] = useState('')
   const [nurAktive, setNurAktive] = useState(false)
+  const [editModus, setEditModus] = useState(false)
+  const [neuDialog, setNeuDialog] = useState(false)
   const qc = useQueryClient()
+
   const { data: kategorien = [], isLoading } = useQuery({
     queryKey: ['kategorien'],
     queryFn: () => getKategorien(false),
   })
+
   const toggleMutation = useMutation({
     mutationFn: (id: number) => toggleKategorieAktiv(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['kategorien'] })
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
+  })
+
+  const kontenMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { konto_skr03?: string; konto_skr04?: string } }) =>
+      updateKategorieKonten(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
+  })
+
+  const resetMutation = useMutation({
+    mutationFn: (id: number) => resetKategorieKonten(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteKategorie(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
   })
 
   const suchtext = filter.toLowerCase()
@@ -52,6 +264,8 @@ export function KategorienPage() {
 
   return (
     <div className="p-6 max-w-4xl">
+      {neuDialog && <NeuDialog onClose={() => setNeuDialog(false)} />}
+
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Kategorien</h2>
@@ -60,8 +274,8 @@ export function KategorienPage() {
         </p>
       </div>
 
-      {/* Suche + Filter */}
-      <div className="mb-5 flex items-center gap-3">
+      {/* Toolbar */}
+      <div className="mb-5 flex items-center gap-3 flex-wrap">
         <input
           type="search"
           value={filter}
@@ -80,7 +294,34 @@ export function KategorienPage() {
         >
           {nurAktive ? 'Nur aktive' : 'Alle'}
         </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditModus(v => !v)}
+            className={`text-sm px-3 py-2 rounded-lg border transition-colors ${
+              editModus
+                ? 'bg-amber-50 border-amber-400 text-amber-700 dark:bg-amber-900/30 dark:border-amber-500 dark:text-amber-300'
+                : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            {editModus ? '✏️ Konten bearbeiten – aktiv' : 'Konten bearbeiten'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setNeuDialog(true)}
+            className="text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          >
+            + Neue Kategorie
+          </button>
+        </div>
       </div>
+
+      {editModus && (
+        <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+          Bearbeitungsmodus aktiv – SKR03/SKR04-Kontonummern können direkt bearbeitet werden.
+          Geänderte Werte sind <span className="font-semibold">orange</span> markiert. Mit ↩ zurück auf den Standardwert.
+        </div>
+      )}
 
       {isLoading && <p className="text-slate-400 text-sm">Lade…</p>}
 
@@ -90,7 +331,6 @@ export function KategorienPage() {
           const meta = KONTENART_META[art] ?? { label: art, cls: 'bg-slate-100 text-slate-600', beschreibung: '' }
           return (
             <div key={art}>
-              {/* Gruppenheader */}
               <div className="flex items-center gap-2 mb-3">
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${meta.cls}`}>
                   {meta.label}
@@ -99,19 +339,18 @@ export function KategorienPage() {
                 <span className="text-xs text-slate-300 dark:text-slate-600 ml-auto">{liste.length} Kategorien</span>
               </div>
 
-              {/* Tabelle */}
               <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                       <th className="text-left px-4 py-2.5 font-medium sticky left-0 bg-slate-50 dark:bg-slate-900 z-10">Bezeichnung</th>
-                      <th className="text-left px-3 py-2.5 font-medium w-20">SKR03</th>
-                      <th className="text-left px-3 py-2.5 font-medium w-20">SKR04</th>
+                      <th className="text-left px-3 py-2.5 font-medium w-28">SKR03</th>
+                      <th className="text-left px-3 py-2.5 font-medium w-28">SKR04</th>
                       <th className="text-left px-3 py-2.5 font-medium w-24">EÜR-Zeile</th>
                       <th className="text-left px-3 py-2.5 font-medium w-20">EKS</th>
                       <th className="text-left px-3 py-2.5 font-medium w-24">USt-Satz</th>
                       <th className="text-left px-3 py-2.5 font-medium w-16">VSt %</th>
-                      <th className="px-3 py-2.5 w-10" />
+                      <th className="px-3 py-2.5 w-28 text-right" />
                     </tr>
                   </thead>
                   <tbody>
@@ -122,7 +361,7 @@ export function KategorienPage() {
                           !k.aktiv ? 'opacity-40' : ''
                         } ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
                       >
-                        <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-slate-800 z-10">
+                        <td className="px-4 py-2 sticky left-0 bg-white dark:bg-slate-800 z-10">
                           <div className="flex items-center gap-2">
                             <span className="text-slate-800 dark:text-slate-100">{k.name}</span>
                             {!k.ist_system && (
@@ -137,46 +376,101 @@ export function KategorienPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-slate-600 dark:text-slate-300 text-xs">
-                          {k.konto_skr03 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+
+                        {/* SKR03 */}
+                        <td className="px-3 py-2">
+                          {editModus ? (
+                            <KontoCellEdit
+                              value={k.konto_skr03}
+                              defaultValue={k.konto_skr03_default}
+                              isModified={k.user_modified_skr03}
+                              onSave={v => kontenMutation.mutate({ id: k.id, data: { konto_skr03: v } })}
+                              onReset={() => resetMutation.mutate(k.id)}
+                            />
+                          ) : (
+                            <span className={`font-mono text-xs ${k.user_modified_skr03 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                              {k.konto_skr03 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-slate-600 dark:text-slate-300 text-xs">
-                          {k.konto_skr04 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+
+                        {/* SKR04 */}
+                        <td className="px-3 py-2">
+                          {editModus ? (
+                            <KontoCellEdit
+                              value={k.konto_skr04}
+                              defaultValue={k.konto_skr04_default}
+                              isModified={k.user_modified_skr04}
+                              onSave={v => kontenMutation.mutate({ id: k.id, data: { konto_skr04: v } })}
+                              onReset={() => resetMutation.mutate(k.id)}
+                            />
+                          ) : (
+                            <span className={`font-mono text-xs ${k.user_modified_skr04 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                              {k.konto_skr04 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 text-xs">
+
+                        <td className="px-3 py-2 text-slate-500 dark:text-slate-400 text-xs">
                           {k.euer_zeile
                             ? <span>Zeile {k.euer_zeile}</span>
                             : <span className="text-slate-300 dark:text-slate-600">—</span>
                           }
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs">
+                        <td className="px-3 py-2 font-mono text-xs">
                           {k.eks_kategorie
                             ? <span className="text-slate-700 dark:text-slate-300">{k.eks_kategorie}</span>
                             : <span className="text-slate-300 dark:text-slate-600">—</span>
                           }
                         </td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-3 py-2">
                           <UstBadge satz={k.ust_satz_standard} />
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                        <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
                           {Number(k.vorsteuer_prozent) === 100
                             ? '100 %'
                             : <span className="text-amber-600 dark:text-amber-400">{k.vorsteuer_prozent} %</span>
                           }
                         </td>
-                        <td className="px-3 py-2.5 text-right">
-                          <button
-                            type="button"
-                            title={k.aktiv ? 'Deaktivieren' : 'Aktivieren'}
-                            onClick={() => toggleMutation.mutate(k.id)}
-                            className={`text-xs px-2 py-1 rounded border transition-colors ${
-                              k.aktiv
-                                ? 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-red-300 hover:text-red-500 dark:hover:text-red-400'
-                                : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
-                            }`}
-                          >
-                            {k.aktiv ? 'Aus' : 'Ein'}
-                          </button>
+                        <td className="px-3 py-2 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {editModus && (k.user_modified_skr03 || k.user_modified_skr04) && (
+                              <button
+                                type="button"
+                                title="Kontonummern auf Standardwerte zurücksetzen"
+                                onClick={() => resetMutation.mutate(k.id)}
+                                className="text-xs px-2 py-1 rounded border border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
+                              >
+                                Reset
+                              </button>
+                            )}
+                            {editModus && !k.ist_system && (
+                              <button
+                                type="button"
+                                title="Kategorie löschen"
+                                onClick={() => {
+                                  if (confirm(`Kategorie "${k.name}" löschen?`)) deleteMutation.mutate(k.id)
+                                }}
+                                className="text-xs px-2 py-1 rounded border border-red-200 text-red-400 hover:border-red-400 hover:text-red-600 dark:border-red-800 dark:text-red-500 dark:hover:text-red-400"
+                              >
+                                Löschen
+                              </button>
+                            )}
+                            {!editModus && (
+                              <button
+                                type="button"
+                                title={k.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                                onClick={() => toggleMutation.mutate(k.id)}
+                                className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                  k.aktiv
+                                    ? 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-red-300 hover:text-red-500 dark:hover:text-red-400'
+                                    : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
+                                }`}
+                              >
+                                {k.aktiv ? 'Aus' : 'Ein'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -192,7 +486,7 @@ export function KategorienPage() {
       {!isLoading && kategorien.length > 0 && (
         <div className="mt-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-4 text-xs text-slate-500 dark:text-slate-400 space-y-1">
           <p className="font-semibold text-slate-600 dark:text-slate-300 mb-2">Legende</p>
-          <p><span className="font-mono">SKR03/04</span> – DATEV-Kontonummern (Standardkontenrahmen)</p>
+          <p><span className="font-mono">SKR03/04</span> – DATEV-Kontonummern (Standardkontenrahmen). Geänderte Werte erscheinen orange.</p>
           <p><span className="font-mono">EÜR-Zeile</span> – Zeile in der Einnahmen-Überschuss-Rechnung (Anlage EÜR)</p>
           <p><span className="font-mono">EKS</span> – Tabellenfeld in der Anlage EKS (Jobcenter-Einkommenserklärung)</p>
           <p><span className="font-mono">VSt %</span> – Anteil der Vorsteuer der abgezogen wird (100 % = voller Abzug)</p>

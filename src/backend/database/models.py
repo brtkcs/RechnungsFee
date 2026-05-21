@@ -130,6 +130,10 @@ class Kategorie(Base):
     konto_skr03: Mapped[str | None] = mapped_column(String(10))
     konto_skr04: Mapped[str | None] = mapped_column(String(10))
     konto_skr49: Mapped[str | None] = mapped_column(String(10))
+    konto_skr03_default: Mapped[str | None] = mapped_column(String(10))
+    konto_skr04_default: Mapped[str | None] = mapped_column(String(10))
+    user_modified_skr03: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="0")
+    user_modified_skr04: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="0")
     eks_kategorie: Mapped[str | None] = mapped_column(String(10))  # B9, A1 etc.
     euer_zeile: Mapped[int | None] = mapped_column(Integer)
     vorsteuer_prozent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=100, nullable=False)
@@ -195,6 +199,9 @@ class Journaleintrag(Base):
     steuerbefreiung_grund: Mapped[str | None] = mapped_column(String(100))  # z.B. "§19 UStG"
     rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))
     beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id"))
+    # Kontonummern-Snapshot (aus Kategorie zum Buchungszeitpunkt – unveränderbar)
+    konto_skr03: Mapped[str | None] = mapped_column(String(10))
+    konto_skr04: Mapped[str | None] = mapped_column(String(10))
     # GoBD
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     signatur: Mapped[str | None] = mapped_column(String(64))

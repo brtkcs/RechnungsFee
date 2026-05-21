@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 26
+SCHEMA_VERSION = 27
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -662,6 +662,32 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 26"))
             conn.commit()
             print("[Migration] Schema auf Version 26 gebracht (EÜR-Zeilennummern auf Anlage EÜR 2025 korrigiert)")
+
+        if version < 27:
+            # kategorien: Default-Spalten + user_modified-Flags
+            cols_kat = {r[1] for r in conn.execute(text("PRAGMA table_info(kategorien)")).fetchall()}
+            for col, ddl in [
+                ("konto_skr03_default",  "ALTER TABLE kategorien ADD COLUMN konto_skr03_default TEXT"),
+                ("konto_skr04_default",  "ALTER TABLE kategorien ADD COLUMN konto_skr04_default TEXT"),
+                ("user_modified_skr03",  "ALTER TABLE kategorien ADD COLUMN user_modified_skr03 INTEGER NOT NULL DEFAULT 0"),
+                ("user_modified_skr04",  "ALTER TABLE kategorien ADD COLUMN user_modified_skr04 INTEGER NOT NULL DEFAULT 0"),
+            ]:
+                if col not in cols_kat:
+                    conn.execute(text(ddl))
+            # Aktuelle Werte als Default einfrieren (einmalig)
+            conn.execute(text("UPDATE kategorien SET konto_skr03_default = konto_skr03 WHERE konto_skr03_default IS NULL"))
+            conn.execute(text("UPDATE kategorien SET konto_skr04_default = konto_skr04 WHERE konto_skr04_default IS NULL"))
+            # journal: Kontonummer-Snapshot-Spalten
+            cols_j = {r[1] for r in conn.execute(text("PRAGMA table_info(journal)")).fetchall()}
+            for col, ddl in [
+                ("konto_skr03", "ALTER TABLE journal ADD COLUMN konto_skr03 TEXT"),
+                ("konto_skr04", "ALTER TABLE journal ADD COLUMN konto_skr04 TEXT"),
+            ]:
+                if col not in cols_j:
+                    conn.execute(text(ddl))
+            conn.execute(text("PRAGMA user_version = 27"))
+            conn.commit()
+            print("[Migration] Schema auf Version 27 gebracht (kategorien: Default-Konten + user_modified; journal: konto-Snapshot)")
 
 
 def _migrate_kategorien() -> None:

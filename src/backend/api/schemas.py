@@ -178,6 +178,10 @@ class KategorieResponse(BaseModel):
     konto_skr03: Optional[str]
     konto_skr04: Optional[str]
     konto_skr49: Optional[str]
+    konto_skr03_default: Optional[str]
+    konto_skr04_default: Optional[str]
+    user_modified_skr03: bool
+    user_modified_skr04: bool
     eks_kategorie: Optional[str]
     euer_zeile: Optional[int]
     vorsteuer_prozent: Decimal
@@ -186,6 +190,22 @@ class KategorieResponse(BaseModel):
     aktiv: bool
 
     model_config = {"from_attributes": True}
+
+
+class KategorieKontoUpdate(BaseModel):
+    konto_skr03: Optional[str] = None
+    konto_skr04: Optional[str] = None
+
+
+class KategorieCreate(BaseModel):
+    name: str
+    kontenart: str
+    konto_skr03: Optional[str] = None
+    konto_skr04: Optional[str] = None
+    euer_zeile: Optional[int] = None
+    eks_kategorie: Optional[str] = None
+    vorsteuer_prozent: Decimal = Decimal("100")
+    ust_satz_standard: int = 0
 
 
 # ---------------------------------------------------------------------------

@@ -601,8 +601,9 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
     partner = _partner_name(rechnung)
     beschreibung = data.beschreibung or f"Zahlung {rechnung.rechnungsnummer}: {partner}"
 
-    # Kategorie der Rechnung übernehmen
+    # Kategorie der Rechnung übernehmen (inkl. Kontonummer-Snapshot)
     kategorie_id = rechnung.kategorie_id
+    kat_obj = rechnung.kategorie
     unternehmen = db.query(Unternehmen).first()
     ust_satz = Decimal("0")
     steuerbefreiung_grund = None
@@ -628,6 +629,8 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
         belegnr=belegnr,
         beschreibung=beschreibung,
         kategorie_id=kategorie_id,
+        konto_skr03=kat_obj.konto_skr03 if kat_obj else None,
+        konto_skr04=kat_obj.konto_skr04 if kat_obj else None,
         zahlungsart=data.zahlungsart,
         art=art,
         netto_betrag=netto,
@@ -687,6 +690,8 @@ def storno_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
             belegnr=belegnr,
             beschreibung=f"STORNO {eintrag.belegnr}: Rechnung {re_nr} storniert",
             kategorie_id=eintrag.kategorie_id,
+            konto_skr03=eintrag.konto_skr03,
+            konto_skr04=eintrag.konto_skr04,
             zahlungsart=eintrag.zahlungsart,
             art=storno_art,
             netto_betrag=eintrag.netto_betrag,

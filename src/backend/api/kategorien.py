@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Kategorie
-from .schemas import KategorieResponse
+from database.models import Kategorie, Journaleintrag, Rechnungsposition
+from .schemas import KategorieResponse, KategorieKontoUpdate, KategorieCreate
 
 router = APIRouter(prefix="/api/kategorien", tags=["Stammdaten"])
 
@@ -34,6 +34,31 @@ def get_kategorie(kategorie_id: int, db: Session = Depends(get_db)):
     return kat
 
 
+@router.post("", response_model=KategorieResponse, status_code=201)
+def create_kategorie(data: KategorieCreate, db: Session = Depends(get_db)):
+    if db.query(Kategorie).filter(Kategorie.name == data.name).first():
+        raise HTTPException(status_code=409, detail="Eine Kategorie mit diesem Namen existiert bereits.")
+    kat = Kategorie(
+        name=data.name,
+        kontenart=data.kontenart,
+        konto_skr03=data.konto_skr03,
+        konto_skr04=data.konto_skr04,
+        konto_skr03_default=data.konto_skr03,
+        konto_skr04_default=data.konto_skr04,
+        euer_zeile=data.euer_zeile,
+        eks_kategorie=data.eks_kategorie,
+        vorsteuer_prozent=data.vorsteuer_prozent,
+        ust_satz_standard=data.ust_satz_standard,
+        ist_system=False,
+        user_modified_skr03=False,
+        user_modified_skr04=False,
+    )
+    db.add(kat)
+    db.commit()
+    db.refresh(kat)
+    return kat
+
+
 @router.patch("/{kategorie_id}/aktiv", response_model=KategorieResponse)
 def toggle_aktiv(kategorie_id: int, db: Session = Depends(get_db)):
     kat = db.query(Kategorie).filter(Kategorie.id == kategorie_id).first()
@@ -43,3 +68,50 @@ def toggle_aktiv(kategorie_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(kat)
     return kat
+
+
+@router.patch("/{kategorie_id}/konten", response_model=KategorieResponse)
+def update_konten(kategorie_id: int, data: KategorieKontoUpdate, db: Session = Depends(get_db)):
+    kat = db.query(Kategorie).filter(Kategorie.id == kategorie_id).first()
+    if not kat:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden.")
+    if data.konto_skr03 is not None:
+        kat.konto_skr03 = data.konto_skr03 or None
+        kat.user_modified_skr03 = (data.konto_skr03 != kat.konto_skr03_default)
+    if data.konto_skr04 is not None:
+        kat.konto_skr04 = data.konto_skr04 or None
+        kat.user_modified_skr04 = (data.konto_skr04 != kat.konto_skr04_default)
+    db.commit()
+    db.refresh(kat)
+    return kat
+
+
+@router.post("/{kategorie_id}/konten/reset", response_model=KategorieResponse)
+def reset_konten(kategorie_id: int, db: Session = Depends(get_db)):
+    kat = db.query(Kategorie).filter(Kategorie.id == kategorie_id).first()
+    if not kat:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden.")
+    kat.konto_skr03 = kat.konto_skr03_default
+    kat.konto_skr04 = kat.konto_skr04_default
+    kat.user_modified_skr03 = False
+    kat.user_modified_skr04 = False
+    db.commit()
+    db.refresh(kat)
+    return kat
+
+
+@router.delete("/{kategorie_id}", status_code=204)
+def delete_kategorie(kategorie_id: int, db: Session = Depends(get_db)):
+    kat = db.query(Kategorie).filter(Kategorie.id == kategorie_id).first()
+    if not kat:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden.")
+    if kat.ist_system:
+        raise HTTPException(status_code=409, detail="Systemkategorien können nicht gelöscht werden.")
+    in_use = (
+        db.query(Journaleintrag).filter(Journaleintrag.kategorie_id == kategorie_id).first() or
+        db.query(Rechnungsposition).filter(Rechnungsposition.kategorie_id == kategorie_id).first()
+    )
+    if in_use:
+        raise HTTPException(status_code=409, detail="Kategorie wird in Buchungen verwendet und kann nicht gelöscht werden.")
+    db.delete(kat)
+    db.commit()
