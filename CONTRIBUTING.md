@@ -53,7 +53,7 @@ Wir verpflichten uns zu einem offenen und einladenden Umfeld für alle, unabhän
 
 ### 💬 Feedback & Ideen
 
-- Öffne eine [Discussion](https://github.com/nicoletta/RechnungsFee/discussions) für neue Ideen
+- Öffne eine [Discussion](https://github.com/nicolettas-muggelbude/RechnungsFee/discussions) für neue Ideen
 - Kommentiere zu bestehenden Features in Issues
 - Teile deine Erfahrungen als Freiberufler/Selbstständiger
 
@@ -183,28 +183,63 @@ Datum;Partner;Verwendungszweck;Betrag
 
 ### Voraussetzungen
 
-*(Details folgen, wenn Tech-Stack finalisiert ist)*
-
-Voraussichtlich:
-- Node.js 20+
-- Python 3.11+
-- Git
-- VS Code (empfohlen)
+- **Python 3.12+**
+- **Node.js 22+**
+- **Rust + Cargo** (nur für Tauri-Build, nicht für Web-Entwicklung nötig)
+- **Git**
 
 ### Setup
 
 ```bash
 # Repository klonen
-git clone https://github.com/nicoletta/RechnungsFee.git
+git clone https://github.com/nicolettas-muggelbude/RechnungsFee.git
 cd RechnungsFee
-
-# Dependencies installieren (Details folgen)
-# npm install (Frontend)
-# pip install -r requirements.txt (Backend)
-
-# Development Server starten (Details folgen)
-# npx run dev
 ```
+
+**Terminal 1 – Backend:**
+
+```bash
+cd src/backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --port 8002 --reload
+```
+
+**Terminal 2 – Frontend:**
+
+```bash
+cd src/frontend
+npm install
+npm run dev
+```
+
+Dann Browser öffnen: **http://localhost:5173**
+
+### Ports
+
+| Dienst | URL |
+|--------|-----|
+| Frontend (Vite) | http://localhost:5173 |
+| Backend (FastAPI) | http://localhost:8002 |
+| API-Docs (Swagger) | http://localhost:8002/docs |
+
+### Datenpfade (Linux/macOS)
+
+```
+~/.local/share/RechnungsFee/rechnungsfee.db   ← Datenbank
+~/.local/share/RechnungsFee/uploads/          ← Belegdateien
+~/.local/share/RechnungsFee/backups/          ← automatische Backups
+```
+
+### Tauri-App bauen (optional)
+
+```bash
+cd src/frontend
+npm run tauri build
+```
+
+Voraussetzung: Rust + Cargo installiert (`rustup.rs`), Tauri-Abhängigkeiten je nach OS (siehe [Tauri-Docs](https://tauri.app/start/prerequisites/)).
 
 ---
 
@@ -360,8 +395,8 @@ docs: README um Installation erweitert
 
 ### Hilfe bekommen
 
-- **Allgemeine Fragen**: [GitHub Discussions](https://github.com/nicoletta/RechnungsFee/discussions)
-- **Bug Reports**: [GitHub Issues](https://github.com/nicoletta/RechnungsFee/issues)
+- **Allgemeine Fragen**: [GitHub Discussions](https://github.com/nicolettas-muggelbude/RechnungsFee/discussions)
+- **Bug Reports**: [GitHub Issues](https://github.com/nicolettas-muggelbude/RechnungsFee/issues)
 - **Entwickler-Fragen**: Discussions mit Label `question`
 
 ---
