@@ -221,6 +221,7 @@ export function KategorienPage() {
   const [nurAktive, setNurAktive] = useState(false)
   const [editModus, setEditModus] = useState(false)
   const [neuDialog, setNeuDialog] = useState(false)
+  const [loeschenId, setLoeschenId] = useState<number | null>(null)
   const qc = useQueryClient()
 
   const { data: kategorien = [], isLoading } = useQuery({
@@ -447,16 +448,33 @@ export function KategorienPage() {
                               </button>
                             )}
                             {editModus && !k.ist_system && (
-                              <button
-                                type="button"
-                                title="Kategorie löschen"
-                                onClick={() => {
-                                  if (confirm(`Kategorie "${k.name}" löschen?`)) deleteMutation.mutate(k.id)
-                                }}
-                                className="text-xs px-2 py-1 rounded border border-red-200 text-red-400 hover:border-red-400 hover:text-red-600 dark:border-red-800 dark:text-red-500 dark:hover:text-red-400"
-                              >
-                                Löschen
-                              </button>
+                              loeschenId === k.id ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-red-500 dark:text-red-400">Sicher?</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => { deleteMutation.mutate(k.id); setLoeschenId(null) }}
+                                    className="text-xs px-2 py-1 rounded border border-red-400 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-600 dark:bg-red-950 dark:text-red-400"
+                                  >
+                                    Ja
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLoeschenId(null)}
+                                    className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                  >
+                                    Nein
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setLoeschenId(k.id)}
+                                  className="text-xs px-2 py-1 rounded border border-red-200 text-red-400 hover:border-red-400 hover:text-red-600 dark:border-red-800 dark:text-red-500 dark:hover:text-red-400"
+                                >
+                                  Löschen
+                                </button>
+                              )
                             )}
                             {!editModus && (
                               <button
