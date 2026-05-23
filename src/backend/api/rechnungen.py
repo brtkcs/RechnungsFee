@@ -75,6 +75,18 @@ def _naechste_belegnr_journal(db: Session, datum: date) -> str:
     return _belegnr_aus_format(nk.format, datum, nr)
 
 
+def _ust_konto(art: str, ust_satz: Decimal) -> tuple[str | None, str | None]:
+    """Gibt (konto_skr03, konto_skr04) für den USt-Anteil zurück."""
+    satz = int(ust_satz)
+    if art == "Einnahme":
+        skr03 = {19: "1776", 7: "1771"}.get(satz)
+        skr04 = {19: "3806", 7: "3801"}.get(satz)
+    else:
+        skr03 = {19: "1575", 7: "1570"}.get(satz)
+        skr04 = {19: "1406", 7: "1401"}.get(satz)
+    return skr03, skr04
+
+
 def _berechne_position(pos_data) -> tuple[Decimal, Decimal, Decimal]:
     """Gibt (ust_betrag, brutto, netto_rund) zurück."""
     netto = pos_data.netto.quantize(Decimal("0.01"), ROUND_HALF_UP)
@@ -660,6 +672,7 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
         ust_betrag = Decimal("0.00")
 
     belegnr = _naechste_belegnr_journal(db, data.datum)
+    konto_ust_skr03, konto_ust_skr04 = _ust_konto(art, ust_satz) if ust_satz > 0 else (None, None)
 
     eintrag = Journaleintrag(
         datum=data.datum,
@@ -668,6 +681,8 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
         kategorie_id=kategorie_id,
         konto_skr03=kat_obj.konto_skr03 if kat_obj else None,
         konto_skr04=kat_obj.konto_skr04 if kat_obj else None,
+        konto_ust_skr03=konto_ust_skr03,
+        konto_ust_skr04=konto_ust_skr04,
         zahlungsart=data.zahlungsart,
         art=art,
         netto_betrag=netto,

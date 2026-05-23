@@ -245,15 +245,14 @@ export function JournalPage() {
                 const istAktiv = aktiverEintragId === e.id
                 const bereitsStorniert = bereitsStornieterteBelegnrn.has(e.belegnr)
                 const istStorno = e.beschreibung.startsWith('STORNO ')
+                const hatUst = parseFloat(e.ust_betrag) > 0
+                const rowClass = `border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none transition-colors ${
+                  istAktiv ? 'bg-blue-50 dark:bg-blue-950' : istStorno ? 'hover:bg-slate-50 dark:hover:bg-slate-700 opacity-60' : 'hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`
                 return (
                   <>
-                    <tr
-                      key={e.id}
-                      onClick={() => toggleEintrag(e.id)}
-                      className={`border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none transition-colors ${
-                        istAktiv ? 'bg-blue-50 dark:bg-blue-950' : istStorno ? 'hover:bg-slate-50 dark:hover:bg-slate-700 opacity-60' : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-                      }`}
-                    >
+                    {/* Netto-Zeile */}
+                    <tr key={e.id} onClick={() => toggleEintrag(e.id)} className={rowClass}>
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{formatDatum(e.datum)}</td>
                       <td className="px-4 py-3 font-mono text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                         <span className={`inline-block w-3 text-slate-300 dark:text-slate-600 transition-transform ${istAktiv ? 'rotate-90' : ''}`}>▶</span>
@@ -270,12 +269,31 @@ export function JournalPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{e.zahlungsart}</td>
                       <td className="px-4 py-3 text-right font-medium text-green-600">
-                        {e.art === 'Einnahme' ? formatEuro(e.brutto_betrag) : ''}
+                        {e.art === 'Einnahme' ? formatEuro(hatUst ? e.netto_betrag : e.brutto_betrag) : ''}
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-red-600">
-                        {e.art === 'Ausgabe' ? formatEuro(e.brutto_betrag) : ''}
+                        {e.art === 'Ausgabe' ? formatEuro(hatUst ? e.netto_betrag : e.brutto_betrag) : ''}
                       </td>
                     </tr>
+                    {/* USt-Zeile */}
+                    {hatUst && (
+                      <tr key={`${e.id}-ust`} onClick={() => toggleEintrag(e.id)} className={rowClass}>
+                        <td className="px-4 py-2 text-slate-400 dark:text-slate-500 text-xs"></td>
+                        <td className="px-4 py-2 font-mono text-xs text-slate-300 dark:text-slate-600">
+                          {e.konto_ust_skr03 ?? ''}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-slate-400 dark:text-slate-500 italic">
+                          {e.art === 'Einnahme' ? `Umsatzsteuer ${e.ust_satz} %` : `Vorsteuer ${e.ust_satz} %`}
+                        </td>
+                        <td className="px-4 py-2"></td>
+                        <td className="px-4 py-2 text-right text-xs font-medium text-green-500 dark:text-green-700">
+                          {e.art === 'Einnahme' ? formatEuro(e.ust_betrag) : ''}
+                        </td>
+                        <td className="px-4 py-2 text-right text-xs font-medium text-red-500 dark:text-red-700">
+                          {e.art === 'Ausgabe' ? formatEuro(e.ust_betrag) : ''}
+                        </td>
+                      </tr>
+                    )}
                     {istAktiv && (
                       <BuchungDetail
                         key={`detail-${e.id}`}

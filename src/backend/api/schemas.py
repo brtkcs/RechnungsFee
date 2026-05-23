@@ -278,6 +278,10 @@ class JournalEintragResponse(BaseModel):
     vorsteuerabzug: bool
     steuerbefreiung_grund: Optional[str]
     externe_belegnr: Optional[str] = None
+    konto_skr03: Optional[str] = None
+    konto_skr04: Optional[str] = None
+    konto_ust_skr03: Optional[str] = None
+    konto_ust_skr04: Optional[str] = None
     immutable: bool
     erstellt_am: datetime
 

@@ -266,6 +266,10 @@ export type JournalEintrag = {
   steuerbefreiung_grund: string | null
   externe_belegnr?: string
   rechnung_id?: number | null
+  konto_skr03?: string | null
+  konto_skr04?: string | null
+  konto_ust_skr03?: string | null
+  konto_ust_skr04?: string | null
   immutable: boolean
   erstellt_am: string
 }

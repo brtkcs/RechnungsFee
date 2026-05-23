@@ -76,6 +76,18 @@ def _berechne_ust(brutto: Decimal, ust_satz: Decimal) -> tuple[Decimal, Decimal]
     return netto, ust_betrag
 
 
+def _ust_konto(art: str, ust_satz: Decimal) -> tuple[str | None, str | None]:
+    """Gibt (konto_skr03, konto_skr04) für den USt-Anteil zurück."""
+    satz = int(ust_satz)
+    if art == "Einnahme":
+        skr03 = {19: "1776", 7: "1771"}.get(satz)
+        skr04 = {19: "3806", 7: "3801"}.get(satz)
+    else:
+        skr03 = {19: "1575", 7: "1570"}.get(satz)
+        skr04 = {19: "1406", 7: "1401"}.get(satz)
+    return skr03, skr04
+
+
 def _get_bar_kassenstand(db: Session) -> Decimal:
     """Gibt den aktuellen Kassenstand der Barkasse zurück (nur Bar-Buchungen)."""
     einnahmen = db.query(func.sum(Journaleintrag.brutto_betrag)).filter(
@@ -233,6 +245,7 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
     belegnr = _naechste_belegnr(db, data.datum)
 
     kat = db.query(Kategorie).filter(Kategorie.id == data.kategorie_id).first() if data.kategorie_id else None
+    konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz) if ust_satz > 0 else (None, None)
     journaleintrag = Journaleintrag(
         datum=data.datum,
         belegnr=belegnr,
@@ -240,6 +253,8 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
         kategorie_id=data.kategorie_id,
         konto_skr03=kat.konto_skr03 if kat else None,
         konto_skr04=kat.konto_skr04 if kat else None,
+        konto_ust_skr03=konto_ust_skr03,
+        konto_ust_skr04=konto_ust_skr04,
         kunde_id=data.kunde_id,
         zahlungsart=data.zahlungsart,
         art=data.art,
@@ -291,6 +306,7 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
         netto, ust_betrag = _berechne_ust(pos.brutto_betrag, ust_satz)
         belegnr = _naechste_belegnr(db, data.datum)
         split_kat = db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first() if pos.kategorie_id else None
+        konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz) if ust_satz > 0 else (None, None)
         journaleintrag = Journaleintrag(
             datum=data.datum,
             belegnr=belegnr,
@@ -299,6 +315,8 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
             kategorie_id=pos.kategorie_id,
             konto_skr03=split_kat.konto_skr03 if split_kat else None,
             konto_skr04=split_kat.konto_skr04 if split_kat else None,
+            konto_ust_skr03=konto_ust_skr03,
+            konto_ust_skr04=konto_ust_skr04,
             kunde_id=data.kunde_id,
             zahlungsart=data.zahlungsart,
             art=data.art,
@@ -403,6 +421,8 @@ def storno_eintrag(eintrag_id: int, data: StornoRequest, db: Session = Depends(g
         kategorie_id=original.kategorie_id,
         konto_skr03=original.konto_skr03,
         konto_skr04=original.konto_skr04,
+        konto_ust_skr03=original.konto_ust_skr03,
+        konto_ust_skr04=original.konto_ust_skr04,
         zahlungsart=original.zahlungsart,
         art=storno_art,
         netto_betrag=original.netto_betrag,
