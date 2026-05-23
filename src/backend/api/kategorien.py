@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import Kategorie, Journaleintrag, Rechnungsposition
-from .schemas import KategorieResponse, KategorieKontoUpdate, KategorieCreate
+from .schemas import KategorieResponse, KategorieKontoUpdate, KategorieCreate, KategorieUpdate
 
 router = APIRouter(prefix="/api/kategorien", tags=["Stammdaten"])
 
@@ -54,6 +54,33 @@ def create_kategorie(data: KategorieCreate, db: Session = Depends(get_db)):
         user_modified_skr04=False,
     )
     db.add(kat)
+    db.commit()
+    db.refresh(kat)
+    return kat
+
+
+@router.put("/{kategorie_id}", response_model=KategorieResponse)
+def update_kategorie(kategorie_id: int, data: KategorieCreate, db: Session = Depends(get_db)):
+    kat = db.query(Kategorie).filter(Kategorie.id == kategorie_id).first()
+    if not kat:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden.")
+    if kat.ist_system:
+        raise HTTPException(status_code=409, detail="Systemkategorien können nicht bearbeitet werden.")
+    konflikt = db.query(Kategorie).filter(Kategorie.name == data.name, Kategorie.id != kategorie_id).first()
+    if konflikt:
+        raise HTTPException(status_code=409, detail="Eine Kategorie mit diesem Namen existiert bereits.")
+    kat.name = data.name
+    kat.kontenart = data.kontenart
+    kat.konto_skr03 = data.konto_skr03 or None
+    kat.konto_skr04 = data.konto_skr04 or None
+    kat.konto_skr03_default = data.konto_skr03 or None
+    kat.konto_skr04_default = data.konto_skr04 or None
+    kat.euer_zeile = data.euer_zeile
+    kat.eks_kategorie = data.eks_kategorie or None
+    kat.vorsteuer_prozent = data.vorsteuer_prozent
+    kat.ust_satz_standard = data.ust_satz_standard
+    kat.user_modified_skr03 = False
+    kat.user_modified_skr04 = False
     db.commit()
     db.refresh(kat)
     return kat

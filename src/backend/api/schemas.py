@@ -207,6 +207,8 @@ class KategorieCreate(BaseModel):
     vorsteuer_prozent: Decimal = Decimal("100")
     ust_satz_standard: int = 0
 
+KategorieUpdate = KategorieCreate
+
 
 # ---------------------------------------------------------------------------
 # Setup-Status (wird beim Start abgefragt)

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getKategorien, toggleKategorieAktiv,
-  updateKategorieKonten, resetKategorieKonten, createKategorie, deleteKategorie,
-  type KategorieCreate,
+  updateKategorieKonten, resetKategorieKonten, createKategorie, updateKategorie, deleteKategorie,
+  type Kategorie, type KategorieCreate,
 } from '../../api/client'
 
 const KONTENART_META: Record<string, { label: string; cls: string; beschreibung: string }> = {
@@ -31,12 +31,23 @@ const LEER: KategorieCreate = {
   euer_zeile: undefined, eks_kategorie: '', vorsteuer_prozent: 100, ust_satz_standard: 19,
 }
 
-function NeuDialog({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState<KategorieCreate>(LEER)
+function NeuDialog({ onClose, bearbeiten }: { onClose: () => void; bearbeiten?: Kategorie }) {
+  const [form, setForm] = useState<KategorieCreate>(bearbeiten ? {
+    name: bearbeiten.name,
+    kontenart: bearbeiten.kontenart,
+    konto_skr03: bearbeiten.konto_skr03 ?? '',
+    konto_skr04: bearbeiten.konto_skr04 ?? '',
+    euer_zeile: bearbeiten.euer_zeile ?? undefined,
+    eks_kategorie: bearbeiten.eks_kategorie ?? '',
+    vorsteuer_prozent: Number(bearbeiten.vorsteuer_prozent),
+    ust_satz_standard: bearbeiten.ust_satz_standard,
+  } : LEER)
   const [err, setErr] = useState('')
   const qc = useQueryClient()
   const mut = useMutation({
-    mutationFn: createKategorie,
+    mutationFn: bearbeiten
+      ? (data: KategorieCreate) => updateKategorie(bearbeiten.id, data)
+      : createKategorie,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['kategorien'] }); onClose() },
     onError: (e: Error) => setErr(e.message),
   })
@@ -50,7 +61,7 @@ function NeuDialog({ onClose }: { onClose: () => void }) {
         className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4"
         onClick={e => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Neue Kategorie</h3>
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{bearbeiten ? 'Kategorie bearbeiten' : 'Neue Kategorie'}</h3>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
@@ -161,7 +172,7 @@ function NeuDialog({ onClose }: { onClose: () => void }) {
             onClick={() => mut.mutate(form)}
             className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            Anlegen
+            {bearbeiten ? 'Speichern' : 'Anlegen'}
           </button>
         </div>
       </div>
@@ -221,6 +232,7 @@ export function KategorienPage() {
   const [nurAktive, setNurAktive] = useState(false)
   const [editModus, setEditModus] = useState(false)
   const [neuDialog, setNeuDialog] = useState(false)
+  const [bearbeitenKat, setBearbeitenKat] = useState<Kategorie | null>(null)
   const [loeschenId, setLoeschenId] = useState<number | null>(null)
   const qc = useQueryClient()
 
@@ -266,6 +278,7 @@ export function KategorienPage() {
   return (
     <div className="p-6 max-w-4xl">
       {neuDialog && <NeuDialog onClose={() => setNeuDialog(false)} />}
+      {bearbeitenKat && <NeuDialog onClose={() => setBearbeitenKat(null)} bearbeiten={bearbeitenKat} />}
 
       {/* Header */}
       <div className="mb-6">
@@ -445,6 +458,15 @@ export function KategorienPage() {
                                 className="text-xs px-2 py-1 rounded border border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
                               >
                                 Reset
+                              </button>
+                            )}
+                            {editModus && !k.ist_system && loeschenId !== k.id && (
+                              <button
+                                type="button"
+                                onClick={() => setBearbeitenKat(k)}
+                                className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              >
+                                Bearbeiten
                               </button>
                             )}
                             {editModus && !k.ist_system && (

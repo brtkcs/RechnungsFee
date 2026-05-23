@@ -240,6 +240,8 @@ export const resetKategorieKonten = (id: number) =>
   request<Kategorie>(`/kategorien/${id}/konten/reset`, { method: 'POST' })
 export const createKategorie = (data: KategorieCreate) =>
   request<Kategorie>(`/kategorien`, { method: 'POST', body: JSON.stringify(data) })
+export const updateKategorie = (id: number, data: KategorieCreate) =>
+  request<Kategorie>(`/kategorien/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteKategorie = (id: number) =>
   request<void>(`/kategorien/${id}`, { method: 'DELETE' })
 
