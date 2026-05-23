@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRechnungen, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung,
-  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl,
+  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, invoke,
   sucheArtikel, getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, deleteBeleg, analysiereRechnung,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate,
@@ -1798,9 +1798,17 @@ function ImportDialog({
   }
 
   async function handlePdfOeffnen() {
-    if (!ergebnis?.temp_url) return
-    const base = await getApiBase()
-    openUrl(`${base}${ergebnis.temp_url}`)
+    if (!ergebnis?.temp_path) return
+    // Absoluten Dateipfad als file://-URL öffnen → System-PDF-Viewer
+    const path = ergebnis.temp_path
+    const fileUrl = path.match(/^[A-Za-z]:/)
+      ? `file:///${path.replace(/\\/g, '/')}`   // Windows: C:\... → file:///C:/...
+      : `file://${path}`                         // Linux/macOS: /home/... → file:///home/...
+    if (isTauri()) {
+      await invoke('open_url', { url: fileUrl })
+    } else {
+      window.open(fileUrl, '_blank')
+    }
   }
 
   const formatLabel: Record<string, string> = {

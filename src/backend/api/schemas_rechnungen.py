@@ -246,6 +246,7 @@ class AnalyseResponse(BaseModel):
     positionen: List[AnalysePositionResponse]
     warnungen: List[str]
     temp_url: Optional[str] = None
+    temp_path: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+export { invoke } from '@tauri-apps/api/core'
 
 // --- API-Basis-URL ---
 // Im Tauri-Produktionsmodus: Backend-Port per IPC-Command holen.
@@ -651,6 +651,7 @@ export type AnalyseErgebnis = {
   positionen: AnalysePosition[]
   warnungen: string[]
   temp_url?: string
+  temp_path?: string
 }
 
 export async function analysiereRechnung(datei: File): Promise<AnalyseErgebnis> {

@@ -139,12 +139,15 @@ async def analysiere_rechnung(datei: UploadFile = File(...)):
     ergebnis = analysiere_datei(datei.filename or "", inhalt)
 
     temp_url = None
+    temp_path = None
     if datei.content_type == "application/pdf":
         TEMP_DIR.mkdir(parents=True, exist_ok=True)
         _bereinige_temp_dir()
         token = str(uuid.uuid4())
-        (TEMP_DIR / f"{token}.pdf").write_bytes(inhalt)
+        temp_file = TEMP_DIR / f"{token}.pdf"
+        temp_file.write_bytes(inhalt)
         temp_url = f"/rechnungen/temp/{token}"
+        temp_path = str(temp_file.absolute())
 
     from .schemas_rechnungen import AnalyseFelder, AnalysePositionResponse
     return AnalyseResponse(
@@ -153,6 +156,7 @@ async def analysiere_rechnung(datei: UploadFile = File(...)):
         positionen=[AnalysePositionResponse(**p.__dict__) for p in ergebnis.positionen],
         warnungen=ergebnis.warnungen,
         temp_url=temp_url,
+        temp_path=temp_path,
     )
 
 
