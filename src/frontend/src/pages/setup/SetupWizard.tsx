@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { createUnternehmen, createKonto, setKassenbestand, type Unternehmen, type Konto } from '../../api/client'
@@ -20,15 +20,6 @@ export function SetupWizard() {
   const [kontoData, setKontoData] = useState<Omit<Konto, 'id' | 'aktiv' | 'ist_standard'> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: WheelEvent) => {
-      const el = scrollRef.current
-      if (el) el.scrollTop += e.deltaY
-    }
-    window.addEventListener('wheel', handler, { passive: true })
-    return () => window.removeEventListener('wheel', handler)
-  }, [])
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -82,6 +73,7 @@ export function SetupWizard() {
   return (
     <div
       ref={scrollRef}
+      onWheel={(e) => { if (scrollRef.current) scrollRef.current.scrollTop += e.deltaY }}
       className="h-screen overflow-y-auto bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
     >
       <div className="min-h-full flex items-center justify-center p-4">

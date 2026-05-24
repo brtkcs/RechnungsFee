@@ -23,6 +23,17 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.6',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Rechnungs-PDF: USt-Aufschlüsselung pro Steuersatz (§14 UStG) bei gemischten Sätzen; B2B-Kunden (ZUGFeRD) erhalten Netto-, B2C-Kunden Bruttorechnung (Issue #101)' },
+      { typ: 'fix', text: 'Ausgangsrechnung: Kategorie-Feld entfernt – Erlöskategorie wird automatisch ermittelt (Issue #100)' },
+      { typ: 'fix', text: 'CachyOS/Arch: Sidecar-Absturz beim Start (Exit 3) durch entferntes imghdr-Modul behoben – Magic-Bytes-Erkennung als Ersatz (Issue #92)' },
+      { typ: 'fix', text: 'Setup-Wizard: Mausrad-Scrollen unter Mint Cinnamon / GTK-Desktops funktioniert jetzt' },
+      { typ: 'fix', text: 'Migration: Sehr alte Datenbanken (v0.1.x) werden beim Start vollständig migriert ohne Fehler' },
+    ],
+  },
+  {
     version: 'v0.2.5',
     datum: 'Mai 2026',
     eintraege: [
