@@ -167,6 +167,21 @@ def _run_migrations() -> None:
                 if col_name not in cols:
                     conn.execute(text(f"ALTER TABLE unternehmen ADD COLUMN {col_name} {ddl}"))
 
+            # kategorien – konto_skr03/04 waren von Anfang an im Modell, fehlen aber in sehr alten DBs
+            cols = {row[1] for row in conn.execute(text("PRAGMA table_info(kategorien)"))}
+            for col_name, ddl in [
+                ("konto_skr03", "TEXT"),
+                ("konto_skr04", "TEXT"),
+                ("konto_skr49", "TEXT"),
+                ("euer_zeile",  "INTEGER"),
+                ("eks_kategorie", "TEXT"),
+                ("vorsteuer_prozent", "NUMERIC(5,2) NOT NULL DEFAULT 100"),
+                ("ist_system",  "BOOLEAN NOT NULL DEFAULT 0"),
+                ("aktiv",       "BOOLEAN NOT NULL DEFAULT 1"),
+            ]:
+                if col_name not in cols:
+                    conn.execute(text(f"ALTER TABLE kategorien ADD COLUMN {col_name} {ddl}"))
+
             # kategorien.ust_satz_standard
             cols = {row[1] for row in conn.execute(text("PRAGMA table_info(kategorien)"))}
             if "ust_satz_standard" not in cols:
