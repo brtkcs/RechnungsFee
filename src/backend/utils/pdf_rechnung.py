@@ -108,6 +108,17 @@ def _iso_zu_de(iso: str) -> str:
         return str(iso)
 
 
+def _ust_aufschluesselung(positionen) -> list[tuple[int, float, float]]:
+    """Gruppiert Positionen nach USt-Satz. Gibt [(satz_int, netto_sum, ust_sum), ...] zurück."""
+    netto_by: dict[int, float] = {}
+    ust_by: dict[int, float] = {}
+    for pos in positionen:
+        satz = int(float(str(pos.ust_satz)))
+        netto_by[satz] = netto_by.get(satz, 0.0) + float(str(pos.netto))
+        ust_by[satz] = ust_by.get(satz, 0.0) + float(str(pos.ust_betrag))
+    return sorted([(s, netto_by[s], ust_by[s]) for s in netto_by], key=lambda x: x[0])
+
+
 def _person_bezeichnung(rechtsform: str) -> str:
     """Korrekte Personenbezeichnung je nach Rechtsform."""
     rf = (rechtsform or "").lower()
@@ -473,8 +484,14 @@ class RechnungPDF(FPDF):
             self.set_text_color(*TEXT_DUNKEL)
             self.cell(val_w, 5.5, wert, align="R", new_x="LMARGIN", new_y="NEXT")
 
-        _sum_row("Nettobetrag",  _fmt_euro(r.netto_gesamt))
-        _sum_row("Umsatzsteuer", _fmt_euro(r.ust_gesamt))
+        aufschluesselung = _ust_aufschluesselung(r.positionen)
+        if len(aufschluesselung) > 1:
+            for satz, netto_sum, ust_sum in aufschluesselung:
+                _sum_row(f"Netto {satz} %", _fmt_euro(netto_sum))
+                _sum_row(f"USt {satz} %",   _fmt_euro(ust_sum))
+        else:
+            _sum_row("Nettobetrag",  _fmt_euro(r.netto_gesamt))
+            _sum_row("Umsatzsteuer", _fmt_euro(r.ust_gesamt))
         _sum_row("Gesamtbetrag", _fmt_euro(r.brutto_gesamt), bold=True, trenn=True)
 
         self.ln(6)
