@@ -1212,14 +1212,15 @@ function RechnungForm({
     setFaelligAm(d.toISOString().slice(0, 10))
   }, [datum, zahlungsziel, initial])
 
-  // USt-Satz aller Positionen aus gewählter Kategorie ableiten
+  // USt-Satz aller Positionen aus gewählter Kategorie ableiten – nur für Eingangsrechnungen
   useEffect(() => {
+    if (typ === 'ausgang') return
     if (!kategorieId || !kategorien) return
     const kat = kategorien.find((k) => String(k.id) === kategorieId)
     if (!kat) return
     const neuerUst = istKleinunternehmer ? '0' : String(kat.ust_satz_standard)
     setPositionen((prev) => prev.map((p) => ({ ...p, ust_satz: neuerUst })))
-  }, [kategorieId, kategorien, istKleinunternehmer])
+  }, [kategorieId, kategorien, istKleinunternehmer, typ])
 
   // Kategorie-Gruppen analog BuchungForm
   const alle = kategorien ?? []
@@ -1301,8 +1302,11 @@ function RechnungForm({
   }
 
   function addPosition() {
-    const kat = (kategorien ?? []).find((k) => String(k.id) === kategorieId)
-    const defaultUst = istKleinunternehmer ? '0' : (kat ? String(kat.ust_satz_standard) : defaultUstGlobal)
+    const defaultUst = istKleinunternehmer
+      ? '0'
+      : typ === 'ausgang'
+        ? defaultUstGlobal
+        : String((kategorien ?? []).find((k) => String(k.id) === kategorieId)?.ust_satz_standard ?? defaultUstGlobal)
     setPositionen((prev) => [...prev, leerPosition(defaultUst)])
   }
 
@@ -1432,17 +1436,19 @@ function RechnungForm({
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kategorie</label>
-        <select
-          value={kategorieId}
-          onChange={(e) => setKategorieId(e.target.value)}
-          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-        >
-          <option value="">— keine —</option>
-          {kategorieOptionen}
-        </select>
-      </div>
+      {typ !== 'ausgang' && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kategorie</label>
+          <select
+            value={kategorieId}
+            onChange={(e) => setKategorieId(e.target.value)}
+            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+          >
+            <option value="">— keine —</option>
+            {kategorieOptionen}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">

@@ -75,6 +75,22 @@ def _naechste_belegnr_journal(db: Session, datum: date) -> str:
     return _belegnr_aus_format(nk.format, datum, nr)
 
 
+def _erloes_kategorie(db: Session, rechnung: "Rechnung") -> tuple[int | None, "Kategorie | None"]:
+    """Ermittelt die Erlös-Kategorie für Ausgangsrechnungen anhand des dominanten USt-Satzes."""
+    if not rechnung.positionen:
+        return None, None
+    # Dominanter USt-Satz = Satz mit höchstem Netto-Anteil
+    satz_summen: dict[int, Decimal] = {}
+    for pos in rechnung.positionen:
+        satz = int(pos.ust_satz)
+        satz_summen[satz] = satz_summen.get(satz, Decimal("0")) + pos.netto
+    dom_satz = max(satz_summen, key=lambda s: satz_summen[s])
+    namen = {19: "Betriebseinnahmen", 7: "Betriebseinnahmen (7%)", 0: "Betriebseinnahmen (0%)"}
+    name = namen.get(dom_satz, "Betriebseinnahmen")
+    kat = db.query(Kategorie).filter(Kategorie.bezeichnung == name, Kategorie.aktiv == True).first()
+    return (kat.id if kat else None, kat)
+
+
 def _ust_konto(art: str, ust_satz: Decimal) -> tuple[str | None, str | None]:
     """Gibt (konto_skr03, konto_skr04) für den USt-Anteil zurück."""
     satz = int(ust_satz)
@@ -654,9 +670,6 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
     partner = _partner_name(rechnung)
     beschreibung = data.beschreibung or f"Zahlung {rechnung.rechnungsnummer}: {partner}"
 
-    # Kategorie der Rechnung übernehmen (inkl. Kontonummer-Snapshot)
-    kategorie_id = rechnung.kategorie_id
-    kat_obj = rechnung.kategorie
     unternehmen = db.query(Unternehmen).first()
     ust_satz = Decimal("0")
     steuerbefreiung_grund = None
@@ -664,8 +677,20 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
     if unternehmen and unternehmen.ist_kleinunternehmer:
         steuerbefreiung_grund = "§19 UStG"
     elif rechnung.positionen:
-        # USt-Satz aus erster Position übernehmen (vereinfacht)
-        ust_satz = rechnung.positionen[0].ust_satz
+        # Dominanter USt-Satz (Satz mit höchstem Netto-Anteil)
+        satz_summen: dict[int, Decimal] = {}
+        for pos in rechnung.positionen:
+            s = int(pos.ust_satz)
+            satz_summen[s] = satz_summen.get(s, Decimal("0")) + pos.netto
+        dom_satz = max(satz_summen, key=lambda s: satz_summen[s])
+        ust_satz = Decimal(str(dom_satz))
+
+    # Kategorie: Ausgangsrechnung → Erlös-Kategorie aus USt-Satz; Eingangsrechnung → Kategorie der Rechnung
+    if rechnung.typ == "ausgang":
+        kategorie_id, kat_obj = _erloes_kategorie(db, rechnung)
+    else:
+        kategorie_id = rechnung.kategorie_id
+        kat_obj = rechnung.kategorie
 
     # Netto aus Brutto berechnen
     if ust_satz > 0:
