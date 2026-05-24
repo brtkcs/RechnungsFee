@@ -40,6 +40,7 @@ from utils.pdf_rechnung import (
     _person_bezeichnung,
     _logo_abmessungen,
     _adresszeilen,
+    _ust_aufschluesselung,
     GRAU_HELL,
     TEXT_GRAU,
     TEXT_DUNKEL,
@@ -370,6 +371,11 @@ class RechnungPDFVorlage1(FPDF):
             self.cell(val_w, 5.5, wert, align="R", new_x="LMARGIN", new_y="NEXT")
 
         _sum_row("Gesamtbetrag", _fmt_euro(r.brutto_gesamt), bold=True, trenn=True)
+
+        if not unt.get("ist_kleinunternehmer"):
+            for satz, _netto, ust_sum in _ust_aufschluesselung(r.positionen):
+                if satz > 0:
+                    _sum_row(f"enthaltene USt {satz} %", _fmt_euro(ust_sum), grau=True)
 
         self.ln(4)
 
