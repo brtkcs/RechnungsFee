@@ -485,12 +485,11 @@ class RechnungPDF(FPDF):
             self.cell(val_w, 5.5, wert, align="R", new_x="LMARGIN", new_y="NEXT")
 
         aufschluesselung = _ust_aufschluesselung(r.positionen)
+        _sum_row("Nettobetrag", _fmt_euro(r.netto_gesamt))
         if len(aufschluesselung) > 1:
-            for satz, netto_sum, ust_sum in aufschluesselung:
-                _sum_row(f"Netto {satz} %", _fmt_euro(netto_sum))
-                _sum_row(f"USt {satz} %",   _fmt_euro(ust_sum))
+            for satz, _netto, ust_sum in aufschluesselung:
+                _sum_row(f"zzgl. USt {satz} %", _fmt_euro(ust_sum))
         else:
-            _sum_row("Nettobetrag",  _fmt_euro(r.netto_gesamt))
             _sum_row("Umsatzsteuer", _fmt_euro(r.ust_gesamt))
         _sum_row("Gesamtbetrag", _fmt_euro(r.brutto_gesamt), bold=True, trenn=True)
 

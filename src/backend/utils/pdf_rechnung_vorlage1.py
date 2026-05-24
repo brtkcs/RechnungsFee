@@ -354,31 +354,29 @@ class RechnungPDFVorlage1(FPDF):
 
         self.ln(6)
 
-        # --- Summen-Block (rechtsbündig) ---
+        # --- Summen-Block (rechtsbündig, Brutto-Format) ---
         sum_x = L_MARGIN + NUTZ_W * 0.5
         lbl_w = NUTZ_W * 0.3
         val_w = NUTZ_W * 0.2
 
-        def _sum_row(lbl: str, wert: str, bold: bool = False, trenn: bool = False):
+        def _sum_row(lbl: str, wert: str, bold: bool = False, trenn: bool = False, grau: bool = False):
             if trenn:
                 self.set_draw_color(*GRAU_RAND)
                 self.line(sum_x, self.get_y(), L_MARGIN + NUTZ_W, self.get_y())
             self.set_x(sum_x)
-            self.set_font("DejaVu", "B" if bold else "", 8.5)
+            self.set_font("DejaVu", "B" if bold else "", 8.5 if bold else 8)
             self.set_text_color(*TEXT_GRAU)
             self.cell(lbl_w, 5.5, lbl, align="R")
-            self.set_text_color(*TEXT_DUNKEL)
+            self.set_text_color(*TEXT_GRAU if grau else TEXT_DUNKEL)
             self.cell(val_w, 5.5, wert, align="R", new_x="LMARGIN", new_y="NEXT")
 
-        aufschluesselung = _ust_aufschluesselung(r.positionen)
-        if len(aufschluesselung) > 1:
-            for satz, netto_sum, ust_sum in aufschluesselung:
-                _sum_row(f"Netto {satz} %", _fmt_euro(netto_sum))
-                _sum_row(f"USt {satz} %",   _fmt_euro(ust_sum))
-        else:
-            _sum_row("Nettobetrag",  _fmt_euro(r.netto_gesamt))
-            _sum_row("Umsatzsteuer", _fmt_euro(r.ust_gesamt))
         _sum_row("Gesamtbetrag", _fmt_euro(r.brutto_gesamt), bold=True, trenn=True)
+
+        if not unt.get("ist_kleinunternehmer"):
+            aufschluesselung = _ust_aufschluesselung(r.positionen)
+            for satz, _netto, ust_sum in aufschluesselung:
+                if satz > 0:
+                    _sum_row(f"davon USt {satz} %", _fmt_euro(ust_sum), grau=True)
 
         self.ln(4)
 
