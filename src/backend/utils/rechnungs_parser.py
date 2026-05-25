@@ -173,6 +173,61 @@ def _betrag_de(text: str) -> Optional[str]:
 _GUELTIGE_UST = {0, 7, 9, 16, 19}  # in DE vorkommende Sätze
 
 
+def _faellig_aus_zahlungsziel(datum_iso: Optional[str], ziel_text: str) -> Optional[str]:
+    """Berechnet Fälligkeitsdatum aus Datum + 'X Tage'-Text (wie Plain-PDF-Fallback)."""
+    if not datum_iso or not ziel_text:
+        return None
+    m = re.search(
+        r"Rechnungsdatum\s*\+\s*(\d+)\s*(?:Werk)?[Tt]age?"
+        r"|(?:Zahlungsziel|Zahlbar\s+innerhalb|netto\s+(?:sofort\s+)?innerhalb|innerhalb)\s*[:\s]*(\d+)\s*(?:Werk)?[Tt]age?"
+        r"|(\d+)\s*(?:Werk)?[Tt]age?\s*(?:Zahlungsziel|netto|Zahlung|ab\s+Rechnung)?"
+        r"|Zahlung\s+(?:innerhalb|binnen)\s*(\d+)\s*(?:Werk)?[Tt]age?"
+        r"|netto\s+(\d+)\s*[Tt]age?",
+        ziel_text, re.IGNORECASE,
+    )
+    if not m:
+        return None
+    try:
+        from datetime import timedelta
+        tage = int(next(g for g in m.groups() if g is not None))
+        return (date.fromisoformat(datum_iso) + timedelta(days=tage)).isoformat()
+    except (ValueError, TypeError, StopIteration):
+        return None
+
+
+def _ust_satz_aus_betraegen(netto_str: Optional[str], ust_str: Optional[str]) -> Optional[str]:
+    """Leitet USt-Satz (%) aus Netto- und USt-Betrag ab, gerundet auf DE-Standardsatz."""
+    if not netto_str or not ust_str:
+        return None
+    try:
+        netto = Decimal(netto_str)
+        ust = Decimal(ust_str)
+        if netto <= 0:
+            return None
+        rate = int((ust / netto * 100).quantize(Decimal("1")))
+        closest = min(_GUELTIGE_UST, key=lambda s: abs(s - rate))
+        return str(closest)
+    except (InvalidOperation, ValueError, ZeroDivisionError):
+        return None
+
+
+def _berechne_fehlende_summen(felder: dict) -> None:
+    """Berechnet fehlendes Brutto/Netto/USt wenn zwei der drei Werte bekannt sind."""
+    try:
+        n = Decimal(felder["gesamt_netto"]) if felder.get("gesamt_netto") else None
+        u = Decimal(felder["gesamt_ust"]) if felder.get("gesamt_ust") else None
+        b = Decimal(felder["gesamt_brutto"]) if felder.get("gesamt_brutto") else None
+        q = Decimal("0.01")
+        if n and u and not b:
+            felder["gesamt_brutto"] = str((n + u).quantize(q))
+        elif n and b and not u:
+            felder["gesamt_ust"] = str((b - n).quantize(q))
+        elif u and b and not n:
+            felder["gesamt_netto"] = str((b - u).quantize(q))
+    except (InvalidOperation, KeyError):
+        pass
+
+
 def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["AnalysePosition"]:
     """
     Versucht Einzelpositionen aus PDF-Freitext zu extrahieren.
@@ -499,6 +554,7 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             break
 
     felder = {k: v for k, v in felder.items() if v is not None}
+    _berechne_fehlende_summen(felder)
 
     if felder:
         warnungen.append("Kein eingebettetes XML – Felder aus PDF-Text extrahiert, bitte prüfen.")
@@ -584,12 +640,17 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
     if datum_raw and len(datum_raw) == 8:
         felder["datum"] = f"{datum_raw[:4]}-{datum_raw[4:6]}-{datum_raw[6:8]}"
 
-    # Fälligkeitsdatum (BT-9)
+    # Fälligkeitsdatum (BT-9) – explizit oder aus Zahlungsbedingungstext
     faellig_raw = _x(root, "//ram:SpecifiedTradePaymentTerms/ram:DueDateDateTime/udt:DateTimeString", ns)
     if faellig_raw and len(faellig_raw) == 8:
         felder["faellig_am"] = f"{faellig_raw[:4]}-{faellig_raw[4:6]}-{faellig_raw[6:8]}"
     else:
-        warnungen.append("BT-9: Fälligkeitsdatum fehlt")
+        ziel_text = _x(root, "//ram:SpecifiedTradePaymentTerms/ram:Description", ns) or ""
+        iso = _faellig_aus_zahlungsziel(felder.get("datum"), ziel_text)
+        if iso:
+            felder["faellig_am"] = iso
+        else:
+            warnungen.append("BT-9: Fälligkeitsdatum fehlt")
 
     # Lieferant (BT-27)
     lieferant_name = _x(root, "//ram:SellerTradeParty/ram:Name", ns)
@@ -614,11 +675,14 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
     if netto:  felder["gesamt_netto"]  = netto
     if ust:    felder["gesamt_ust"]    = ust
     if brutto: felder["gesamt_brutto"] = brutto
-    if not brutto:
+    _berechne_fehlende_summen(felder)
+    if not felder.get("gesamt_brutto"):
         warnungen.append("BT-112: Gesamtbetrag (brutto) fehlt")
 
-    # Steuersatz (erster gefundener)
+    # Steuersatz (explizit oder aus Beträgen abgeleitet)
     ust_satz = _x(root, "//ram:ApplicableTradeTax/ram:RateApplicablePercent", ns)
+    if not ust_satz:
+        ust_satz = _ust_satz_aus_betraegen(felder.get("gesamt_netto"), felder.get("gesamt_ust"))
     if ust_satz:
         felder["ust_satz"] = ust_satz
 
@@ -632,7 +696,10 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
             einheit_code = menge_elems[0].get("unitCode")
 
         netto_pos = _d(_x(item, "ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount", ns))
-        ust_pos   = _x(item, "ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent", ns)
+        ust_pos = (
+            _x(item, "ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent", ns)
+            or _x(item, ".//ram:RateApplicablePercent", ns)
+        )
 
         positionen.append(AnalysePosition(
             beschreibung=beschr,
@@ -691,6 +758,11 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
     )
     if faellig:
         felder["faellig_am"] = faellig
+    else:
+        ziel_text = _x(root, "//cac:PaymentTerms/cbc:Note", ns) or ""
+        iso = _faellig_aus_zahlungsziel(felder.get("datum"), ziel_text)
+        if iso:
+            felder["faellig_am"] = iso
 
     lieferant_name = (
         _x(root, "//cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name", ns)
@@ -715,9 +787,13 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
     if netto:  felder["gesamt_netto"]  = netto
     if ust:    felder["gesamt_ust"]    = ust
     if brutto: felder["gesamt_brutto"] = brutto
-    if ust_satz: felder["ust_satz"]   = ust_satz
-    if not brutto:
+    _berechne_fehlende_summen(felder)
+    if not felder.get("gesamt_brutto"):
         warnungen.append("BT-112: Gesamtbetrag (brutto) fehlt")
+    # Steuersatz (explizit oder aus Beträgen abgeleitet)
+    if not ust_satz:
+        ust_satz = _ust_satz_aus_betraegen(felder.get("gesamt_netto"), felder.get("gesamt_ust"))
+    if ust_satz: felder["ust_satz"] = ust_satz
 
     for item in root.xpath("//cac:InvoiceLine", namespaces=ns):
         beschr = _x(item, "cac:Item/cbc:Name", ns) or "Position"
@@ -727,7 +803,11 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
         if menge_elems:
             einheit_code = menge_elems[0].get("unitCode")
         netto_pos = _d(_x(item, "cbc:LineExtensionAmount", ns))
-        ust_pos   = _x(item, "cac:Item/cac:ClassifiedTaxCategory/cbc:Percent", ns)
+        ust_pos = (
+            _x(item, "cac:Item/cac:ClassifiedTaxCategory/cbc:Percent", ns)
+            or _x(item, "cac:TaxTotal/cac:TaxSubtotal/cac:TaxCategory/cbc:Percent", ns)
+            or _x(item, ".//cac:TaxCategory/cbc:Percent", ns)
+        )
 
         positionen.append(AnalysePosition(
             beschreibung=beschr,
