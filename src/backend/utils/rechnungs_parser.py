@@ -195,6 +195,16 @@ def _faellig_aus_zahlungsziel(datum_iso: Optional[str], ziel_text: str) -> Optio
         return None
 
 
+def _normalize_ust_satz(val: Optional[str]) -> Optional[str]:
+    """'19.00' → '19', '7.0' → '7', None/'' → None."""
+    if not val:
+        return None
+    try:
+        return str(int(Decimal(val)))
+    except (InvalidOperation, ValueError):
+        return val
+
+
 def _ust_satz_aus_betraegen(netto_str: Optional[str], ust_str: Optional[str]) -> Optional[str]:
     """Leitet USt-Satz (%) aus Netto- und USt-Betrag ab, gerundet auf DE-Standardsatz."""
     if not netto_str or not ust_str:
@@ -680,7 +690,7 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
         warnungen.append("BT-112: Gesamtbetrag (brutto) fehlt")
 
     # Steuersatz (explizit oder aus Beträgen abgeleitet)
-    ust_satz = _x(root, "//ram:ApplicableTradeTax/ram:RateApplicablePercent", ns)
+    ust_satz = _normalize_ust_satz(_x(root, "//ram:ApplicableTradeTax/ram:RateApplicablePercent", ns))
     if not ust_satz:
         ust_satz = _ust_satz_aus_betraegen(felder.get("gesamt_netto"), felder.get("gesamt_ust"))
     if ust_satz:
@@ -696,7 +706,7 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
             einheit_code = menge_elems[0].get("unitCode")
 
         netto_pos = _d(_x(item, "ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount", ns))
-        ust_pos = (
+        ust_pos = _normalize_ust_satz(
             _x(item, "ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent", ns)
             or _x(item, ".//ram:RateApplicablePercent", ns)
         )
@@ -791,6 +801,7 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
     if not felder.get("gesamt_brutto"):
         warnungen.append("BT-112: Gesamtbetrag (brutto) fehlt")
     # Steuersatz (explizit oder aus Beträgen abgeleitet)
+    ust_satz = _normalize_ust_satz(ust_satz)
     if not ust_satz:
         ust_satz = _ust_satz_aus_betraegen(felder.get("gesamt_netto"), felder.get("gesamt_ust"))
     if ust_satz: felder["ust_satz"] = ust_satz
@@ -803,7 +814,7 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
         if menge_elems:
             einheit_code = menge_elems[0].get("unitCode")
         netto_pos = _d(_x(item, "cbc:LineExtensionAmount", ns))
-        ust_pos = (
+        ust_pos = _normalize_ust_satz(
             _x(item, "cac:Item/cac:ClassifiedTaxCategory/cbc:Percent", ns)
             or _x(item, "cac:TaxTotal/cac:TaxSubtotal/cac:TaxCategory/cbc:Percent", ns)
             or _x(item, ".//cac:TaxCategory/cbc:Percent", ns)
