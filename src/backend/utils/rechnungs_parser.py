@@ -717,7 +717,18 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
         if menge_elems:
             einheit_code = menge_elems[0].get("unitCode")
 
-        netto_pos = _d(_x(item, "ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount", ns))
+        # EP (Einzelpreis) bevorzugen; Fallback: LineTotalAmount ÷ Menge
+        ep_raw = _d(_x(item, "ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:ChargeAmount", ns))
+        line_total = _d(_x(item, "ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount", ns))
+        if ep_raw:
+            netto_pos = ep_raw
+        elif line_total and menge_raw:
+            try:
+                netto_pos = str((Decimal(line_total) / Decimal(menge_raw)).quantize(Decimal("0.01")))
+            except (InvalidOperation, ZeroDivisionError):
+                netto_pos = line_total
+        else:
+            netto_pos = line_total
         ust_pos = _normalize_ust_satz(
             _x(item, "ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent", ns)
             or _x(item, ".//ram:RateApplicablePercent", ns)
@@ -826,7 +837,18 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
         menge_elems = item.xpath("cbc:InvoicedQuantity", namespaces=ns)
         if menge_elems:
             einheit_code = menge_elems[0].get("unitCode")
-        netto_pos = _d(_x(item, "cbc:LineExtensionAmount", ns))
+        # EP (Einzelpreis) bevorzugen; Fallback: LineExtensionAmount ÷ Menge
+        ep_raw = _d(_x(item, "cac:Price/cbc:PriceAmount", ns))
+        line_total_ubl = _d(_x(item, "cbc:LineExtensionAmount", ns))
+        if ep_raw:
+            netto_pos = ep_raw
+        elif line_total_ubl and menge_raw:
+            try:
+                netto_pos = str((Decimal(line_total_ubl) / Decimal(menge_raw)).quantize(Decimal("0.01")))
+            except (InvalidOperation, ZeroDivisionError):
+                netto_pos = line_total_ubl
+        else:
+            netto_pos = line_total_ubl
         ust_pos = _normalize_ust_satz(
             _x(item, "cac:Item/cac:ClassifiedTaxCategory/cbc:Percent", ns)
             or _x(item, "cac:TaxTotal/cac:TaxSubtotal/cac:TaxCategory/cbc:Percent", ns)
