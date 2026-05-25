@@ -173,6 +173,18 @@ def _betrag_de(text: str) -> Optional[str]:
 _GUELTIGE_UST = {0, 7, 9, 16, 19}  # in DE vorkommende Sätze
 
 
+def _faellig_aus_text(text: str, datum_iso: Optional[str]) -> Optional[str]:
+    """Fälligkeitsdatum aus Freitext: erst explizites Datum, dann X-Tage-Berechnung."""
+    _dp = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}"
+    m = re.search(
+        r"(?:F[äa]llig(?:keit(?:s?datum)?)?|zahlbar\s+bis|zu\s+zahlen\s+bis)\s*:?\s*(" + _dp + r")",
+        text, re.IGNORECASE,
+    )
+    if m:
+        return _datum_de_zu_iso(m.group(1))
+    return _faellig_aus_zahlungsziel(datum_iso, text)
+
+
 def _faellig_aus_zahlungsziel(datum_iso: Optional[str], ziel_text: str) -> Optional[str]:
     """Berechnet Fälligkeitsdatum aus Datum + 'X Tage'-Text (wie Plain-PDF-Fallback)."""
     if not datum_iso or not ziel_text:
@@ -871,6 +883,20 @@ def analysiere_datei(dateiname: str, inhalt: bytes) -> AnalyseErgebnis:
                     ergebnis.format = "xrechnung"
                 else:
                     ergebnis.format = "zugferd"
+                # Fälligkeit aus PDF-Text wenn XML keinen Zahlungstext hat
+                if not ergebnis.felder.get("faellig_am") or \
+                        ergebnis.felder.get("faellig_am") == ergebnis.felder.get("datum"):
+                    try:
+                        import io
+                        from pypdf import PdfReader
+                        pdf_text = "\n".join(
+                            p.extract_text() or "" for p in PdfReader(io.BytesIO(inhalt)).pages
+                        )
+                        faellig = _faellig_aus_text(pdf_text, ergebnis.felder.get("datum"))
+                        if faellig:
+                            ergebnis.felder["faellig_am"] = faellig
+                    except Exception:
+                        pass
                 return ergebnis
         except Exception:
             pass
