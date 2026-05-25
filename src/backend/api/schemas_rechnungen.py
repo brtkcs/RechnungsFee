@@ -222,6 +222,7 @@ class AnalysePositionResponse(BaseModel):
     einheit: str
     netto: str
     ust_satz: str
+    artikel_nr: Optional[str] = None
 
 
 class AnalyseFelder(BaseModel):
@@ -252,6 +253,7 @@ class AnalyseResponse(BaseModel):
     felder: AnalyseFelder
     positionen: List[AnalysePositionResponse]
     warnungen: List[str]
+    positionen_modus: str = "netto"   # "netto" | "brutto"
     temp_url: Optional[str] = None
     temp_path: Optional[str] = None
     lieferant_vorschlaege: List[LieferantVorschlag] = []

@@ -628,6 +628,7 @@ export type AnalysePosition = {
   einheit: string
   netto: string
   ust_satz: string
+  artikel_nr?: string
 }
 
 export type AnalyseFelder = {
@@ -658,6 +659,7 @@ export type AnalyseErgebnis = {
   felder: AnalyseFelder
   positionen: AnalysePosition[]
   warnungen: string[]
+  positionen_modus?: 'netto' | 'brutto'
   temp_url?: string
   temp_path?: string
   lieferant_vorschlaege?: LieferantVorschlag[]

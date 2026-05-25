@@ -26,6 +26,7 @@ class AnalysePosition:
     einheit: str = "Stück"
     netto: str = "0.00"
     ust_satz: str = "0"
+    artikel_nr: Optional[str] = None
 
 
 @dataclass
@@ -35,6 +36,7 @@ class AnalyseErgebnis:
     positionen: list[AnalysePosition] = field(default_factory=list)
     warnungen: list[str] = field(default_factory=list)
     konfidenz: dict = field(default_factory=dict)  # Feld → "ok"|"warnung"|"fehlt"
+    positionen_modus: str = "netto"      # "netto" | "brutto" – Eingabemodus für Positionen
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +170,167 @@ def _betrag_de(text: str) -> Optional[str]:
         return None
 
 
+_GUELTIGE_UST = {0, 7, 9, 16, 19}  # in DE vorkommende Sätze
+
+
+def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["AnalysePosition"]:
+    """
+    Versucht Einzelpositionen aus PDF-Freitext zu extrahieren.
+    Gibt leere Liste zurück wenn kein verwertbares Ergebnis erkennbar ist.
+    """
+    # Betrag am Zeilenende, optional gefolgt von "19 %" (trailing USt)
+    _BETRAG_END = re.compile(
+        r"\s+(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*(?:€|EUR)?\s*(?:(\d+)\s*%)?\s*$",
+        re.IGNORECASE,
+    )
+    _SUMMENLABEL = re.compile(
+        r"^(?:netto(?:betrag|summe|preis)?|brutto(?:betrag|summe)?|"
+        r"gesamt(?:betrag|summe)?|zwischensumme|rechnungsbetrag|"
+        r"zu\s+zahlen(?:\w+)?|summe(?:betrag)?(?:\s+netto)?|"
+        r"(?:ust|mwst|umsatzsteuer)\.?\s*\d*\s*%?|"
+        r"\d+\s*%\s*(?:ust|mwst|umsatzsteuer)|"
+        r"rabatt|skonto|aufschlag|mindermenge)\s*(?:[:\s]|$)",
+        re.IGNORECASE,
+    )
+    _HEADER = re.compile(
+        r"(?:beschreibung|bezeichnung|artikel|leistung).{0,40}(?:betrag|preis|ep|gp)",
+        re.IGNORECASE,
+    )
+    _EINHEIT = re.compile(
+        r"^(Stk\.?|Stück|Std\.?|[Hh](?:r(?:s|[.])?)?\.?|[Tt]ag(?:e|en)?\.?|"
+        r"[Ww]ochen?\.?|[Mm]onate?n?\.?|[Kk][Gg]\.?|[Gg](?:ram)?\.?|"
+        r"[Ll](?:iter)?\.?|m[l]?\.?|[Mm]eter?\.?|[Kk][Mm]\.?|"
+        r"[Pp](?:auschal(?:e)?|sch\.?))\s+",
+        re.IGNORECASE,
+    )
+    _EINHEIT_MAP = {
+        "stk": "Stück", "stück": "Stück",
+        "std": "Std", "h": "Std", "hr": "Std", "hrs": "Std",
+        "tag": "Tag", "tage": "Tag", "tagen": "Tag",
+        "woche": "Woche", "wochen": "Woche",
+        "monat": "Monat", "monate": "Monat",
+        "kg": "kg", "g": "g", "gram": "g",
+        "l": "l", "liter": "l", "ml": "ml",
+        "m": "m", "meter": "m", "km": "km",
+        "pauschal": "Pauschal", "pauschale": "Pauschal", "psch": "Pauschal",
+    }
+
+    alle_zeilen = text.split("\n")
+    positionen: list[AnalysePosition] = []
+
+    start, end = 0, len(alle_zeilen)
+    for i, z in enumerate(alle_zeilen):
+        s = z.strip()
+        if _HEADER.search(s):
+            start = i + 1
+        if i > start and _SUMMENLABEL.match(s) and _BETRAG_END.search(s):
+            end = i
+            break
+
+    for z in alle_zeilen[start:end]:
+        s = z.strip()
+        if not s:
+            continue
+        # USt-Aufschlüsselungszeile überspringen: "A 19 10,08 1,92 12,00"
+        if re.match(r"^[A-Z]\s+\d{1,2}\s+\d+,\d{2}\s+\d+,\d{2}\s+\d+,\d{2}\s*$", s):
+            continue
+        m = _BETRAG_END.search(s)
+        if not m:
+            continue
+        betrag = _betrag_de(m.group(1))
+        if not betrag:
+            continue
+        try:
+            if Decimal(betrag) < Decimal("0.01"):
+                continue
+        except InvalidOperation:
+            continue
+
+        vor = s[:m.start()].strip()
+        if not vor or _SUMMENLABEL.match(vor):
+            continue
+
+        # USt aus trailing-% (Gruppe 2) oder aus Inline-% in vor bestimmen
+        ust_pos = ust_satz_default or "0"
+        if m.group(2) and int(m.group(2)) in _GUELTIGE_UST:
+            ust_pos = m.group(2)
+        else:
+            m_ust = re.search(r"(\d+)\s*%\s*$", vor)
+            if m_ust and int(m_ust.group(1)) in _GUELTIGE_UST:
+                ust_pos = m_ust.group(1)
+                vor = vor[:m_ust.start()].strip()
+            else:
+                # % irgendwo in der Zeile vor dem Betrag (z.B. "19 % MwSt")
+                m_ust2 = re.search(r"\b(\d+)\s*%", vor)
+                if m_ust2 and int(m_ust2.group(1)) in _GUELTIGE_UST:
+                    ust_pos = m_ust2.group(1)
+
+        # Zweiten Betrag (Einzelpreis) in vor abschneiden
+        m2 = _BETRAG_END.search(vor)
+        if m2:
+            vor = vor[:m2.start()].strip()
+
+        # Nackter USt-Satz (ohne %) am Zeilenende → aus Beschreibung entfernen
+        m_naked = re.search(r"(?<!\d)(\d{1,2})\s*$", vor)
+        if m_naked and int(m_naked.group(1)) in _GUELTIGE_UST:
+            if ust_pos == (ust_satz_default or "0"):
+                ust_pos = m_naked.group(1)
+            vor = vor[:m_naked.start()].strip()
+
+        # Artikelnummer am Anfang: Ziffernfolge (≥4) oder alphanumerischer Code mit Trennzeichen
+        artikel_nr: Optional[str] = None
+        m_artnr = re.match(
+            r"^(\d{4,}|[A-Z]{1,5}[-./]\d{2,}|[A-Z]{2,}\d{2,})\s+(?=[A-Za-zÀ-ž])",
+            vor, re.IGNORECASE,
+        )
+        if m_artnr and len(vor) - len(m_artnr.group(0)) >= 3:
+            artikel_nr = m_artnr.group(1)
+            vor = vor[m_artnr.end():].strip()
+
+        # Menge am Anfang: "2x", "4 Std", "1,5 kg" …
+        menge, einheit = "1.000", "Stück"
+        # Format "[TypCode] [Qty] Beschreibung" (z.B. "A 1 TLD Domain"): einzelner Buchstabe + Zahl
+        m_typ_q = re.match(r"^[A-Z]\s+(\d+(?:[,.]\d+)?)\s+(?=[A-Za-zÀ-ž])", vor, re.IGNORECASE)
+        if m_typ_q:
+            try:
+                menge = f"{float(m_typ_q.group(1).replace(',', '.')):.3f}"
+            except ValueError:
+                pass
+            vor = vor[m_typ_q.end():].strip()
+        m_menge = re.match(r"^(\d+(?:[,.]\d+)?)\s*", vor)
+        if m_menge:
+            nach_zahl = vor[m_menge.end():]
+            m_x = re.match(r"^([xX×])\s*", nach_zahl)
+            m_ein = _EINHEIT.match(nach_zahl)
+            if m_x or m_ein:
+                try:
+                    menge = f"{float(m_menge.group(1).replace(',', '.')):.3f}"
+                except ValueError:
+                    pass
+                if m_ein:
+                    roh = m_ein.group(1).rstrip(". ").lower()
+                    einheit = _EINHEIT_MAP.get(roh, m_ein.group(1).rstrip("."))
+                    vor = nach_zahl[m_ein.end():].strip()
+                else:
+                    vor = nach_zahl[m_x.end():].strip()
+
+        if len(vor) < 2 or re.match(r"^\d+$", vor):
+            continue
+
+        positionen.append(AnalysePosition(
+            beschreibung=vor,
+            menge=menge,
+            einheit=einheit,
+            netto=betrag,
+            ust_satz=ust_pos,
+            artikel_nr=artikel_nr,
+        ))
+
+    if len(positionen) == 1 and len(positionen[0].beschreibung) < 5:
+        return []
+    return positionen
+
+
 def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
     """Fallback: Text aus PDF lesen und per Regex Rechnungsfelder suchen."""
     warnungen: list[str] = []
@@ -266,29 +429,46 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             except (ValueError, TypeError):
                 pass
 
-    # USt-Satz + USt-Betrag (kombiniert)
-    m = re.search(
-        r"(\d{1,2})\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*[:\s]+([\d.,]+)",
-        text, re.IGNORECASE,
+    # USt-Aufschlüsselung Tabellenformat: "[A-Z] 19 10,08 1,92 12,00" → Netto/USt/Brutto
+    m_ust_tab = re.search(
+        r"^[A-Z]\s+(\d{1,2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s*$",
+        text, re.IGNORECASE | re.MULTILINE,
     )
-    if m:
-        felder["ust_satz"] = m.group(1)
-        v = _betrag_de(m.group(2))
-        if v:
-            felder["gesamt_ust"] = v
-    else:
+    if m_ust_tab:
+        if not felder.get("ust_satz"):
+            felder["ust_satz"] = m_ust_tab.group(1)
+        if not felder.get("gesamt_netto"):
+            felder["gesamt_netto"] = _betrag_de(m_ust_tab.group(2))
+        if not felder.get("gesamt_ust"):
+            felder["gesamt_ust"] = _betrag_de(m_ust_tab.group(3))
+        if not felder.get("gesamt_brutto"):
+            felder["gesamt_brutto"] = _betrag_de(m_ust_tab.group(4))
+
+    # USt-Satz + USt-Betrag (kombiniert, mit %-Zeichen)
+    if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
         m = re.search(
-            r"(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*(?:\d+\s*%\s*)?:?\s*([\d.,]+)",
+            r"(\d{1,2})\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*[:\s]+([\d.,]+)",
             text, re.IGNORECASE,
         )
         if m:
-            v = _betrag_de(m.group(1))
+            felder["ust_satz"] = m.group(1)
+            v = _betrag_de(m.group(2))
             if v:
                 felder["gesamt_ust"] = v
+        else:
+            m = re.search(
+                r"(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*(?:\d+\s*%\s*)?:?\s*([\d.,]+)",
+                text, re.IGNORECASE,
+            )
+            if m:
+                v = _betrag_de(m.group(1))
+                if v:
+                    felder["gesamt_ust"] = v
 
     # Brutto-Gesamtbetrag
     m = re.search(
-        r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|Brutto(?:summe|betrag)?|Gesamt(?:summe)?)\s*[:\s]+([\d.,]+)\s*(?:€|EUR)?",
+        r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|"
+        r"Brutto(?:summe|betrag)?|Gesamt(?:summe)?|Summe)\s*[:\s]*([\d.,]+)\s*(?:€|EUR)?",
         text, re.IGNORECASE,
     )
     if m:
@@ -335,7 +515,27 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
         if k not in felder:
             konfidenz[k] = "fehlt"
 
-    return AnalyseErgebnis(format="pdf", felder=felder, warnungen=warnungen, konfidenz=konfidenz)
+    positionen = _extrahiere_positionen(text, felder.get("ust_satz"))
+
+    # Brutto/Netto-Modus: Summe der Positionen mit bekannten Gesamtbeträgen vergleichen
+    positionen_modus = "netto"
+    if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
+        try:
+            pos_summe = sum(Decimal(p.netto) for p in positionen)
+            toleranz = Decimal("0.15")
+            netto_total = Decimal(felder.get("gesamt_netto") or "0")
+            brutto_total = Decimal(felder.get("gesamt_brutto") or "0")
+            diff_netto = abs(pos_summe - netto_total) if netto_total else Decimal("9999")
+            diff_brutto = abs(pos_summe - brutto_total) if brutto_total else Decimal("9999")
+            if diff_brutto <= toleranz and diff_brutto < diff_netto:
+                positionen_modus = "brutto"
+        except (InvalidOperation, Exception):
+            pass
+
+    return AnalyseErgebnis(
+        format="pdf", felder=felder, positionen=positionen,
+        positionen_modus=positionen_modus, warnungen=warnungen, konfidenz=konfidenz,
+    )
 
 
 def _x(elem, xpath: str, ns: dict) -> Optional[str]:

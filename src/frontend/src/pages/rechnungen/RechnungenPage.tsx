@@ -1150,7 +1150,7 @@ function RechnungForm({
   const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
     if (prefillFromAnalyse?.positionen?.length) {
       return prefillFromAnalyse.positionen.map((p) => ({
-        beschreibung: p.beschreibung,
+        beschreibung: p.artikel_nr ? `${p.artikel_nr} ${p.beschreibung}` : p.beschreibung,
         menge: String(parseFloat(p.menge)),
         einheit: p.einheit || 'Stück',
         netto: p.netto,
@@ -1175,9 +1175,11 @@ function RechnungForm({
     return [pos]
   })
   const [eingabeModus, setEingabeModus] = useState<'netto' | 'brutto'>(
-    prefillFromAnalyse?.positionen?.length
-      ? 'netto'
-      : pf?.gesamt_netto && !pf?.gesamt_brutto ? 'netto' : 'brutto'
+    prefillFromAnalyse?.positionen_modus === 'brutto'
+      ? 'brutto'
+      : prefillFromAnalyse?.positionen?.length
+        ? 'netto'
+        : pf?.gesamt_netto && !pf?.gesamt_brutto ? 'netto' : 'brutto'
   )
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
   const [schnellmodus, setSchnellmodus] = useState(
@@ -1306,12 +1308,13 @@ function RechnungForm({
   }
 
   function addPosition() {
+    const letztePos = positionen[positionen.length - 1]
     const defaultUst = istKleinunternehmer
       ? '0'
       : typ === 'ausgang'
         ? defaultUstGlobal
-        : String((kategorien ?? []).find((k) => String(k.id) === kategorieId)?.ust_satz_standard ?? defaultUstGlobal)
-    setPositionen((prev) => [...prev, leerPosition(defaultUst)])
+        : String((kategorien ?? []).find((k) => String(k.id) === (letztePos?.kategorie_id ?? ''))?.ust_satz_standard ?? defaultUstGlobal)
+    setPositionen((prev) => [...prev, { ...leerPosition(defaultUst), kategorie_id: letztePos?.kategorie_id }])
   }
 
   function removePosition(i: number) {
@@ -1575,6 +1578,26 @@ function RechnungForm({
                 </select>
               </div>
             </div>
+            {/* Kategorie */}
+            <div>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Kategorie</label>
+              <select
+                value={positionen[0]?.kategorie_id ?? ''}
+                onChange={(e) => updatePosition(0, 'kategorie_id', e.target.value)}
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+              >
+                <option value="">— keine Kategorie —</option>
+                <optgroup label="Betriebsausgaben">
+                  {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                </optgroup>
+                {anlageKat.length > 0 && (
+                  <optgroup label="Investitionen">
+                    {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
             {/* Summenanzeige */}
             {parseFloat((positionen[0]?.netto ?? '').replace(',', '.')) !== 0 && (
               <div className="text-xs text-right text-slate-500 dark:text-slate-400 space-y-0.5 pt-1 border-t border-slate-100 dark:border-slate-700">
