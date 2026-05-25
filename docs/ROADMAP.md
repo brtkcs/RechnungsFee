@@ -155,6 +155,7 @@ Steuerliche Auswertungen für Finanzamt und Steuerberater.
 - [ ] DATEV-Export (CSV nach DATEV-Format)
 - [ ] Jahresübersicht (Kategorien-Summen, grafisch)
 - [ ] PDF-Export für alle Auswertungen
+- [ ] Dashboard individuell konfigurierbar (Kacheln ein-/ausblenden, Reihenfolge, externer Link z.B. Online-Banking) ([#104](https://github.com/nicolettas-muggelbude/RechnungsFee/issues/104))
 
 ---
 
