@@ -243,14 +243,15 @@ function FaelligeKachel({ rechnungen }: { rechnungen: Rechnung[] }) {
     )
   }
 
+  const gesamt = ausgang.length + eingang.length
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-800 mb-6">
       <div className="px-5 py-3 border-b border-amber-100 dark:border-amber-800 flex items-center gap-2">
         <span className="text-amber-500">⚠️</span>
         <h3 className="font-semibold text-slate-700 dark:text-slate-200">Fällige Rechnungen</h3>
-        <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">nächste 7 Tage + überfällig</span>
+        <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">nächste 7 Tage + überfällig · {gesamt} Einträge</span>
       </div>
-      <div className="px-5 py-4 space-y-5">
+      <div className="overflow-y-auto resize-y px-5 py-4 space-y-5" style={{ height: '240px', minHeight: '96px' }}>
         <FaelligTabelle liste={ausgang} titel="Ausgangsrechnungen" />
         <FaelligTabelle liste={eingang} titel="Eingangsrechnungen" />
       </div>
@@ -313,7 +314,7 @@ export function Dashboard() {
     .filter((e) => e.art === 'Ausgabe')
     .reduce((s, e) => s + parseFloat(e.brutto_betrag), 0)
   const saldo = einnahmen - ausgaben
-  const letzte5 = alle.slice(0, 5)
+  const letzteEintraege = alle
 
   // Zufluss für Monitor (Einnahmen excl. Privateinlagen + Kassenanfangsbestand, aktueller Monat)
   const zuflussMonat = (aktuelleEintraege ?? [])
@@ -435,37 +436,42 @@ export function Dashboard() {
 
       {/* Letzte Buchungen */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-        <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700">
+        <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <h3 className="font-semibold text-slate-700 dark:text-slate-200">Letzte Buchungen</h3>
+          {letzteEintraege.length > 0 && (
+            <span className="text-xs text-slate-400 dark:text-slate-500">{letzteEintraege.length} Einträge</span>
+          )}
         </div>
-        {letzte5.length === 0 ? (
+        {letzteEintraege.length === 0 ? (
           <p className="text-slate-400 dark:text-slate-500 text-sm p-5">Keine Buchungen im gewählten Zeitraum.</p>
         ) : (
-          <table className="w-full text-sm">
-            <tbody>
-              {letzte5.map((e) => (
-                <tr key={e.id} className="border-b border-slate-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700">
-                  <td className="px-5 py-3 text-slate-500 dark:text-slate-400 w-28">{formatDatum(e.datum)}</td>
-                  <td className="px-5 py-3 text-slate-400 dark:text-slate-500 w-32 font-mono text-xs">{e.belegnr}</td>
-                  <td className="px-5 py-3 text-slate-700 dark:text-slate-200">
-                    {e.beschreibung}
-                    {e.kategorie_kontenart === 'Privat' && (
-                      <span className="ml-1.5 text-[10px] text-purple-500 bg-purple-50 border border-purple-200 rounded px-1 dark:bg-purple-950 dark:border-purple-800">
-                        Privat
-                      </span>
-                    )}
-                  </td>
-                  <td className={`px-5 py-3 text-right font-medium ${
-                    e.kategorie_kontenart === 'Privat'
-                      ? 'text-slate-400'
-                      : e.art === 'Einnahme' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {e.art === 'Ausgabe' ? '−' : '+'}{formatEuro(e.brutto_betrag)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-y-auto resize-y" style={{ height: '240px', minHeight: '96px' }}>
+            <table className="w-full text-sm">
+              <tbody>
+                {letzteEintraege.map((e) => (
+                  <tr key={e.id} className="border-b border-slate-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <td className="px-5 py-3 text-slate-500 dark:text-slate-400 w-28">{formatDatum(e.datum)}</td>
+                    <td className="px-5 py-3 text-slate-400 dark:text-slate-500 w-32 font-mono text-xs">{e.belegnr}</td>
+                    <td className="px-5 py-3 text-slate-700 dark:text-slate-200">
+                      {e.beschreibung}
+                      {e.kategorie_kontenart === 'Privat' && (
+                        <span className="ml-1.5 text-[10px] text-purple-500 bg-purple-50 border border-purple-200 rounded px-1 dark:bg-purple-950 dark:border-purple-800">
+                          Privat
+                        </span>
+                      )}
+                    </td>
+                    <td className={`px-5 py-3 text-right font-medium ${
+                      e.kategorie_kontenart === 'Privat'
+                        ? 'text-slate-400'
+                        : e.art === 'Einnahme' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {e.art === 'Ausgabe' ? '−' : '+'}{formatEuro(e.brutto_betrag)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
