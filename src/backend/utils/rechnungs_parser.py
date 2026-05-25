@@ -9,6 +9,7 @@ Unterstützte Formate:
 
 from __future__ import annotations
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 import re
@@ -33,6 +34,7 @@ class AnalyseErgebnis:
     felder: dict = field(default_factory=dict)
     positionen: list[AnalysePosition] = field(default_factory=list)
     warnungen: list[str] = field(default_factory=list)
+    konfidenz: dict = field(default_factory=dict)  # Feld → "ok"|"warnung"|"fehlt"
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +75,267 @@ def _einheit(code: Optional[str]) -> str:
 def _ns(root):
     """Gibt das Namespace-Dict für lxml zurück."""
     return root.nsmap
+
+
+def _build_konfidenz(felder: dict) -> dict:
+    """
+    Bewertet je Feld die Extraktionsqualität.
+    ok      = vorhanden und plausibel
+    warnung = vorhanden, aber verdächtig
+    fehlt   = nicht extrahiert
+    """
+    K: dict[str, str] = {}
+    today = date.today()
+
+    def _bewerte(schluessel: str, check_fn=None) -> None:
+        val = felder.get(schluessel)
+        if not val:
+            K[schluessel] = "fehlt"
+            return
+        if check_fn:
+            K[schluessel] = check_fn(val)
+        else:
+            K[schluessel] = "ok"
+
+    def _datum_check(val: str) -> str:
+        try:
+            d = datetime.strptime(val, "%Y-%m-%d").date()
+        except ValueError:
+            return "warnung"
+        if d > today:
+            return "warnung"
+        if (today - d).days > 5 * 365:
+            return "warnung"
+        return "ok"
+
+    def _betrag_check(val: str) -> str:
+        try:
+            Decimal(val)
+            return "ok"
+        except InvalidOperation:
+            return "warnung"
+
+    def _name_check(val: str) -> str:
+        return "ok" if len(val.strip()) >= 3 else "warnung"
+
+    _bewerte("externe_belegnr")
+    _bewerte("datum", _datum_check)
+    _bewerte("faellig_am", _datum_check)
+    _bewerte("gesamt_brutto", _betrag_check)
+    _bewerte("gesamt_netto", _betrag_check)
+    _bewerte("gesamt_ust", _betrag_check)
+    _bewerte("lieferant_name", _name_check)
+
+    # Plausibilität: netto + ust ≈ brutto (Toleranz 0.02 €)
+    netto = felder.get("gesamt_netto")
+    ust = felder.get("gesamt_ust")
+    brutto = felder.get("gesamt_brutto")
+    if netto and ust and brutto:
+        try:
+            diff = abs(Decimal(netto) + Decimal(ust) - Decimal(brutto))
+            if diff > Decimal("0.02"):
+                K["gesamt_brutto"] = "warnung"
+        except InvalidOperation:
+            pass
+
+    return K
+
+
+def _datum_de_zu_iso(text: str) -> Optional[str]:
+    """DD.MM.YYYY oder D.M.YY → ISO-String, sonst None."""
+    m = re.match(r"(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})", text.strip())
+    if not m:
+        return None
+    day, month, year = m.group(1), m.group(2), m.group(3)
+    if len(year) == 2:
+        year = f"20{year}"
+    try:
+        return date(int(year), int(month), int(day)).isoformat()
+    except ValueError:
+        return None
+
+
+def _betrag_de(text: str) -> Optional[str]:
+    """Deutschen Betrag (1.234,56 / 1234,56 / 1234.56) → Decimal-String oder None."""
+    text = text.strip().replace("€", "").replace("EUR", "").strip()
+    try:
+        if re.match(r"^\d{1,3}(?:\.\d{3})*,\d{2}$", text):
+            return str(Decimal(text.replace(".", "").replace(",", ".")))
+        if re.match(r"^\d+,\d{2}$", text):
+            return str(Decimal(text.replace(",", ".")))
+        return str(Decimal(text.replace(",", ".")))
+    except InvalidOperation:
+        return None
+
+
+def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
+    """Fallback: Text aus PDF lesen und per Regex Rechnungsfelder suchen."""
+    warnungen: list[str] = []
+    try:
+        import io
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as exc:
+        return AnalyseErgebnis(
+            format="pdf",
+            warnungen=["Kein eingebettetes XML – Textextraktion fehlgeschlagen.", str(exc)],
+        )
+
+    if not text.strip():
+        return AnalyseErgebnis(
+            format="pdf",
+            warnungen=["Kein eingebettetes XML – kein extrahierbarer Text (gescanntes Dokument?)."],
+        )
+
+    felder: dict = {}
+
+    # Datum – zuerst suchen, damit spätere Felder darauf aufbauen können
+    _datum_pattern = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}"
+    m = re.search(
+        r"(?:Rechnungs(?:datum)?|Ausstellungsdatum|Ausgestellt(?:\s+am)?|Datum)\s*:?\s*(" + _datum_pattern + r")",
+        text, re.IGNORECASE,
+    )
+    if m:
+        iso = _datum_de_zu_iso(m.group(1))
+        if iso:
+            felder["datum"] = iso
+    else:
+        # Fallback: alle Datumstreffer sammeln, neuestes plausibles nehmen
+        alle_daten = re.findall(_datum_pattern, text)
+        for treffer in alle_daten:
+            iso = _datum_de_zu_iso(treffer)
+            if iso:
+                felder["datum"] = iso
+                break
+
+    # Rechnungsnummer – gängige deutsche Label (Wert in derselben Zeile)
+    _belegnr_label = (
+        r"(?:Rechnungs(?:nummer|[-\s]?Nr\.?|nr\.?|snr\.?)"
+        r"|Rechnung(?!s?[\s]*(?:datum|sDatum))\s*(?:[-]?\s*Nr\.?|#|:|\s)"
+        r"|RE[-.\s]?Nr\.?|RE(?=[\s:]+[A-Z0-9\-])"
+        r"|Beleg(?:nummer|[-\s]?Nr\.?|nr\.?)|Beleg(?=[\s:]+\d)"
+        r"|Faktura[-\s]?(?:Nr\.?|nummer)?"
+        r"|Invoice\s*(?:No\.?|Nr\.?|#))"
+    )
+    def _belegnr_filter(kandidat: str) -> bool:
+        return (bool(re.search(r"\d", kandidat))
+                and not re.match(r"^\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}$", kandidat))
+
+    m = re.search(_belegnr_label + r"[\s:]*([A-Z0-9][A-Z0-9/\-_.]{1,29})", text, re.IGNORECASE)
+    if m:
+        kandidat = m.group(1).strip()
+        if _belegnr_filter(kandidat):
+            felder["externe_belegnr"] = kandidat
+
+    # Fallback: Label als Tabellen-Header, Wert steht auf der nächsten Zeile
+    if not felder.get("externe_belegnr"):
+        m2 = re.search(
+            _belegnr_label + r"[^\n]*\n\s*([A-Z0-9][A-Z0-9/\-_.]{1,29})",
+            text, re.IGNORECASE,
+        )
+        if m2:
+            kandidat = m2.group(1).strip()
+            if _belegnr_filter(kandidat):
+                felder["externe_belegnr"] = kandidat
+
+    # Fälligkeitsdatum – explizites Datum ODER "X Tage Zahlungsziel"
+    m_faellig = re.search(
+        r"(?:F[äa]llig(?:keit(?:s?datum)?)?|zahlbar\s+bis|zu\s+zahlen\s+bis)\s*:?\s*(" + _datum_pattern + r")",
+        text, re.IGNORECASE,
+    )
+    if m_faellig:
+        iso = _datum_de_zu_iso(m_faellig.group(1))
+        if iso:
+            felder["faellig_am"] = iso
+    else:
+        # "14 Tage", "14 Werktage", "Zahlungsziel 14 Tage", "netto 14 Tage" usw.
+        m_ziel = re.search(
+            r"Rechnungsdatum\s*\+\s*(\d+)\s*(?:Werk)?[Tt]age?"
+            r"|(?:Zahlungsziel|Zahlbar\s+innerhalb|netto\s+(?:sofort\s+)?innerhalb|innerhalb)\s*[:\s]*(\d+)\s*(?:Werk)?[Tt]age?"
+            r"|(\d+)\s*(?:Werk)?[Tt]age?\s*(?:Zahlungsziel|netto|Zahlung|ab\s+Rechnung)"
+            r"|Zahlung\s+(?:innerhalb|binnen)\s*(\d+)\s*(?:Werk)?[Tt]age?"
+            r"|netto\s+(\d+)\s*[Tt]age?",
+            text, re.IGNORECASE,
+        )
+        if m_ziel and felder.get("datum"):
+            try:
+                from datetime import timedelta
+                tage = int(next(g for g in m_ziel.groups() if g is not None))
+                felder["faellig_am"] = (date.fromisoformat(felder["datum"]) + timedelta(days=tage)).isoformat()
+            except (ValueError, TypeError):
+                pass
+
+    # USt-Satz + USt-Betrag (kombiniert)
+    m = re.search(
+        r"(\d{1,2})\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*[:\s]+([\d.,]+)",
+        text, re.IGNORECASE,
+    )
+    if m:
+        felder["ust_satz"] = m.group(1)
+        v = _betrag_de(m.group(2))
+        if v:
+            felder["gesamt_ust"] = v
+    else:
+        m = re.search(
+            r"(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*(?:\d+\s*%\s*)?:?\s*([\d.,]+)",
+            text, re.IGNORECASE,
+        )
+        if m:
+            v = _betrag_de(m.group(1))
+            if v:
+                felder["gesamt_ust"] = v
+
+    # Brutto-Gesamtbetrag
+    m = re.search(
+        r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|Brutto(?:summe|betrag)?|Gesamt(?:summe)?)\s*[:\s]+([\d.,]+)\s*(?:€|EUR)?",
+        text, re.IGNORECASE,
+    )
+    if m:
+        v = _betrag_de(m.group(1))
+        if v:
+            felder["gesamt_brutto"] = v
+
+    # Netto-Betrag
+    m = re.search(
+        r"(?:Netto(?:betrag|summe)?|Zwischensumme(?:\s+netto)?)\s*[:\s]+([\d.,]+)\s*(?:€|EUR)?",
+        text, re.IGNORECASE,
+    )
+    if m:
+        v = _betrag_de(m.group(1))
+        if v:
+            felder["gesamt_netto"] = v
+
+    # USt-ID
+    m = re.search(r"(?:USt\.?-?IdNr\.?|UStIdNr|UID)\s*:?\s*(DE\d{9})", text, re.IGNORECASE)
+    if m:
+        felder["lieferant_ust_id"] = m.group(1).strip()
+
+    # Lieferanten-Name: erste Zeile mit Unternehmensform-Marker
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    for line in lines[:25]:
+        if re.search(r"\b(GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.)\b", line, re.IGNORECASE):
+            felder["lieferant_name"] = line
+            break
+
+    felder = {k: v for k, v in felder.items() if v is not None}
+
+    if felder:
+        warnungen.append("Kein eingebettetes XML – Felder aus PDF-Text extrahiert, bitte prüfen.")
+    else:
+        warnungen.append("Kein eingebettetes XML – keine Felder erkannt, bitte manuell ausfüllen.")
+
+
+    konfidenz = _build_konfidenz(felder)
+    # Alle per Regex extrahierten Felder mindestens auf "warnung" setzen
+    for k in list(konfidenz):
+        if konfidenz[k] == "ok":
+            konfidenz[k] = "warnung"
+    for k in ("externe_belegnr", "datum", "gesamt_brutto", "lieferant_name"):
+        if k not in felder:
+            konfidenz[k] = "fehlt"
+
+    return AnalyseErgebnis(format="pdf", felder=felder, warnungen=warnungen, konfidenz=konfidenz)
 
 
 def _x(elem, xpath: str, ns: dict) -> Optional[str]:
@@ -190,7 +453,10 @@ def _parse_cii_xml(xml_bytes: bytes) -> AnalyseErgebnis:
     # None-Werte entfernen
     felder = {k: v for k, v in felder.items() if v is not None}
 
-    return AnalyseErgebnis(format=fmt, felder=felder, positionen=positionen, warnungen=warnungen)
+    return AnalyseErgebnis(
+        format=fmt, felder=felder, positionen=positionen,
+        warnungen=warnungen, konfidenz=_build_konfidenz(felder),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +545,10 @@ def _parse_ubl_xml(xml_bytes: bytes) -> AnalyseErgebnis:
         ))
 
     felder = {k: v for k, v in felder.items() if v is not None}
-    return AnalyseErgebnis(format="xrechnung", felder=felder, positionen=positionen, warnungen=warnungen)
+    return AnalyseErgebnis(
+        format="xrechnung", felder=felder, positionen=positionen,
+        warnungen=warnungen, konfidenz=_build_konfidenz(felder),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +582,7 @@ def analysiere_datei(dateiname: str, inhalt: bytes) -> AnalyseErgebnis:
                 return ergebnis
         except Exception:
             pass
-        return AnalyseErgebnis(format="pdf", warnungen=["Kein eingebettetes XML gefunden – bitte Felder manuell ausfüllen."])
+        return _extrahiere_pdf_text(inhalt)
 
     return AnalyseErgebnis(format="unbekannt", warnungen=["Dateiformat nicht unterstützt."])
 

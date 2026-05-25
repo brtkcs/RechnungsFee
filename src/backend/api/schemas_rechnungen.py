@@ -5,7 +5,7 @@ Getrennt von schemas.py wegen Umfang.
 
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional, List
+from typing import Dict, List, Optional
 from pydantic import BaseModel, field_validator, model_validator
 
 
@@ -238,6 +238,13 @@ class AnalyseFelder(BaseModel):
     lieferant_strasse: Optional[str] = None
     lieferant_plz: Optional[str] = None
     lieferant_ort: Optional[str] = None
+    konfidenz: Dict[str, str] = {}
+
+
+class LieferantVorschlag(BaseModel):
+    id: int
+    name: str
+    score: float
 
 
 class AnalyseResponse(BaseModel):
@@ -247,6 +254,7 @@ class AnalyseResponse(BaseModel):
     warnungen: List[str]
     temp_url: Optional[str] = None
     temp_path: Optional[str] = None
+    lieferant_vorschlaege: List[LieferantVorschlag] = []
 
 
 # ---------------------------------------------------------------------------

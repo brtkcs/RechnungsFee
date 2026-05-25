@@ -2,6 +2,7 @@
 Rechnungen-API (Eingang + Ausgang) mit Journal-Verknüpfung.
 """
 
+import difflib
 import hashlib
 import shutil
 import uuid
@@ -11,13 +12,14 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 from fastapi.responses import FileResponse, Response
 from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 
 from database.connection import get_db, APP_DATA_DIR
 from database.models import (
-    Beleg, Rechnung, Rechnungsposition, Journaleintrag,
+    Beleg, Lieferant, Rechnung, Rechnungsposition, Journaleintrag,
     Kategorie, Unternehmen, Nummernkreis,
 )
 from utils.signatur import signatur_journaleintrag
@@ -26,7 +28,7 @@ from utils.pdf_rechnung_vorlage1 import generate_rechnung_pdf_vorlage1
 from utils.zugferd import generate_zugferd_pdf
 from utils.rechnungs_parser import analysiere_datei
 from .schemas_rechnungen import (
-    BelegResponse, RechnungCreate, RechnungUpdate, RechnungResponse,
+    BelegResponse, LieferantVorschlag, RechnungCreate, RechnungUpdate, RechnungResponse,
     BarZahlungCreate, BarZahlungResult, ZahlungKompakt, AnalyseResponse,
 )
 
@@ -149,7 +151,7 @@ def _partner_name(rechnung: Rechnung) -> str:
 # ---------------------------------------------------------------------------
 
 @router.post("/analysieren", response_model=AnalyseResponse)
-async def analysiere_rechnung(datei: UploadFile = File(...)):
+async def analysiere_rechnung(datei: UploadFile = File(...), db: Session = Depends(get_db)):
     """ZUGFeRD / XRechnung aus PDF oder XML extrahieren (keine DB-Änderung)."""
     inhalt = await datei.read()
     ergebnis = analysiere_datei(datei.filename or "", inhalt)
@@ -165,14 +167,93 @@ async def analysiere_rechnung(datei: UploadFile = File(...)):
         temp_url = f"/rechnungen/temp/{token}"
         temp_path = str(temp_file.absolute())
 
+    # Lieferanten-Vorschläge per Fuzzy-Matching
+    lieferant_vorschlaege: list[LieferantVorschlag] = []
+    erkannter_name = ergebnis.felder.get("lieferant_name", "")
+    erkannte_ust_id = ergebnis.felder.get("lieferant_ust_id", "")
+    if erkannter_name or erkannte_ust_id:
+        alle_lieferanten = db.query(Lieferant).filter(Lieferant.aktiv == True).all()
+        scored: list[tuple[float, Lieferant]] = []
+        for lief in alle_lieferanten:
+            score = 0.0
+            if erkannte_ust_id and lief.ust_idnr and erkannte_ust_id.replace(" ", "") == lief.ust_idnr.replace(" ", ""):
+                score = 1.0
+            elif erkannter_name and lief.firmenname:
+                score = difflib.SequenceMatcher(None, erkannter_name.lower(), lief.firmenname.lower()).ratio()
+            if score > 0.5:
+                scored.append((score, lief))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        lieferant_vorschlaege = [
+            LieferantVorschlag(id=lief.id, name=lief.firmenname, score=round(score, 2))
+            for score, lief in scored[:3]
+        ]
+
     from .schemas_rechnungen import AnalyseFelder, AnalysePositionResponse
     return AnalyseResponse(
         format=ergebnis.format,
-        felder=AnalyseFelder(**ergebnis.felder),
+        felder=AnalyseFelder(**ergebnis.felder, konfidenz=ergebnis.konfidenz),
         positionen=[AnalysePositionResponse(**p.__dict__) for p in ergebnis.positionen],
         warnungen=ergebnis.warnungen,
         temp_url=temp_url,
         temp_path=temp_path,
+        lieferant_vorschlaege=lieferant_vorschlaege,
+    )
+
+
+class AnalysierePfadRequest(BaseModel):
+    pfad: str
+
+@router.post("/analysieren-pfad", response_model=AnalyseResponse)
+def analysiere_rechnung_pfad(body: AnalysierePfadRequest, db: Session = Depends(get_db)):
+    """Wie /analysieren, aber liest die Datei vom lokalen Pfad (Tauri Drag-&-Drop auf Windows)."""
+    from pathlib import Path as _Path
+    pfad = _Path(body.pfad)
+    if not pfad.exists() or not pfad.is_file():
+        raise HTTPException(status_code=400, detail="Datei nicht gefunden")
+    inhalt = pfad.read_bytes()
+    dateiname = pfad.name
+    ergebnis = analysiere_datei(dateiname, inhalt)
+
+    temp_url = None
+    temp_path = None
+    if dateiname.lower().endswith(".pdf"):
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        _bereinige_temp_dir()
+        token = str(uuid.uuid4())
+        temp_file = TEMP_DIR / f"{token}.pdf"
+        temp_file.write_bytes(inhalt)
+        temp_url = f"/rechnungen/temp/{token}"
+        temp_path = str(temp_file.absolute())
+
+    lieferant_vorschlaege: list[LieferantVorschlag] = []
+    erkannter_name = ergebnis.felder.get("lieferant_name", "")
+    erkannte_ust_id = ergebnis.felder.get("lieferant_ust_id", "")
+    if erkannter_name or erkannte_ust_id:
+        alle_lieferanten = db.query(Lieferant).filter(Lieferant.aktiv == True).all()
+        scored: list[tuple[float, Lieferant]] = []
+        for lief in alle_lieferanten:
+            score = 0.0
+            if erkannte_ust_id and lief.ust_idnr and erkannte_ust_id.replace(" ", "") == lief.ust_idnr.replace(" ", ""):
+                score = 1.0
+            elif erkannter_name and lief.firmenname:
+                score = difflib.SequenceMatcher(None, erkannter_name.lower(), lief.firmenname.lower()).ratio()
+            if score > 0.5:
+                scored.append((score, lief))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        lieferant_vorschlaege = [
+            LieferantVorschlag(id=lief.id, name=lief.firmenname, score=round(score, 2))
+            for score, lief in scored[:3]
+        ]
+
+    from .schemas_rechnungen import AnalyseFelder, AnalysePositionResponse
+    return AnalyseResponse(
+        format=ergebnis.format,
+        felder=AnalyseFelder(**ergebnis.felder, konfidenz=ergebnis.konfidenz),
+        positionen=[AnalysePositionResponse(**p.__dict__) for p in ergebnis.positionen],
+        warnungen=ergebnis.warnungen,
+        temp_url=temp_url,
+        temp_path=temp_path,
+        lieferant_vorschlaege=lieferant_vorschlaege,
     )
 
 

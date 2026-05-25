@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRechnungen, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, invoke,
   sucheArtikel, getUstSaetze, getKassenstand,
-  uploadBeleg, getBelegUrl, deleteBeleg, analysiereRechnung,
+  uploadBeleg, getBelegUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate,
-  type ArtikelSuche, type AnalyseErgebnis,
+  type ArtikelSuche, type AnalyseErgebnis, type LieferantVorschlag,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
 
@@ -1102,6 +1103,7 @@ function RechnungForm({
   onCancel: () => void
 }) {
   const pf = prefillFromAnalyse?.felder
+  const pfRing = (key: string) => pf?.konfidenz?.[key] === 'warnung' ? 'ring-2 ring-amber-400 rounded-lg' : ''
   const formatLabel: Record<string, string> = {
     zugferd: 'ZUGFeRD', xrechnung: 'XRechnung', pdf: 'PDF', unbekannt: 'Unbekannt', xml: 'XML',
   }
@@ -1121,7 +1123,7 @@ function RechnungForm({
 
   const [rechnungsnummer, setRechnungsnummer] = useState(initial?.rechnungsnummer ?? '')
   const [datum, setDatum] = useState(pf?.datum ?? initial?.datum ?? heuteIso())
-  const [leistungsdatum, setLeistungsdatum] = useState(initial?.leistungsdatum ?? initial?.datum ?? heuteIso())
+  const [leistungsdatum, setLeistungsdatum] = useState(initial?.leistungsdatum ?? initial?.datum ?? pf?.datum ?? heuteIso())
   const [leistungsdatumManuell, setLeistungsdatumManuell] = useState(
     !!(initial?.leistungsdatum && initial.leistungsdatum !== initial.datum)
   )
@@ -1145,27 +1147,37 @@ function RechnungForm({
   const [kategorieId, setKategorieId] = useState<string>(String(initial?.kategorie_id ?? ''))
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
-  const [positionen, setPositionen] = useState<Positionszeile[]>(
-    prefillFromAnalyse?.positionen?.length
-      ? prefillFromAnalyse.positionen.map((p) => ({
-          beschreibung: p.beschreibung,
-          menge: String(parseFloat(p.menge)),
-          einheit: p.einheit || 'Stück',
-          netto: p.netto,
-          ust_satz: p.ust_satz,
-        }))
-      : initial?.positionen?.map((p) => ({
-          beschreibung: p.beschreibung,
-          menge: String(parseFloat(p.menge)),
-          einheit: p.einheit,
-          netto: p.brutto,  // eingabeModus startet als 'brutto' → Bruttowert vorbefüllen
-          ust_satz: String(parseFloat(p.ust_satz)),
-          artikel_id: p.artikel_id ?? undefined,
-          kategorie_id: p.kategorie_id != null ? String(p.kategorie_id) : undefined,
-        })) ?? [leerPosition(defaultUstGlobal)]
-  )
+  const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
+    if (prefillFromAnalyse?.positionen?.length) {
+      return prefillFromAnalyse.positionen.map((p) => ({
+        beschreibung: p.beschreibung,
+        menge: String(parseFloat(p.menge)),
+        einheit: p.einheit || 'Stück',
+        netto: p.netto,
+        ust_satz: p.ust_satz,
+      }))
+    }
+    if (initial?.positionen?.length) {
+      return initial.positionen.map((p) => ({
+        beschreibung: p.beschreibung,
+        menge: String(parseFloat(p.menge)),
+        einheit: p.einheit,
+        netto: p.brutto,  // eingabeModus startet als 'brutto' → Bruttowert vorbefüllen
+        ust_satz: String(parseFloat(p.ust_satz)),
+        artikel_id: p.artikel_id ?? undefined,
+        kategorie_id: p.kategorie_id != null ? String(p.kategorie_id) : undefined,
+      }))
+    }
+    // Plain-PDF-Prefill: Brutto/Netto-Betrag und USt-Satz aus Texterkennung vorfüllen
+    const pos = leerPosition(pf?.ust_satz ?? defaultUstGlobal)
+    if (pf?.gesamt_brutto) pos.netto = pf.gesamt_brutto
+    else if (pf?.gesamt_netto) pos.netto = pf.gesamt_netto
+    return [pos]
+  })
   const [eingabeModus, setEingabeModus] = useState<'netto' | 'brutto'>(
-    prefillFromAnalyse?.positionen?.length ? 'netto' : 'brutto'
+    prefillFromAnalyse?.positionen?.length
+      ? 'netto'
+      : pf?.gesamt_netto && !pf?.gesamt_brutto ? 'netto' : 'brutto'
   )
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
   const [schnellmodus, setSchnellmodus] = useState(
@@ -1204,23 +1216,15 @@ function RechnungForm({
     if (!leistungsdatumManuell) setLeistungsdatum(datum)
   }, [datum, leistungsdatumManuell])
 
-  // Fälligkeitsdatum = Rechnungsdatum + Zahlungsziel (nur neue Rechnungen, nur wenn unternehmen geladen)
+  // Fälligkeitsdatum = Rechnungsdatum + Zahlungsziel (nur neue Rechnungen, nicht bei Prefill aus Analyse)
   useEffect(() => {
     if (initial) return
+    if (pf?.faellig_am) return
     const d = new Date(datum)
     d.setDate(d.getDate() + zahlungsziel)
     setFaelligAm(d.toISOString().slice(0, 10))
   }, [datum, zahlungsziel, initial])
 
-  // USt-Satz aller Positionen aus gewählter Kategorie ableiten – nur für Eingangsrechnungen
-  useEffect(() => {
-    if (typ === 'ausgang') return
-    if (!kategorieId || !kategorien) return
-    const kat = kategorien.find((k) => String(k.id) === kategorieId)
-    if (!kat) return
-    const neuerUst = istKleinunternehmer ? '0' : String(kat.ust_satz_standard)
-    setPositionen((prev) => prev.map((p) => ({ ...p, ust_satz: neuerUst })))
-  }, [kategorieId, kategorien, istKleinunternehmer, typ])
 
   // Kategorie-Gruppen analog BuchungForm
   const alle = kategorien ?? []
@@ -1398,13 +1402,15 @@ function RechnungForm({
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Rechnungsdatum *</label>
-          <input
-            type="date"
-            required
-            value={datum}
-            onChange={(e) => setDatum(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-          />
+          <div className={pfRing('datum')}>
+            <input
+              type="date"
+              required
+              value={datum}
+              onChange={(e) => setDatum(e.target.value)}
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+          </div>
         </div>
       </div>
 
@@ -1426,34 +1432,24 @@ function RechnungForm({
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Fällig am</label>
-          <input
-            type="date"
-            value={faelligAm}
-            min={datum}
-            onChange={(e) => setFaelligAm(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-          />
+          <div className={pfRing('faellig_am')}>
+            <input
+              type="date"
+              value={faelligAm}
+              min={datum}
+              onChange={(e) => setFaelligAm(e.target.value)}
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+          </div>
         </div>
       </div>
 
-      {typ !== 'ausgang' && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kategorie</label>
-          <select
-            value={kategorieId}
-            onChange={(e) => setKategorieId(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-          >
-            <option value="">— keine —</option>
-            {kategorieOptionen}
-          </select>
-        </div>
-      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
           {typ === 'ausgang' ? 'Kunde' : 'Lieferant'}
         </label>
+        <div className={pfRing('lieferant_name')}>
         <StammdatenCombobox
           items={partnerListe.map((p: any) => ({
             id: p.id as number,
@@ -1471,6 +1467,7 @@ function RechnungForm({
               : 'Lieferant suchen oder frei eingeben…'
           }
         />
+        </div>
       </div>
 
       {/* §19-Hinweis */}
@@ -1727,13 +1724,15 @@ function RechnungForm({
             Belegnr. des Lieferanten
             <span className="text-slate-400 dark:text-slate-500 font-normal ml-1">(optional)</span>
           </label>
-          <input
-            type="text"
-            value={externeBelegnr}
-            onChange={(e) => setExterneBelegnr(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
-            placeholder="z. B. RE-2025-0042"
-          />
+          <div className={pfRing('externe_belegnr')}>
+            <input
+              type="text"
+              value={externeBelegnr}
+              onChange={(e) => setExterneBelegnr(e.target.value)}
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
+              placeholder="z. B. RE-2025-0042"
+            />
+          </div>
         </div>
       )}
 
@@ -1763,6 +1762,36 @@ function RechnungForm({
     </form>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Konfidenz-Indikator
+// ---------------------------------------------------------------------------
+
+function KonfidenzDot({ level }: { level?: string }) {
+  if (!level || level === 'ok') return null
+  if (level === 'fehlt') return (
+    <span title="Feld nicht erkannt" className="inline-block w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+  )
+  return (
+    <span title="Plausibilität prüfen" className="inline-block w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+  )
+}
+
+function LieferantVorschlagBox({ vorschlaege }: { vorschlaege: LieferantVorschlag[] }) {
+  if (vorschlaege.length === 0) return null
+  return (
+    <div className="ml-0 mt-0.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 text-xs space-y-1">
+      <p className="text-blue-600 dark:text-blue-400 font-medium">Möglicher Treffer im Lieferantenstamm:</p>
+      {vorschlaege.map(v => (
+        <div key={v.id} className="flex justify-between text-slate-700 dark:text-slate-300">
+          <span>{v.name}</span>
+          <span className="text-slate-400 dark:text-slate-500">{Math.round(v.score * 100)} %</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 
 // ---------------------------------------------------------------------------
 // Import-Dialog (Stufe 2 – ZUGFeRD/XRechnung)
@@ -1803,18 +1832,45 @@ function ImportDialog({
     if (f) handleDatei(f)
   }
 
+  // Tauri auf Windows: HTML5-Drop feuert nicht – stattdessen tauri://drag-drop hören
+  useEffect(() => {
+    if (!isTauri() || schritt !== 'upload') return
+    let unlisten: (() => void) | undefined
+    listen<{ paths: string[] }>('tauri://drag-drop', async (event) => {
+      const paths = event.payload?.paths ?? (event.payload as any) ?? []
+      const erlaubte = (Array.isArray(paths) ? paths : [])
+        .filter((p: string) => /\.(pdf|xml)$/i.test(p))
+      if (erlaubte.length === 0) return
+      const pfad = erlaubte[0]
+      const name = pfad.replace(/\\/g, '/').split('/').pop() ?? 'rechnung'
+      setLaedt(true)
+      setLadeFehler(null)
+      try {
+        const res = await analysiereRechnungPfad(pfad)
+        // Datei für Beleganhang: temp-Datei vom Backend holen
+        if (res.temp_url) {
+          const base = await import('../../api/client').then(m => m.getBaseUrl())
+          const blob = await fetch(`${base}${res.temp_url}`).then(r => r.blob())
+          setDatei(new File([blob], name, { type: 'application/pdf' }))
+        }
+        setErgebnis(res)
+        setSchritt('ergebnis')
+      } catch (e: any) {
+        setLadeFehler(e.message)
+      } finally {
+        setLaedt(false)
+      }
+    }).then((fn) => { unlisten = fn })
+    return () => { unlisten?.() }
+  }, [schritt])
+
   async function handlePdfOeffnen() {
-    if (!ergebnis?.temp_path) return
-    // Absoluten Dateipfad als file://-URL öffnen → System-PDF-Viewer
-    const path = ergebnis.temp_path
-    const fileUrl = path.match(/^[A-Za-z]:/)
-      ? `file:///${path.replace(/\\/g, '/')}`   // Windows: C:\... → file:///C:/...
-      : `file://${path}`                         // Linux/macOS: /home/... → file:///home/...
-    if (isTauri()) {
-      await invoke('open_url', { url: fileUrl })
-    } else {
-      window.open(fileUrl, '_blank')
-    }
+    if (!ergebnis?.temp_url) return
+    // HTTP-Endpunkt statt file://-Pfad – funktioniert plattformübergreifend (auch WSL).
+    const base = import.meta.env.DEV
+      ? `${window.location.protocol}//${window.location.host}/api`
+      : await getApiBase()
+    await openUrl(`${base}${ergebnis.temp_url}`)
   }
 
   const formatLabel: Record<string, string> = {
@@ -1882,7 +1938,9 @@ function ImportDialog({
                 <span className="text-sm text-slate-500 dark:text-slate-400">
                   {ergebnis.format === 'zugferd' || ergebnis.format === 'xrechnung'
                     ? 'Strukturierte Daten erkannt'
-                    : 'Keine strukturierten Daten – bitte manuell ausfüllen'}
+                    : felder && Object.keys(felder).some(k => k !== 'konfidenz' && (felder as any)[k])
+                      ? 'Felder aus PDF-Text extrahiert – bitte prüfen'
+                      : 'Keine Daten erkannt – bitte manuell ausfüllen'}
                 </span>
               </div>
 
@@ -1896,36 +1954,56 @@ function ImportDialog({
               )}
 
               {/* Erkannte Felder */}
-              {felder && Object.keys(felder).some(k => (felder as any)[k]) && (
+              {felder && Object.keys(felder).some(k => k !== 'konfidenz' && (felder as any)[k]) && (
                 <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-2 text-sm">
                   {felder.lieferant_name && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500 dark:text-slate-400">Lieferant</span>
-                      <span className="font-medium dark:text-slate-200">{felder.lieferant_name}</span>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 dark:text-slate-400">Lieferant</span>
+                        <div className="flex items-center gap-1.5">
+                          <KonfidenzDot level={felder.konfidenz?.lieferant_name} />
+                          <span className="font-medium dark:text-slate-200">{felder.lieferant_name}</span>
+                        </div>
+                      </div>
+                      {ergebnis?.lieferant_vorschlaege && ergebnis.lieferant_vorschlaege.length > 0 && (
+                        <LieferantVorschlagBox vorschlaege={ergebnis.lieferant_vorschlaege} />
+                      )}
                     </div>
                   )}
                   {felder.externe_belegnr && (
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-500 dark:text-slate-400">Rechnungsnr.</span>
-                      <span className="font-medium dark:text-slate-200">{felder.externe_belegnr}</span>
+                      <div className="flex items-center gap-1.5">
+                        <KonfidenzDot level={felder.konfidenz?.externe_belegnr} />
+                        <span className="font-medium dark:text-slate-200">{felder.externe_belegnr}</span>
+                      </div>
                     </div>
                   )}
                   {felder.datum && (
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-500 dark:text-slate-400">Datum</span>
-                      <span className="font-medium dark:text-slate-200">{formatDatum(felder.datum)}</span>
+                      <div className="flex items-center gap-1.5">
+                        <KonfidenzDot level={felder.konfidenz?.datum} />
+                        <span className="font-medium dark:text-slate-200">{formatDatum(felder.datum)}</span>
+                      </div>
                     </div>
                   )}
                   {felder.faellig_am && (
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-center">
                       <span className="text-slate-500 dark:text-slate-400">Fällig am</span>
-                      <span className="font-medium dark:text-slate-200">{formatDatum(felder.faellig_am)}</span>
+                      <div className="flex items-center gap-1.5">
+                        <KonfidenzDot level={felder.konfidenz?.faellig_am} />
+                        <span className="font-medium dark:text-slate-200">{formatDatum(felder.faellig_am)}</span>
+                      </div>
                     </div>
                   )}
                   {felder.gesamt_brutto && (
-                    <div className="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-2 mt-2 font-semibold">
+                    <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-2 mt-2 font-semibold">
                       <span className="text-slate-600 dark:text-slate-300">Brutto</span>
-                      <span className="dark:text-slate-100">{formatEuro(felder.gesamt_brutto)}</span>
+                      <div className="flex items-center gap-1.5">
+                        <KonfidenzDot level={felder.konfidenz?.gesamt_brutto} />
+                        <span className="dark:text-slate-100">{formatEuro(felder.gesamt_brutto)}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1986,6 +2064,7 @@ export function RechnungenPage() {
   const [zeigImport, setZeigImport] = useState(false)
   const [importPrefill, setImportPrefill] = useState<AnalyseErgebnis | null>(null)
   const [importDatei, setImportDatei] = useState<File | null>(null)
+  const [importKey, setImportKey] = useState(0)
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams =
@@ -2083,6 +2162,7 @@ export function RechnungenPage() {
             setTyp('eingang')
             setFormModus('neu')
             setSelectedId(null)
+            setImportKey(k => k + 1)
           }}
         />
       )}
@@ -2320,6 +2400,7 @@ export function RechnungenPage() {
           </div>
           <div className="p-6">
             <RechnungForm
+              key={importPrefill ? `import-${importKey}` : `manual-${formModus}-${selectedId ?? 'neu'}`}
               typ={formModus === 'bearbeiten' && selectedRechnung ? selectedRechnung.typ : typ}
               initial={formModus === 'bearbeiten' ? selectedRechnung ?? undefined : undefined}
               prefillFromAnalyse={formModus === 'neu' ? importPrefill ?? undefined : undefined}

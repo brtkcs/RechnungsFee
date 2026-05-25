@@ -644,6 +644,13 @@ export type AnalyseFelder = {
   lieferant_strasse?: string
   lieferant_plz?: string
   lieferant_ort?: string
+  konfidenz?: Record<string, 'ok' | 'warnung' | 'fehlt'>
+}
+
+export type LieferantVorschlag = {
+  id: number
+  name: string
+  score: number
 }
 
 export type AnalyseErgebnis = {
@@ -653,6 +660,7 @@ export type AnalyseErgebnis = {
   warnungen: string[]
   temp_url?: string
   temp_path?: string
+  lieferant_vorschlaege?: LieferantVorschlag[]
 }
 
 export async function analysiereRechnung(datei: File): Promise<AnalyseErgebnis> {
@@ -660,6 +668,20 @@ export async function analysiereRechnung(datei: File): Promise<AnalyseErgebnis> 
   const form = new FormData()
   form.append('datei', datei)
   const res = await fetch(`${base}/rechnungen/analysieren`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail ?? 'Analyse fehlgeschlagen')
+  }
+  return res.json()
+}
+
+export async function analysiereRechnungPfad(pfad: string): Promise<AnalyseErgebnis> {
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/rechnungen/analysieren-pfad`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pfad }),
+  })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail ?? 'Analyse fehlgeschlagen')
