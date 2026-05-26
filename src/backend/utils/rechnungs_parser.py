@@ -256,8 +256,10 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
     Gibt leere Liste zurück wenn kein verwertbares Ergebnis erkennbar ist.
     """
     # Betrag am Zeilenende, optional gefolgt von "19 %" (trailing USt)
+    # Akzeptiert deutsches Kommaformat (10,00) und englisches Punktformat (10.00),
+    # das pypdf aus manchen POS-PDFs extrahiert.
     _BETRAG_END = re.compile(
-        r"\s+(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})\s*(?:€|EUR)?\s*(?:(\d+)\s*%)?\s*$",
+        r"\s+(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})\s*(?:€|EUR)?\s*(?:(\d+)\s*%)?\s*$",
         re.IGNORECASE,
     )
     _SUMMENLABEL = re.compile(
@@ -270,7 +272,7 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
         re.IGNORECASE,
     )
     _HEADER = re.compile(
-        r"(?:beschreibung|bezeichnung|artikel|leistung|pos(?:ition)?\s*(?:nr|no|#)?)"
+        r"(?:anzahl|beschreibung|bezeichnung|artikel|leistung|pos(?:ition)?\s*(?:nr|no|#)?)"
         r".{0,55}"
         r"(?:betrag|preis|ep|gp|netto?|brutto?|total|gesamt|summe|eur|€)",
         re.IGNORECASE,
@@ -310,8 +312,8 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
         s = z.strip()
         if not s:
             continue
-        # USt-Aufschlüsselungszeile überspringen: "A 19 10,08 1,92 12,00"
-        if re.match(r"^[A-Z]\s+\d{1,2}\s+\d+,\d{2}\s+\d+,\d{2}\s+\d+,\d{2}\s*$", s):
+        # USt-Aufschlüsselungszeile überspringen: "A 19 10,08 1,92 12,00" (auch Punktformat)
+        if re.match(r"^[A-Z]\s+\d{1,2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s*$", s):
             continue
         m = _BETRAG_END.search(s)
         if not m:
@@ -569,8 +571,9 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
                 pass
 
     # USt-Aufschlüsselung Tabellenformat: "[A-Z] 19 10,08 1,92 12,00" → Netto/USt/Brutto
+    # Akzeptiert Komma und Punkt als Dezimaltrennzeichen (pypdf-Varianten).
     m_ust_tab = re.search(
-        r"^[A-Z]\s+(\d{1,2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s+(\d+,\d{2})\s*$",
+        r"^[A-Z]\s+(\d{1,2})\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s*$",
         text, re.IGNORECASE | re.MULTILINE,
     )
     if m_ust_tab:
