@@ -110,6 +110,24 @@ export default function App() {
     return () => window.removeEventListener('rechnungsfee:inline-viewer', handler)
   }, [])
 
+  // WebKitGTK auf Linux (z.B. Mint Cinnamon) scrollt overflow-Container nicht
+  // automatisch per Mausrad – manuell nachholen wie im SetupWizard.
+  useEffect(() => {
+    const handler = (e: WheelEvent) => {
+      let el = e.target as HTMLElement | null
+      while (el && el !== document.documentElement) {
+        const oy = window.getComputedStyle(el).overflowY
+        if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) {
+          el.scrollTop += e.deltaY
+          break
+        }
+        el = el.parentElement
+      }
+    }
+    window.addEventListener('wheel', handler, { passive: true })
+    return () => window.removeEventListener('wheel', handler)
+  }, [])
+
   async function handleBestaetigenSchliessen() {
     setZeigSchliessen(false)
     const { invoke } = await import('@tauri-apps/api/core')
