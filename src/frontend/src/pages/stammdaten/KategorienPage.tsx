@@ -260,6 +260,7 @@ export function KategorienPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteKategorie(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
+    onError: (e: Error) => alert(e.message),
   })
 
   const suchtext = filter.toLowerCase()

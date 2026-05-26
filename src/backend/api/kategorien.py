@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Kategorie, Journaleintrag, Rechnungsposition
+from database.models import Kategorie, Journaleintrag, Rechnungsposition, Rechnung, BankTransaktion, AutoFilterRegel
 from .schemas import KategorieResponse, KategorieKontoUpdate, KategorieCreate, KategorieUpdate
 
 router = APIRouter(prefix="/api/kategorien", tags=["Stammdaten"])
@@ -136,7 +136,10 @@ def delete_kategorie(kategorie_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Systemkategorien können nicht gelöscht werden.")
     in_use = (
         db.query(Journaleintrag).filter(Journaleintrag.kategorie_id == kategorie_id).first() or
-        db.query(Rechnungsposition).filter(Rechnungsposition.kategorie_id == kategorie_id).first()
+        db.query(Rechnungsposition).filter(Rechnungsposition.kategorie_id == kategorie_id).first() or
+        db.query(Rechnung).filter(Rechnung.kategorie_id == kategorie_id).first() or
+        db.query(BankTransaktion).filter(BankTransaktion.kategorie_id == kategorie_id).first() or
+        db.query(AutoFilterRegel).filter(AutoFilterRegel.kategorie_id == kategorie_id).first()
     )
     if in_use:
         raise HTTPException(status_code=409, detail="Kategorie wird in Buchungen verwendet und kann nicht gelöscht werden.")
