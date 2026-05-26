@@ -76,7 +76,7 @@ STANDARD_KATEGORIEN = [
     {"name": "Umsatzsteuer-Zahlung FA",       "kontenart": "Aufwand", "konto_skr03": "1780", "konto_skr04": "1780", "eks_kategorie": "B18",   "euer_zeile": 58,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     # ── Tabelle B Ergänzungen ─────────────────────────────────────────────
     {"name": "Abschreibungen (AfA)",             "kontenart": "Aufwand", "konto_skr03": "4830", "konto_skr04": "6220", "eks_kategorie": None,    "euer_zeile": 36,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-    {"name": "Fahrtkosten (km-Pauschale)",       "kontenart": "Aufwand", "konto_skr03": "4560", "konto_skr04": "6530", "eks_kategorie": "B6_3",  "euer_zeile": 70,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+    {"name": "Fahrtkosten Privat-PKW (0,10 €/km)", "kontenart": "Aufwand", "konto_skr03": "4560", "konto_skr04": "6530", "eks_kategorie": "B6_5",  "euer_zeile": 70,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Verpflegungsmehraufwand",          "kontenart": "Aufwand", "konto_skr03": "4661", "konto_skr04": "6645", "eks_kategorie": "B7_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B12",   "euer_zeile": 46,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "4730", "konto_skr04": "6580", "eks_kategorie": None,    "euer_zeile": 61,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},

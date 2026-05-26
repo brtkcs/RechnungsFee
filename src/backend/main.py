@@ -801,6 +801,7 @@ def _migrate_kategorien() -> None:
             ("Pflegeversicherung (Pflicht)", "C2"),    # war C3 – im Formular mit KV zusammen
             ("Riester-Beiträge",             "C9"),    # war C5
             ("Sonstige Absetzungen",         "C10"),   # war C6
+            ("Fahrtkosten (km-Pauschale)",   "B6_5"),  # war B6_3
         ]
         for name, eks in korrekturen:
             kat = db.query(Kategorie).filter(Kategorie.name == name).first()
@@ -811,6 +812,7 @@ def _migrate_kategorien() -> None:
         umbenennungen = [
             ("Miete Büro", "Miete Büro (19%)"),
             ("Reisekosten", "Reisekosten – Übernachtung"),
+            ("Fahrtkosten (km-Pauschale)", "Fahrtkosten Privat-PKW (0,10 €/km)"),
         ]
         for alt, neu in umbenennungen:
             kat = db.query(Kategorie).filter(Kategorie.name == alt).first()
@@ -871,7 +873,7 @@ def _migrate_kategorien() -> None:
             {"name": "Sonstige Absetzungen",                 "kontenart": "Privat",  "konto_skr03": "1890", "konto_skr04": "2100", "eks_kategorie": "C10",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             # Issue #106 – fehlende EÜR-Zeilen
             {"name": "Abschreibungen (AfA)",             "kontenart": "Aufwand", "konto_skr03": "4830", "konto_skr04": "6220", "eks_kategorie": None,    "euer_zeile": 36,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "Fahrtkosten (km-Pauschale)",       "kontenart": "Aufwand", "konto_skr03": "4560", "konto_skr04": "6530", "eks_kategorie": "B6_3",  "euer_zeile": 70,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Fahrtkosten Privat-PKW (0,10 €/km)", "kontenart": "Aufwand", "konto_skr03": "4560", "konto_skr04": "6530", "eks_kategorie": "B6_5",  "euer_zeile": 70,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Verpflegungsmehraufwand",          "kontenart": "Aufwand", "konto_skr03": "4661", "konto_skr04": "6645", "eks_kategorie": "B7_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B12",   "euer_zeile": 46,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "4730", "konto_skr04": "6580", "eks_kategorie": None,    "euer_zeile": 61,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
