@@ -97,9 +97,10 @@ def _ust_aufschluesselung(positionen) -> list[tuple[int, float, float]]:
     netto_by: dict[int, float] = {}
     ust_by:   dict[int, float] = {}
     for pos in positionen:
-        satz = int(float(str(pos.ust_satz)))
-        netto_by[satz] = netto_by.get(satz, 0.0) + float(str(pos.netto))
-        ust_by[satz]   = ust_by.get(satz, 0.0)   + float(str(pos.ust_betrag))
+        satz  = int(float(str(pos.ust_satz)))
+        menge = float(str(pos.menge))
+        netto_by[satz] = netto_by.get(satz, 0.0) + float(str(pos.netto))    * menge
+        ust_by[satz]   = ust_by.get(satz, 0.0)   + float(str(pos.ust_betrag)) * menge
     return sorted([(s, netto_by[s], ust_by[s]) for s in netto_by], key=lambda x: x[0])
 
 
