@@ -1333,8 +1333,11 @@ function RechnungForm({
         : pf?.gesamt_netto && !pf?.gesamt_brutto ? 'netto' : 'brutto'
   )
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
+  // Bei Import (XML/PDF) mit mehreren Positionen immer aufgeschlüsselten Modus zeigen
   const [schnellmodus, setSchnellmodus] = useState(
-    typ === 'eingang' && (!initial || initial.positionen.length <= 1)
+    typ === 'eingang' &&
+    (!initial || initial.positionen.length <= 1) &&
+    (prefillFromAnalyse?.positionen?.length ?? 0) <= 1
   )
 
   const partnerListe = typ === 'ausgang' ? (kunden ?? []) : (lieferanten ?? [])
