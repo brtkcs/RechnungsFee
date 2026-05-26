@@ -52,10 +52,9 @@ class RechnungPDF(RechnungPDFBase):
             self.cell(col_w[1], 6, menge_str, align="R")
             self.cell(col_w[2], 6, pos.einheit[:12])
             if self._ist_netto:
-                einzelpreis = float(str(pos.netto)) / menge if menge else 0.0
-                self.cell(col_w[3], 6, _fmt_euro(einzelpreis),   align="R")
-                self.cell(col_w[4], 6, f"{int(pos.ust_satz)} %", align="R")
-                self.cell(col_w[5], 6, _fmt_euro(pos.netto),     align="R")
+                self.cell(col_w[3], 6, _fmt_euro(pos.netto),             align="R")
+                self.cell(col_w[4], 6, f"{int(pos.ust_satz)} %",         align="R")
+                self.cell(col_w[5], 6, _fmt_euro(float(str(pos.netto)) * menge), align="R")
             else:
                 self.cell(col_w[3], 6, f"{int(pos.ust_satz)} %", align="R")
                 self.cell(col_w[4], 6, _fmt_euro(pos.brutto),    align="R")
