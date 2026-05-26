@@ -111,15 +111,16 @@ export default function App() {
   }, [])
 
   // WebKitGTK auf Linux (z.B. Mint Cinnamon) scrollt overflow-Container nicht
-  // automatisch per Mausrad – manuell nachholen wie im SetupWizard.
+  // automatisch per Mausrad. e.target ist auf Cinnamon unzuverlässig –
+  // elementFromPoint liefert immer das Element unter dem Cursor.
   useEffect(() => {
     const handler = (e: WheelEvent) => {
-      let el = e.target as HTMLElement | null
+      let el = (document.elementFromPoint(e.clientX, e.clientY) ?? e.target) as HTMLElement | null
       while (el && el !== document.documentElement) {
         const oy = window.getComputedStyle(el).overflowY
         if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) {
           el.scrollTop += e.deltaY
-          break
+          return
         }
         el = el.parentElement
       }
