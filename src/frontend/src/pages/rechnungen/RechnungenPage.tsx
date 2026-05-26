@@ -1230,13 +1230,6 @@ function RechnungForm({
 
   // Kategorie-Gruppen analog BuchungForm
   const alle = kategorien ?? []
-  const erloeseKat = alle.filter(
-    (k) =>
-      k.kontenart === 'Erlös' &&
-      (istKleinunternehmer
-        ? k.name === 'Kleinunternehmer-Einnahmen'
-        : k.name !== 'Kleinunternehmer-Einnahmen')
-  )
   const aufwandKat = alle.filter((k) => k.kontenart === 'Aufwand')
   const anlageKat  = alle.filter((k) => k.kontenart === 'Anlage')
 
