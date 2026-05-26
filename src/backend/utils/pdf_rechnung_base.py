@@ -80,8 +80,9 @@ def _fmt_euro(val: Any) -> str:
         n = float(str(val))
     except (ValueError, TypeError):
         n = 0.0
+    sign = "-" if n < 0 else ""
     formatted = f"{abs(n):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"{formatted} €"
+    return f"{sign}{formatted} €"
 
 
 def _iso_zu_de(iso: str) -> str:
