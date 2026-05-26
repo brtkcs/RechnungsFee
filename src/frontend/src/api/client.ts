@@ -766,7 +766,8 @@ export type RechnungCreate = {
   typ: 'eingang' | 'ausgang'
   rechnungsnummer?: string
   datum: string
-  leistungsdatum?: string
+  leistung_von?: string
+  leistung_bis?: string
   faellig_am?: string
   kunde_id?: number
   lieferant_id?: number
