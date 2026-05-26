@@ -173,7 +173,7 @@ class TestMigrationen:
         # journal (nach Migration 17 umbenannt von kassenbuch)
         assert {"kunde_id", "rechnung_id", "externe_belegnr", "signatur"} <= get_columns(db_path, "journal")
         # rechnungen
-        assert {"bezahlt_betrag", "zahlungsstatus", "leistungsdatum",
+        assert {"bezahlt_betrag", "zahlungsstatus", "leistung_von", "leistung_bis",
                 "ist_entwurf", "storniert", "ausgegeben"} <= get_columns(db_path, "rechnungen")
         # tagesabschluesse
         assert {"zaehlung_json", "signatur"} <= get_columns(db_path, "tagesabschluesse")
