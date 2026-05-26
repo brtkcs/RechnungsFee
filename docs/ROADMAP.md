@@ -225,3 +225,4 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2 Stufe 2** (Mai 2026): ZUGFeRD/XRechnung-Import – Auto-Fill, plain PDF mit Viewer, Beleganhang automatisch ([v0.2.4](https://github.com/nicolettas-muggelbude/RechnungsFee/releases/tag/v0.2.4))
 - [x] **EÜR 2025** (Mai 2026): 44 Zeilennummern auf Anlage EÜR 2025 korrigiert, SKR03/04 auf DATEV-Kontenrahmen 2026 (39 Korrekturen)
 - [x] **Kategorien editierbar** (Mai 2026): SKR03/04-Konten pro Kategorie anpassbar, Reset, eigene Kategorien anlegen/löschen
+- [x] **v0.2.7** (Mai 2026): PDF Gutschriften/negative Mengen korrekt (Einzelpreis, Netto-Spalte, USt-Vorzeichen); Kategorien löschen: fehlende FK-Prüfungen + Fehlermeldung (Issue #96); Linux Mint Cinnamon Mausrad-Scrollen; PDF-Vorlagen Basisklasse `RechnungPDFBase`; 5 fehlende Kategorien ergänzt (Issue #106)
