@@ -497,17 +497,21 @@ class RechnungPDF(FPDF):
         if self._ist_netto:
             _sum_row("Nettobetrag", _fmt_euro(r.netto_gesamt))
             if len(aufschluesselung) > 1:
-                for satz, _netto, ust_sum in aufschluesselung:
-                    _sum_row(f"zzgl. USt {satz} %", _fmt_euro(ust_sum))
+                ust_lbl = "  |  ".join(f"{satz} %: {_fmt_euro(ust_sum)}" for satz, _, ust_sum in aufschluesselung)
+                _sum_row(f"USt {ust_lbl}", _fmt_euro(r.ust_gesamt))
             else:
                 _sum_row("Umsatzsteuer", _fmt_euro(r.ust_gesamt))
             _sum_row("Gesamtbetrag", _fmt_euro(r.brutto_gesamt), bold=True, trenn=True)
         else:
             _sum_row("Gesamtbetrag", _fmt_euro(r.brutto_gesamt), bold=True, trenn=True)
             if not unt.get("ist_kleinunternehmer"):
-                for satz, _netto, ust_sum in aufschluesselung:
-                    if satz > 0:
-                        _sum_row(f"enthaltene USt {satz} %", _fmt_euro(ust_sum))
+                saetze_mit_ust = [(satz, ust_sum) for satz, _, ust_sum in aufschluesselung if satz > 0]
+                if len(saetze_mit_ust) > 1:
+                    ust_lbl = "  |  ".join(f"{satz} %: {_fmt_euro(ust_sum)}" for satz, ust_sum in saetze_mit_ust)
+                    _sum_row(f"enthaltene USt {ust_lbl}", _fmt_euro(r.ust_gesamt))
+                elif saetze_mit_ust:
+                    satz, ust_sum = saetze_mit_ust[0]
+                    _sum_row(f"enthaltene USt {satz} %", _fmt_euro(ust_sum))
 
         self.ln(6)
 
