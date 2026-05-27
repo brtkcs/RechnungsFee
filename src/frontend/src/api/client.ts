@@ -25,9 +25,11 @@ async function getBaseUrl(): Promise<string> {
   return _baseUrl
 }
 
-/** Wartet bis das Backend antwortet (max. 50 × 200 ms = 10 s). */
+/** Wartet bis das Backend antwortet (max. 300 × 200 ms = 60 s).
+ *  Nach einem Update scannt Windows Defender die neue backend.exe und PyInstaller
+ *  extrahiert sich neu – das dauert typisch 20–60 s. */
 async function waitForBackend(baseUrl: string): Promise<void> {
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 300; i++) {
     try {
       const res = await fetch(`${baseUrl}/setup/status`)
       if (res.ok) return
@@ -36,17 +38,22 @@ async function waitForBackend(baseUrl: string): Promise<void> {
     }
     await new Promise((r) => setTimeout(r, 200))
   }
-  console.warn('[RechnungsFee] Backend nach 10 s nicht erreichbar')
+  console.warn('[RechnungsFee] Backend nach 60 s nicht erreichbar')
 }
+
+// Promise der resolved wenn das Backend bereit ist – alle request()-Calls warten darauf.
+// fire-and-forget war falsch: useQuery startete sofort ohne auf waitForBackend zu warten.
+let _backendReady: Promise<void> = Promise.resolve()
 
 // Im Tauri-Modus einmalig warten, damit das UI erst lädt wenn das Backend ready ist
 if (isTauri() && !import.meta.env.DEV) {
-  getBaseUrl().then((url) => waitForBackend(url))
+  _backendReady = getBaseUrl().then((url) => waitForBackend(url))
 }
 
 // --- HTTP-Hilfsfunktion ---
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  await _backendReady  // Wartet bis Backend bereit ist (nach Update kann das 30–60 s dauern)
   const base = await getBaseUrl()
   const res = await fetch(`${base}${path}`, {
     headers: { 'Content-Type': 'application/json' },

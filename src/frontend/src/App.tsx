@@ -30,12 +30,25 @@ function AppRoutes() {
     retryDelay: 500,
   })
 
+  // Zeigt nach 8 s einen Hinweis: erster Start nach einem Update dauert länger
+  const [longWait, setLongWait] = useState(false)
+  useEffect(() => {
+    if (!isLoading) return
+    const t = setTimeout(() => setLongWait(true), 8000)
+    return () => clearTimeout(t)
+  }, [isLoading])
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-3">
           <div className="text-4xl">🧾</div>
           <p className="text-slate-500 text-sm">RechnungsFee wird geladen…</p>
+          {longWait && (
+            <p className="text-slate-400 text-xs">
+              Erster Start nach einem Update? Das kann einen Moment dauern…
+            </p>
+          )}
         </div>
       </div>
     )
