@@ -471,6 +471,90 @@ def _extrahiere_positionen_multi_amt(lines: list[str], ust_satz_default: Optiona
     return positionen
 
 
+def _extrahiere_positionen_pos_kassenbeleg(text: str) -> list["AnalysePosition"]:
+    """
+    POS-Kassenbons: pypdf extrahiert jede Tabellenspalte als eigene Zeile.
+    Format nach 'Gesamt €'-Header: A / 1 / Beschreibung / 19 / 10,00 / 10,00 (je Zeile)
+    """
+    lines = text.split("\n")
+
+    # Header-Ende: "Gesamt €" nach "Anzahl" + "Beschreibung" in den vorangegangenen Zeilen
+    header_end = -1
+    for i, line in enumerate(lines):
+        if re.match(r"^\s*Gesamt\s*€?\s*$", line.strip(), re.IGNORECASE):
+            block = " ".join(l.strip() for l in lines[max(0, i - 5):i + 1]).lower()
+            if "anzahl" in block and "beschreibung" in block:
+                header_end = i
+                break
+
+    if header_end < 0:
+        return []
+
+    # Daten bis "Summe"
+    summe_idx = len(lines)
+    for i in range(header_end + 1, len(lines)):
+        if re.match(r"^\s*Summe\s*$", lines[i].strip(), re.IGNORECASE):
+            summe_idx = i
+            break
+
+    data_lines = [l.strip() for l in lines[header_end + 1:summe_idx] if l.strip()]
+
+    def _parse_pos_betrag(s: str) -> Optional[str]:
+        try:
+            return str(Decimal(s.replace(".", "").replace(",", ".")).quantize(Decimal("0.01")))
+        except Exception:
+            return None
+
+    positionen: list[AnalysePosition] = []
+    i = 0
+    while i < len(data_lines):
+        if not re.match(r"^[A-Z]$", data_lines[i]):
+            i += 1
+            continue
+        i += 1  # TypeCode
+
+        if i >= len(data_lines) or not re.match(r"^\d+$", data_lines[i]):
+            continue
+        try:
+            menge = f"{float(data_lines[i]):.3f}"
+        except ValueError:
+            menge = "1.000"
+        i += 1
+
+        # Beschreibung: alles bis zur USt%-Zahl (1-2stellig)
+        beschreibung_parts: list[str] = []
+        while i < len(data_lines) and not re.match(r"^\d{1,2}$", data_lines[i]):
+            beschreibung_parts.append(data_lines[i])
+            i += 1
+
+        if not beschreibung_parts or i >= len(data_lines):
+            continue
+
+        beschreibung = " ".join(beschreibung_parts)
+        ust_satz = data_lines[i]
+        i += 1
+
+        if i + 1 >= len(data_lines):
+            continue
+
+        i += 1  # Einzelpreis (überspringen; Gesamt reicht)
+        gesamt = _parse_pos_betrag(data_lines[i])
+        i += 1
+
+        if gesamt is None:
+            continue
+
+        positionen.append(AnalysePosition(
+            beschreibung=beschreibung,
+            menge=menge,
+            einheit="Stück",
+            netto=gesamt,
+            ust_satz=ust_satz,
+        ))
+
+    return positionen
+
+
 def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
     """Fallback: Text aus PDF lesen und per Regex Rechnungsfelder suchen."""
     warnungen: list[str] = []
@@ -543,11 +627,11 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
                 felder["externe_belegnr"] = kandidat
                 break
 
-    # POS-Kassenbeleg: "Beleg Nr." als Spaltenüberschrift, erste Zahl auf nächster Zeile
+    # POS-Kassenbeleg: "Beleg Nr." → weitere Spaltenheader (Kasse/Zahlungsart/Datum) → erste Zahl
     if not felder.get("externe_belegnr"):
         m_pos = re.search(
-            r"Beleg\s+Nr\.?\b[^\n]*\n\s*(\d{1,15})\b",
-            text, re.IGNORECASE,
+            r"Beleg\s+Nr\..*?Datum\s*\n(\d{1,15})\b",
+            text, re.IGNORECASE | re.DOTALL,
         )
         if m_pos:
             felder["externe_belegnr"] = m_pos.group(1)
@@ -594,6 +678,22 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             felder["gesamt_ust"] = _betrag_de(m_ust_tab.group(3))
         if not felder.get("gesamt_brutto"):
             felder["gesamt_brutto"] = _betrag_de(m_ust_tab.group(4))
+
+    # POS-Kassenbeleg: USt-Tabelle mit je einem Wert pro Zeile
+    # "Brutto €\nA\n19\n30,92\n5,88\n36,80"
+    if not felder.get("gesamt_netto"):
+        m_ust_pos = re.search(
+            r"Brutto\s*€?\s*\n[A-Z]\s*\n(\d{1,2})\s*\n(\d+[,.]\d{2})\s*\n(\d+[,.]\d{2})\s*\n(\d+[,.]\d{2})",
+            text, re.IGNORECASE,
+        )
+        if m_ust_pos:
+            if not felder.get("ust_satz"):
+                felder["ust_satz"] = m_ust_pos.group(1)
+            felder["gesamt_netto"] = _betrag_de(m_ust_pos.group(2))
+            if not felder.get("gesamt_ust"):
+                felder["gesamt_ust"] = _betrag_de(m_ust_pos.group(3))
+            if not felder.get("gesamt_brutto"):
+                felder["gesamt_brutto"] = _betrag_de(m_ust_pos.group(4))
 
     # USt-Satz von eigener Zeile: "MwSt-Satz: 19 %" oder "VAT Rate 19 %"
     if not felder.get("ust_satz"):
@@ -673,6 +773,18 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             felder["lieferant_name"] = line
             break
 
+    # POS: erste Zeile "Name Straße HausNr" → Name vor dem Straßennamen extrahieren
+    if not felder.get("lieferant_name") and lines:
+        m_name_str = re.match(
+            r"^(.+?)\s+\S*(?:str\.|straße|gasse|weg|allee|platz|ring|damm)\s+\d+[a-zA-Z]?\s*$",
+            lines[0], re.IGNORECASE,
+        )
+        if m_name_str:
+            kandidat = m_name_str.group(1).strip()
+            if (2 <= len(kandidat) <= 80
+                    and not re.search(r"@|www\.|https?://|tel\b|fax\b", kandidat, re.IGNORECASE)):
+                felder["lieferant_name"] = kandidat
+
     # Fallback: erste Zeile als Unternehmensname wenn zweite Zeile eine Straße ist
     # (Freelancer / Kleinunternehmen ohne Rechtsformkürzel)
     if not felder.get("lieferant_name") and len(lines) >= 2:
@@ -691,7 +803,6 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
     else:
         warnungen.append("Kein eingebettetes XML – keine Felder erkannt, bitte manuell ausfüllen.")
 
-
     konfidenz = _build_konfidenz(felder)
     # Alle per Regex extrahierten Felder mindestens auf "warnung" setzen
     for k in list(konfidenz):
@@ -709,6 +820,10 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
         pos2 = _extrahiere_positionen_multi_amt(alle_zeilen, felder.get("ust_satz"))
         if pos2:
             positionen = pos2
+    if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
+        pos3 = _extrahiere_positionen_pos_kassenbeleg(text)
+        if pos3:
+            positionen = pos3
 
     # Brutto/Netto-Modus: Summe der Positionen mit bekannten Gesamtbeträgen vergleichen
     positionen_modus = "netto"
