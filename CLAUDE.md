@@ -96,6 +96,7 @@ def _run_migrations():
 | 28 | journal: konto_ust_skr03/04-Snapshot (USt-Gegenkonto 1776/1771/1575/1570 etc.) |
 | 29 | konten: stray `bank`-Spalte bereinigt (Migration 22 ließ sie in manchen DBs zurück, Issue #102) |
 | 30 | rechnungen: `leistungsdatum` → `leistung_von` (RENAME COLUMN) + `leistung_bis DATE` neu (Issue #107 Leistungszeitraum) |
+| 31 | Skonto: unternehmen (standard_skonto_prozent/tage), kunden (skonto_prozent/tage), rechnungen (skonto_prozent/tage) (Issue #73) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
