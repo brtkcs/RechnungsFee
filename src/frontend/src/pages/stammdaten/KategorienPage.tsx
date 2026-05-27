@@ -6,6 +6,7 @@ import {
   updateKategorieBeschreibung, downloadKategorienPdf,
   type Kategorie, type KategorieCreate,
 } from '../../api/client'
+import { InfoTooltip } from '../../components/InfoTooltip'
 
 const KONTENART_META: Record<string, { label: string; cls: string; beschreibung: string }> = {
   Erlös:   { label: 'Erlöse',   cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300', beschreibung: 'Betriebseinnahmen' },
@@ -495,6 +496,9 @@ export function KategorienPage() {
                                 </button>
                               )}
                               <span className="text-slate-800 dark:text-slate-100">{k.name}</span>
+                              {k.beschreibung && expandedId !== k.id && (
+                                <InfoTooltip text={k.beschreibung} side="bottom" align="left" />
+                              )}
                               {!k.ist_system && (
                                 <span className="text-xs bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium">
                                   Eigene
@@ -506,12 +510,6 @@ export function KategorienPage() {
                                 </span>
                               )}
                             </div>
-                            {/* Beschreibungs-Vorschau (wenn nicht expanded) */}
-                            {k.beschreibung && expandedId !== k.id && (
-                              <p className="mt-0.5 ml-6 text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs">
-                                {k.beschreibung}
-                              </p>
-                            )}
                           </td>
 
                           {/* SKR03 */}
@@ -662,7 +660,7 @@ export function KategorienPage() {
       {!isLoading && kategorien.length > 0 && (
         <div className="mt-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-4 text-xs text-slate-500 dark:text-slate-400 space-y-1">
           <p className="font-semibold text-slate-600 dark:text-slate-300 mb-2">Legende</p>
-          <p><span className="font-mono">💬</span> – Im Bearbeitungsmodus: Verwendungsbeispiele anpassen. Blaues Symbol = Beschreibung vorhanden (wird im Buchungsformular als Hinweis angezeigt).</p>
+          <p><span className="font-mono">ℹ</span> – Mouseover auf das Info-Icon zeigt Verwendungsbeispiele. Im Bearbeitungsmodus: 💬-Button zum Anpassen.</p>
           <p><span className="font-mono">📄 PDF</span> – Alle Kategorien mit Beschreibungen als Nachschlageblatt exportieren (ohne Kontonummern).</p>
           <p><span className="font-mono">SKR03/04</span> – DATEV-Kontonummern (Standardkontenrahmen). Geänderte Werte erscheinen orange.</p>
           <p><span className="font-mono">EÜR-Zeile</span> – Zeile in der Einnahmen-Überschuss-Rechnung (Anlage EÜR)</p>
