@@ -7,7 +7,7 @@ import {
   getArtikel, createArtikel, updateArtikel, getArtikelRechnungen,
   getLieferanten, getUstSaetze, type Artikel, type ArtikelTyp,
   getArtikelGruppen, createArtikelGruppe, updateArtikelGruppe,
-  toggleArtikelGruppeAktiv, deleteArtikelGruppe, type ArtikelGruppe,
+  toggleArtikelGruppeAktiv, deleteArtikelGruppe,
 } from '../../api/client'
 
 // ---------------------------------------------------------------------------
