@@ -169,6 +169,18 @@ class RechnungPDFVorlage1(RechnungPDFBase):
         x_start   = float(L_MARGIN) if qr_aktiv else L_MARGIN + (NUTZ_W - box_w) / 2
         block_top = self.get_y()
 
+        # Skonto-Werte vorab berechnen (für Tabellenzeile + QR-Code)
+        from datetime import timedelta as _td
+        from decimal import Decimal as _D
+        _sk_proz = getattr(r, "skonto_prozent", None)
+        _sk_tage = getattr(r, "skonto_tage",    None)
+        if _sk_proz and _sk_tage and zahlungsstatus not in ("bezahlt", "teilweise"):
+            sk_betrag = (r.brutto_gesamt * _D(str(_sk_proz)) / 100).quantize(_D("0.01"))
+            sk_frist  = r.datum + _td(days=int(_sk_tage))
+            sk_netto  = r.brutto_gesamt - sk_betrag
+        else:
+            sk_betrag = sk_frist = sk_netto = None
+
         kopf_titel = "Zahlung erhalten" if zahlungsstatus in ("bezahlt", "teilweise") and zahlungen else "Überweisung"
         kopf_w = box_w + qr_col_w if qr_aktiv else box_w
         self.set_font("DejaVu", "B", 8)
@@ -212,12 +224,8 @@ class RechnungPDFVorlage1(RechnungPDFBase):
                 _row("Empfänger", empfaenger, bold_val=True)
             _row("Rechnungsbetrag", _fmt_euro(r.brutto_gesamt), bold_val=True)
             _row("Zahlungsziel", faellig)
-            if getattr(r, "skonto_prozent", None) and getattr(r, "skonto_tage", None):
-                from datetime import timedelta
-                from decimal import Decimal as _D
-                sk_frist = r.datum + timedelta(days=int(r.skonto_tage))
-                sk_betrag = (r.brutto_gesamt * _D(str(r.skonto_prozent)) / 100).quantize(_D("0.01"))
-                _row("Skonto", f"{r.skonto_prozent:.0f}% bis {_iso_zu_de(str(sk_frist))}: {_fmt_euro(r.brutto_gesamt - sk_betrag)}")
+            if sk_betrag is not None:
+                _row("Skonto", f"{_sk_proz:.0f}% bis {_iso_zu_de(str(sk_frist))}: {_fmt_euro(sk_netto)}")
             if r.rechnungsnummer:
                 _row("Verwendungszweck", r.rechnungsnummer or "")
             if bank:
@@ -230,24 +238,64 @@ class RechnungPDFVorlage1(RechnungPDFBase):
         block_bottom = self.get_y()
 
         if qr_aktiv:
-            qr_size    = 25
-            label_h    = 5
-            min_bottom = block_top + 6.5 + 3 + qr_size + label_h + 3
-            if block_bottom < min_bottom:
-                block_bottom = min_bottom
-                self.set_y(block_bottom)
-
             empf = unt.get("firmenname") or " ".join(
                 p for p in [unt.get("vorname"), unt.get("nachname")] if p
             )
-            qr_data = epc_qr_bytes(iban, bic, empf, float(r.brutto_gesamt), r.rechnungsnummer or "")
-            if qr_data:
+            qr_voll = epc_qr_bytes(iban, bic, empf, float(r.brutto_gesamt), r.rechnungsnummer or "")
+            qr_sk   = (
+                epc_qr_bytes(iban, bic, empf, float(sk_netto), r.rechnungsnummer or "")
+                if sk_netto is not None else None
+            )
+
+            qr_y_top = block_top + 6.5 + 3
+
+            if qr_sk and qr_voll:
+                # Zwei QR-Codes (18 mm) nebeneinander im 40-mm-Streifen
+                qr_sz  = 18
+                qr_gap = 4   # 18 + 4 + 18 = 40 = qr_col_w exakt
+                lbl_h  = 3.0
+                min_bottom = qr_y_top + qr_sz + 1 + lbl_h + lbl_h + 3
+                if block_bottom < min_bottom:
+                    block_bottom = min_bottom
+                    self.set_y(block_bottom)
+
+                qr_x_sk = x_start + box_w
+                qr_x_vo = x_start + box_w + qr_sz + qr_gap
+                self.image(BytesIO(qr_sk),   x=qr_x_sk, y=qr_y_top, w=qr_sz, h=qr_sz)
+                self.image(BytesIO(qr_voll), x=qr_x_vo, y=qr_y_top, w=qr_sz, h=qr_sz)
+
+                lbl_y = qr_y_top + qr_sz + 1
+                self.set_font("DejaVu", "B", 5)
+                self.set_text_color(*TEXT_GRAU)
+                self.set_xy(qr_x_sk, lbl_y)
+                self.cell(qr_sz, lbl_h, "Skonto", align="C", new_x="LMARGIN", new_y="NEXT")
+                self.set_font("DejaVu", "", 5)
+                self.set_xy(qr_x_sk, lbl_y + lbl_h)
+                self.cell(qr_sz, lbl_h, f"bis {_iso_zu_de(str(sk_frist))}: {_fmt_euro(sk_netto)}", align="C")
+
+                self.set_font("DejaVu", "B", 5)
+                self.set_xy(qr_x_vo, lbl_y)
+                self.cell(qr_sz, lbl_h, "Ohne Skonto", align="C", new_x="LMARGIN", new_y="NEXT")
+                self.set_font("DejaVu", "", 5)
+                self.set_xy(qr_x_vo, lbl_y + lbl_h)
+                self.cell(qr_sz, lbl_h, _fmt_euro(r.brutto_gesamt), align="C")
+
+                self.set_font("DejaVu", "", 8)
+                self.set_text_color(*TEXT_DUNKEL)
+
+            elif qr_voll:
+                # Einzelner QR-Code (kein Skonto)
+                qr_size    = 25
+                min_bottom = qr_y_top + qr_size + 5 + 3
+                if block_bottom < min_bottom:
+                    block_bottom = min_bottom
+                    self.set_y(block_bottom)
+
                 qr_x = x_start + box_w + (qr_col_w - qr_size) / 2
-                qr_y = block_top + 6.5 + 3
-                self.image(BytesIO(qr_data), x=qr_x, y=qr_y, w=qr_size, h=qr_size)
+                self.image(BytesIO(qr_voll), x=qr_x, y=qr_y_top, w=qr_size, h=qr_size)
                 self.set_font("DejaVu", "", 6)
                 self.set_text_color(*TEXT_GRAU)
-                self.set_xy(x_start + box_w, qr_y + qr_size + 1)
+                self.set_xy(x_start + box_w, qr_y_top + qr_size + 1)
                 self.cell(qr_col_w, 4, "Per Banking-App zahlen", align="C")
                 self.set_font("DejaVu", "", 8)
                 self.set_text_color(*TEXT_DUNKEL)
