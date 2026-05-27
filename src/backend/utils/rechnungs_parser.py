@@ -543,6 +543,15 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
                 felder["externe_belegnr"] = kandidat
                 break
 
+    # POS-Kassenbeleg: "Beleg Nr." als Spaltenüberschrift, erste Zahl auf nächster Zeile
+    if not felder.get("externe_belegnr"):
+        m_pos = re.search(
+            r"Beleg\s+Nr\.?\b[^\n]*\n\s*(\d{1,15})\b",
+            text, re.IGNORECASE,
+        )
+        if m_pos:
+            felder["externe_belegnr"] = m_pos.group(1)
+
     # Fälligkeitsdatum – explizites Datum ODER "X Tage Zahlungsziel"
     m_faellig = re.search(
         r"(?:F[äa]llig(?:keit(?:s?datum)?)?|zahlbar\s+bis|zu\s+zahlen\s+bis)\s*:?\s*(" + _datum_pattern + r")",
@@ -663,6 +672,16 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
         if re.search(r"\b(GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.)\b", line, re.IGNORECASE):
             felder["lieferant_name"] = line
             break
+
+    # Fallback: erste Zeile als Unternehmensname wenn zweite Zeile eine Straße ist
+    # (Freelancer / Kleinunternehmen ohne Rechtsformkürzel)
+    if not felder.get("lieferant_name") and len(lines) >= 2:
+        first, second = lines[0], lines[1]
+        if (3 <= len(first) <= 80
+                and not re.search(r"@|www\.|https?://|tel\b|fax\b|steuernr|ust\.?-?id", first, re.IGNORECASE)
+                and not re.match(r"^\d", first)
+                and re.search(r"\d+[a-zA-Z]?\s*$", second)):  # Zweite Zeile endet auf Hausnummer
+            felder["lieferant_name"] = first
 
     felder = {k: v for k, v in felder.items() if v is not None}
     _berechne_fehlende_summen(felder)
