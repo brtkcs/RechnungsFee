@@ -247,6 +247,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
                 if sk_netto is not None else None
             )
 
+
             qr_y_top = block_top + 6.5 + 3
 
             if qr_sk and qr_voll:

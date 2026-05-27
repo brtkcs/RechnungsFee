@@ -133,18 +133,63 @@ class RechnungPDF(RechnungPDFBase):
 
                     qr_aktiv = unt.get("qr_zahlung_aktiv", False)
                     if qr_aktiv:
-                        qr_size  = 25
-                        gap      = 4
-                        text_w   = NUTZ_W - qr_size - gap
-                        y_start  = self.get_y()
-                        qr_x     = L_MARGIN + text_w + gap
-                        self.multi_cell(text_w, 5, hinweis)
                         empf = unt.get("firmenname") or " ".join(
                             p for p in [unt.get("vorname"), unt.get("nachname")] if p
                         )
-                        qr_data = epc_qr_bytes(iban, bic, empf, float(r.brutto_gesamt), r.rechnungsnummer or "")
-                        if qr_data:
-                            self.image(BytesIO(qr_data), x=qr_x, y=y_start, w=qr_size, h=qr_size)
+                        # Skonto-QR bestimmen
+                        sk_proz = getattr(r, "skonto_prozent", None)
+                        sk_tage = getattr(r, "skonto_tage",    None)
+                        if sk_proz and sk_tage:
+                            from datetime import timedelta as _td
+                            sk_betrag = (r.brutto_gesamt * Decimal(str(sk_proz)) / 100).quantize(Decimal("0.01"))
+                            sk_netto  = r.brutto_gesamt - sk_betrag
+                            sk_frist  = r.datum + _td(days=int(sk_tage))
+                            qr_sk = epc_qr_bytes(iban, bic, empf, float(sk_netto), r.rechnungsnummer or "")
+                        else:
+                            qr_sk = sk_netto = sk_frist = None
+
+                        qr_voll = epc_qr_bytes(iban, bic, empf, float(r.brutto_gesamt), r.rechnungsnummer or "")
+
+                        if qr_sk and qr_voll:
+                            # Zwei QR-Codes: Text links, Skonto-QR + Voll-QR rechts
+                            qr_sz   = 18
+                            qr_gap  = 4   # 18 + 4 + 18 = 40 mm
+                            lbl_h   = 3.0
+                            col_w   = qr_sz + qr_gap + qr_sz  # 40 mm
+                            text_w  = NUTZ_W - col_w - 4
+                            y_start = self.get_y()
+                            qr_x_sk = L_MARGIN + text_w + 4
+                            qr_x_vo = qr_x_sk + qr_sz + qr_gap
+                            self.multi_cell(text_w, 5, hinweis)
+                            self.image(BytesIO(qr_sk),   x=qr_x_sk, y=y_start, w=qr_sz, h=qr_sz)
+                            self.image(BytesIO(qr_voll), x=qr_x_vo, y=y_start, w=qr_sz, h=qr_sz)
+                            lbl_y = y_start + qr_sz + 1
+                            self.set_font("DejaVu", "B", 5)
+                            self.set_text_color(*TEXT_GRAU)
+                            self.set_xy(qr_x_sk, lbl_y)
+                            self.cell(qr_sz, lbl_h, "Skonto", align="C", new_x="LMARGIN", new_y="NEXT")
+                            self.set_font("DejaVu", "", 5)
+                            self.set_xy(qr_x_sk, lbl_y + lbl_h)
+                            self.cell(qr_sz, lbl_h, f"bis {_iso_zu_de(str(sk_frist))}: {_fmt_euro(sk_netto)}", align="C")
+                            self.set_font("DejaVu", "B", 5)
+                            self.set_xy(qr_x_vo, lbl_y)
+                            self.cell(qr_sz, lbl_h, "Ohne Skonto", align="C", new_x="LMARGIN", new_y="NEXT")
+                            self.set_font("DejaVu", "", 5)
+                            self.set_xy(qr_x_vo, lbl_y + lbl_h)
+                            self.cell(qr_sz, lbl_h, _fmt_euro(r.brutto_gesamt), align="C")
+                            self.set_font("DejaVu", "", 8)
+                            self.set_text_color(*TEXT_GRAU)
+                            if self.get_y() < y_start + qr_sz + lbl_h + lbl_h + 2:
+                                self.set_y(y_start + qr_sz + lbl_h + lbl_h + 2)
+                        elif qr_voll:
+                            # Einzelner QR-Code (kein Skonto)
+                            qr_size = 25
+                            gap     = 4
+                            text_w  = NUTZ_W - qr_size - gap
+                            y_start = self.get_y()
+                            qr_x    = L_MARGIN + text_w + gap
+                            self.multi_cell(text_w, 5, hinweis)
+                            self.image(BytesIO(qr_voll), x=qr_x, y=y_start, w=qr_size, h=qr_size)
                             self.set_font("DejaVu", "", 6)
                             self.set_text_color(*TEXT_GRAU)
                             self.set_xy(qr_x, y_start + qr_size + 1)
