@@ -25,7 +25,7 @@ export function InfoTooltip({ text, side = 'top', align = 'left', className = ''
 
   return (
     <span
-      className={`relative inline-flex items-center ${className}`}
+      className={`relative inline-flex items-center ${visible ? 'z-[201]' : ''} ${className}`}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
@@ -42,7 +42,7 @@ export function InfoTooltip({ text, side = 'top', align = 'left', className = ''
         </svg>
       </button>
       {visible && (
-        <span className={`absolute ${popupPos} z-50 w-72 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 shadow-xl leading-relaxed pointer-events-none`}>
+        <span className={`absolute ${popupPos} z-[200] w-72 bg-slate-700 text-white text-xs rounded-lg px-3 py-2 shadow-xl leading-relaxed pointer-events-none`}>
           {text}
           <span className={`absolute ${arrowPos} border-[5px] border-transparent`} />
         </span>

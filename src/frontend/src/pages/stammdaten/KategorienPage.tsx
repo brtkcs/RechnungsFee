@@ -497,7 +497,7 @@ export function KategorienPage() {
                               )}
                               <span className="text-slate-800 dark:text-slate-100">{k.name}</span>
                               {k.beschreibung && expandedId !== k.id && (
-                                <InfoTooltip text={k.beschreibung} side="bottom" align="left" />
+                                <InfoTooltip text={k.beschreibung} side="top" align="left" />
                               )}
                               {!k.ist_system && (
                                 <span className="text-xs bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium">
