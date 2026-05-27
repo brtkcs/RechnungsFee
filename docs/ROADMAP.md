@@ -229,3 +229,4 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2.8** (Mai 2026): Leistungszeitraum Von–Bis (Issue #107); Kategorie-Zuweisung bei Zahlung + Split; PDF-Import bilinguale Rechnungen (Amazon-Format) + EUR-ohne-Leerzeichen; Cinnamon Wizard-Scroll-Fix
 - [x] **v0.2.9** (Mai 2026): Skonto (Issue #73) – Standard/Kunden/Rechnung, ZahlungsDialog-Hinweis, PDF-Zeile, zwei Giro-Codes (Vorlage 0+1); POS-Kassenbeleg-Import komplett überarbeitet; Journal: Rechnungsnummer + Rechnungsbuchungen schreibgeschützt; PDF-Import-Fixes (Fälligkeit, Mehrspalten-Modus)
 - [x] **Artikelstamm-Gruppen** (Mai 2026): `artikel.kategorie` umbenannt zu `gruppe`; neue Tabelle `artikel_gruppen` mit Typ-Unterscheidung (Warengruppe / Servicegruppe / Fremdleistungsgruppe); FK-Verknüpfung statt Freitext; Gruppenverwaltungs-Modal direkt auf der Artikelseite (Issue #109 Folgemaßnahme)
+- [x] **Info-Seite** (Mai 2026): Handbuch-Link (muggelbude.it), Links und „Über" vor den Changelog verschoben

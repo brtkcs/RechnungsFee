@@ -29,6 +29,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Artikelgruppen-Verwaltung: Warengruppen, Servicegruppen und Fremdleistungsgruppen anlegen, umbenennen und deaktivieren – direkt über „Gruppen"-Button auf der Artikelseite' },
       { typ: 'verbesserung', text: 'Artikelstamm: Feld „Kategorie" heißt jetzt Warengruppe / Servicegruppe / Fremdleistungsgruppe (je nach Typ); Auswahl über Dropdown statt Freitext' },
       { typ: 'fix', text: 'Ausgangsrechnungen mit mehreren Steuersätzen: Zahlung erzeugt jetzt je USt-Satz einen eigenen Journaleintrag statt eines einzigen mit dominantem Satz (Issue #109)' },
+      { typ: 'verbesserung', text: 'Info-Seite: Handbuch, Links und „Über RechnungsFee" stehen jetzt oben – der Changelog ist ans Ende gewandert' },
     ],
   },
   {
