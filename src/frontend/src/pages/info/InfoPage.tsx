@@ -103,27 +103,6 @@ export function InfoPage() {
         </div>
       )}
 
-      {/* Beta-Disclaimer */}
-      <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-5 py-4 flex gap-3">
-        <span className="text-amber-500 dark:text-amber-400 text-lg shrink-0">⚠</span>
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Beta-Version – bitte beachten</p>
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            RechnungsFee befindet sich in der Beta-Phase. Die Software kann Fehler enthalten und
-            sollte nicht als einzige Steuerunterlage verwendet werden. Erstelle regelmäßig{' '}
-            <a href="/backup" className="font-medium underline hover:no-underline">Backups</a> deiner Daten.
-          </p>
-        </div>
-      </div>
-
-      {/* Was ist neu */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Was ist neu</h2>
-        {CHANGELOG.map((v, i) => (
-          <VersionsBlock key={v.version} v={v} defaultOffen={i === 0} />
-        ))}
-      </div>
-
       {/* Über RechnungsFee */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 space-y-2">
         <h2 className="font-bold text-slate-800 dark:text-slate-100">Über RechnungsFee</h2>
@@ -188,6 +167,27 @@ export function InfoPage() {
             <span>Quellcode auf GitHub</span>
           </a>
         </div>
+      </div>
+
+      {/* Beta-Disclaimer */}
+      <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-5 py-4 flex gap-3">
+        <span className="text-amber-500 dark:text-amber-400 text-lg shrink-0">⚠</span>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Beta-Version – bitte beachten</p>
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            RechnungsFee befindet sich in der Beta-Phase. Die Software kann Fehler enthalten und
+            sollte nicht als einzige Steuerunterlage verwendet werden. Erstelle regelmäßig{' '}
+            <a href="/backup" className="font-medium underline hover:no-underline">Backups</a> deiner Daten.
+          </p>
+        </div>
+      </div>
+
+      {/* Was ist neu */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Was ist neu</h2>
+        {CHANGELOG.map((v, i) => (
+          <VersionsBlock key={v.version} v={v} defaultOffen={i === 0} />
+        ))}
       </div>
 
     </div>
