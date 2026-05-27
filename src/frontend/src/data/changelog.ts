@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.11',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Storno-Begründung Pflichtfeld: Schnellauswahl (Doppelt ausgestellt / Falsche Adresse / Kundenwiderspruch / Sonstiges) – Begründung wird im Journal dokumentiert' },
+      { typ: 'fix', text: 'Backend-Start nach Update: Wartezeit auf 60 Sekunden verlängert – verhindert „Backend nicht erreichbar" nach Windows-Update (Defender-Scan, PyInstaller-Extraktion)' },
+    ],
+  },
+  {
     version: 'v0.2.10',
     datum: 'Mai 2026',
     eintraege: [
