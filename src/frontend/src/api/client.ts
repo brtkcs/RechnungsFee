@@ -880,6 +880,14 @@ export async function getRechnungZugferd(id: number): Promise<Blob> {
 // --- Artikelstamm ---
 export type ArtikelTyp = 'artikel' | 'dienstleistung' | 'fremdleistung'
 
+export type ArtikelGruppe = {
+  id: number
+  typ: ArtikelTyp
+  name: string
+  aktiv: boolean
+  artikel_anzahl: number
+}
+
 export type Artikel = {
   id: number
   artikelnummer: string
@@ -897,7 +905,8 @@ export type Artikel = {
   hersteller: string | null
   artikelcode: string | null
   beschreibung: string | null
-  gruppe: string | null
+  gruppe_id: number | null
+  gruppe_obj: { id: number; name: string } | null
   aktiv: boolean
   erstellt_am: string
   aktualisiert_am: string
@@ -938,7 +947,7 @@ export type ArtikelCreate = {
   hersteller?: string
   artikelcode?: string
   beschreibung?: string
-  gruppe?: string
+  gruppe_id?: number
 }
 
 export type ArtikelUpdate = Partial<ArtikelCreate> & { aktiv?: boolean }
@@ -957,6 +966,17 @@ export const updateArtikel = (id: number, data: ArtikelUpdate) =>
   request<Artikel>(`/artikel/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const getArtikelRechnungen = (id: number) =>
   request<ArtikelRechnungKurz[]>(`/artikel/${id}/rechnungen`)
+
+export const getArtikelGruppen = (typ?: ArtikelTyp, nurAktive = false) =>
+  request<ArtikelGruppe[]>(`/artikel-gruppen${toQuery({ typ, nur_aktive: nurAktive ? 'true' : undefined })}`)
+export const createArtikelGruppe = (data: { typ: ArtikelTyp; name: string }) =>
+  request<ArtikelGruppe>('/artikel-gruppen', { method: 'POST', body: JSON.stringify(data) })
+export const updateArtikelGruppe = (id: number, name: string) =>
+  request<ArtikelGruppe>(`/artikel-gruppen/${id}`, { method: 'PUT', body: JSON.stringify({ name }) })
+export const toggleArtikelGruppeAktiv = (id: number) =>
+  request<ArtikelGruppe>(`/artikel-gruppen/${id}/aktiv`, { method: 'PATCH' })
+export const deleteArtikelGruppe = (id: number) =>
+  request<void>(`/artikel-gruppen/${id}`, { method: 'DELETE' })
 
 // --- USt-Sätze ---
 export type UstSatz = {

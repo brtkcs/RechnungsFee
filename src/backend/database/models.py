@@ -313,6 +313,21 @@ class Lieferant(Base):
 # Artikelstamm
 # ---------------------------------------------------------------------------
 
+class ArtikelGruppe(Base):
+    """Warengruppen / Servicegruppen / Fremdleistungsgruppen."""
+    __tablename__ = "artikel_gruppen"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    typ: Mapped[str] = mapped_column(String(20), nullable=False)   # artikel|dienstleistung|fremdleistung
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    artikel: Mapped[list["Artikel"]] = relationship(back_populates="gruppe_obj")
+
+    __table_args__ = (UniqueConstraint("typ", "name", name="uix_artikel_gruppen_typ_name"),)
+
+
 class Artikel(Base):
     """Artikel- und Dienstleistungsstammdaten."""
     __tablename__ = "artikel"
@@ -332,12 +347,13 @@ class Artikel(Base):
     hersteller: Mapped[str | None] = mapped_column(String(100))
     artikelcode: Mapped[str | None] = mapped_column(String(100))
     beschreibung: Mapped[str | None] = mapped_column(Text)
-    gruppe: Mapped[str | None] = mapped_column(String(100))
+    gruppe_id: Mapped[int | None] = mapped_column(ForeignKey("artikel_gruppen.id"))
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     lieferant: Mapped["Lieferant | None"] = relationship(back_populates="artikel")
+    gruppe_obj: Mapped["ArtikelGruppe | None"] = relationship(back_populates="artikel")
     positionen: Mapped[list["Rechnungsposition"]] = relationship(back_populates="artikel")
 
 

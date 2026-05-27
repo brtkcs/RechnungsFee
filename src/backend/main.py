@@ -30,9 +30,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen, eks
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 32
+SCHEMA_VERSION = 33
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -56,6 +56,7 @@ app.include_router(export.router)
 app.include_router(rechnungen.router)
 app.include_router(backup.router)
 app.include_router(artikel.router)
+app.include_router(artikel_gruppen.router)
 app.include_router(ust_saetze.router)
 app.include_router(pdf_vorlagen.router)
 app.include_router(eks.router)
@@ -796,6 +797,44 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 32"))
             conn.commit()
             print("[Migration] Schema auf Version 32 gebracht (artikel: kategorie → gruppe)")
+
+        if version < 33:
+            # Neue Tabelle artikel_gruppen
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS artikel_gruppen (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    typ TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    aktiv BOOLEAN NOT NULL DEFAULT 1,
+                    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(typ, name)
+                )
+            """))
+            # FK-Spalte gruppe_id zu artikel hinzufügen
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(artikel)")).fetchall()}
+            if "gruppe_id" not in cols:
+                conn.execute(text("ALTER TABLE artikel ADD COLUMN gruppe_id INTEGER REFERENCES artikel_gruppen(id)"))
+            # Bestehende Text-Werte in artikel_gruppen migrieren
+            if "gruppe" in cols:
+                rows = conn.execute(text(
+                    "SELECT DISTINCT typ, gruppe FROM artikel WHERE gruppe IS NOT NULL AND gruppe != ''"
+                )).fetchall()
+                for typ, name in rows:
+                    conn.execute(text(
+                        "INSERT OR IGNORE INTO artikel_gruppen (typ, name) VALUES (:typ, :name)"
+                    ), {"typ": typ, "name": name})
+                conn.execute(text("""
+                    UPDATE artikel SET gruppe_id = (
+                        SELECT id FROM artikel_gruppen
+                        WHERE artikel_gruppen.typ = artikel.typ
+                        AND artikel_gruppen.name = artikel.gruppe
+                    )
+                    WHERE gruppe IS NOT NULL AND gruppe != ''
+                """))
+                conn.execute(text("ALTER TABLE artikel DROP COLUMN gruppe"))
+            conn.execute(text("PRAGMA user_version = 33"))
+            conn.commit()
+            print("[Migration] Schema auf Version 33 gebracht (artikel_gruppen + artikel.gruppe_id FK)")
 
 
 def _migrate_kategorien() -> None:

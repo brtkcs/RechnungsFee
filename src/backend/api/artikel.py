@@ -120,7 +120,7 @@ def create_artikel(data: ArtikelCreate, db: Session = Depends(get_db)):
         hersteller=data.hersteller,
         artikelcode=data.artikelcode,
         beschreibung=data.beschreibung,
-        gruppe=data.gruppe,
+        gruppe_id=data.gruppe_id,
     )
     db.add(artikel)
     db.commit()

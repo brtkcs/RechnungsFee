@@ -6,6 +6,8 @@ import { z } from 'zod'
 import {
   getArtikel, createArtikel, updateArtikel, getArtikelRechnungen,
   getLieferanten, getUstSaetze, type Artikel, type ArtikelTyp,
+  getArtikelGruppen, createArtikelGruppe, updateArtikelGruppe,
+  toggleArtikelGruppeAktiv, deleteArtikelGruppe, type ArtikelGruppe,
 } from '../../api/client'
 
 // ---------------------------------------------------------------------------
@@ -18,22 +20,16 @@ const TYP_LABELS: Record<ArtikelTyp, string> = {
   fremdleistung: 'Fremdleistung',
 }
 
-const GRUPPE_LABELS: Record<ArtikelTyp, string> = {
-  artikel: 'Warengruppe',
-  dienstleistung: 'Servicegruppe',
-  fremdleistung: 'Fremdleistungsgruppe',
-}
-
-const GRUPPE_PLACEHOLDER: Record<ArtikelTyp, string> = {
-  artikel: 'z.B. IT-Hardware, Elektronik, Büromaterial …',
-  dienstleistung: 'z.B. IT-Beratung, Marketing, Schulung …',
-  fremdleistung: 'z.B. Subunternehmer, Fremdmontage …',
-}
-
 const TYP_FARBEN: Record<ArtikelTyp, string> = {
   artikel: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
   dienstleistung: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
   fremdleistung: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
+}
+
+const GRUPPE_LABELS: Record<ArtikelTyp, string> = {
+  artikel: 'Warengruppe',
+  dienstleistung: 'Servicegruppe',
+  fremdleistung: 'Fremdleistungsgruppe',
 }
 
 function hatEK(typ: ArtikelTyp) { return typ === 'artikel' || typ === 'fremdleistung' }
@@ -91,6 +87,167 @@ function EinheitAuswahl({ value, onChange }: { value: string; onChange: (v: stri
   )
 }
 
+// ---------------------------------------------------------------------------
+// Gruppenverwaltung – Modal
+// ---------------------------------------------------------------------------
+
+function GruppenModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient()
+  const [aktiverTyp, setAktiverTyp] = useState<ArtikelTyp>('artikel')
+  const [neuerName, setNeuerName] = useState('')
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [fehler, setFehler] = useState('')
+
+  const { data: gruppen = [] } = useQuery({
+    queryKey: ['artikel-gruppen'],
+    queryFn: () => getArtikelGruppen(),
+  })
+
+  const gefiltert = gruppen.filter(g => g.typ === aktiverTyp)
+
+  const createMut = useMutation({
+    mutationFn: () => createArtikelGruppe({ typ: aktiverTyp, name: neuerName.trim() }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['artikel-gruppen'] }); setNeuerName(''); setFehler('') },
+    onError: (e: Error) => setFehler(e.message),
+  })
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) => updateArtikelGruppe(id, name),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['artikel-gruppen'] }); setEditId(null); setFehler('') },
+    onError: (e: Error) => setFehler(e.message),
+  })
+
+  const toggleMut = useMutation({
+    mutationFn: (id: number) => toggleArtikelGruppeAktiv(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['artikel-gruppen'] }),
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => deleteArtikelGruppe(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['artikel-gruppen'] }),
+    onError: (e: Error) => setFehler(e.message),
+  })
+
+  function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!neuerName.trim()) return
+    createMut.mutate()
+  }
+
+  function handleUpdate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editId || !editName.trim()) return
+    updateMut.mutate({ id: editId, name: editName })
+  }
+
+  const TYPEN: ArtikelTyp[] = ['artikel', 'dienstleistung', 'fremdleistung']
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Gruppen verwalten</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xl leading-none">×</button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 dark:border-slate-700 shrink-0">
+          {TYPEN.map(t => (
+            <button
+              key={t}
+              onClick={() => { setAktiverTyp(t); setFehler(''); setEditId(null) }}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                aktiverTyp === t
+                  ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              {GRUPPE_LABELS[t]}n
+            </button>
+          ))}
+        </div>
+
+        {/* Liste */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1 min-h-0">
+          {gefiltert.length === 0 && (
+            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">Noch keine Gruppen angelegt.</p>
+          )}
+          {gefiltert.map(g => (
+            <div
+              key={g.id}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                g.aktiv ? 'bg-slate-50 dark:bg-slate-700/50' : 'bg-slate-100/50 dark:bg-slate-800/50 opacity-60'
+              }`}
+            >
+              {editId === g.id ? (
+                <form onSubmit={handleUpdate} className="flex-1 flex gap-2">
+                  <input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    autoFocus
+                    className="flex-1 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm dark:bg-slate-700 dark:text-slate-100"
+                  />
+                  <button type="submit" disabled={updateMut.isPending} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                    OK
+                  </button>
+                  <button type="button" onClick={() => setEditId(null)} className="text-xs px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    Abbruch
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{g.name}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{g.artikel_anzahl} Artikel</span>
+                  <button
+                    onClick={() => { setEditId(g.id); setEditName(g.name); setFehler('') }}
+                    className="text-xs text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 px-1"
+                    title="Umbenennen"
+                  >✎</button>
+                  <button
+                    onClick={() => toggleMut.mutate(g.id)}
+                    className={`text-xs px-1 ${g.aktiv ? 'text-slate-400 hover:text-amber-600 dark:hover:text-amber-400' : 'text-green-600 dark:text-green-400 hover:text-green-700'}`}
+                    title={g.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                  >{g.aktiv ? '⊘' : '✓'}</button>
+                  <button
+                    onClick={() => { setFehler(''); deleteMut.mutate(g.id) }}
+                    disabled={g.artikel_anzahl > 0}
+                    className="text-xs text-slate-400 hover:text-red-600 dark:hover:text-red-400 px-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={g.artikel_anzahl > 0 ? 'In Verwendung – nicht löschbar' : 'Löschen'}
+                  >🗑</button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Neue Gruppe */}
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 shrink-0">
+          {fehler && <p className="text-red-600 dark:text-red-400 text-xs mb-2">{fehler}</p>}
+          <form onSubmit={handleCreate} className="flex gap-2">
+            <input
+              value={neuerName}
+              onChange={e => setNeuerName(e.target.value)}
+              placeholder={`Neue ${GRUPPE_LABELS[aktiverTyp]} …`}
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
+            />
+            <button
+              type="submit"
+              disabled={!neuerName.trim() || createMut.isPending}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              Anlegen
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -108,7 +265,7 @@ const schema = z.object({
   hersteller: z.string().optional(),
   artikelcode: z.string().optional(),
   beschreibung: z.string().optional(),
-  gruppe: z.string().optional(),
+  gruppe_id: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -152,7 +309,7 @@ function ArtikelFormModal({
       hersteller: initial.hersteller ?? '',
       artikelcode: initial.artikelcode ?? '',
       beschreibung: initial.beschreibung ?? '',
-      gruppe: initial.gruppe ?? '',
+      gruppe_id: initial.gruppe_id ? String(initial.gruppe_id) : '',
     } : {
       typ: 'artikel',
       steuersatz: defaultSatz,
@@ -162,6 +319,11 @@ function ArtikelFormModal({
 
   const typ = watch('typ') as ArtikelTyp
   const steuersatz = parseFloat(watch('steuersatz') || '0')
+
+  const { data: gruppen = [] } = useQuery({
+    queryKey: ['artikel-gruppen', typ],
+    queryFn: () => getArtikelGruppen(typ, true),
+  })
 
   // Hilfswerte für die jeweils berechnete Seite (nicht im RHF-Schema)
   const [vkNetto, setVkNetto] = useState(
@@ -174,6 +336,11 @@ function ArtikelFormModal({
     setVkNetto(initial?.vk_netto ? String(parseFloat(initial.vk_netto)) : '')
     setEkBrutto(initial?.ek_brutto ? String(parseFloat(initial.ek_brutto)) : '')
   }, [initial?.id])
+
+  // Gruppe zurücksetzen wenn Typ wechselt
+  useEffect(() => {
+    setValue('gruppe_id', '')
+  }, [typ, setValue])
 
   function bruttoAusNetto(netto: number) {
     return Math.round(netto * (1 + steuersatz / 100) * 100) / 100
@@ -220,7 +387,7 @@ function ArtikelFormModal({
         hersteller: hatHersteller(v.typ) ? v.hersteller || undefined : undefined,
         artikelcode: hatHersteller(v.typ) ? v.artikelcode || undefined : undefined,
         beschreibung: v.beschreibung || undefined,
-        gruppe: v.gruppe || undefined,
+        gruppe_id: v.gruppe_id ? Number(v.gruppe_id) : undefined,
       }
       return initial ? updateArtikel(initial.id, payload) : createArtikel(payload)
     },
@@ -331,7 +498,7 @@ function ArtikelFormModal({
             </div>
           )}
 
-          {/* Lieferant (nur bei DL + Fremdleistung) */}
+          {/* Lieferant */}
           {hatLieferant(typ) && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -352,7 +519,7 @@ function ArtikelFormModal({
             </div>
           )}
 
-          {/* Hersteller/Artikelcode (nur bei Dienstleistung) */}
+          {/* Hersteller/Artikelcode (nur bei Artikel) */}
           {hatHersteller(typ) && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -366,10 +533,20 @@ function ArtikelFormModal({
             </div>
           )}
 
-          {/* Kategorie */}
+          {/* Gruppe */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{GRUPPE_LABELS[typ]}</label>
-            <input {...register('gruppe')} placeholder={GRUPPE_PLACEHOLDER[typ]} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400" />
+            <select {...register('gruppe_id')} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100">
+              <option value="">– keine –</option>
+              {gruppen.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+            {gruppen.length === 0 && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                Noch keine {GRUPPE_LABELS[typ]}n angelegt – über „Gruppen verwalten" erstellen.
+              </p>
+            )}
           </div>
 
           {/* Beschreibung */}
@@ -477,10 +654,10 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
               <p className="text-xs text-slate-400 dark:text-slate-500">Einheit</p>
               <p className="text-sm text-slate-700 dark:text-slate-200">{artikel.einheit}</p>
             </div>
-            {artikel.gruppe && (
+            {artikel.gruppe_obj && (
               <div>
                 <p className="text-xs text-slate-400 dark:text-slate-500">{GRUPPE_LABELS[artikel.typ]}</p>
-                <p className="text-sm text-slate-700 dark:text-slate-200">{artikel.gruppe}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-200">{artikel.gruppe_obj.name}</p>
               </div>
             )}
             {artikel.lieferant && (
@@ -568,6 +745,7 @@ export function ArtikelPage() {
   const [selected, setSelected] = useState<Artikel | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editArtikel, setEditArtikel] = useState<Artikel | undefined>()
+  const [showGruppen, setShowGruppen] = useState(false)
 
   const { data: artikel, isLoading } = useQuery({
     queryKey: ['artikel', aktiv, typFilter],
@@ -580,7 +758,8 @@ export function ArtikelPage() {
     return (
       a.bezeichnung.toLowerCase().includes(s) ||
       a.artikelnummer.toLowerCase().includes(s) ||
-      (a.lieferant?.firmenname.toLowerCase().includes(s) ?? false)
+      (a.lieferant?.firmenname.toLowerCase().includes(s) ?? false) ||
+      (a.gruppe_obj?.name.toLowerCase().includes(s) ?? false)
     )
   })
 
@@ -602,21 +781,28 @@ export function ArtikelPage() {
         <div className="p-6 pb-4 shrink-0">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Artikelstamm</h1>
-            <button
-              onClick={() => { setEditArtikel(undefined); setShowForm(true) }}
-              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-            >
-              + Neu
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowGruppen(true)}
+                className="px-3 py-2 text-sm font-medium border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                Gruppen
+              </button>
+              <button
+                onClick={() => { setEditArtikel(undefined); setShowForm(true) }}
+                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              >
+                + Neu
+              </button>
+            </div>
           </div>
           <input
             value={suche}
             onChange={e => setSuche(e.target.value)}
-            placeholder="Suche nach Bezeichnung, Artikelnummer, Lieferant …"
+            placeholder="Suche nach Bezeichnung, Artikelnummer, Gruppe …"
             className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm mb-3 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
           />
           <div className="flex gap-2 flex-wrap">
-            {/* Typ-Filter */}
             {(['', 'artikel', 'dienstleistung', 'fremdleistung'] as const).map(t => (
               <button
                 key={t}
@@ -663,13 +849,15 @@ export function ArtikelPage() {
                   <span className="font-medium text-sm text-slate-800 dark:text-slate-100">{a.bezeichnung}</span>
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{formatEuro(a.vk_brutto)}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-slate-400 dark:text-slate-500">{a.artikelnummer}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full ${TYP_FARBEN[a.typ]}`}>
                     {TYP_LABELS[a.typ]}
                   </span>
+                  {a.gruppe_obj && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500">· {a.gruppe_obj.name}</span>
+                  )}
                   {!a.aktiv && <span className="text-xs text-slate-400 dark:text-slate-500 italic">inaktiv</span>}
-                  {a.lieferant && <span className="text-xs text-slate-400 dark:text-slate-500">· {a.lieferant.firmenname}</span>}
                 </div>
               </button>
             ))
@@ -717,6 +905,9 @@ export function ArtikelPage() {
           </div>
         </div>
       )}
+
+      {/* Gruppen-Modal */}
+      {showGruppen && <GruppenModal onClose={() => setShowGruppen(false)} />}
     </div>
   )
 }

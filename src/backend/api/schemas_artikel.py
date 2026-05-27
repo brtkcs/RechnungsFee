@@ -21,7 +21,7 @@ class ArtikelCreate(BaseModel):
     hersteller: Optional[str] = None
     artikelcode: Optional[str] = None
     beschreibung: Optional[str] = None
-    gruppe: Optional[str] = None
+    gruppe_id: Optional[int] = None
 
     @field_validator("typ")
     @classmethod
@@ -56,7 +56,7 @@ class ArtikelUpdate(BaseModel):
     hersteller: Optional[str] = None
     artikelcode: Optional[str] = None
     beschreibung: Optional[str] = None
-    gruppe: Optional[str] = None
+    gruppe_id: Optional[int] = None
     aktiv: Optional[bool] = None
 
     @field_validator("typ")
@@ -71,6 +71,12 @@ class ArtikelLieferantKurz(BaseModel):
     id: int
     firmenname: str
     lieferantennummer: Optional[str] = None
+    model_config = {"from_attributes": True}
+
+
+class ArtikelGruppeKurz(BaseModel):
+    id: int
+    name: str
     model_config = {"from_attributes": True}
 
 
@@ -91,7 +97,8 @@ class ArtikelResponse(BaseModel):
     hersteller: Optional[str] = None
     artikelcode: Optional[str] = None
     beschreibung: Optional[str] = None
-    gruppe: Optional[str] = None
+    gruppe_id: Optional[int] = None
+    gruppe_obj: Optional[ArtikelGruppeKurz] = None
     aktiv: bool
     erstellt_am: datetime
     aktualisiert_am: datetime
