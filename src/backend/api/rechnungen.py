@@ -834,28 +834,51 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
     unternehmen = db.query(Unternehmen).first()
     ust_satz = Decimal("0")
     steuerbefreiung_grund = None
+    # Tupel-Liste (satz, brutto_anteil, ust_skr03, ust_skr04) – je ein Eintrag pro USt-Gruppe
+    ust_gruppen: list[tuple[Decimal, Decimal, str | None, str | None]] = []
 
     if unternehmen and unternehmen.ist_kleinunternehmer:
         steuerbefreiung_grund = "§19 UStG"
+        ust_gruppen = [(Decimal("0"), betrag, None, None)]
     elif rechnung.positionen:
-        # Dominanter USt-Satz (Satz mit höchstem Netto-Anteil)
-        satz_summen: dict[int, Decimal] = {}
+        gruppen_brutto: dict[int, Decimal] = {}
         for pos in rechnung.positionen:
             s = int(pos.ust_satz)
-            satz_summen[s] = satz_summen.get(s, Decimal("0")) + pos.netto
-        dom_satz = max(satz_summen, key=lambda s: satz_summen[s])
+            gruppen_brutto[s] = gruppen_brutto.get(s, Decimal("0")) + pos.brutto
+        # Dominanter Satz bleibt für Skonto-Berechnung erhalten
+        dom_satz = max(gruppen_brutto, key=lambda s: gruppen_brutto[s])
         ust_satz = Decimal(str(dom_satz))
+        # Anteil je Gruppe proportional zum Brutto-Anteil der Rechnung
+        gesamt_pos_brutto = sum(gruppen_brutto.values())
+        rest_g = betrag
+        for i, satz in enumerate(sorted(gruppen_brutto.keys())):
+            satz_d = Decimal(str(satz))
+            g_ust_skr03, g_ust_skr04 = _ust_konto(art, satz_d) if satz > 0 else (None, None)
+            if i == len(gruppen_brutto) - 1:
+                g_betrag = rest_g
+            else:
+                g_betrag = (betrag * gruppen_brutto[satz] / gesamt_pos_brutto).quantize(Decimal("0.01"), ROUND_HALF_UP)
+                rest_g -= g_betrag
+            ust_gruppen.append((satz_d, g_betrag, g_ust_skr03, g_ust_skr04))
+    else:
+        ust_gruppen = [(Decimal("0"), betrag, None, None)]
 
     konto_ust_skr03, konto_ust_skr04 = _ust_konto(art, ust_satz) if ust_satz > 0 else (None, None)
 
-    def _netto_ust(brutto: Decimal) -> tuple[Decimal, Decimal]:
-        if ust_satz > 0:
-            n = (brutto * 100 / (100 + ust_satz)).quantize(Decimal("0.01"), ROUND_HALF_UP)
-            return n, (brutto - n).quantize(Decimal("0.01"), ROUND_HALF_UP)
-        return brutto, Decimal("0.00")
-
-    def _erstelle_eintrag(kat_id: int | None, kat: "Kategorie | None", brutto: Decimal, beschr: str) -> Journaleintrag:
-        n, u = _netto_ust(brutto)
+    def _erstelle_eintrag(
+        kat_id: int | None, kat: "Kategorie | None", brutto: Decimal, beschr: str,
+        g_satz: Decimal | None = None,
+        g_ust_skr03: str | None = None,
+        g_ust_skr04: str | None = None,
+    ) -> Journaleintrag:
+        satz = g_satz if g_satz is not None else ust_satz
+        ust03 = g_ust_skr03 if g_satz is not None else konto_ust_skr03
+        ust04 = g_ust_skr04 if g_satz is not None else konto_ust_skr04
+        if satz > 0:
+            n = (brutto * 100 / (100 + satz)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            u = (brutto - n).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        else:
+            n, u = brutto, Decimal("0.00")
         e = Journaleintrag(
             datum=data.datum,
             belegnr=_naechste_belegnr_journal(db, data.datum),
@@ -863,15 +886,15 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
             kategorie_id=kat_id,
             konto_skr03=kat.konto_skr03 if kat else None,
             konto_skr04=kat.konto_skr04 if kat else None,
-            konto_ust_skr03=konto_ust_skr03,
-            konto_ust_skr04=konto_ust_skr04,
+            konto_ust_skr03=ust03,
+            konto_ust_skr04=ust04,
             zahlungsart=data.zahlungsart,
             art=art,
             netto_betrag=n,
-            ust_satz=ust_satz,
+            ust_satz=satz,
             ust_betrag=u,
             brutto_betrag=brutto,
-            vorsteuerabzug=(art == "Ausgabe" and ust_satz > 0),
+            vorsteuerabzug=(art == "Ausgabe" and satz > 0),
             steuerbefreiung_grund=steuerbefreiung_grund,
             rechnung_id=rechnung_id,
             immutable=True,
@@ -927,8 +950,13 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
             kategorie_id = rechnung.kategorie_id
             kat_obj = rechnung.kategorie
 
-    eintrag = _erstelle_eintrag(kategorie_id, kat_obj, betrag, beschreibung)
-    db.add(eintrag)
+    erster_eintrag = None
+    for i, (g_satz, g_betrag, g_ust_skr03, g_ust_skr04) in enumerate(ust_gruppen):
+        e = _erstelle_eintrag(kategorie_id, kat_obj, g_betrag, beschreibung, g_satz, g_ust_skr03, g_ust_skr04)
+        db.add(e)
+        if i == 0:
+            erster_eintrag = e
+    eintrag = erster_eintrag
 
     if data.skonto_betrag and data.skonto_betrag > 0:
         _erstelle_skonto_eintrag(db, rechnung, rechnung_id, data, data.skonto_betrag, ust_satz,
