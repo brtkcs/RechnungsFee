@@ -212,6 +212,12 @@ class RechnungPDFVorlage1(RechnungPDFBase):
                 _row("Empfänger", empfaenger, bold_val=True)
             _row("Rechnungsbetrag", _fmt_euro(r.brutto_gesamt), bold_val=True)
             _row("Zahlungsziel", faellig)
+            if getattr(r, "skonto_prozent", None) and getattr(r, "skonto_tage", None):
+                from datetime import timedelta
+                from decimal import Decimal as _D
+                sk_frist = r.datum + timedelta(days=int(r.skonto_tage))
+                sk_betrag = (r.brutto_gesamt * _D(str(r.skonto_prozent)) / 100).quantize(_D("0.01"))
+                _row("Skonto", f"{r.skonto_prozent:.0f}% bis {_iso_zu_de(str(sk_frist))}: {_fmt_euro(r.brutto_gesamt - sk_betrag)}")
             if r.rechnungsnummer:
                 _row("Verwendungszweck", r.rechnungsnummer or "")
             if bank:

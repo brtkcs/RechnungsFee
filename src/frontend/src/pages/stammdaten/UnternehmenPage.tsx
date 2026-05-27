@@ -465,6 +465,32 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
           <span className="text-sm text-slate-500 dark:text-slate-400">Tage nach Rechnungsdatum</span>
         </div>
 
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">Standard-Skonto</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step={0.5}
+            value={form.standard_skonto_prozent ?? ''}
+            onChange={ev => set('standard_skonto_prozent', ev.target.value === '' ? null : parseFloat(ev.target.value))}
+            placeholder="z. B. 2"
+            className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+          />
+          <span className="text-sm text-slate-500 dark:text-slate-400">%</span>
+          <span className="text-sm text-slate-400 dark:text-slate-500">bei Zahlung innerhalb von</span>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={form.standard_skonto_tage ?? ''}
+            onChange={ev => set('standard_skonto_tage', ev.target.value === '' ? null : parseInt(ev.target.value))}
+            placeholder="z. B. 10"
+            className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+          />
+          <span className="text-sm text-slate-500 dark:text-slate-400">Tagen (leer = kein Skonto)</span>
+        </div>
+
         <label className={`flex items-start gap-3 ${form.iban?.trim() ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
           <input
             type="checkbox"

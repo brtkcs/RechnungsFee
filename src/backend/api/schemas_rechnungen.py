@@ -95,6 +95,8 @@ class RechnungCreate(BaseModel):
     notizen: Optional[str] = None
     externe_belegnr: Optional[str] = None
     ist_entwurf: bool = True
+    skonto_prozent: Optional[Decimal] = None
+    skonto_tage: Optional[int] = None
     positionen: List[RechnungspositionCreate]
 
     @model_validator(mode="after")
@@ -143,6 +145,8 @@ class RechnungUpdate(BaseModel):
     notizen: Optional[str] = None
     externe_belegnr: Optional[str] = None
     ist_entwurf: Optional[bool] = None
+    skonto_prozent: Optional[Decimal] = None
+    skonto_tage: Optional[int] = None
     positionen: Optional[List[RechnungspositionCreate]] = None
 
 
@@ -183,6 +187,8 @@ class RechnungResponse(BaseModel):
     externe_belegnr: Optional[str]
     leistung_von: Optional[date]
     leistung_bis: Optional[date]
+    skonto_prozent: Optional[Decimal] = None
+    skonto_tage: Optional[int] = None
     ist_entwurf: bool
     ausgegeben: bool
     positionen: List[RechnungspositionResponse] = []
@@ -296,6 +302,7 @@ class BarZahlungCreate(BaseModel):
     beschreibung: Optional[str] = None
     kategorie_id: Optional[int] = None  # Pflicht für Eingangsrechnungen (ohne Split), wird beim Endpoint geprüft
     split: Optional[List["ZahlungSplitPosition"]] = None  # Split: ersetzt kategorie_id, Summe muss betrag ergeben
+    skonto_betrag: Optional[Decimal] = None  # Skontobetrag wenn Skonto gewährt wird
 
     @field_validator("zahlungsart")
     @classmethod

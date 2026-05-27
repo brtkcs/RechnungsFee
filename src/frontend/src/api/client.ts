@@ -146,6 +146,8 @@ export type Unternehmen = {
   unterschrift_auf_rechnung?: boolean
   standard_zahlungsziel?: number
   qr_zahlung_aktiv?: boolean
+  standard_skonto_prozent?: number | null
+  standard_skonto_tage?: number | null
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -437,6 +439,8 @@ export type Kunde = {
   z_hd?: string
   notizen?: string
   zugferd_aktiv?: boolean
+  skonto_prozent?: number | null
+  skonto_tage?: number | null
   ust_idnr_validiert?: boolean
   aktiv?: boolean
 }
@@ -755,6 +759,8 @@ export type Rechnung = {
   positionen: Rechnungsposition[]
   zahlungen: ZahlungKompakt[]
   beleg: Beleg | null
+  skonto_prozent: number | null
+  skonto_tage: number | null
   ist_entwurf: boolean
   ausgegeben: boolean
   immutable: boolean
@@ -777,6 +783,8 @@ export type RechnungCreate = {
   notizen?: string
   externe_belegnr?: string
   ist_entwurf?: boolean
+  skonto_prozent?: number | null
+  skonto_tage?: number | null
   positionen: RechnungspositionCreate[]
   netto_gesamt_override?: string
   ust_gesamt_override?: string
@@ -798,6 +806,7 @@ export type BarZahlungCreate = {
   beschreibung?: string
   kategorie_id?: number
   split?: ZahlungSplitPosition[]
+  skonto_betrag?: string
 }
 
 export type BarZahlungResult = {

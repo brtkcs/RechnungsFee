@@ -82,6 +82,20 @@ function ZahlungsDialog({
   const [beschreibung, setBeschreibung] = useState('')
   const [fehler, setFehler] = useState<string | null>(null)
 
+  // Skonto
+  const skontoFrist: string | null = (rechnung.skonto_prozent != null && rechnung.skonto_tage != null)
+    ? (() => {
+        const d = new Date(rechnung.datum)
+        d.setDate(d.getDate() + rechnung.skonto_tage!)
+        return d.toISOString().slice(0, 10)
+      })()
+    : null
+  const skontoVerfuegbar = rechnung.typ === 'ausgang' && skontoFrist !== null && datum <= skontoFrist
+  const berechneterSkontoBetrag = skontoVerfuegbar
+    ? Math.round(parseFloat(rechnung.brutto_gesamt) * rechnung.skonto_prozent! / 100 * 100) / 100
+    : 0
+  const [skontoAktiv, setSkontoAktiv] = useState(false)
+
   // Eingangsrechnung: Kategorie bei Zahlung (Schritt 6+7)
   // rechnung.kategorie_id ist nach erster Teilzahlung gesetzt → Vorausfüllung (Schritt 7)
   const [kategorieId, setKategorieId] = useState<string>(String(rechnung.kategorie_id ?? ''))
@@ -137,6 +151,7 @@ function ZahlungsDialog({
       datum,
       zahlungsart,
       beschreibung: beschreibung || undefined,
+      ...(skontoAktiv && berechneterSkontoBetrag > 0 ? { skonto_betrag: berechneterSkontoBetrag.toFixed(2) } : {}),
     }
 
     if (rechnung.typ === 'eingang') {
@@ -210,6 +225,49 @@ function ZahlungsDialog({
               placeholder="0,00"
             />
           </div>
+
+          {/* Skonto-Hinweis */}
+          {skontoVerfuegbar && (
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl p-3 text-sm">
+              <p className="text-green-800 dark:text-green-200 font-medium">
+                {rechnung.skonto_prozent}% Skonto verfügbar (bis {skontoFrist!.split('-').reverse().join('.')})
+              </p>
+              <p className="text-green-700 dark:text-green-300 mt-0.5">
+                Netto: <strong>{formatEuro(parseFloat(rechnung.brutto_gesamt) - berechneterSkontoBetrag)}</strong>{' '}
+                statt {formatEuro(parseFloat(rechnung.brutto_gesamt))} — Nachlass: {formatEuro(berechneterSkontoBetrag)}
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSkontoAktiv(true)
+                    setBetrag((restbetrag - berechneterSkontoBetrag).toFixed(2).replace('.', ','))
+                  }}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
+                    skontoAktiv
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-white dark:bg-slate-800 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900'
+                  }`}
+                >
+                  Skonto anwenden
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSkontoAktiv(false)
+                    setBetrag(restbetrag.toFixed(2).replace('.', ','))
+                  }}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
+                    !skontoAktiv
+                      ? 'bg-slate-600 text-white border-slate-600'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Ohne Skonto
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Datum */}
           <div>
@@ -1279,6 +1337,12 @@ function RechnungForm({
   )
   const [leistungZeitraum, setLeistungZeitraum] = useState(!!(initial?.leistung_bis))
   const zahlungsziel = unternehmen?.standard_zahlungsziel ?? 14
+  const [skontoProzent, setSkontoProzent] = useState<string>(
+    initial?.skonto_prozent != null ? String(initial.skonto_prozent) : ''
+  )
+  const [skontoTage, setSkontoTage] = useState<string>(
+    initial?.skonto_tage != null ? String(initial.skonto_tage) : ''
+  )
   const [faelligAm, setFaelligAm] = useState(() => {
     if (pf?.faellig_am) return pf.faellig_am
     if (initial?.faellig_am) return initial.faellig_am
@@ -1367,6 +1431,26 @@ function RechnungForm({
     }
     // Eingang: keine Default-Kategorie (zu vielfältig)
   }, [kategorien, istKleinunternehmer, typ, initial])
+
+  // Skonto aus Kunde/Unternehmen vorbelegen (nur neue Ausgangsrechnungen)
+  useEffect(() => {
+    if (initial || typ !== 'ausgang') return
+    if (partnerId && kunden) {
+      const k = kunden.find((c: any) => String(c.id) === partnerId)
+      if (k && (k as any).skonto_prozent != null) {
+        setSkontoProzent(String((k as any).skonto_prozent))
+        setSkontoTage(String((k as any).skonto_tage ?? ''))
+        return
+      }
+    }
+    if (unternehmen?.standard_skonto_prozent != null) {
+      setSkontoProzent(String(unternehmen.standard_skonto_prozent))
+      setSkontoTage(String(unternehmen.standard_skonto_tage ?? ''))
+    } else {
+      setSkontoProzent('')
+      setSkontoTage('')
+    }
+  }, [partnerId, kunden, unternehmen, initial, typ])
 
   // Leistungsdatum synchron mit Rechnungsdatum halten (solange nicht manuell geändert)
   useEffect(() => {
@@ -1484,6 +1568,8 @@ function RechnungForm({
       notizen: notizen || undefined,
       externe_belegnr: typ === 'eingang' ? (externeBelegnr || undefined) : undefined,
       ist_entwurf: istEntwurf,
+      skonto_prozent: skontoProzent ? parseFloat(skontoProzent) : undefined,
+      skonto_tage: skontoTage ? parseInt(skontoTage) : undefined,
       // XML-Import: Gesamtbeträge direkt aus der Rechnung übernehmen
       // Nur wenn alle drei Werte vorliegen (aus XML oder via _berechne_fehlende_summen abgeleitet)
       ...(prefillFromAnalyse?.felder?.gesamt_netto &&
@@ -1642,6 +1728,41 @@ function RechnungForm({
         </div>
       )}
 
+      {/* Skonto – nur Ausgangsrechnungen */}
+      {typ === 'ausgang' && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              Skonto %{' '}<span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.5"
+              value={skontoProzent}
+              onChange={(e) => setSkontoProzent(e.target.value)}
+              placeholder="z. B. 2"
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+              Skonto-Frist{' '}<span className="text-slate-400 dark:text-slate-500 font-normal">(Tage)</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="365"
+              step="1"
+              value={skontoTage}
+              onChange={(e) => setSkontoTage(e.target.value)}
+              placeholder="z. B. 7"
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">

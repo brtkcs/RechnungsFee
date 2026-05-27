@@ -56,6 +56,8 @@ class UnternehmenBase(BaseModel):
     unterschrift_auf_rechnung: bool = False
     standard_zahlungsziel: int = 14
     qr_zahlung_aktiv: bool = False
+    standard_skonto_prozent: Optional[Decimal] = None
+    standard_skonto_tage: Optional[int] = None
 
     @field_validator("versteuerungsart")
     @classmethod
@@ -424,6 +426,8 @@ class KundeBase(BaseModel):
     z_hd: Optional[str] = None
     notizen: Optional[str] = None
     zugferd_aktiv: bool = False
+    skonto_prozent: Optional[Decimal] = None
+    skonto_tage: Optional[int] = None
 
 
 class KundeCreate(KundeBase):

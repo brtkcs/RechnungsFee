@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 30
+SCHEMA_VERSION = 31
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -760,6 +760,33 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 30"))
             conn.commit()
             print("[Migration] Schema auf Version 30 gebracht (leistungsdatum → leistung_von + leistung_bis)")
+
+        if version < 31:
+            # Skonto: unternehmen (Standard), kunden (kundenspezifisch), rechnungen (je Rechnung)
+            cols_unt = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            for col, ddl in [
+                ("standard_skonto_prozent", "ALTER TABLE unternehmen ADD COLUMN standard_skonto_prozent NUMERIC(5,2)"),
+                ("standard_skonto_tage",    "ALTER TABLE unternehmen ADD COLUMN standard_skonto_tage INTEGER"),
+            ]:
+                if col not in cols_unt:
+                    conn.execute(text(ddl))
+            cols_kun = {r[1] for r in conn.execute(text("PRAGMA table_info(kunden)")).fetchall()}
+            for col, ddl in [
+                ("skonto_prozent", "ALTER TABLE kunden ADD COLUMN skonto_prozent NUMERIC(5,2)"),
+                ("skonto_tage",    "ALTER TABLE kunden ADD COLUMN skonto_tage INTEGER"),
+            ]:
+                if col not in cols_kun:
+                    conn.execute(text(ddl))
+            cols_rec = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            for col, ddl in [
+                ("skonto_prozent", "ALTER TABLE rechnungen ADD COLUMN skonto_prozent NUMERIC(5,2)"),
+                ("skonto_tage",    "ALTER TABLE rechnungen ADD COLUMN skonto_tage INTEGER"),
+            ]:
+                if col not in cols_rec:
+                    conn.execute(text(ddl))
+            conn.execute(text("PRAGMA user_version = 31"))
+            conn.commit()
+            print("[Migration] Schema auf Version 31 gebracht (Skonto: unternehmen + kunden + rechnungen)")
 
 
 

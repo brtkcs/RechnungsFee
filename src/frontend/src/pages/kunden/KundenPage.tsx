@@ -119,6 +119,8 @@ const schema = z.object({
   ist_verein: z.boolean().optional(),
   ist_gemeinnuetzig: z.boolean().optional(),
   zugferd_aktiv: z.boolean().optional(),
+  skonto_prozent: z.number().min(0).max(100).nullable().optional(),
+  skonto_tage: z.number().int().min(1).max(365).nullable().optional(),
 }).superRefine((data, ctx) => {
   if (!data.zugferd_aktiv) return
   if (!data.firmenname?.trim()) ctx.addIssue({ code: 'custom', path: ['firmenname'], message: 'Pflichtfeld für ZUGFeRD' })
@@ -133,6 +135,7 @@ const EMPTY: FormValues = {
   firmenname: '', vorname: '', nachname: '', strasse: '', hausnummer: '',
   plz: '', ort: '', land: 'DE', ust_idnr: '', email: '', telefon: '',
   kundennummer: '', z_hd: '', notizen: '', ist_verein: false, ist_gemeinnuetzig: false, zugferd_aktiv: false,
+  skonto_prozent: null, skonto_tage: null,
 }
 
 // ---------------------------------------------------------------------------
@@ -199,6 +202,8 @@ export function KundenPage() {
       email: k.email ?? '', telefon: k.telefon ?? '', kundennummer: k.kundennummer ?? '',
       z_hd: k.z_hd ?? '', notizen: k.notizen ?? '', ist_verein: k.ist_verein, ist_gemeinnuetzig: k.ist_gemeinnuetzig,
       zugferd_aktiv: k.zugferd_aktiv ?? false,
+      skonto_prozent: (k as any).skonto_prozent ?? null,
+      skonto_tage: (k as any).skonto_tage ?? null,
     })
     setShowForm(true)
   }
@@ -467,6 +472,15 @@ export function KundenPage() {
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Notizen</label>
                   <textarea {...register('notizen')} rows={2} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Skonto (kundenspezifisch)</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" min={0} max={100} step={0.5} {...register('skonto_prozent', { setValueAs: v => v === '' || v == null ? null : parseFloat(v) })} placeholder="z. B. 2" className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+                    <span className="text-sm text-slate-500 dark:text-slate-400">%  bei Zahlung innerhalb von</span>
+                    <input type="number" min={1} max={365} {...register('skonto_tage', { setValueAs: v => v === '' || v == null ? null : parseInt(v) })} placeholder="z. B. 10" className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+                    <span className="text-sm text-slate-500 dark:text-slate-400">Tagen  (leer = Standard aus Unternehmen)</span>
+                  </div>
                 </div>
                 <div className="col-span-2 flex gap-4">
                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">

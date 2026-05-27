@@ -6,6 +6,7 @@ Layout:
   Zahlungshinweis als Fließtext, optionaler EPC-QR-Code.
 """
 
+from decimal import Decimal
 from io import BytesIO
 
 from utils.pdf_rechnung_base import (
@@ -101,6 +102,21 @@ class RechnungPDF(RechnungPDFBase):
                 )
                 self.cell(0, 5, zeile, new_x="LMARGIN", new_y="NEXT")
         else:
+            # Skonto-Hinweis (nur bei offener Ausgangsrechnung mit Skonto-Bedingungen)
+            if (r.typ == "ausgang"
+                    and getattr(r, "skonto_prozent", None)
+                    and getattr(r, "skonto_tage", None)):
+                from datetime import timedelta
+                skonto_frist = r.datum + timedelta(days=int(r.skonto_tage))
+                skonto_betrag = (r.brutto_gesamt * Decimal(str(r.skonto_prozent)) / 100).quantize(Decimal("0.01"))
+                skonto_text = (
+                    f"{r.skonto_prozent:.0f}% Skonto bei Zahlung bis {_iso_zu_de(str(skonto_frist))}: "
+                    f"{_fmt_euro(r.brutto_gesamt - skonto_betrag)}"
+                )
+                self.set_font("DejaVu", "", 8)
+                self.set_text_color(*TEXT_GRAU)
+                self.cell(0, 5, skonto_text, new_x="LMARGIN", new_y="NEXT")
+
             if unt.get("zahlungshinweis_aktiv", True):
                 iban = unt.get("iban") or ""
                 if iban and r.typ == "ausgang":

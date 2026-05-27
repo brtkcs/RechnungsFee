@@ -105,6 +105,20 @@ def _ust_konto(art: str, ust_satz: Decimal) -> tuple[str | None, str | None]:
     return skr03, skr04
 
 
+def _skonto_konto(rechnung_typ: str, ust_satz: Decimal) -> tuple[str | None, str | None]:
+    """Gibt (konto_skr03, konto_skr04) für die Skonto-Gegenbuchung zurück."""
+    satz = int(ust_satz)
+    if rechnung_typ == "ausgang":
+        # Erlösschmälerungen
+        skr03 = {19: "8736", 7: "8727", 0: "8720"}.get(satz)
+        skr04 = {19: "4310", 7: "4320", 0: "4300"}.get(satz)
+    else:
+        # Erhaltene Skonti (Eingangsrechnung)
+        skr03 = {19: "2401", 7: "2400", 0: "2400"}.get(satz)
+        skr04 = {19: "3401", 7: "3400", 0: "3400"}.get(satz)
+    return skr03, skr04
+
+
 def _berechne_position(pos_data) -> tuple[Decimal, Decimal, Decimal]:
     """Gibt (ust_betrag, brutto, netto_rund) zurück."""
     netto = pos_data.netto.quantize(Decimal("0.01"), ROUND_HALF_UP)
@@ -406,6 +420,8 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
         notizen=data.notizen,
         externe_belegnr=data.externe_belegnr,
         ist_entwurf=data.ist_entwurf,
+        skonto_prozent=data.skonto_prozent,
+        skonto_tage=data.skonto_tage,
         bezahlt=False,
         bezahlt_betrag=Decimal("0.00"),
         zahlungsstatus="offen",
@@ -470,7 +486,8 @@ def update_rechnung(rechnung_id: int, data: RechnungUpdate, db: Session = Depend
     ist_kleinunternehmer = unternehmen.ist_kleinunternehmer if unternehmen else False
 
     for field in ("rechnungsnummer", "datum", "leistung_von", "leistung_bis", "faellig_am", "kunde_id",
-                  "lieferant_id", "partner_freitext", "kategorie_id", "notizen", "externe_belegnr"):
+                  "lieferant_id", "partner_freitext", "kategorie_id", "notizen", "externe_belegnr",
+                  "skonto_prozent", "skonto_tage"):
         val = getattr(data, field, None)
         if val is not None:
             setattr(rechnung, field, val)
@@ -718,6 +735,46 @@ def delete_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
 # Zahlungs-Endpunkte
 # ---------------------------------------------------------------------------
 
+def _erstelle_skonto_eintrag(
+    db: Session,
+    rechnung: "Rechnung",
+    rechnung_id: int,
+    data: "BarZahlungCreate",
+    skonto_betrag: Decimal,
+    ust_satz: Decimal,
+    steuerbefreiung_grund: str | None,
+    zahlung_art: str,
+) -> None:
+    """Erzeugt den Skonto-Journaleintrag (Erlösschmälerung / erhaltener Skonto)."""
+    skonto_art = "Ausgabe" if rechnung.typ == "ausgang" else "Einnahme"
+    sk_netto = (skonto_betrag * 100 / (100 + ust_satz)).quantize(Decimal("0.01"), ROUND_HALF_UP) if ust_satz > 0 else skonto_betrag
+    sk_ust = (skonto_betrag - sk_netto).quantize(Decimal("0.01"), ROUND_HALF_UP) if ust_satz > 0 else Decimal("0.00")
+    sk_konto_skr03, sk_konto_skr04 = _skonto_konto(rechnung.typ, ust_satz)
+    sk_ust_skr03, sk_ust_skr04 = _ust_konto(skonto_art, ust_satz) if ust_satz > 0 else (None, None)
+    sk = Journaleintrag(
+        datum=data.datum,
+        belegnr=_naechste_belegnr_journal(db, data.datum),
+        beschreibung=f"Skonto {rechnung.rechnungsnummer}",
+        kategorie_id=None,
+        konto_skr03=sk_konto_skr03,
+        konto_skr04=sk_konto_skr04,
+        konto_ust_skr03=sk_ust_skr03,
+        konto_ust_skr04=sk_ust_skr04,
+        zahlungsart="Skonto",
+        art=skonto_art,
+        netto_betrag=sk_netto,
+        ust_satz=ust_satz,
+        ust_betrag=sk_ust,
+        brutto_betrag=skonto_betrag,
+        vorsteuerabzug=(skonto_art == "Ausgabe" and ust_satz > 0),
+        steuerbefreiung_grund=steuerbefreiung_grund,
+        rechnung_id=rechnung_id,
+        immutable=True,
+    )
+    sk.signatur = signatur_journaleintrag(sk)
+    db.add(sk)
+
+
 @router.post("/{rechnung_id}/zahlung-bar", response_model=BarZahlungResult, status_code=201)
 def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session = Depends(get_db)):
     """
@@ -734,12 +791,21 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
     if restbetrag <= 0:
         raise HTTPException(status_code=409, detail="Rechnung ist bereits vollständig bezahlt.")
 
-    betrag = data.betrag if data.betrag is not None else restbetrag
+    betrag = data.betrag if data.betrag is not None else (
+        restbetrag - data.skonto_betrag if data.skonto_betrag else restbetrag
+    )
     if betrag > restbetrag:
         raise HTTPException(
             status_code=422,
             detail=f"Betrag ({betrag}) übersteigt den Restbetrag ({restbetrag}).",
         )
+    if data.skonto_betrag and data.skonto_betrag > 0:
+        total = (betrag + data.skonto_betrag).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        if total > restbetrag.quantize(Decimal("0.01"), ROUND_HALF_UP) + Decimal("0.01"):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Betrag + Skonto ({total}) übersteigt den Restbetrag ({restbetrag}).",
+            )
 
     art = "Einnahme" if rechnung.typ == "ausgang" else "Ausgabe"
 
@@ -861,6 +927,11 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
 
     eintrag = _erstelle_eintrag(kategorie_id, kat_obj, betrag, beschreibung)
     db.add(eintrag)
+
+    if data.skonto_betrag and data.skonto_betrag > 0:
+        _erstelle_skonto_eintrag(db, rechnung, rechnung_id, data, data.skonto_betrag, ust_satz,
+                                 steuerbefreiung_grund, art)
+
     db.flush()
     _aktualisiere_zahlungsstatus(rechnung)
     db.commit()

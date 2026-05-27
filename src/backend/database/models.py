@@ -92,6 +92,8 @@ class Unternehmen(Base):
     unterschrift_auf_rechnung: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     standard_zahlungsziel: Mapped[int] = mapped_column(Integer, default=14, server_default="14")
     qr_zahlung_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    standard_skonto_prozent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    standard_skonto_tage: Mapped[int | None] = mapped_column(Integer)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -272,6 +274,8 @@ class Kunde(Base):
     z_hd: Mapped[str | None] = mapped_column(String(200))
     notizen: Mapped[str | None] = mapped_column(Text)
     zugferd_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    skonto_prozent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    skonto_tage: Mapped[int | None] = mapped_column(Integer)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -404,6 +408,9 @@ class Rechnung(Base):
     externe_belegnr: Mapped[str | None] = mapped_column(String(100))  # Lieferanten-Rechnungsnr. (nur Eingang)
     leistung_von: Mapped[date | None] = mapped_column(Date)
     leistung_bis: Mapped[date | None] = mapped_column(Date)
+    # Skonto
+    skonto_prozent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    skonto_tage: Mapped[int | None] = mapped_column(Integer)
     # GoBD
     ist_entwurf: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
