@@ -21,7 +21,7 @@ class ArtikelCreate(BaseModel):
     hersteller: Optional[str] = None
     artikelcode: Optional[str] = None
     beschreibung: Optional[str] = None
-    kategorie: Optional[str] = None
+    gruppe: Optional[str] = None
 
     @field_validator("typ")
     @classmethod
@@ -56,7 +56,7 @@ class ArtikelUpdate(BaseModel):
     hersteller: Optional[str] = None
     artikelcode: Optional[str] = None
     beschreibung: Optional[str] = None
-    kategorie: Optional[str] = None
+    gruppe: Optional[str] = None
     aktiv: Optional[bool] = None
 
     @field_validator("typ")
@@ -91,7 +91,7 @@ class ArtikelResponse(BaseModel):
     hersteller: Optional[str] = None
     artikelcode: Optional[str] = None
     beschreibung: Optional[str] = None
-    kategorie: Optional[str] = None
+    gruppe: Optional[str] = None
     aktiv: bool
     erstellt_am: datetime
     aktualisiert_am: datetime

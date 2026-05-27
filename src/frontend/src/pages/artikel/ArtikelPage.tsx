@@ -18,6 +18,18 @@ const TYP_LABELS: Record<ArtikelTyp, string> = {
   fremdleistung: 'Fremdleistung',
 }
 
+const GRUPPE_LABELS: Record<ArtikelTyp, string> = {
+  artikel: 'Warengruppe',
+  dienstleistung: 'Servicegruppe',
+  fremdleistung: 'Fremdleistungsgruppe',
+}
+
+const GRUPPE_PLACEHOLDER: Record<ArtikelTyp, string> = {
+  artikel: 'z.B. IT-Hardware, Elektronik, Büromaterial …',
+  dienstleistung: 'z.B. IT-Beratung, Marketing, Schulung …',
+  fremdleistung: 'z.B. Subunternehmer, Fremdmontage …',
+}
+
 const TYP_FARBEN: Record<ArtikelTyp, string> = {
   artikel: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
   dienstleistung: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
@@ -96,7 +108,7 @@ const schema = z.object({
   hersteller: z.string().optional(),
   artikelcode: z.string().optional(),
   beschreibung: z.string().optional(),
-  kategorie: z.string().optional(),
+  gruppe: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -140,7 +152,7 @@ function ArtikelFormModal({
       hersteller: initial.hersteller ?? '',
       artikelcode: initial.artikelcode ?? '',
       beschreibung: initial.beschreibung ?? '',
-      kategorie: initial.kategorie ?? '',
+      gruppe: initial.gruppe ?? '',
     } : {
       typ: 'artikel',
       steuersatz: defaultSatz,
@@ -208,7 +220,7 @@ function ArtikelFormModal({
         hersteller: hatHersteller(v.typ) ? v.hersteller || undefined : undefined,
         artikelcode: hatHersteller(v.typ) ? v.artikelcode || undefined : undefined,
         beschreibung: v.beschreibung || undefined,
-        kategorie: v.kategorie || undefined,
+        gruppe: v.gruppe || undefined,
       }
       return initial ? updateArtikel(initial.id, payload) : createArtikel(payload)
     },
@@ -356,8 +368,8 @@ function ArtikelFormModal({
 
           {/* Kategorie */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kategorie</label>
-            <input {...register('kategorie')} placeholder="z.B. IT-Hardware, Marketing, Beratung …" className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400" />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{GRUPPE_LABELS[typ]}</label>
+            <input {...register('gruppe')} placeholder={GRUPPE_PLACEHOLDER[typ]} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400" />
           </div>
 
           {/* Beschreibung */}
@@ -465,10 +477,10 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
               <p className="text-xs text-slate-400 dark:text-slate-500">Einheit</p>
               <p className="text-sm text-slate-700 dark:text-slate-200">{artikel.einheit}</p>
             </div>
-            {artikel.kategorie && (
+            {artikel.gruppe && (
               <div>
-                <p className="text-xs text-slate-400 dark:text-slate-500">Kategorie</p>
-                <p className="text-sm text-slate-700 dark:text-slate-200">{artikel.kategorie}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">{GRUPPE_LABELS[artikel.typ]}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-200">{artikel.gruppe}</p>
               </div>
             )}
             {artikel.lieferant && (

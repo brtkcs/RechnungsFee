@@ -897,7 +897,7 @@ export type Artikel = {
   hersteller: string | null
   artikelcode: string | null
   beschreibung: string | null
-  kategorie: string | null
+  gruppe: string | null
   aktiv: boolean
   erstellt_am: string
   aktualisiert_am: string
@@ -938,7 +938,7 @@ export type ArtikelCreate = {
   hersteller?: string
   artikelcode?: string
   beschreibung?: string
-  kategorie?: string
+  gruppe?: string
 }
 
 export type ArtikelUpdate = Partial<ArtikelCreate> & { aktiv?: boolean }

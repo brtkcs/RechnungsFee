@@ -332,7 +332,7 @@ class Artikel(Base):
     hersteller: Mapped[str | None] = mapped_column(String(100))
     artikelcode: Mapped[str | None] = mapped_column(String(100))
     beschreibung: Mapped[str | None] = mapped_column(Text)
-    kategorie: Mapped[str | None] = mapped_column(String(100))
+    gruppe: Mapped[str | None] = mapped_column(String(100))
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
