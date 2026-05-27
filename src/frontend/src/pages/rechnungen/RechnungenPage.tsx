@@ -1283,6 +1283,7 @@ function RechnungForm({
     if (pf?.faellig_am) return pf.faellig_am
     if (initial?.faellig_am) return initial.faellig_am
     if (initial) return ''
+    if (prefillFromAnalyse) return ''  // Import ohne Fälligkeit → leer lassen
     const d = new Date(heuteIso())
     d.setDate(d.getDate() + (unternehmen?.standard_zahlungsziel ?? 14))
     return d.toISOString().slice(0, 10)
@@ -1375,11 +1376,11 @@ function RechnungForm({
   // Fälligkeitsdatum = Rechnungsdatum + Zahlungsziel (nur neue Rechnungen, nicht bei Prefill aus Analyse)
   useEffect(() => {
     if (initial) return
-    if (pf?.faellig_am) return
+    if (prefillFromAnalyse) return  // Import ohne Fälligkeit → nicht berechnen
     const d = new Date(datum)
     d.setDate(d.getDate() + zahlungsziel)
     setFaelligAm(d.toISOString().slice(0, 10))
-  }, [datum, zahlungsziel, initial])
+  }, [datum, zahlungsziel, initial, prefillFromAnalyse])
 
 
   // Kategorie-Gruppen analog BuchungForm
