@@ -142,6 +142,7 @@ class Kategorie(Base):
     ust_satz_standard: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0|7|19
     ist_system: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    beschreibung: Mapped[str | None] = mapped_column(Text)  # Beispiele / Verwendungshinweis
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     journaleintraege: Mapped[list["Journaleintrag"]] = relationship(back_populates="kategorie")

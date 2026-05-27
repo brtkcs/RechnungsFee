@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getKategorien, toggleKategorieAktiv,
   updateKategorieKonten, resetKategorieKonten, createKategorie, updateKategorie, deleteKategorie,
+  updateKategorieBeschreibung, downloadKategorienPdf,
   type Kategorie, type KategorieCreate,
 } from '../../api/client'
 
@@ -23,12 +24,81 @@ function UstBadge({ satz }: { satz: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// Beschreibungs-Inline-Editor
+// ---------------------------------------------------------------------------
+
+function BeschreibungEditor({
+  kategorie,
+  onSave,
+  onClose,
+}: {
+  kategorie: Kategorie
+  onSave: (text: string | null) => void
+  onClose: () => void
+}) {
+  const [text, setText] = useState(kategorie.beschreibung ?? '')
+
+  function handleBlurOrSave() {
+    const val = text.trim() || null
+    if (val !== (kategorie.beschreibung ?? null)) {
+      onSave(val)
+    }
+  }
+
+  return (
+    <tr className="bg-sky-50 dark:bg-sky-950/40">
+      <td colSpan={8} className="px-4 py-3">
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-sky-700 dark:text-sky-300">
+            💬 Verwendungsbeispiele / Notizen zu „{kategorie.name}"
+          </p>
+          <textarea
+            rows={3}
+            autoFocus
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="z. B. Büromaterial – Stifte, Papier, Druckerpatronen, Ordner …"
+            className="w-full text-sm border border-sky-300 dark:border-sky-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { handleBlurOrSave(); onClose() }}
+              className="px-3 py-1.5 text-xs bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              Speichern
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+            >
+              Schließen
+            </button>
+            {kategorie.beschreibung && (
+              <button
+                type="button"
+                onClick={() => { onSave(null); onClose() }}
+                className="px-3 py-1.5 text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 ml-auto"
+              >
+                Löschen
+              </button>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Neues-Kategorie-Dialog
 // ---------------------------------------------------------------------------
 
 const LEER: KategorieCreate = {
   name: '', kontenart: 'Aufwand', konto_skr03: '', konto_skr04: '',
   euer_zeile: undefined, eks_kategorie: '', vorsteuer_prozent: 100, ust_satz_standard: 19,
+  beschreibung: '',
 }
 
 function NeuDialog({ onClose, bearbeiten }: { onClose: () => void; bearbeiten?: Kategorie }) {
@@ -41,6 +111,7 @@ function NeuDialog({ onClose, bearbeiten }: { onClose: () => void; bearbeiten?: 
     eks_kategorie: bearbeiten.eks_kategorie ?? '',
     vorsteuer_prozent: Number(bearbeiten.vorsteuer_prozent),
     ust_satz_standard: bearbeiten.ust_satz_standard,
+    beschreibung: bearbeiten.beschreibung ?? '',
   } : LEER)
   const [err, setErr] = useState('')
   const qc = useQueryClient()
@@ -154,6 +225,17 @@ function NeuDialog({ onClose, bearbeiten }: { onClose: () => void; bearbeiten?: 
               onChange={e => set('vorsteuer_prozent', Number(e.target.value))}
             />
           </div>
+
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Verwendungsbeispiele (optional)</label>
+            <textarea
+              rows={2}
+              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm resize-none"
+              value={form.beschreibung ?? ''}
+              onChange={e => set('beschreibung', e.target.value)}
+              placeholder="z. B. was gehört in diese Kategorie, was nicht …"
+            />
+          </div>
         </div>
 
         {err && <p className="text-xs text-red-500">{err}</p>}
@@ -234,6 +316,7 @@ export function KategorienPage() {
   const [neuDialog, setNeuDialog] = useState(false)
   const [bearbeitenKat, setBearbeitenKat] = useState<Kategorie | null>(null)
   const [loeschenId, setLoeschenId] = useState<number | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
   const qc = useQueryClient()
 
   const { data: kategorien = [], isLoading } = useQuery({
@@ -263,13 +346,20 @@ export function KategorienPage() {
     onError: (e: Error) => alert(e.message),
   })
 
+  const beschreibungMutation = useMutation({
+    mutationFn: ({ id, text }: { id: number; text: string | null }) =>
+      updateKategorieBeschreibung(id, text),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
+  })
+
   const suchtext = filter.toLowerCase()
   const gefiltert = kategorien.filter(k =>
     (nurAktive ? k.aktiv : true) &&
     (k.name.toLowerCase().includes(suchtext) ||
     (k.konto_skr03 ?? '').includes(suchtext) ||
     (k.konto_skr04 ?? '').includes(suchtext) ||
-    (k.eks_kategorie ?? '').toLowerCase().includes(suchtext))
+    (k.eks_kategorie ?? '').toLowerCase().includes(suchtext) ||
+    (k.beschreibung ?? '').toLowerCase().includes(suchtext))
   )
 
   const gruppen = REIHENFOLGE
@@ -295,7 +385,7 @@ export function KategorienPage() {
           type="search"
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          placeholder="Name, SKR-Konto oder EKS-Feld suchen …"
+          placeholder="Name, SKR-Konto, EKS oder Beschreibung suchen …"
           className="w-full max-w-sm border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
@@ -310,6 +400,14 @@ export function KategorienPage() {
           {nurAktive ? 'Nur aktive' : 'Alle'}
         </button>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => downloadKategorienPdf()}
+            className="text-sm px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            title="Alle Kategorien als PDF exportieren (ohne Kontonummern)"
+          >
+            📄 PDF
+          </button>
           <button
             type="button"
             onClick={() => setEditModus(v => !v)}
@@ -370,152 +468,184 @@ export function KategorienPage() {
                   </thead>
                   <tbody>
                     {liste.map((k, i) => (
-                      <tr
-                        key={k.id}
-                        className={`border-b border-slate-100 dark:border-slate-700 last:border-0 transition-opacity ${
-                          !k.aktiv ? 'opacity-40' : ''
-                        } ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
-                      >
-                        <td className="px-4 py-2 sticky left-0 bg-white dark:bg-slate-800 z-10">
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-800 dark:text-slate-100">{k.name}</span>
-                            {!k.ist_system && (
-                              <span className="text-xs bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium">
-                                Eigene
-                              </span>
-                            )}
-                            {!k.aktiv && (
-                              <span className="text-xs bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 px-1.5 py-0.5 rounded font-medium">
-                                Inaktiv
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* SKR03 */}
-                        <td className="px-3 py-2">
-                          {editModus ? (
-                            <KontoCellEdit
-                              key={`${k.id}-skr03-${k.konto_skr03 ?? ''}`}
-                              value={k.konto_skr03}
-                              defaultValue={k.konto_skr03_default}
-                              isModified={k.user_modified_skr03}
-                              onSave={v => kontenMutation.mutate({ id: k.id, data: { konto_skr03: v } })}
-                              onReset={() => resetMutation.mutate(k.id)}
-                            />
-                          ) : (
-                            <span className={`font-mono text-xs ${k.user_modified_skr03 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                              {k.konto_skr03 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* SKR04 */}
-                        <td className="px-3 py-2">
-                          {editModus ? (
-                            <KontoCellEdit
-                              key={`${k.id}-skr04-${k.konto_skr04 ?? ''}`}
-                              value={k.konto_skr04}
-                              defaultValue={k.konto_skr04_default}
-                              isModified={k.user_modified_skr04}
-                              onSave={v => kontenMutation.mutate({ id: k.id, data: { konto_skr04: v } })}
-                              onReset={() => resetMutation.mutate(k.id)}
-                            />
-                          ) : (
-                            <span className={`font-mono text-xs ${k.user_modified_skr04 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
-                              {k.konto_skr04 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-3 py-2 text-slate-500 dark:text-slate-400 text-xs">
-                          {k.euer_zeile
-                            ? <span>Zeile {k.euer_zeile}</span>
-                            : <span className="text-slate-300 dark:text-slate-600">—</span>
-                          }
-                        </td>
-                        <td className="px-3 py-2 font-mono text-xs">
-                          {k.eks_kategorie
-                            ? <span className="text-slate-700 dark:text-slate-300">{k.eks_kategorie}</span>
-                            : <span className="text-slate-300 dark:text-slate-600">—</span>
-                          }
-                        </td>
-                        <td className="px-3 py-2">
-                          <UstBadge satz={k.ust_satz_standard} />
-                        </td>
-                        <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-                          {Number(k.vorsteuer_prozent) === 100
-                            ? '100 %'
-                            : <span className="text-amber-600 dark:text-amber-400">{k.vorsteuer_prozent} %</span>
-                          }
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {editModus && (k.user_modified_skr03 || k.user_modified_skr04) && (
+                      <>
+                        <tr
+                          key={k.id}
+                          className={`border-b border-slate-100 dark:border-slate-700 last:border-0 transition-opacity ${
+                            !k.aktiv ? 'opacity-40' : ''
+                          } ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-900/30'}`}
+                        >
+                          <td className="px-4 py-2 sticky left-0 bg-white dark:bg-slate-800 z-10">
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                title="Kontonummern auf Standardwerte zurücksetzen"
-                                onClick={() => resetMutation.mutate(k.id)}
-                                className="text-xs px-2 py-1 rounded border border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
-                              >
-                                Reset
-                              </button>
-                            )}
-                            {editModus && !k.ist_system && loeschenId !== k.id && (
-                              <button
-                                type="button"
-                                onClick={() => setBearbeitenKat(k)}
-                                className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
-                              >
-                                Bearbeiten
-                              </button>
-                            )}
-                            {editModus && !k.ist_system && (
-                              loeschenId === k.id ? (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-red-500 dark:text-red-400">Kategorie „{k.name}" löschen?</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => { deleteMutation.mutate(k.id); setLoeschenId(null) }}
-                                    className="text-xs px-2 py-1 rounded border border-red-400 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-600 dark:bg-red-950 dark:text-red-400"
-                                  >
-                                    Ja
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setLoeschenId(null)}
-                                    className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
-                                  >
-                                    Nein
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setLoeschenId(k.id)}
-                                  className="text-xs px-2 py-1 rounded border border-red-200 text-red-400 hover:border-red-400 hover:text-red-600 dark:border-red-800 dark:text-red-500 dark:hover:text-red-400"
-                                >
-                                  Löschen
-                                </button>
-                              )
-                            )}
-                            {!editModus && (
-                              <button
-                                type="button"
-                                title={k.aktiv ? 'Deaktivieren' : 'Aktivieren'}
-                                onClick={() => toggleMutation.mutate(k.id)}
-                                className={`text-xs px-2 py-1 rounded border transition-colors ${
-                                  k.aktiv
-                                    ? 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-red-300 hover:text-red-500 dark:hover:text-red-400'
-                                    : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
+                                title={k.beschreibung ? 'Verwendungsbeispiel bearbeiten' : 'Verwendungsbeispiel hinzufügen'}
+                                onClick={() => setExpandedId(expandedId === k.id ? null : k.id)}
+                                className={`shrink-0 text-sm leading-none transition-colors ${
+                                  expandedId === k.id
+                                    ? 'text-sky-500 dark:text-sky-400'
+                                    : k.beschreibung
+                                      ? 'text-sky-400 dark:text-sky-500 hover:text-sky-600'
+                                      : 'text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-400'
                                 }`}
                               >
-                                {k.aktiv ? 'Aus' : 'Ein'}
+                                💬
                               </button>
+                              <span className="text-slate-800 dark:text-slate-100">{k.name}</span>
+                              {!k.ist_system && (
+                                <span className="text-xs bg-violet-100 text-violet-600 dark:bg-violet-900 dark:text-violet-300 px-1.5 py-0.5 rounded font-medium">
+                                  Eigene
+                                </span>
+                              )}
+                              {!k.aktiv && (
+                                <span className="text-xs bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 px-1.5 py-0.5 rounded font-medium">
+                                  Inaktiv
+                                </span>
+                              )}
+                            </div>
+                            {/* Beschreibungs-Vorschau (wenn nicht expanded) */}
+                            {k.beschreibung && expandedId !== k.id && (
+                              <p className="mt-0.5 ml-6 text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs">
+                                {k.beschreibung}
+                              </p>
                             )}
-                          </div>
-                        </td>
-                      </tr>
+                          </td>
+
+                          {/* SKR03 */}
+                          <td className="px-3 py-2">
+                            {editModus ? (
+                              <KontoCellEdit
+                                key={`${k.id}-skr03-${k.konto_skr03 ?? ''}`}
+                                value={k.konto_skr03}
+                                defaultValue={k.konto_skr03_default}
+                                isModified={k.user_modified_skr03}
+                                onSave={v => kontenMutation.mutate({ id: k.id, data: { konto_skr03: v } })}
+                                onReset={() => resetMutation.mutate(k.id)}
+                              />
+                            ) : (
+                              <span className={`font-mono text-xs ${k.user_modified_skr03 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                                {k.konto_skr03 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* SKR04 */}
+                          <td className="px-3 py-2">
+                            {editModus ? (
+                              <KontoCellEdit
+                                key={`${k.id}-skr04-${k.konto_skr04 ?? ''}`}
+                                value={k.konto_skr04}
+                                defaultValue={k.konto_skr04_default}
+                                isModified={k.user_modified_skr04}
+                                onSave={v => kontenMutation.mutate({ id: k.id, data: { konto_skr04: v } })}
+                                onReset={() => resetMutation.mutate(k.id)}
+                              />
+                            ) : (
+                              <span className={`font-mono text-xs ${k.user_modified_skr04 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                                {k.konto_skr04 ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400 text-xs">
+                            {k.euer_zeile
+                              ? <span>Zeile {k.euer_zeile}</span>
+                              : <span className="text-slate-300 dark:text-slate-600">—</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">
+                            {k.eks_kategorie
+                              ? <span className="text-slate-700 dark:text-slate-300">{k.eks_kategorie}</span>
+                              : <span className="text-slate-300 dark:text-slate-600">—</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2">
+                            <UstBadge satz={k.ust_satz_standard} />
+                          </td>
+                          <td className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+                            {Number(k.vorsteuer_prozent) === 100
+                              ? '100 %'
+                              : <span className="text-amber-600 dark:text-amber-400">{k.vorsteuer_prozent} %</span>
+                            }
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {editModus && (k.user_modified_skr03 || k.user_modified_skr04) && (
+                                <button
+                                  type="button"
+                                  title="Kontonummern auf Standardwerte zurücksetzen"
+                                  onClick={() => resetMutation.mutate(k.id)}
+                                  className="text-xs px-2 py-1 rounded border border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
+                                >
+                                  Reset
+                                </button>
+                              )}
+                              {editModus && !k.ist_system && loeschenId !== k.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => setBearbeitenKat(k)}
+                                  className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+                                >
+                                  Bearbeiten
+                                </button>
+                              )}
+                              {editModus && !k.ist_system && (
+                                loeschenId === k.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-red-500 dark:text-red-400">Löschen?</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => { deleteMutation.mutate(k.id); setLoeschenId(null) }}
+                                      className="text-xs px-2 py-1 rounded border border-red-400 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-600 dark:bg-red-950 dark:text-red-400"
+                                    >
+                                      Ja
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setLoeschenId(null)}
+                                      className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                    >
+                                      Nein
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLoeschenId(k.id)}
+                                    className="text-xs px-2 py-1 rounded border border-red-200 text-red-400 hover:border-red-400 hover:text-red-600 dark:border-red-800 dark:text-red-500 dark:hover:text-red-400"
+                                  >
+                                    Löschen
+                                  </button>
+                                )
+                              )}
+                              {!editModus && (
+                                <button
+                                  type="button"
+                                  title={k.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                                  onClick={() => toggleMutation.mutate(k.id)}
+                                  className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                    k.aktiv
+                                      ? 'border-slate-200 dark:border-slate-600 text-slate-400 hover:border-red-300 hover:text-red-500 dark:hover:text-red-400'
+                                      : 'border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950'
+                                  }`}
+                                >
+                                  {k.aktiv ? 'Aus' : 'Ein'}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Beschreibungs-Editor (aufgeklappt) */}
+                        {expandedId === k.id && (
+                          <BeschreibungEditor
+                            key={`desc-${k.id}`}
+                            kategorie={k}
+                            onSave={text => beschreibungMutation.mutate({ id: k.id, text })}
+                            onClose={() => setExpandedId(null)}
+                          />
+                        )}
+                      </>
                     ))}
                   </tbody>
                 </table>
@@ -529,6 +659,8 @@ export function KategorienPage() {
       {!isLoading && kategorien.length > 0 && (
         <div className="mt-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-4 text-xs text-slate-500 dark:text-slate-400 space-y-1">
           <p className="font-semibold text-slate-600 dark:text-slate-300 mb-2">Legende</p>
+          <p><span className="font-mono">💬</span> – Verwendungsbeispiele anzeigen / bearbeiten. Blaues Symbol = Beschreibung vorhanden.</p>
+          <p><span className="font-mono">📄 PDF</span> – Alle Kategorien mit Beschreibungen als druckfähiges PDF exportieren (ohne Kontonummern).</p>
           <p><span className="font-mono">SKR03/04</span> – DATEV-Kontonummern (Standardkontenrahmen). Geänderte Werte erscheinen orange.</p>
           <p><span className="font-mono">EÜR-Zeile</span> – Zeile in der Einnahmen-Überschuss-Rechnung (Anlage EÜR)</p>
           <p><span className="font-mono">EKS</span> – Tabellenfeld in der Anlage EKS (Jobcenter-Einkommenserklärung)</p>

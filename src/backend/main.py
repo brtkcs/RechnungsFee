@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 34
+SCHEMA_VERSION = 35
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -844,6 +844,93 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 34"))
             conn.commit()
             print("[Migration] Schema auf Version 34 gebracht (rechnungen.storno_grund)")
+
+        if version < 35:
+            # kategorien: beschreibung hinzufügen + Default-Beispiele für Standardkategorien
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(kategorien)")).fetchall()}
+            if "beschreibung" not in cols:
+                conn.execute(text("ALTER TABLE kategorien ADD COLUMN beschreibung TEXT"))
+            # Default-Beschreibungen für Standardkategorien (nur setzen wenn noch leer)
+            defaults = {
+                "Betriebseinnahmen (19%)":        "z. B. Honorare, Rechnungen an Kunden mit 19 % USt (Regelbesteuerung)",
+                "Betriebseinnahmen (7%)":         "z. B. Einnahmen mit 7 % USt (Lebensmittel, Bücher, Zeitschriften)",
+                "Betriebseinnahmen (0%)":         "z. B. Einnahmen als Kleinunternehmer (§ 19 UStG) oder steuerfreie Umsätze",
+                "Sonstige Einnahmen":             "z. B. Entschädigungen, Schadensersatz, einmalige Nebeneinnahmen",
+                "Zuwendungen von Dritten":        "z. B. Fördermittel, Zuschüsse, Transferleistungen",
+                "Umsatzsteuer-Erstattung FA":     "Erstattung vom Finanzamt nach USt-Voranmeldung (Überschuss der Vorsteuer)",
+                "Vorsteuererstattung FA":         "Erstattung vom Finanzamt nach Voranmeldung",
+                "Eigenverbrauch von Waren (19%)": "Entnahme von Waren für private Zwecke (19 % USt auf Einkaufspreis)",
+                "Eigenverbrauch von Waren (7%)":  "Entnahme von Waren für private Zwecke (7 % USt auf Einkaufspreis)",
+                "Wareneinkauf":                   "z. B. Waren für den Wiederverkauf (19 % USt)",
+                "Wareneinkauf (7%)":              "z. B. Waren für den Wiederverkauf mit 7 % USt",
+                "Wareneinkauf EU":                "z. B. Waren von EU-Lieferanten (innergemeinschaftlicher Erwerb)",
+                "Wareneinkauf Nicht-EU":          "z. B. Importe aus Drittländern (Einfuhrumsatzsteuer beachten)",
+                "Löhne & Gehälter":              "z. B. Bruttogehalt Vollzeitkräfte inkl. Sozialversicherungsabgaben",
+                "Löhne & Gehälter Teilzeit":     "z. B. Bruttogehalt Teilzeitkräfte inkl. Sozialversicherungsabgaben",
+                "Minijob / geringfügige Beschäftigung": "z. B. Aushilfen bis 556 €/Monat (pauschale Abgaben)",
+                "Personalkosten Familienangehörige": "z. B. Arbeitsvertrag mit Ehepartner oder Kindern (Fremdvergleich beachten)",
+                "AG-Anteil Sozialversicherung":  "z. B. Arbeitgeberanteil Renten-, Kranken-, Pflege-, Arbeitslosenversicherung",
+                "Fremdleistungen":               "z. B. Subunternehmer, externe Dienstleister, Honorare Dritter",
+                "Miete Büro (19%)":              "z. B. Büromiete mit 19 % USt (gewerbliche Vermietung)",
+                "Miete Büro (0%)":               "z. B. Büromiete ohne USt (private Vermietung)",
+                "Nebenkosten Büro":              "z. B. Strom, Wasser, Heizung, Reinigung für Büroräume",
+                "Arbeitszimmer (anteilig)":      "z. B. anteiliger Abzug bei Homeoffice: Fläche des Arbeitszimmers ÷ Gesamtfläche × Jahresmiete",
+                "Büromaterial":                  "z. B. Stifte, Papier, Druckerpatronen, Ordner, Heftklammern, Briefumschläge",
+                "Büroausstattung":               "z. B. Schreibtisch, Bürostühle, Regale, Lampen (über GWG-Grenze: Abschreibung nötig)",
+                "Porto & Versand":               "z. B. Briefmarken, Paketversand, Kurierdienste",
+                "Geringwertige Wirtschaftsgüter (GWG)": "z. B. Technik und Einrichtung bis 800 € netto – sofort abschreibbar im Kaufjahr",
+                "Telefon & Internet":            "z. B. Mobilfunkvertrag, DSL/Glasfaser, VOIP, Videokonferenz-Abo",
+                "Werbung & Marketing":           "z. B. Anzeigen, Flyer, Visitenkarten, Website, Social-Media-Werbung, Messen",
+                "KFZ-Kosten":                    "z. B. Kraftstoff (Benzin/Diesel/Strom), Motoröl für betriebliche Fahrten",
+                "KFZ-Steuer":                    "z. B. jährliche Kfz-Steuer für betrieblich genutzte Fahrzeuge",
+                "KFZ-Versicherung":              "z. B. Haftpflicht- und Kaskoversicherung für betriebliche Fahrzeuge",
+                "KFZ-Leasing":                   "z. B. monatliche Leasingraten für betrieblich genutzte Fahrzeuge",
+                "KFZ-Reparatur":                 "z. B. Werkstattrechnung, TÜV/HU, Reifenwechsel, Reifenkauf",
+                "Fahrtkosten Privat-PKW (0,10 €/km)": "z. B. betriebliche Fahrten mit privatem PKW – 0,10 €/km Pauschale (Fahrtenbuch nötig)",
+                "Reisekosten – Übernachtung":   "z. B. Hotel, Pension, Ferienwohnung auf Dienstreisen",
+                "Reisekosten – Nebenkosten":    "z. B. Taxi, Mietwagen, Gepäckgebühren, Reiseversicherung auf Dienstreisen",
+                "Reisekosten – ÖPNV":           "z. B. Bahn, Bus, U-Bahn, Straßenbahn für betriebliche Fahrten",
+                "Verpflegungsmehraufwand":      "z. B. Tagespauschalen auf Dienstreisen: 8 € (bis 8 Std.), 14 € (ab 8 Std.), 28 € (ganztägig)",
+                "Bewirtungskosten":             "z. B. Geschäftsessen mit Kunden oder Partnern – 70 % abziehbar; Anlass und Teilnehmer auf dem Beleg notieren",
+                "Steuerberatung":               "z. B. Steuerberater-Honorar, Jahresabschluss, Lohnbuchhaltung",
+                "Rechts- & Beratungskosten":   "z. B. Anwaltskosten, Unternehmensberatung, Notargebühren",
+                "Buchführungskosten":           "z. B. Buchhaltungssoftware-Abo, externe Buchführung",
+                "Betriebsversicherungen":       "z. B. Betriebshaftpflicht, Inhaltsversicherung, Cyberversicherung, Rechtsschutz",
+                "Berufsgenossenschaft":         "z. B. gesetzliche Unfallversicherung (Beiträge zur Berufsgenossenschaft)",
+                "Fortbildung & Fachliteratur":  "z. B. Kurse, Seminare, Webinare, Fachbücher, Fachjournale, Online-Lernplattformen",
+                "Software & Abonnements":       "z. B. Office-Lizenzen, Cloud-Dienste, SaaS-Tools, App-Abos",
+                "Bankgebühren":                 "z. B. Kontoführungsgebühren, Überweisungsgebühren, EC-Terminal-Kosten",
+                "Zinsen & Darlehenskosten":    "z. B. Bankzinsen auf Betriebskredit, Kreditgebühren, Finanzierungskosten",
+                "Kredittilgung":               "z. B. monatliche Tilgungsraten – kein Betriebsaufwand, nur Geldabfluss",
+                "Umsatzsteuer-Zahlung FA":     "z. B. monatliche oder quartalsweise USt-Vorauszahlung ans Finanzamt",
+                "Sonstige Betriebsausgaben":   "z. B. Kleinbeträge ohne eigene Kategorie – bei wachsenden Beträgen eigene Kategorie anlegen",
+                "Reparatur Anlagevermögen":    "z. B. Reparatur von Maschinen, Geräten, IT-Ausstattung, Gebäudeteilen",
+                "Miete Einrichtung":           "z. B. Miete oder Leasing von Büroausstattung, Maschinen oder Geräten",
+                "Betriebliche Abfallbeseitigung": "z. B. Entsorgungskosten, Containerdienst, Sonderabfall-Entsorgung",
+                "Mitgliedsbeiträge":           "z. B. IHK-Beitrag, Berufsverbände, Wirtschaftsvereinigungen, Fachverbände",
+                "Spenden (betrieblich)":       "z. B. Geld- oder Sachspenden an gemeinnützige Organisationen (Spendenquittung aufheben)",
+                "Gewerbesteuer":               "z. B. vierteljährliche Gewerbesteuer-Vorauszahlungen oder Jahresausgleich",
+                "Anlagevermögen (Kauf)":       "z. B. Computer, Maschinen, Fahrzeuge über 800 € netto – Abschreibung über Nutzungsdauer (AfA-Tabelle)",
+                "Abschreibungen (AfA)":        "z. B. Jahres-AfA für Wirtschaftsgüter des Anlagevermögens (vom Steuerberater berechnet)",
+                "Investition aus Zuwendung Dritter": "z. B. Anschaffungen die aus Fördergeldern oder Zuschüssen finanziert wurden",
+                "Privatentnahme":              "z. B. Bargeld-Entnahme für private Zwecke – kein Betriebsaufwand",
+                "Privateinlage":               "z. B. Einzahlung eigener privater Mittel ins Unternehmen",
+                "Einkommensteuer-Vorauszahlung": "z. B. vierteljährliche Vorauszahlungen ans Finanzamt (Jan/Apr/Jul/Okt)",
+                "Krankenversicherung (Pflicht)": "z. B. Beiträge zur gesetzlichen oder privaten Krankenversicherung",
+                "Pflegeversicherung (Pflicht)": "z. B. Beiträge zur gesetzlichen oder privaten Pflegeversicherung",
+                "Rentenversicherung (freiwillig)": "z. B. freiwillige Beiträge zur gesetzlichen Rentenversicherung",
+                "Riester-Beiträge":            "z. B. Beiträge zur Riester-Rente (staatlich gefördert, Zulageantrag nötig)",
+                "Sonstige Absetzungen":        "z. B. weitere abzugsfähige Versicherungen oder Vorsorgeaufwendungen",
+                "Umsatzsteuer (vereinnahmt)":  "Korrekturbuchung für vereinnahmte Umsatzsteuer, die ans Finanzamt abgeführt wird",
+                "USt auf Eigenverbrauch":      "Korrekturbuchung für Umsatzsteuer auf Eigenverbrauch von Waren",
+            }
+            for name, beschreibung in defaults.items():
+                conn.execute(text(
+                    "UPDATE kategorien SET beschreibung = :b WHERE name = :n AND (beschreibung IS NULL OR beschreibung = '')"
+                ), {"n": name, "b": beschreibung})
+            conn.execute(text("PRAGMA user_version = 35"))
+            conn.commit()
+            print(f"[Migration] Schema auf Version 35 gebracht (kategorien.beschreibung + {len(defaults)} Default-Beschreibungen)")
 
 
 def _migrate_kategorien() -> None:

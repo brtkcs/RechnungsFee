@@ -233,3 +233,4 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2.10** (Mai 2026): Artikelgruppen-Verwaltung (Warengruppe/Servicegruppe/Fremdleistungsgruppe), Skonto-USt-Konto-Fix (Issue #108), gemischte USt-Sätze bei Zahlung (Issue #109)
 - [x] **Storno-Begründung** (Mai 2026): Pflichtfeld mit Schnellauswahl; Begründung in `rechnungen.storno_grund` und Journaleintrag; Schema 34
 - [x] **Backend-Start nach Update** (Mai 2026): `_backendReady` Promise korrekt abgewartet, Timeout 10 s → 60 s (Defender-Scan / PyInstaller-Extraktion nach Windows-Update)
+- [x] **Kategorie-Beschreibungen** (Mai 2026): `kategorien.beschreibung` – ~65 vorbefüllte Verwendungsbeispiele (migriert), inline editierbar auf KategorienPage, Hinweis im Buchungsformular, PDF-Export als Nachschlageblatt; Schema 35

@@ -229,6 +229,7 @@ export type Kategorie = {
   ust_satz_standard: number
   ist_system: boolean
   aktiv: boolean
+  beschreibung: string | null
 }
 export type KategorieCreate = {
   name: string
@@ -239,6 +240,7 @@ export type KategorieCreate = {
   eks_kategorie?: string
   vorsteuer_prozent?: number
   ust_satz_standard?: number
+  beschreibung?: string | null
 }
 export const getKategorien = (nurAktive = false) =>
   request<Kategorie[]>(`/kategorien${nurAktive ? '?nur_aktive=true' : ''}`)
@@ -248,12 +250,18 @@ export const updateKategorieKonten = (id: number, data: { konto_skr03?: string; 
   request<Kategorie>(`/kategorien/${id}/konten`, { method: 'PATCH', body: JSON.stringify(data) })
 export const resetKategorieKonten = (id: number) =>
   request<Kategorie>(`/kategorien/${id}/konten/reset`, { method: 'POST' })
+export const updateKategorieBeschreibung = (id: number, beschreibung: string | null) =>
+  request<Kategorie>(`/kategorien/${id}/beschreibung`, { method: 'PATCH', body: JSON.stringify({ beschreibung }) })
 export const createKategorie = (data: KategorieCreate) =>
   request<Kategorie>(`/kategorien`, { method: 'POST', body: JSON.stringify(data) })
 export const updateKategorie = (id: number, data: KategorieCreate) =>
   request<Kategorie>(`/kategorien/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteKategorie = (id: number) =>
   request<void>(`/kategorien/${id}`, { method: 'DELETE' })
+export async function downloadKategorienPdf(): Promise<void> {
+  const base = await getBaseUrl()
+  await openUrl(`${base}/kategorien/export/pdf`)
+}
 
 // --- Journal ---
 export type JournalEintrag = {

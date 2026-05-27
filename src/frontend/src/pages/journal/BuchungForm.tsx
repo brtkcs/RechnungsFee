@@ -482,6 +482,11 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
                 <option value="">— keine —</option>
                 {renderKategorieOptgroups(art)}
               </select>
+              {gewaehlteKat?.beschreibung && (
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 pl-1">
+                  💬 {gewaehlteKat.beschreibung}
+                </p>
+              )}
             </div>
 
             {/* Privat-Hinweis */}

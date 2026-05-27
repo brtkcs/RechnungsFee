@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import Kategorie, Journaleintrag, Rechnungsposition, Rechnung, BankTransaktion, AutoFilterRegel
-from .schemas import KategorieResponse, KategorieKontoUpdate, KategorieCreate, KategorieUpdate
+from fastapi.responses import FileResponse
+from .schemas import KategorieResponse, KategorieKontoUpdate, KategorieCreate, KategorieUpdate, KategorieBeschreibungUpdate
 
 router = APIRouter(prefix="/api/kategorien", tags=["Stammdaten"])
 
@@ -49,6 +50,7 @@ def create_kategorie(data: KategorieCreate, db: Session = Depends(get_db)):
         eks_kategorie=data.eks_kategorie,
         vorsteuer_prozent=data.vorsteuer_prozent,
         ust_satz_standard=data.ust_satz_standard,
+        beschreibung=data.beschreibung or None,
         ist_system=False,
         user_modified_skr03=False,
         user_modified_skr04=False,
@@ -79,8 +81,21 @@ def update_kategorie(kategorie_id: int, data: KategorieCreate, db: Session = Dep
     kat.eks_kategorie = data.eks_kategorie or None
     kat.vorsteuer_prozent = data.vorsteuer_prozent
     kat.ust_satz_standard = data.ust_satz_standard
+    kat.beschreibung = data.beschreibung or None
     kat.user_modified_skr03 = False
     kat.user_modified_skr04 = False
+    db.commit()
+    db.refresh(kat)
+    return kat
+
+
+@router.patch("/{kategorie_id}/beschreibung", response_model=KategorieResponse)
+def update_beschreibung(kategorie_id: int, data: KategorieBeschreibungUpdate, db: Session = Depends(get_db)):
+    """Beschreibung / Beispiele zu einer Kategorie speichern (auch für Systemkategorien)."""
+    kat = db.query(Kategorie).filter(Kategorie.id == kategorie_id).first()
+    if not kat:
+        raise HTTPException(status_code=404, detail="Kategorie nicht gefunden.")
+    kat.beschreibung = data.beschreibung.strip() if data.beschreibung else None
     db.commit()
     db.refresh(kat)
     return kat
@@ -125,6 +140,22 @@ def reset_konten(kategorie_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(kat)
     return kat
+
+
+@router.get("/export/pdf")
+def export_kategorien_pdf(db: Session = Depends(get_db)):
+    """PDF-Export aller aktiven Kategorien mit Beschreibung (ohne Kontonummern)."""
+    import tempfile
+    from utils.pdf_kategorien import generate_kategorien_pdf
+    kategorien = db.query(Kategorie).filter(Kategorie.aktiv == True).order_by(Kategorie.kontenart, Kategorie.name).all()
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        generate_kategorien_pdf(kategorien, tmp.name)
+        return FileResponse(
+            tmp.name,
+            media_type="application/pdf",
+            filename="kategorien.pdf",
+            headers={"Content-Disposition": 'inline; filename="kategorien.pdf"'},
+        )
 
 
 @router.delete("/{kategorie_id}", status_code=204)

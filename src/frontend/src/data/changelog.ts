@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.2.11',
     datum: 'Mai 2026',
     eintraege: [
+      { typ: 'neu', text: 'Buchungskategorien: Verwendungsbeispiele und Beschreibungen – vorbefüllt, frei editierbar, als Hinweis im Buchungsformular sichtbar; Export als PDF-Nachschlageblatt' },
       { typ: 'neu', text: 'Storno-Begründung Pflichtfeld: Schnellauswahl (Doppelt ausgestellt / Falsche Adresse / Kundenwiderspruch / Sonstiges) – Begründung wird im Journal dokumentiert' },
       { typ: 'fix', text: 'Backend-Start nach Update: Wartezeit auf 60 Sekunden verlängert – verhindert „Backend nicht erreichbar" nach Windows-Update (Defender-Scan, PyInstaller-Extraktion)' },
     ],

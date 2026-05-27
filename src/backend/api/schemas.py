@@ -190,6 +190,7 @@ class KategorieResponse(BaseModel):
     ust_satz_standard: int
     ist_system: bool
     aktiv: bool
+    beschreibung: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -197,6 +198,10 @@ class KategorieResponse(BaseModel):
 class KategorieKontoUpdate(BaseModel):
     konto_skr03: Optional[str] = None
     konto_skr04: Optional[str] = None
+
+
+class KategorieBeschreibungUpdate(BaseModel):
+    beschreibung: Optional[str] = None
 
 
 class KategorieCreate(BaseModel):
@@ -208,6 +213,7 @@ class KategorieCreate(BaseModel):
     eks_kategorie: Optional[str] = None
     vorsteuer_prozent: Decimal = Decimal("100")
     ust_satz_standard: int = 0
+    beschreibung: Optional[str] = None
 
 KategorieUpdate = KategorieCreate
 
