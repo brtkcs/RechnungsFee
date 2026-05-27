@@ -1493,6 +1493,87 @@ class Lieferant:
 
 ---
 
+### **8.9 Artikelstamm**
+
+**Zweck:**
+- Artikel und Dienstleistungen einmalig anlegen, in Rechnungen wiederverwenden
+- Preise (VK brutto/netto, EK brutto/netto), Steuersatz, Einheit zentral pflegen
+- Lieferant-Verknüpfung für Einkauf, Hersteller und Artikelcode für Handelsware
+- Gruppierung nach Warengruppe / Servicegruppe / Fremdleistungsgruppe für Auswertungen
+
+---
+
+#### **8.9.1 Artikel-Typen**
+
+| Typ | Bezeichnung | Felder |
+|-----|-------------|--------|
+| `artikel` | Artikel / Handelsware | VK + EK, Hersteller, Artikelcode, Lieferant, **Warengruppe** |
+| `dienstleistung` | Dienstleistung | VK, Lieferant (optional), **Servicegruppe** |
+| `fremdleistung` | Fremdleistung (Subunternehmer) | VK + EK, Lieferant (Pflicht), **Fremdleistungsgruppe** |
+
+---
+
+#### **8.9.2 Artikelgruppen**
+
+Artikel werden in **Gruppen** eingeteilt. Gruppen sind je Typ getrennt:
+
+- `artikel` → **Warengruppen** (z. B. „IT-Hardware", „Elektronik", „Büromaterial")
+- `dienstleistung` → **Servicegruppen** (z. B. „IT-Beratung", „Marketing", „Schulung")
+- `fremdleistung` → **Fremdleistungsgruppen** (z. B. „Subunternehmer", „Fremdmontage")
+
+**Datenbank:**
+```sql
+CREATE TABLE artikel_gruppen (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    typ       TEXT NOT NULL,          -- artikel | dienstleistung | fremdleistung
+    name      TEXT NOT NULL,
+    aktiv     BOOLEAN NOT NULL DEFAULT 1,
+    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(typ, name)
+);
+
+-- artikel.gruppe_id verweist auf artikel_gruppen.id
+ALTER TABLE artikel ADD COLUMN gruppe_id INTEGER REFERENCES artikel_gruppen(id);
+```
+
+**Verwaltung im UI:**
+
+- Button „Gruppen" auf der Artikelseite öffnet das Gruppen-Modal
+- Tabs: Warengruppen | Servicegruppen | Fremdleistungsgruppen
+- Pro Gruppe: Anzahl verknüpfter Artikel sichtbar
+- Umbenennen: Wirkt sofort auf alle verknüpften Artikel (FK-Update)
+- Deaktivieren: Gruppe verschwindet aus Dropdown, Artikel behalten die Verknüpfung
+- Löschen: Nur möglich wenn kein Artikel die Gruppe verwendet
+
+**Formular:**
+
+```
+Warengruppe:  [ IT-Hardware ▼ ]
+              – keine –
+              IT-Hardware
+              Elektronik
+              Büromaterial
+```
+
+Das Dropdown filtert automatisch nach dem gewählten Typ (Artikel / Dienstleistung / Fremdleistung).
+Bei Typ-Wechsel wird die Gruppen-Auswahl zurückgesetzt.
+
+**Auswertungen (geplant):**
+
+Da Gruppen als FK gespeichert sind, können spätere Reports einfach auf `gruppe_id` gruppieren:
+
+```sql
+-- Umsatz je Warengruppe
+SELECT ag.name, SUM(rp.brutto * rp.menge) AS umsatz
+FROM rechnungspositionen rp
+JOIN artikel a ON rp.artikel_id = a.id
+JOIN artikel_gruppen ag ON a.gruppe_id = ag.id
+WHERE ag.typ = 'artikel'
+GROUP BY ag.id, ag.name;
+```
+
+---
+
 ### **8.11 DSGVO-Compliance für Stammdaten** ⚠️ WICHTIG
 
 **Gilt für:** Kundenstamm UND Lieferantenstamm

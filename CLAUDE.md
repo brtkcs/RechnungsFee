@@ -32,7 +32,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 30` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 33` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -97,6 +97,8 @@ def _run_migrations():
 | 29 | konten: stray `bank`-Spalte bereinigt (Migration 22 ließ sie in manchen DBs zurück, Issue #102) |
 | 30 | rechnungen: `leistungsdatum` → `leistung_von` (RENAME COLUMN) + `leistung_bis DATE` neu (Issue #107 Leistungszeitraum) |
 | 31 | Skonto: unternehmen (standard_skonto_prozent/tage), kunden (skonto_prozent/tage), rechnungen (skonto_prozent/tage) (Issue #73) |
+| 32 | artikel: `kategorie` TEXT → `gruppe` TEXT (RENAME COLUMN) – klarere Bezeichnung als Warengruppe/Servicegruppe |
+| 33 | artikel_gruppen-Tabelle (id, typ, name, aktiv); artikel.gruppe TEXT → artikel.gruppe_id FK; bestehende Text-Werte automatisch migriert |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
