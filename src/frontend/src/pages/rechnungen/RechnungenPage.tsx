@@ -552,11 +552,13 @@ function RechnungDetail({
     onError: (e: Error) => alert(e.message),
   })
 
-  /** Lädt das PDF als Blob (wartet auf echte HTTP-Antwort → setzt ausgegeben im Backend),
-   *  gibt eine Blob-URL zurück und invalidiert danach den Rechnungs-Cache. */
+  /** Lädt das PDF als Blob (wartet auf echte HTTP-Antwort → setzt ausgegeben im Backend).
+   *  Wenn rechnung.ausgegeben bereits True ist, wird kopie=true übergeben –
+   *  so entscheidet das Frontend eindeutig ob Original oder Kopie. */
   async function _fetchPdfBlob(): Promise<string> {
     const base = await getApiBase()
-    const resp = await fetch(`${base}/rechnungen/${rechnung.id}/pdf`)
+    const params = rechnung.ausgegeben ? '?kopie=true' : ''
+    const resp = await fetch(`${base}/rechnungen/${rechnung.id}/pdf${params}`)
     const blob = await resp.blob()
     return URL.createObjectURL(blob)
   }

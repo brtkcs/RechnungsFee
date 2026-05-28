@@ -570,10 +570,11 @@ def markiere_ausgegeben(rechnung_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{rechnung_id}/pdf")
-def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False, db: Session = Depends(get_db)):
+def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False, kopie: bool = False, db: Session = Depends(get_db)):
     """PDF der Rechnung generieren und zurückgeben.
     Beim ersten Abruf wird die Rechnung automatisch als 'ausgegeben' markiert.
-    Folge-Abrufe erhalten ein KOPIE-Banner."""
+    Folge-Abrufe erhalten ein KOPIE-Banner.
+    kopie=true: Frontend erzwingt Kopie-Markierung unabhängig vom DB-Zustand."""
     rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
     if not rechnung:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
@@ -617,8 +618,9 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         rechnung._gutschrift_original_nr = original.rechnungsnummer if original else None
 
     ist_entwurf = rechnung.ist_entwurf
-    # Entwürfe bekommen kein ausgegeben-Flag und keinen Kopie-Hinweis
-    ist_kopie = (not ist_entwurf) and rechnung.ausgegeben
+    # Entwürfe bekommen kein ausgegeben-Flag und keinen Kopie-Hinweis.
+    # kopie=True: Frontend weiß bereits, dass ausgegeben=True → Kopie erzwingen
+    ist_kopie = (not ist_entwurf) and (rechnung.ausgegeben or kopie)
 
     # Netto- oder Bruttorechnung: B2B-Kunden (zugferd_aktiv) → Nettorechnung
     ist_netto = (
