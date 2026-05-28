@@ -379,14 +379,24 @@ class RechnungPDFBase(FPDF):
 
     def _render_titel(self):
         r = self._r
-        titel = (
-            f"Rechnung {r.rechnungsnummer or ''}".strip()
-            if r.typ == "ausgang"
-            else f"Eingangsrechnung {r.rechnungsnummer or ''}".strip()
-        )
+        dokument_typ = getattr(r, "dokument_typ", "Rechnung") or "Rechnung"
+        if dokument_typ == "Gutschrift":
+            titel = f"Gutschrift {r.rechnungsnummer or ''}".strip()
+        elif r.typ == "ausgang":
+            titel = f"Rechnung {r.rechnungsnummer or ''}".strip()
+        else:
+            titel = f"Eingangsrechnung {r.rechnungsnummer or ''}".strip()
         self.set_font("DejaVu", "B", 16)
         self.set_text_color(*TEXT_DUNKEL)
         self.cell(0, 9, titel, new_x="LMARGIN", new_y="NEXT")
+
+        # Bezugszeile bei Gutschriften
+        if dokument_typ == "Gutschrift":
+            gutschrift_nr = getattr(r, "_gutschrift_original_nr", None)
+            if gutschrift_nr:
+                self.set_font("DejaVu", "", 9)
+                self.set_text_color(*TEXT_GRAU)
+                self.cell(0, 5, f"Gutschrift zu Rechnung {gutschrift_nr}", new_x="LMARGIN", new_y="NEXT")
 
         if self._ist_entwurf:
             self.set_font("DejaVu", "", 8)

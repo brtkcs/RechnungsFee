@@ -607,6 +607,11 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
             "qr_zahlung_aktiv":           unternehmen.qr_zahlung_aktiv or False,
         }
 
+    # Gutschrift: Originalrechnungsnummer am Objekt hinterlegen (für PDF-Titel)
+    if rechnung.gutschrift_zu_rechnung_id:
+        original = db.query(Rechnung).filter(Rechnung.id == rechnung.gutschrift_zu_rechnung_id).first()
+        rechnung._gutschrift_original_nr = original.rechnungsnummer if original else None
+
     ist_entwurf = rechnung.ist_entwurf
     # Entwürfe bekommen kein ausgegeben-Flag und keinen Kopie-Hinweis
     ist_kopie = (not ist_entwurf) and rechnung.ausgegeben
@@ -646,6 +651,8 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
     if kunde_zugferd:
         firma = (unt_dict.get("firmenname") or "").replace("/", "-")
         dateiname = f"{firma}_Invoice {rechnung.rechnungsnummer or rechnung_id}.pdf"
+    elif getattr(rechnung, "dokument_typ", "Rechnung") == "Gutschrift":
+        dateiname = f"Gutschrift_{rechnung.rechnungsnummer or rechnung_id}.pdf"
     else:
         dateiname = f"Rechnung_{rechnung.rechnungsnummer or rechnung_id}.pdf"
     disposition = "attachment" if download else "inline"
@@ -1029,6 +1036,100 @@ def storno_rechnung(rechnung_id: int, data: StornoRequest, db: Session = Depends
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)
+
+
+@router.post("/{rechnung_id}/gutschrift", response_model=RechnungResponse, status_code=201)
+def create_gutschrift(rechnung_id: int, db: Session = Depends(get_db)):
+    """Erstellt eine Gutschrift aus einer bestehenden Ausgangsrechnung.
+    Alle Positionen werden übernommen (Mengen negiert), eigene RE-Nummer, Entwurf."""
+    original = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
+    if not original:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
+    if original.typ != "ausgang":
+        raise HTTPException(status_code=409, detail="Gutschriften können nur für Ausgangsrechnungen erstellt werden.")
+    if original.dokument_typ == "Gutschrift":
+        raise HTTPException(status_code=409, detail="Aus einer Gutschrift kann keine weitere Gutschrift erstellt werden.")
+    if original.storniert:
+        raise HTTPException(status_code=409, detail="Stornierte Rechnungen können nicht als Vorlage für eine Gutschrift dienen.")
+
+    heute = date.today()
+
+    # Rechnungsnummer aus Nummernkreis
+    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "rechnung_ausgang").first()
+    if nk:
+        if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != heute.year:
+            nk.naechste_nr = 1
+        nk.letztes_jahr = heute.year
+        nr = nk.naechste_nr
+        nk.naechste_nr += 1
+        rechnungsnummer = f"RE-{_belegnr_aus_format(nk.format, heute, nr)}"
+    else:
+        count = db.query(Rechnung).filter(Rechnung.typ == "ausgang").count()
+        rechnungsnummer = f"RE-{str(heute.year)[-2:]}{count + 1:04d}"
+
+    orig_nr = original.rechnungsnummer or f"#{original.id}"
+
+    gutschrift = Rechnung(
+        typ="ausgang",
+        dokument_typ="Gutschrift",
+        gutschrift_zu_rechnung_id=original.id,
+        rechnungsnummer=rechnungsnummer,
+        datum=heute,
+        faellig_am=None,
+        kunde_id=original.kunde_id,
+        partner_freitext=original.partner_freitext,
+        kategorie_id=original.kategorie_id,
+        notizen=f"Gutschrift zu {orig_nr}",
+        skonto_prozent=None,
+        skonto_tage=None,
+        ist_entwurf=True,
+        bezahlt=False,
+        bezahlt_betrag=Decimal("0.00"),
+        zahlungsstatus="offen",
+        netto_gesamt=Decimal("0.00"),
+        ust_gesamt=Decimal("0.00"),
+        brutto_gesamt=Decimal("0.00"),
+    )
+    db.add(gutschrift)
+    db.flush()
+
+    netto_sum = Decimal("0.00")
+    ust_sum = Decimal("0.00")
+
+    for nr_pos, pos in enumerate(
+        sorted(original.positionen, key=lambda p: p.position_nr), start=1
+    ):
+        menge_neg = -(pos.menge)
+        netto_pos = (pos.netto * menge_neg / pos.menge).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        ust_betrag = (netto_pos * pos.ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP) if pos.ust_satz else Decimal("0.00")
+        brutto_pos = netto_pos + ust_betrag
+
+        neue_pos = Rechnungsposition(
+            rechnung_id=gutschrift.id,
+            artikel_id=pos.artikel_id,
+            position_nr=nr_pos,
+            beschreibung=pos.beschreibung,
+            menge=menge_neg,
+            einheit=pos.einheit,
+            netto=netto_pos,
+            ust_satz=pos.ust_satz,
+            ust_betrag=ust_betrag,
+            brutto=brutto_pos,
+            kategorie_id=pos.kategorie_id,
+        )
+        db.add(neue_pos)
+        netto_sum += netto_pos
+        ust_sum += ust_betrag
+
+    gutschrift.netto_gesamt = netto_sum.quantize(Decimal("0.01"), ROUND_HALF_UP)
+    gutschrift.ust_gesamt = ust_sum.quantize(Decimal("0.01"), ROUND_HALF_UP)
+    gutschrift.brutto_gesamt = (netto_sum + ust_sum).quantize(Decimal("0.01"), ROUND_HALF_UP)
+
+    db.commit()
+    db.refresh(gutschrift)
+    resp = RechnungResponse.from_orm_extended(gutschrift)
+    resp.gutschrift_zu_rechnung_nr = orig_nr
+    return resp
 
 
 @router.get("/{rechnung_id}/zahlungen", response_model=list[ZahlungKompakt])

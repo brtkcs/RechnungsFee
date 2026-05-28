@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRechnungen, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
-  stornoRechnung, finalisiereRechnung,
+  stornoRechnung, finalisiereRechnung, createGutschrift,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl,
   sucheArtikel, getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
@@ -538,6 +538,15 @@ function RechnungDetail({
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rechnungen'] }),
   })
 
+  const gutschriftMutation = useMutation({
+    mutationFn: () => createGutschrift(rechnung.id),
+    onSuccess: (gs) => {
+      qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      setSelected(gs.id)
+    },
+    onError: (e: Error) => alert(e.message),
+  })
+
   async function _openPdf() {
     const base = await getApiBase()
     await openUrl(`${base}/rechnungen/${rechnung.id}/pdf`)
@@ -653,6 +662,15 @@ function RechnungDetail({
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50"
             >
               {pdfLaeuft ? '⏳ PDF…' : `✉️ Mail senden${!partnerEmail ? ' …' : ''}`}
+            </button>
+          )}
+          {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && !zeigStornoEingabe && (
+            <button
+              onClick={() => gutschriftMutation.mutate()}
+              disabled={gutschriftMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950 text-amber-700 dark:text-amber-400 disabled:opacity-50"
+            >
+              {gutschriftMutation.isPending ? '…' : '↩ Gutschrift'}
             </button>
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && !zeigStornoEingabe && (
@@ -828,6 +846,12 @@ function RechnungDetail({
             <div className="flex justify-between gap-2">
               <span className="text-slate-500 dark:text-slate-400 shrink-0">Storno-Grund</span>
               <span className="text-slate-600 dark:text-slate-300 text-right text-xs">{rechnung.storno_grund}</span>
+            </div>
+          )}
+          {rechnung.gutschrift_zu_rechnung_nr && (
+            <div className="flex justify-between gap-2">
+              <span className="text-slate-500 dark:text-slate-400 shrink-0">Gutschrift zu</span>
+              <span className="text-amber-700 dark:text-amber-400 text-xs font-medium">{rechnung.gutschrift_zu_rechnung_nr}</span>
             </div>
           )}
         </div>
@@ -2731,6 +2755,7 @@ export function RechnungenPage() {
                       <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{formatDatum(r.datum)}</td>
                       <td className="px-5 py-3 font-mono text-xs text-slate-400 dark:text-slate-500">
                         {r.rechnungsnummer ?? '—'}
+                        {r.dokument_typ === 'Gutschrift' && <span className="ml-1.5 text-[10px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded px-1">Gutschrift</span>}
                         {r.ist_entwurf && <span className="ml-1.5 text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded px-1">Entwurf</span>}
                         {r.storniert && <span className="ml-1.5 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-1">Storniert</span>}
                       </td>

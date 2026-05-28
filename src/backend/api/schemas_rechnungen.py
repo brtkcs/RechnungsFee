@@ -197,6 +197,9 @@ class RechnungResponse(BaseModel):
     immutable: bool
     storniert: bool
     storno_grund: Optional[str] = None
+    dokument_typ: str = "Rechnung"
+    gutschrift_zu_rechnung_id: Optional[int] = None
+    gutschrift_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
     aktualisiert_am: datetime
 
@@ -229,6 +232,8 @@ class RechnungResponse(BaseModel):
         ]
         if obj.beleg_id and hasattr(obj, "beleg") and obj.beleg:
             data.beleg = BelegResponse.model_validate(obj.beleg)
+        if obj.gutschrift_zu_rechnung_id and hasattr(obj, "_gutschrift_original_nr"):
+            data.gutschrift_zu_rechnung_nr = obj._gutschrift_original_nr
         return data
 
 

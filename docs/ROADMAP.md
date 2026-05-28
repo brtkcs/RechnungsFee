@@ -234,3 +234,10 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **Storno-Begründung** (Mai 2026): Pflichtfeld mit Schnellauswahl; Begründung in `rechnungen.storno_grund` und Journaleintrag; Schema 34
 - [x] **Backend-Start nach Update** (Mai 2026): `_backendReady` Promise korrekt abgewartet, Timeout 10 s → 60 s (Defender-Scan / PyInstaller-Extraktion nach Windows-Update)
 - [x] **Kategorie-Beschreibungen** (Mai 2026): `kategorien.beschreibung` – ~65 vorbefüllte Verwendungsbeispiele (migriert), inline editierbar auf KategorienPage, Hinweis im Buchungsformular, PDF-Export als Nachschlageblatt; Schema 35
+
+## 🚧 v0.2.12 – Gutschriften (Issue #103)
+
+- [ ] Schema 37: `rechnungen.dokument_typ` (`Rechnung` / `Gutschrift`) + `gutschrift_zu_rechnung_id` FK
+- [ ] Backend: `POST /rechnungen/{id}/gutschrift` – kopiert Positionen (Mengen negiert), eigene RE-Nummer, Entwurf
+- [ ] PDF: Titel „Gutschrift", Bezugszeile „Gutschrift zu Rechnung RE-XXXX"
+- [ ] Frontend: Button „Gutschrift erstellen" an Ausgangsrechnungen, „Gutschrift"-Badge in der Liste, Bezug im Detailbereich

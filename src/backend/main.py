@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 36
+SCHEMA_VERSION = 37
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -945,6 +945,21 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 36"))
             conn.commit()
             print("[Migration] Schema auf Version 36 gebracht (fehlende Kategorie-Beschreibungen ergänzt)")
+
+        if version < 37:
+            # Gutschrift: dokument_typ + gutschrift_zu_rechnung_id
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "dokument_typ" not in cols:
+                conn.execute(text(
+                    "ALTER TABLE rechnungen ADD COLUMN dokument_typ VARCHAR(20) NOT NULL DEFAULT 'Rechnung'"
+                ))
+            if "gutschrift_zu_rechnung_id" not in cols:
+                conn.execute(text(
+                    "ALTER TABLE rechnungen ADD COLUMN gutschrift_zu_rechnung_id INTEGER REFERENCES rechnungen(id)"
+                ))
+            conn.execute(text("PRAGMA user_version = 37"))
+            conn.commit()
+            print("[Migration] Schema auf Version 37 gebracht (rechnungen: dokument_typ + gutschrift_zu_rechnung_id)")
 
 
 def _migrate_kategorien() -> None:

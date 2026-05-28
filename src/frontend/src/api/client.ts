@@ -781,6 +781,9 @@ export type Rechnung = {
   immutable: boolean
   storniert: boolean
   storno_grund: string | null
+  dokument_typ: string
+  gutschrift_zu_rechnung_id: number | null
+  gutschrift_zu_rechnung_nr: string | null
   erstellt_am: string
   aktualisiert_am: string
 }
@@ -866,6 +869,9 @@ export const getRechnungZahlungen = (id: number) =>
 
 export const stornoRechnung = (id: number, grund: string) =>
   request<Rechnung>(`/rechnungen/${id}/storno`, { method: 'POST', body: JSON.stringify({ grund }) })
+
+export const createGutschrift = (id: number) =>
+  request<Rechnung>(`/rechnungen/${id}/gutschrift`, { method: 'POST' })
 
 export const finalisiereRechnung = (id: number) =>
   request<Rechnung>(`/rechnungen/${id}/finalisieren`, { method: 'POST' })

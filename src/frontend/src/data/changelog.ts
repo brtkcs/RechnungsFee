@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.12',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Gutschriften: Aus jeder abgeschlossenen Ausgangsrechnung lässt sich per Klick eine Gutschrift erstellen – mit Bezugsnummer auf die Originalrechnung, eigener RE-Nummer und negierten Positionen' },
+      { typ: 'verbesserung', text: 'Gutschrift-Badge in der Rechnungsliste, Referenz auf die Originalrechnung im Detailbereich, PDF-Ausgabe mit korrektem Titel und Bezugszeile' },
+    ],
+  },
+  {
     version: 'v0.2.11',
     datum: 'Mai 2026',
     eintraege: [
