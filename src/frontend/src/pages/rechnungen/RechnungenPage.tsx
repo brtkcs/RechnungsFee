@@ -486,8 +486,10 @@ function RechnungDetail({
   const [pdfLaeuft, setPdfLaeuft] = useState(false)
   const [pdfHinweis, setPdfHinweis] = useState(false)
   const [belegFehler, setBelegFehler] = useState<string | null>(null)
-  // Lokaler Flag: nach erstem PDF-Öffnen sofort auf true setzen,
-  // ohne auf den async Query-Refetch warten zu müssen.
+  // Ref statt State: _fetchPdfBlob liest immer den aktuellen Wert,
+  // unabhängig vom Closure-Zeitpunkt des letzten Renders.
+  const ausgegebenRef = useRef(rechnung.ausgegeben)
+  // State nur für Button-Text / InfoTooltip (braucht Re-Render)
   const [lokalAusgegeben, setLokalAusgegeben] = useState(rechnung.ausgegeben)
   const qc = useQueryClient()
 
@@ -555,15 +557,17 @@ function RechnungDetail({
     onError: (e: Error) => alert(e.message),
   })
 
-  /** Lädt das PDF als Blob. Nutzt lokalAusgegeben (sofort gesetzt, kein Query-Refetch nötig)
-   *  um sicher kopie=true zu senden wenn das Dokument bereits ausgegeben wurde. */
+  /** Lädt das PDF als Blob. Liest ausgegebenRef.current (immer aktuell, kein Closure-Problem)
+   *  um kopie=true zu senden wenn das Dokument bereits ausgegeben wurde. */
   async function _fetchPdfBlob(): Promise<string> {
     const base = await getApiBase()
-    const params = lokalAusgegeben ? '?kopie=true' : ''
+    const params = ausgegebenRef.current ? '?kopie=true' : ''
     const resp = await fetch(`${base}/rechnungen/${rechnung.id}/pdf${params}`)
     const blob = await resp.blob()
-    // Sofort lokal merken – unabhängig vom async Query-Refetch
-    if (!lokalAusgegeben) setLokalAusgegeben(true)
+    if (!ausgegebenRef.current) {
+      ausgegebenRef.current = true      // sofort für nächsten Aufruf
+      setLokalAusgegeben(true)          // Re-Render für Button-Text
+    }
     return URL.createObjectURL(blob)
   }
 
