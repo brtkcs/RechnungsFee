@@ -248,16 +248,6 @@ class RechnungPDFBase(FPDF):
         self.set_y(ADRESS_Y)
         self.set_text_color(0, 0, 0)
 
-        # Diagonales Wasserzeichen „KOPIE" auf jeder Seite
-        if self._ist_kopie:
-            self.set_font("DejaVu", "B", 72)
-            self.set_text_color(220, 220, 220)
-            with self.rotation(angle=45, x=PAGE_W / 2, y=148.5):
-                txt = "KOPIE"
-                txt_w = self.get_string_width(txt)
-                self.text(x=PAGE_W / 2 - txt_w / 2, y=148.5 + 10, txt=txt)
-            self.set_text_color(0, 0, 0)
-
     def footer(self):
         unt = self._unt
         self.set_y(-FOOTER_H)
@@ -413,6 +403,10 @@ class RechnungPDFBase(FPDF):
             self.set_font("DejaVu", "", 8)
             self.set_text_color(*TEXT_GRAU)
             self.cell(0, 5, "– Entwurf –", new_x="LMARGIN", new_y="NEXT")
+        elif self._ist_kopie:
+            self.set_font("DejaVu", "", 8)
+            self.set_text_color(*TEXT_GRAU)
+            self.cell(0, 5, "– Kopie –", new_x="LMARGIN", new_y="NEXT")
 
     def _render_nach_titel(self):
         """Hook zwischen Titel und Positionen. Standard: ln(4)."""
