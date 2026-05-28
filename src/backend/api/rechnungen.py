@@ -648,9 +648,13 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         else:
             pdf_bytes = generate_rechnung_pdf(rechnung, unt_dict, ist_kopie=ist_kopie, ist_entwurf=ist_entwurf, ist_netto=ist_netto)
 
-    # Gutschriften gelten erst mit der Rückerstattungsbuchung als ausgegeben
+    # ausgegeben beim ersten echten PDF-Öffnen setzen:
+    # – normale Rechnung: sofort beim ersten Öffnen
+    # – Gutschrift: erst wenn Rückerstattung gebucht (zahlungsstatus == 'bezahlt')
     ist_gutschrift_pdf = getattr(rechnung, "dokument_typ", "Rechnung") == "Gutschrift"
-    if not ist_entwurf and not rechnung.ausgegeben and not ist_gutschrift_pdf:
+    gutschrift_erstattet = ist_gutschrift_pdf and str(getattr(rechnung, "zahlungsstatus", "offen")) == "bezahlt"
+    darf_ausgegeben = not ist_gutschrift_pdf or gutschrift_erstattet
+    if not ist_entwurf and not rechnung.ausgegeben and darf_ausgegeben:
         rechnung.ausgegeben = True
         db.commit()
 
@@ -971,8 +975,7 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
 
         db.flush()
         _aktualisiere_zahlungsstatus(rechnung)
-        # Gutschrift gilt mit der Rückerstattungsbuchung als ausgegeben → nächstes PDF = Kopie
-        rechnung.ausgegeben = True
+        # ausgegeben wird NICHT hier gesetzt – das passiert beim ersten PDF-Öffnen nach Erstattung
         db.commit()
         db.refresh(rechnung)
         db.refresh(erster_eintrag_gs)
