@@ -2622,7 +2622,7 @@ export function RechnungenPage() {
         />
       )}
       {/* Linke Spalte */}
-      <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 transition-all`}>
+      <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 min-h-0 transition-all`}>
         <div className="p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Rechnungen</h2>
@@ -2766,7 +2766,7 @@ export function RechnungenPage() {
         )}
 
         {/* Tabelle */}
-        <div className="flex-1 overflow-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {isLoading ? (
               <p className="p-5 text-slate-400 dark:text-slate-500 text-sm">Lade Rechnungen…</p>
@@ -2877,7 +2877,7 @@ export function RechnungenPage() {
       )}
 
       {!formModus && (
-        <div className="w-96 shrink-0">
+        <div className="w-96 shrink-0 h-full overflow-hidden">
           {selectedRechnung ? (
             <RechnungDetail
               rechnung={selectedRechnung}
