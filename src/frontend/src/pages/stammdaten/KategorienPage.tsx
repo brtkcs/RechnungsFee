@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getKategorien, toggleKategorieAktiv,
   updateKategorieKonten, resetKategorieKonten, createKategorie, updateKategorie, deleteKategorie,
-  updateKategorieBeschreibung, downloadKategorienPdf,
+  updateKategorieBeschreibung, downloadKategorienPdf, getUnternehmen,
   type Kategorie, type KategorieCreate,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
@@ -103,7 +103,7 @@ const LEER: KategorieCreate = {
   beschreibung: '',
 }
 
-function NeuDialog({ onClose, bearbeiten }: { onClose: () => void; bearbeiten?: Kategorie }) {
+function NeuDialog({ onClose, bearbeiten, hatEks }: { onClose: () => void; bearbeiten?: Kategorie; hatEks: boolean }) {
   const [form, setForm] = useState<KategorieCreate>(bearbeiten ? {
     name: bearbeiten.name,
     kontenart: bearbeiten.kontenart,
@@ -207,15 +207,17 @@ function NeuDialog({ onClose, bearbeiten }: { onClose: () => void; bearbeiten?: 
             />
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">EKS-Feld</label>
-            <input
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
-              value={form.eks_kategorie ?? ''}
-              onChange={e => set('eks_kategorie', e.target.value)}
-              placeholder="z.B. B13 (optional)"
-            />
-          </div>
+          {hatEks && (
+            <div>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">EKS-Feld</label>
+              <input
+                className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+                value={form.eks_kategorie ?? ''}
+                onChange={e => set('eks_kategorie', e.target.value)}
+                placeholder="z.B. B13 (optional)"
+              />
+            </div>
+          )}
 
           <div>
             <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Vorsteuer %</label>
@@ -326,6 +328,13 @@ export function KategorienPage() {
     queryFn: () => getKategorien(false),
   })
 
+  const { data: unternehmen } = useQuery({
+    queryKey: ['unternehmen'],
+    queryFn: getUnternehmen,
+    staleTime: 1000 * 60 * 10,
+  })
+  const hatEks = unternehmen?.bezieht_transferleistungen ?? false
+
   const toggleMutation = useMutation({
     mutationFn: (id: number) => toggleKategorieAktiv(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
@@ -370,8 +379,8 @@ export function KategorienPage() {
 
   return (
     <div className="p-6 max-w-4xl">
-      {neuDialog && <NeuDialog onClose={() => setNeuDialog(false)} />}
-      {bearbeitenKat && <NeuDialog onClose={() => setBearbeitenKat(null)} bearbeiten={bearbeitenKat} />}
+      {neuDialog && <NeuDialog onClose={() => setNeuDialog(false)} hatEks={hatEks} />}
+      {bearbeitenKat && <NeuDialog onClose={() => setBearbeitenKat(null)} bearbeiten={bearbeitenKat} hatEks={hatEks} />}
 
       {/* Header */}
       <div className="mb-6">
@@ -387,7 +396,7 @@ export function KategorienPage() {
           type="search"
           value={filter}
           onChange={e => setFilter(e.target.value)}
-          placeholder="Name, SKR-Konto, EKS oder Beschreibung suchen …"
+          placeholder={`Name, SKR-Konto${hatEks ? ', EKS' : ''} oder Beschreibung suchen …`}
           className="w-full max-w-sm border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
@@ -462,7 +471,7 @@ export function KategorienPage() {
                       <th className="text-left px-3 py-2.5 font-medium w-28">SKR03</th>
                       <th className="text-left px-3 py-2.5 font-medium w-28">SKR04</th>
                       <th className="text-left px-3 py-2.5 font-medium w-24">EÜR-Zeile</th>
-                      <th className="text-left px-3 py-2.5 font-medium w-20">EKS</th>
+                      {hatEks && <th className="text-left px-3 py-2.5 font-medium w-20">EKS</th>}
                       <th className="text-left px-3 py-2.5 font-medium w-24">USt-Satz</th>
                       <th className="text-left px-3 py-2.5 font-medium w-16">VSt %</th>
                       <th className="px-3 py-2.5 w-28 text-right" />
@@ -554,12 +563,14 @@ export function KategorienPage() {
                               : <span className="text-slate-300 dark:text-slate-600">—</span>
                             }
                           </td>
-                          <td className="px-3 py-2 font-mono text-xs">
-                            {k.eks_kategorie
-                              ? <span className="text-slate-700 dark:text-slate-300">{k.eks_kategorie}</span>
-                              : <span className="text-slate-300 dark:text-slate-600">—</span>
-                            }
-                          </td>
+                          {hatEks && (
+                            <td className="px-3 py-2 font-mono text-xs">
+                              {k.eks_kategorie
+                                ? <span className="text-slate-700 dark:text-slate-300">{k.eks_kategorie}</span>
+                                : <span className="text-slate-300 dark:text-slate-600">—</span>
+                              }
+                            </td>
+                          )}
                           <td className="px-3 py-2">
                             <UstBadge satz={k.ust_satz_standard} />
                           </td>
