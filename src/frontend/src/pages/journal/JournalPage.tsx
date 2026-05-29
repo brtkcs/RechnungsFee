@@ -88,7 +88,9 @@ export function JournalPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="h-full flex flex-col">
+      {/* Kopf + Filter – bleibt stehen */}
+      <div className="shrink-0 px-6 pt-6 pb-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Journal</h2>
         <div className="flex gap-2">
@@ -221,8 +223,10 @@ export function JournalPage() {
           </button>
         )}
       </div>
+      </div>{/* Ende Kopf+Filter */}
 
-      {/* Tabelle */}
+      {/* Tabelle – scrollbar */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {isLoading ? (
           <p className="text-slate-400 dark:text-slate-500 text-sm p-5">Lade…</p>
@@ -312,6 +316,7 @@ export function JournalPage() {
           </table>
         )}
       </div>
+      </div>{/* Ende Tabellen-Wrapper */}
 
       {showBuchung && (
         <BuchungForm
