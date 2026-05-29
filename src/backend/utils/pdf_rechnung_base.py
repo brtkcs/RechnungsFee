@@ -469,10 +469,11 @@ class RechnungPDFBase(FPDF):
         # §25a-Hinweis: positionsweise, wenn mindestens eine Differenzbesteuerungs-Position vorhanden
         hat_diff = any(getattr(pos, "differenzbesteuerung", False) for pos in (r.positionen or []))
         if hat_diff:
-            self.cell(0, 5,
-                      "Sonderregelung nach § 25a UStG: Für gekennzeichnete Positionen gilt die Differenzbesteuerung "
-                      "(Gebrauchtgegenstände). Der Umsatzsteuerbetrag wird nicht gesondert ausgewiesen.",
-                      new_x="LMARGIN", new_y="NEXT")
+            self.multi_cell(0, 4.5,
+                            "Sonderregelung nach § 25a UStG: Für gekennzeichnete Positionen gilt die "
+                            "Differenzbesteuerung (Gebrauchtgegenstände). "
+                            "Der Umsatzsteuerbetrag wird nicht gesondert ausgewiesen.",
+                            new_x="LMARGIN", new_y="NEXT")
         if unt.get("ist_kleinunternehmer") or hat_diff:
             self.ln(self._ln_nach_19)
 
