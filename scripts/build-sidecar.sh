@@ -71,6 +71,8 @@ pyinstaller \
     --hidden-import utils.pdf_shared \
     --hidden-import utils.signatur \
     --hidden-import utils.zugferd \
+    --exclude-module PIL._avif \
+    --exclude-module PIL._webp \
     --collect-all segno \
     --collect-all fpdf \
     --collect-all drafthorse \

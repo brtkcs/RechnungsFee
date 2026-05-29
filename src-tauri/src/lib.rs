@@ -135,8 +135,11 @@ pub fn run() {
             }
             #[cfg(target_os = "linux")]
             {
+                // Zombie-Backends killen – Muster passt für:
+                //   AppImage:  /tmp/.mount_*/usr/bin/backend-x86_64-unknown-linux-gnu
+                //   Dev-Modus: .../src-tauri/binaries/backend-x86_64-unknown-linux-gnu
                 let _ = std::process::Command::new("pkill")
-                    .args(["-f", "binaries/backend"])
+                    .args(["-f", "backend-x86_64-unknown-linux-gnu"])
                     .output();
             }
 

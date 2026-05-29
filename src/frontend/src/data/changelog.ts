@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.14',
+    datum: 'Mai 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Linux: Backend startet nicht mehr (PIL/_avif.so Extraktionsfehler) – AVIF- und WebP-Codec aus dem Bundle ausgeschlossen (Issue #110)' },
+      { typ: 'fix', text: 'Linux AppImage: Ghost-Backends vom letzten Absturz werden beim Start jetzt korrekt beendet – Pfad-Erkennung für AppImage-Modus korrigiert (vorher: nur Dev-Modus erkannt)' },
+    ],
+  },
+  {
     version: 'v0.2.13',
     datum: 'Mai 2026',
     eintraege: [
