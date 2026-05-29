@@ -1150,7 +1150,17 @@ def storno_rechnung(rechnung_id: int, data: StornoRequest, db: Session = Depends
         ).first()
         if bereits:
             continue
-        storno_art = "Ausgabe" if eintrag.art == "Einnahme" else "Einnahme"
+        if eintrag.brutto_betrag >= 0:
+            storno_art = "Ausgabe" if eintrag.art == "Einnahme" else "Einnahme"
+            s_netto  = eintrag.netto_betrag
+            s_ust    = eintrag.ust_betrag
+            s_brutto = eintrag.brutto_betrag
+        else:
+            # Negativer Originalbetrag (z. B. Gutschrift-Buchung): gleiche Art, positiver Betrag
+            storno_art = eintrag.art
+            s_netto  = -eintrag.netto_betrag
+            s_ust    = -eintrag.ust_betrag
+            s_brutto = -eintrag.brutto_betrag
         belegnr = _naechste_belegnr_journal(db, heute)
         gegenbuchung = Journaleintrag(
             datum=heute,
@@ -1161,10 +1171,10 @@ def storno_rechnung(rechnung_id: int, data: StornoRequest, db: Session = Depends
             konto_skr04=eintrag.konto_skr04,
             zahlungsart=eintrag.zahlungsart,
             art=storno_art,
-            netto_betrag=eintrag.netto_betrag,
+            netto_betrag=s_netto,
             ust_satz=eintrag.ust_satz,
-            ust_betrag=eintrag.ust_betrag,
-            brutto_betrag=eintrag.brutto_betrag,
+            ust_betrag=s_ust,
+            brutto_betrag=s_brutto,
             vorsteuerabzug=False,
             steuerbefreiung_grund=None,
             immutable=True,
