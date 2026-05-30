@@ -70,7 +70,7 @@ STANDARD_KATEGORIEN = [
     {"name": "Bankgebühren",                  "kontenart": "Aufwand", "konto_skr03": "4970", "konto_skr04": "6855", "eks_kategorie": "B14_3", "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Software & Abonnements",        "kontenart": "Aufwand", "konto_skr03": "4940", "konto_skr04": "6820", "eks_kategorie": "B14_5", "euer_zeile": 50,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Bewirtungskosten",              "kontenart": "Aufwand", "konto_skr03": "4650", "konto_skr04": "6640", "eks_kategorie": "B14_5", "euer_zeile": 63,   "vorsteuer_prozent": 70,  "ust_satz_standard": 19},
-    {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": "B14_5", "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
+    {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
     {"name": "Sonstige Betriebsausgaben",     "kontenart": "Aufwand", "konto_skr03": "4980", "konto_skr04": "6850", "eks_kategorie": "B14_5", "euer_zeile": 60,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Zinsen & Darlehenskosten",      "kontenart": "Aufwand", "konto_skr03": "2140", "konto_skr04": "7330", "eks_kategorie": "B15",   "euer_zeile": 56,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
     {"name": "Kredittilgung",                 "kontenart": "Aufwand", "konto_skr03": "2100", "konto_skr04": "3150", "eks_kategorie": "B16",   "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},

@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 38
+SCHEMA_VERSION = 39
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -980,6 +980,20 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 38 gebracht (differenzbesteuerung §25a UStG)")
 
+        if version < 39:
+            # 'Bewirtungskosten (nicht abzugsfähig)': eks_kategorie war fälschlicherweise 'B14_5'.
+            # Der steuerlich nicht abziehbare Anteil ist beim Jobcenter keine notwendige Betriebsausgabe
+            # und darf die EKS-Einkommensberechnung nicht mindern.
+            conn.execute(text("""
+                UPDATE kategorien
+                SET eks_kategorie = NULL
+                WHERE name = 'Bewirtungskosten (nicht abzugsfähig)'
+                  AND eks_kategorie = 'B14_5'
+            """))
+            conn.execute(text("PRAGMA user_version = 39"))
+            conn.commit()
+            print("[Migration] Schema auf Version 39 gebracht (Bewirtungskosten nicht abzugsfähig: eks_kategorie → NULL)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -1121,7 +1135,7 @@ def _migrate_kategorien() -> None:
             {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": 15,   "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Bewirtungskosten nicht abzugsfähiger Anteil
-            {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": "B14_5", "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
+            {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
         ]
         for data in neue:
             if not db.query(Kategorie).filter(Kategorie.name == data["name"]).first():
