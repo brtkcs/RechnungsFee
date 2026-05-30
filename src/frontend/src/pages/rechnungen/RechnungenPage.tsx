@@ -1557,7 +1557,7 @@ function RechnungForm({
         beschreibung: p.beschreibung,
         menge: String(parseFloat(p.menge)),
         einheit: p.einheit,
-        netto: (parseFloat(p.brutto) / parseFloat(p.menge)).toFixed(2).replace('.', ','),  // Per-Unit-Brutto (menge≠1 und negative Mengen bei Gutschriften)
+        netto: Math.abs(parseFloat(p.brutto)).toFixed(2).replace('.', ','),  // pos.brutto ist bereits Einzelpreis in der DB – nicht durch menge teilen; abs() für alte Gutschrift-Einträge (neg. brutto)
         ust_satz: String(parseFloat(p.ust_satz)),
         artikel_id: p.artikel_id ?? undefined,
         kategorie_id: p.kategorie_id != null ? String(p.kategorie_id) : undefined,
