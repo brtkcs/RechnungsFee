@@ -273,9 +273,9 @@ Wirtschaftsgüter mit Anschaffungskosten, jährlicher AfA und Restbuchwert – g
 | Immaterielle WG | *(kein eigenes Konto geplant – selten bei Freiberuflern)* |
 
 **Phase 2 EÜR-PDF** muss deshalb unterscheiden:
-- Zeilen 35/36 (Anschaffungskosten) aus Journal-Einträgen beider Anlage-Kategorien
-- Anlage AVEUR als separate Seite im PDF (vereinfacht: tabellarische Auflistung der Buchungen)
-- Hinweiszeilen Privatentnahme (Z106) und Privateinlage (Z107) ausweisen, aber nicht in Gewinnberechnung einbeziehen
+- **Zeile 36** (AfA / Sofortabschreibung): summiert alle Einträge mit `euer_zeile=36` – das sind `Abschreibungen (AfA)`, `GWG`, `EDV / Software (Sofortabschreibung)` – alle `kontenart="Aufwand"`, kein AVEUR-Eintrag nötig
+- **Anlage AVEUR**: nur `kontenart="Anlage"` (KFZ (Kauf) + Anlagevermögen (Kauf)) – als separate Seite im PDF (tabellarische Auflistung der Buchungen mit Anschaffungskosten)
+- **Hinweiszeilen** Privatentnahme (Z106) + Privateinlage (Z107): ausweisen, nicht in Gewinnberechnung einbeziehen
 
 ---
 
