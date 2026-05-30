@@ -113,15 +113,23 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 ---
 
-## v0.3 – Bank-Import *(Ziel: Juni 2026)*
+## v0.3 – Buchhalterische Vollständigkeit *(Ziel: Juni 2026)*
 
-CSV-Import von Kontoauszügen, automatisches Matching.
+### Phase 1 – Korrekturbuchungen ✅ *v0.3.0*
 
-- [ ] CSV-Parser (Postbank, Sparkasse, Volksbank, Commerzbank)
-- [ ] Vorschau und manuelle Zuordnung vor dem Import
-- [ ] Auto-Filter-Regeln (Empfänger/Verwendungszweck → Kategorie)
-- [ ] Duplikat-Erkennung
-- [ ] Import-Protokoll (GoBD: Herkunft nachvollziehbar)
+- [x] Buchungen ohne Geldfluss (`zahlungsart='Keine'`) – für AfA, Sachentnahmen, Eigenverbrauch (Issue #55)
+- [x] Forderungsausfall mit §17-UStG-Korrekturbuchung und Status „Uneinbringlich" (Issue #61)
+- [x] `vorsteuer_betrag`-Snapshot im Journal (tatsächlich abziehbarer Vorsteueranteil je Kategorie)
+- [x] Neue Kategorien: Forderungsausfall (SKR03 4803/SKR04 6403), KFZ (Kauf) (SKR03 0320/SKR04 0540), Bewirtungskosten (nicht abzugsfähig)
+- [x] EDV/Software (Sofortabschreibung): Kontenart Aufwand → Anlage (SKR03 0650), korrekte Buchungslogik (zweistufig: Kauf + AfA) nach BMF 2021 (Issue #111)
+- [x] Einkommensteuer-Vorauszahlung: Fälligkeitsmonate korrigiert (März/Jun/Sep/Dez)
+
+### Phase 2 – EÜR *(Ziel: nach Abschluss Issue #111)*
+
+- [ ] EÜR-Berechnung aus Journalbuchungen nach Anlage EÜR 2025 (Zuflussprinzip)
+- [ ] EÜR-Summen je Zeilennummer, Netto + USt getrennt
+- [ ] PDF-Export Anlage EÜR (druckfertiges Formular oder strukturierter Bericht)
+- [ ] Jahresübersicht: Kategorien-Summen mit EÜR-Zuordnung
 
 ---
 
@@ -146,11 +154,22 @@ manuelle Korrekturbuchungen erhalten, sind im Normalfall aber nicht mehr nötig.
 
 ---
 
-## v0.4 – Auswertungen *(Ziel: August 2026)*
+## v0.4 – Bank-Import *(Ziel: Sommer 2026)*
+
+CSV-Import von Kontoauszügen, automatisches Matching.
+
+- [ ] CSV-Parser (Postbank, Sparkasse, Volksbank, Commerzbank)
+- [ ] Vorschau und manuelle Zuordnung vor dem Import
+- [ ] Auto-Filter-Regeln (Empfänger/Verwendungszweck → Kategorie)
+- [ ] Duplikat-Erkennung
+- [ ] Import-Protokoll (GoBD: Herkunft nachvollziehbar)
+
+---
+
+## v0.5 – Erweiterte Auswertungen *(Ziel: Herbst 2026)*
 
 Steuerliche Auswertungen für Finanzamt und Steuerberater.
 
-- [ ] EÜR-Berechnung (Einnahmen-Überschuss-Rechnung)
 - [ ] UStVA-Voranmeldung (Monat/Quartal)
 - [ ] DATEV-Export (CSV nach DATEV-Format)
 - [ ] Jahresübersicht (Kategorien-Summen, grafisch)
@@ -159,7 +178,7 @@ Steuerliche Auswertungen für Finanzamt und Steuerberater.
 
 ---
 
-## v0.5 – Erweiterte Digitalisierung *(Ziel: offen)*
+## v0.6 – Erweiterte Digitalisierung *(Ziel: offen)*
 
 Opt-in LLM-gestützte Felderkennung und Sonderfälle.
 
@@ -237,3 +256,4 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2.11** (Mai 2026): Storno-Begründung (Pflichtfeld, Schnellauswahl, `storno_grund` in DB + Journal, Schema 34); Backend-Start-Timeout 10 s → 60 s (Defender-Scan / PyInstaller nach Windows-Update)
 - [x] **v0.2.12 – Gutschriften** (Mai 2026, Issue #103): Schema 37 (`dokument_typ`, `gutschrift_zu_rechnung_id`); `POST /rechnungen/{id}/gutschrift` (Positionen negiert, eigene GS-Nummer, Entwurf); Betragslimit (Summe aller Gutschriften ≤ Originalbrutto); Rückerstattung als negative Einnahme im Journal; PDF-Deckblatt „Gutschrift" + Bezugszeile; Storno einer Gutschrift mit GoBD-Gegenbuchung; Frontend: Button, Badge, Detail-Bereich
 - [x] **v0.2.13 – §25a UStG** (Mai 2026): Schema 38 (`artikel.differenzbesteuerung`, `rechnungspositionen.differenzbesteuerung`); Margenberechnung live im Artikelformular (Ankaufspreis, Marge, USt auf Marge); §25a-Badge in Artikelliste + Autocomplete-Dropdown; gemischte Rechnungen (§25a + Regelbesteuerung); PDF-Pflichthinweis nach § 25a UStG (multi_cell, kein Überlauf); Scroll-Layout-Fix (Header + Detailspalte fest, Liste scrollt); Storno-Buchungen: Betrag immer positiv, Art korrekt für Gutschriften
+- [x] **v0.3.0 – Korrekturbuchungen Phase 1** (Mai 2026): Buchungen ohne Geldfluss `zahlungsart='Keine'` (Issue #55); Forderungsausfall §17 UStG mit Status „Uneinbringlich" (Issue #61); `vorsteuer_betrag`-Snapshot; Kategorien Forderungsausfall + KFZ (Kauf) + Bewirtungskosten (nicht abzugsfähig); EDV/Software Aufwand→Anlage nach BMF 2021 (Issue #111); Schema 42

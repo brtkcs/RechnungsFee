@@ -23,6 +23,22 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.0',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu',          text: 'Buchungen ohne Geldfluss – neue Checkbox „Kein Geldfluss" im Buchungsformular für AfA, Sachentnahmen, Eigenverbrauch; kein Kassenstand-Einfluss, kein Tagesabschluss (Issue #55)' },
+      { typ: 'neu',          text: 'Forderungsausfall – Rechnungen als uneinbringlich ausbuchen: Status-Badge, Filter, eigener Eintrag im Journal; für USt-Pflichtige automatisch §17-UStG-Korrekturbuchung (Issue #61)' },
+      { typ: 'neu',          text: 'Neue Kategorie „KFZ (Kauf)" SKR03 0320 / SKR04 0540 – separates Anlagekonto für Fahrzeuge, fließt korrekt in Anlage AVEUR ein' },
+      { typ: 'neu',          text: 'Neue Kategorie „EDV / Software (Sofortabschreibung)" SKR03 0650 – Anlagekonto nach BMF 26.02.2021 (Nutzungsdauer 1 Jahr, § 7 Abs. 1 EStG); zweistufiger Buchungsweg mit separater AfA erklärt' },
+      { typ: 'neu',          text: 'Neue Kategorie „Bewirtungskosten (nicht abzugsfähig)" SKR03 4654 – für den steuerlich nicht abziehbaren 30 %-Anteil nach § 4 Abs. 5 Nr. 2 EStG' },
+      { typ: 'verbesserung', text: 'Journal: vorsteuer_betrag-Snapshot – tatsächlich abziehbarer Vorsteuer-Anteil wird je Buchung gespeichert (berücksichtigt z. B. 70 % bei Bewirtungskosten); Grundlage für künftige EÜR-Zeile und UStVA' },
+      { typ: 'verbesserung', text: 'Privatentnahme / Privateinlage: EÜR-Zeilennummern korrigiert auf Zeile 106 / 107 (Anlage EÜR 2025 Hinweiszeilen)' },
+      { typ: 'fix',          text: 'EDV / Software (Sofortabschreibung): Kategorie war fälschlicherweise als Aufwand (SKR03 4985) angelegt – korrekt ist Anlage (SKR03 0650); BMF 2021 ist kein GWG' },
+      { typ: 'fix',          text: 'Einkommensteuer-Vorauszahlung: Fälligkeitsmonate in der Beschreibung korrigiert (März / Juni / September / Dezember)' },
+      { typ: 'fix',          text: 'Bewirtungskosten (nicht abzugsfähig): EKS-Kategorie korrigiert (war B14_5, jetzt leer – kein anerkannter Aufwand beim Jobcenter)' },
+    ],
+  },
+  {
     version: 'v0.2.14',
     datum: 'Mai 2026',
     eintraege: [
