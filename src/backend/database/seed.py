@@ -61,7 +61,8 @@ STANDARD_KATEGORIEN = [
     {"name": "Büromaterial",                  "kontenart": "Aufwand", "konto_skr03": "4930", "konto_skr04": "6815", "eks_kategorie": "B10",   "euer_zeile": 51,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Büroausstattung",               "kontenart": "Aufwand", "konto_skr03": "4985", "konto_skr04": "6845", "eks_kategorie": "B10",   "euer_zeile": 51,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Porto & Versand",               "kontenart": "Aufwand", "konto_skr03": "4910", "konto_skr04": "6800", "eks_kategorie": "B10",   "euer_zeile": 51,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-    {"name": "Geringwertige Wirtschaftsgüter (GWG)", "kontenart": "Aufwand", "konto_skr03": "4855", "konto_skr04": "6845", "eks_kategorie": "B10", "euer_zeile": 36, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+    {"name": "Geringwertige Wirtschaftsgüter (GWG)", "kontenart": "Aufwand", "konto_skr03": "4855", "konto_skr04": "6845", "eks_kategorie": "B10",   "euer_zeile": 36, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+    {"name": "EDV / Software (Sofortabschreibung)", "kontenart": "Aufwand", "konto_skr03": "4985", "konto_skr04": "6845", "eks_kategorie": "B10",   "euer_zeile": 36, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     # ── Tabelle B Teil 3 ─────────────────────────────────────────────────
     {"name": "Telefon & Internet",            "kontenart": "Aufwand", "konto_skr03": "4920", "konto_skr04": "6805", "eks_kategorie": "B11",   "euer_zeile": 43,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
     {"name": "Steuerberatung",                "kontenart": "Aufwand", "konto_skr03": "4950", "konto_skr04": "6825", "eks_kategorie": "B12",   "euer_zeile": 46,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
