@@ -839,6 +839,7 @@ def _erstelle_skonto_eintrag(
     zahlung_art: str,
 ) -> None:
     """Erzeugt den Skonto-Journaleintrag (Erlösschmälerung / erhaltener Skonto)."""
+    from database.models import Kategorie as _Kategorie
     skonto_art = "Ausgabe" if rechnung.typ == "ausgang" else "Einnahme"
     sk_netto = (skonto_betrag * 100 / (100 + ust_satz)).quantize(Decimal("0.01"), ROUND_HALF_UP) if ust_satz > 0 else skonto_betrag
     sk_ust = (skonto_betrag - sk_netto).quantize(Decimal("0.01"), ROUND_HALF_UP) if ust_satz > 0 else Decimal("0.00")
@@ -846,11 +847,13 @@ def _erstelle_skonto_eintrag(
     # Ausgangsrechnung-Skonto mindert Umsatzsteuer (1776/3806), nicht Vorsteuer (1575/1406)
     ust_art_konto = "Einnahme" if rechnung.typ == "ausgang" else "Ausgabe"
     sk_ust_skr03, sk_ust_skr04 = _ust_konto(ust_art_konto, ust_satz) if ust_satz > 0 else (None, None)
+    kat_name = "Gewährte Skonti" if rechnung.typ == "ausgang" else "Erhaltene Skonti"
+    kat = db.query(_Kategorie).filter(_Kategorie.name == kat_name).first()
     sk = Journaleintrag(
         datum=data.datum,
         belegnr=_naechste_belegnr_journal(db, data.datum),
         beschreibung=f"Skonto {rechnung.rechnungsnummer}",
-        kategorie_id=None,
+        kategorie_id=kat.id if kat else None,
         konto_skr03=sk_konto_skr03,
         konto_skr04=sk_konto_skr04,
         konto_ust_skr03=sk_ust_skr03,

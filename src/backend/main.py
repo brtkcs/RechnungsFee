@@ -913,6 +913,8 @@ def _run_migrations() -> None:
                 "Anlagevermögen (Kauf)":       "z. B. Computer, Maschinen, Fahrzeuge über 800 € netto – Abschreibung über Nutzungsdauer (AfA-Tabelle)",
                 "Abschreibungen (AfA)":        "z. B. Jahres-AfA für Wirtschaftsgüter des Anlagevermögens (vom Steuerberater berechnet)",
                 "Investition aus Zuwendung Dritter": "z. B. Anschaffungen die aus Fördergeldern oder Zuschüssen finanziert wurden",
+                "Gewährte Skonti":             "Skonto den du Kunden gewährst – wird automatisch beim Buchen einer Zahlung mit Skonto zugewiesen (Erlösschmälerung)",
+                "Erhaltene Skonti":            "Skonto den du von Lieferanten erhältst – wird automatisch beim Buchen einer Eingangsrechnung mit Skonto zugewiesen (Aufwandsminderung)",
                 "Privatentnahme":              "z. B. Bargeld-Entnahme für private Zwecke – kein Betriebsaufwand",
                 "Privateinlage":               "z. B. Einzahlung eigener privater Mittel ins Unternehmen",
                 "Einkommensteuer-Vorauszahlung": "z. B. vierteljährliche Vorauszahlungen ans Finanzamt (Jan/Apr/Jul/Okt)",
@@ -1114,6 +1116,9 @@ def _migrate_kategorien() -> None:
             {"name": "Verpflegungsmehraufwand",          "kontenart": "Aufwand", "konto_skr03": "4661", "konto_skr04": "6645", "eks_kategorie": "B7_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B14_5", "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "4730", "konto_skr04": "6580", "eks_kategorie": "B14_5", "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            # Skonti
+            {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": 15,   "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
+            {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
         ]
         for data in neue:
             if not db.query(Kategorie).filter(Kategorie.name == data["name"]).first():
