@@ -1360,10 +1360,10 @@ def create_gutschrift(rechnung_id: int, db: Session = Depends(get_db)):
     for nr_pos, pos in enumerate(
         sorted(original.positionen, key=lambda p: p.position_nr), start=1
     ):
+        # pos.netto / pos.ust_betrag / pos.brutto sind Einzelpreise (per Unit).
+        # Nur menge negieren – Einzelpreise bleiben positiv, damit die PDF-Gesamtspalte
+        # (netto * menge) das richtige Vorzeichen trägt und Summen korrekt sind.
         menge_neg = -(pos.menge)
-        netto_pos = (pos.netto * menge_neg / pos.menge).quantize(Decimal("0.01"), ROUND_HALF_UP)
-        ust_betrag = (netto_pos * pos.ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP) if pos.ust_satz else Decimal("0.00")
-        brutto_pos = netto_pos + ust_betrag
 
         neue_pos = Rechnungsposition(
             rechnung_id=gutschrift.id,
@@ -1372,16 +1372,16 @@ def create_gutschrift(rechnung_id: int, db: Session = Depends(get_db)):
             beschreibung=pos.beschreibung,
             menge=menge_neg,
             einheit=pos.einheit,
-            netto=netto_pos,
+            netto=pos.netto,
             ust_satz=pos.ust_satz,
-            ust_betrag=ust_betrag,
-            brutto=brutto_pos,
+            ust_betrag=pos.ust_betrag,
+            brutto=pos.brutto,
             kategorie_id=pos.kategorie_id,
             differenzbesteuerung=pos.differenzbesteuerung,
         )
         db.add(neue_pos)
-        netto_sum += netto_pos
-        ust_sum += ust_betrag
+        netto_sum += pos.netto * menge_neg
+        ust_sum += pos.ust_betrag * menge_neg
 
     gutschrift.netto_gesamt = netto_sum.quantize(Decimal("0.01"), ROUND_HALF_UP)
     gutschrift.ust_gesamt = ust_sum.quantize(Decimal("0.01"), ROUND_HALF_UP)

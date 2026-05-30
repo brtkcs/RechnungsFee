@@ -274,7 +274,7 @@ export type JournalEintrag = {
   kunde_id: number | null
   kunde_name: string | null
   kunde_email: string | null
-  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal'
+  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal' | 'Keine'
   art: 'Einnahme' | 'Ausgabe'
   netto_betrag: string
   ust_satz: string
@@ -299,7 +299,7 @@ export type JournalEintragCreate = {
   beschreibung: string
   kategorie_id?: number
   kunde_id?: number
-  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal'
+  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal' | 'Keine'
   art: 'Einnahme' | 'Ausgabe'
   brutto_betrag: string
   ust_satz: string
@@ -353,7 +353,7 @@ export type SplitPosition = {
 export type SplitBuchungCreate = {
   datum: string
   art: 'Einnahme' | 'Ausgabe'
-  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal'
+  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal' | 'Keine'
   externe_belegnr?: string
   kunde_id?: number
   positionen: SplitPosition[]
@@ -772,7 +772,7 @@ export type Rechnung = {
   brutto_gesamt: string
   bezahlt: boolean
   bezahlt_betrag: string
-  zahlungsstatus: 'offen' | 'teilweise' | 'bezahlt'
+  zahlungsstatus: 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'
   zahlungsdatum: string | null
   notizen: string | null
   externe_belegnr: string | null
@@ -826,7 +826,7 @@ export type ZahlungSplitPosition = {
 export type BarZahlungCreate = {
   betrag?: string
   datum: string
-  zahlungsart: 'Bar' | 'Karte' | 'PayPal' | 'Bank'
+  zahlungsart: 'Bar' | 'Karte' | 'PayPal' | 'Bank' | 'Keine'
   beschreibung?: string
   kategorie_id?: number
   split?: ZahlungSplitPosition[]
