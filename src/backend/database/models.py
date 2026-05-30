@@ -209,6 +209,8 @@ class Journaleintrag(Base):
     # USt-Gegenkonto (1776/1771 bei Einnahme, 1575/1570 bei Ausgabe in SKR03 etc.)
     konto_ust_skr03: Mapped[str | None] = mapped_column(String(10))
     konto_ust_skr04: Mapped[str | None] = mapped_column(String(10))
+    # km-Pauschale (optional – für Fahrtkosten Privat-PKW)
+    km_anzahl: Mapped[Decimal | None] = mapped_column(Numeric(10, 1))
     # GoBD
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     signatur: Mapped[str | None] = mapped_column(String(64))

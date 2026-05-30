@@ -244,6 +244,7 @@ class JournalEintragCreate(BaseModel):
     ust_satz: Decimal = Decimal("0")
     vorsteuerabzug: bool = False
     externe_belegnr: Optional[str] = None
+    km_anzahl: Optional[Decimal] = None  # Fahrtkosten Privat-PKW: EÜR=km×0,30 gespeichert, EKS rechnet km×0,10
 
     @field_validator("zahlungsart")
     @classmethod
@@ -294,6 +295,7 @@ class JournalEintragResponse(BaseModel):
     konto_ust_skr04: Optional[str] = None
     immutable: bool
     erstellt_am: datetime
+    km_anzahl: Optional[Decimal] = None
 
     model_config = {"from_attributes": True}
 

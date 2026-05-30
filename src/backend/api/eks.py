@@ -26,69 +26,73 @@ router = APIRouter(prefix="/api/eks", tags=["EKS"])
 
 # ---------------------------------------------------------------------------
 # EKS-Feldliste – Reihenfolge und Codes wie im offiziellen Formular 04/2025
-# (tabelle, code, bezeichnung, auto_berechenbar_aus_journal)
+# (tabelle, code, bezeichnung, auto_berechenbar_aus_journal, negativ)
+# negativ=True: Feld wird vom B-Gesamt ABGEZOGEN (z.B. Privatanteil Betriebs-KFZ)
 # ---------------------------------------------------------------------------
 
 EKS_FELDER_META = [
     # ── Tabelle A: Betriebseinnahmen ──────────────────────────────────────
-    ("A", "A1",    "Betriebseinnahmen",                                        True),
-    ("A", "A2",    "Privatentnahmen von Waren",                                True),
-    ("A", "A3",    "Sonstige betriebliche Einnahmen",                          True),
-    ("A", "A4",    "Zuwendungen von Dritten",                                  True),
-    ("A", "A5_1",  "Vereinnahmte Umsatzsteuer",                                True),
-    ("A", "A5_2",  "Umsatzsteuer auf Privatentnahmen von Waren",               True),
-    ("A", "A5_3",  "Vom Finanzamt erstattete Umsatzsteuer",                    True),
+    ("A", "A1",    "Betriebseinnahmen",                                        True,  False),
+    ("A", "A2",    "Privatentnahmen von Waren",                                True,  False),
+    ("A", "A3",    "Sonstige betriebliche Einnahmen",                          True,  False),
+    ("A", "A4",    "Zuwendungen von Dritten",                                  True,  False),
+    ("A", "A5_1",  "Vereinnahmte Umsatzsteuer",                                True,  False),
+    ("A", "A5_2",  "Umsatzsteuer auf Privatentnahmen von Waren",               True,  False),
+    ("A", "A5_3",  "Vom Finanzamt erstattete Umsatzsteuer",                    True,  False),
     # ── Tabelle B Teil 1: Betriebsausgaben ───────────────────────────────
-    ("B", "B1",    "Wareneinkauf",                                              True),
-    ("B", "B2_1",  "Personalkosten – Vollzeitbeschäftigte",                    True),
-    ("B", "B2_2",  "Personalkosten – Teilzeitbeschäftigte",                    False),
-    ("B", "B2_3",  "Personalkosten – geringfügig Beschäftigte",                True),
-    ("B", "B2_4",  "Personalkosten – mithelfende Familienangehörige",          False),
-    ("B", "B3",    "Betriebliche Raumkosten",                                   True),
-    ("B", "B4",    "Betriebliche Versicherungen / Beiträge",                   True),
-    ("B", "B5",    "Kosten für Werbung",                                        True),
+    ("B", "B1",    "Wareneinkauf",                                              True,  False),
+    ("B", "B2_1",  "Personalkosten – Vollzeitbeschäftigte",                    True,  False),
+    ("B", "B2_2",  "Personalkosten – Teilzeitbeschäftigte",                    False, False),
+    ("B", "B2_3",  "Personalkosten – geringfügig Beschäftigte",                True,  False),
+    ("B", "B2_4",  "Personalkosten – mithelfende Familienangehörige",          False, False),
+    ("B", "B3",    "Betriebliche Raumkosten",                                   True,  False),
+    ("B", "B4",    "Betriebliche Versicherungen / Beiträge",                   True,  False),
+    ("B", "B5",    "Kosten für Werbung",                                        True,  False),
     # ── Tabelle B Teil 2 ─────────────────────────────────────────────────
-    ("B", "B6_1",  "Betriebliches KFZ – Steuern",                              True),
-    ("B", "B6_2",  "Betriebliches KFZ – Versicherung",                         True),
-    ("B", "B6_3",  "Betriebliches KFZ – laufende Betriebskosten",              True),
-    ("B", "B6_4",  "Betriebliches KFZ – Reparaturkosten",                      False),
-    ("B", "B6_5",  "Privates KFZ – betriebliche Fahrten (0,10 €/km)",          False),
-    ("B", "B7_1",  "Reisekosten – Übernachtungskosten",                        True),
-    ("B", "B7_2",  "Reisekosten – Reisenebenkosten",                           False),
-    ("B", "B7_3",  "Reisekosten – Öffentliche Verkehrsmittel",                 False),
-    ("B", "B8",    "Investitionen",                                              True),
-    ("B", "B9",    "Investitionen aus Zuwendungen Dritter",                    False),
-    ("B", "B10",   "Büromaterial einschließlich Porto",                         True),
+    ("B", "B6_1",  "Betriebliches KFZ – Steuern",                              True,  False),
+    ("B", "B6_2",  "Betriebliches KFZ – Versicherung",                         True,  False),
+    ("B", "B6_3",  "Betriebliches KFZ – laufende Betriebskosten",              True,  False),
+    ("B", "B6_4",  "Betriebliches KFZ – Reparaturkosten",                      False, False),
+    ("B", "B6_4_priv", "  ↳ abzgl. privat gefahrene Kilometer (0,10 €/km)",   False, True),   # Abzug: Privatanteil Betriebs-KFZ
+    ("B", "B6_5",  "Privates KFZ – betriebliche Fahrten (0,10 €/km)",          True,  False),  # auto aus journal.km_anzahl
+    ("B", "B7_1",  "Reisekosten – Übernachtungskosten",                        True,  False),
+    ("B", "B7_2",  "Reisekosten – Reisenebenkosten",                           False, False),
+    ("B", "B7_3",  "Reisekosten – Öffentliche Verkehrsmittel",                 False, False),
+    ("B", "B8",    "Investitionen",                                              True,  False),
+    ("B", "B9",    "Investitionen aus Zuwendungen Dritter",                    False, False),
+    ("B", "B10",   "Büromaterial einschließlich Porto",                         True,  False),
     # ── Tabelle B Teil 3 ─────────────────────────────────────────────────
-    ("B", "B11",   "Telefonkosten",                                              True),
-    ("B", "B12",   "Beratungskosten",                                            True),
-    ("B", "B13",   "Fortbildungskosten",                                         True),
-    ("B", "B14_1", "Sonstige – Reparaturkosten Anlagevermögen",                False),
-    ("B", "B14_2", "Sonstige – Miete Einrichtung",                             False),
-    ("B", "B14_3", "Sonstige – Nebenkosten des Geldverkehrs",                  True),
-    ("B", "B14_4", "Sonstige – Betriebliche Abfallbeseitigung",                False),
-    ("B", "B14_5", "Sonstige – weitere Betriebsausgaben",                      True),
-    ("B", "B15",   "Schuldzinsen aus Anlagevermögen",                           True),
-    ("B", "B16",   "Tilgung bestehender betrieblicher Darlehen",               True),
-    ("B", "B17",   "Gezahlte Vorsteuer",                                         False),
-    ("B", "B18",   "An das Finanzamt gezahlte Umsatzsteuer",                   True),
+    ("B", "B11",   "Telefonkosten",                                              True,  False),
+    ("B", "B12",   "Beratungskosten",                                            True,  False),
+    ("B", "B13",   "Fortbildungskosten",                                         True,  False),
+    ("B", "B14_1", "Sonstige – Reparaturkosten Anlagevermögen",                False, False),
+    ("B", "B14_2", "Sonstige – Miete Einrichtung",                             False, False),
+    ("B", "B14_3", "Sonstige – Nebenkosten des Geldverkehrs",                  True,  False),
+    ("B", "B14_4", "Sonstige – Betriebliche Abfallbeseitigung",                False, False),
+    ("B", "B14_5", "Sonstige – weitere Betriebsausgaben",                      True,  False),
+    ("B", "B15",   "Schuldzinsen aus Anlagevermögen",                           True,  False),
+    ("B", "B16",   "Tilgung bestehender betrieblicher Darlehen",               True,  False),
+    ("B", "B17",   "Gezahlte Vorsteuer",                                         False, False),
+    ("B", "B18",   "An das Finanzamt gezahlte Umsatzsteuer",                   True,  False),
     # ── Tabelle C: Absetzungen vom Einkommen ─────────────────────────────
-    ("C", "C1",    "Einkommensteuervorauszahlungen / -nachzahlungen",          True),
-    ("C", "C2",    "Pflichtbeiträge Kranken-/Pflege-/Rentenversicherung",      True),
-    ("C", "C3",    "Private Kranken-/Pflegeversicherung (freiwillig)",         True),
-    ("C", "C4",    "Beiträge zur Rentenversicherung",                           True),
-    ("C", "C5",    "Kapitalbildende Lebensversicherung",                        False),
-    ("C", "C6",    "Beiträge zu Versorgungseinrichtungen",                      False),
-    ("C", "C7",    "Kfz-Haftpflichtversicherung",                               False),
-    ("C", "C8",    "Weitere gesetzlich vorgeschriebene Versicherungen",         False),
-    ("C", "C9",    "Geförderte Altersvorsorge / Riester (§ 82 EStG)",          True),
-    ("C", "C10",   "Sonstige Absetzungsmöglichkeiten",                          False),
+    ("C", "C1",    "Einkommensteuervorauszahlungen / -nachzahlungen",          True,  False),
+    ("C", "C2",    "Pflichtbeiträge Kranken-/Pflege-/Rentenversicherung",      True,  False),
+    ("C", "C3",    "Private Kranken-/Pflegeversicherung (freiwillig)",         True,  False),
+    ("C", "C4",    "Beiträge zur Rentenversicherung",                           True,  False),
+    ("C", "C5",    "Kapitalbildende Lebensversicherung",                        False, False),
+    ("C", "C6",    "Beiträge zu Versorgungseinrichtungen",                      False, False),
+    ("C", "C7",    "Kfz-Haftpflichtversicherung",                               False, False),
+    ("C", "C8",    "Weitere gesetzlich vorgeschriebene Versicherungen",         False, False),
+    ("C", "C9",    "Geförderte Altersvorsorge / Riester (§ 82 EStG)",          True,  False),
+    ("C", "C10",   "Sonstige Absetzungsmöglichkeiten",                          False, False),
 ]
 
-ALLE_CODES = [code for _, code, _, _ in EKS_FELDER_META]
-A_CODES    = [code for t, code, _, _ in EKS_FELDER_META if t == "A"]
-B_CODES    = [code for t, code, _, _ in EKS_FELDER_META if t == "B"]
-C_CODES    = [code for t, code, _, _ in EKS_FELDER_META if t == "C"]
+ALLE_CODES = [code for _, code, _, _, _ in EKS_FELDER_META]
+A_CODES    = [code for t, code, _, _, _ in EKS_FELDER_META if t == "A"]
+B_CODES    = [code for t, code, _, _, _ in EKS_FELDER_META if t == "B"]
+C_CODES    = [code for t, code, _, _, _ in EKS_FELDER_META if t == "C"]
+# B6_4_priv ist Abzugsposten – nicht in B_CODES für Spaltensummen (kein Journaleintrag)
+B_CODES_SUMME = [code for t, code, _, _, negativ in EKS_FELDER_META if t == "B" and not negativ]
 
 
 class EksPdfRequest(BaseModel):
@@ -138,6 +142,27 @@ def _journal_summen_pro_monat(von: date, bis: date, db: Session) -> dict[str, st
         .all()
     )
     result = {row.eks_kategorie: str(row.summe or Decimal("0")) for row in rows}
+
+    # B6_5: Privat-PKW betriebliche Fahrten – EKS-Rate 0,10 €/km (nicht 0,30 EÜR)
+    # Wenn km_anzahl gesetzt: km × 0,10; sonst Fallback auf brutto_betrag (Altdaten)
+    b6_5_eintraege = (
+        db.query(Journaleintrag.km_anzahl, Journaleintrag.brutto_betrag)
+        .join(Journaleintrag.kategorie)
+        .filter(
+            Journaleintrag.datum >= von,
+            Journaleintrag.datum <= bis,
+            Kategorie.eks_kategorie == "B6_5",
+        )
+        .all()
+    )
+    if b6_5_eintraege:
+        b6_5_total = Decimal("0")
+        for e in b6_5_eintraege:
+            if e.km_anzahl is not None:
+                b6_5_total += Decimal(str(e.km_anzahl)) * Decimal("0.10")
+            else:
+                b6_5_total += Decimal(str(e.brutto_betrag))
+        result["B6_5"] = str(b6_5_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
     # A5_1: vereinnahmte USt aus allen Einnahmen (A1, A3, A4) automatisch ableiten
     # A5_2: USt auf Eigenverbrauch von Waren (A2) automatisch ableiten
@@ -242,12 +267,12 @@ def eks_halbjahr(
 
     zeilen   = _zeilensummen(werte_pro_monat, monate_keys)
     spalten_a = _spaltensummen(werte_pro_monat, monate_keys, A_CODES)
-    spalten_b = _spaltensummen(werte_pro_monat, monate_keys, B_CODES)
+    spalten_b = _spaltensummen(werte_pro_monat, monate_keys, B_CODES_SUMME)
     spalten_c = _spaltensummen(werte_pro_monat, monate_keys, C_CODES)
 
     felder_meta = [
-        {"tabelle": t, "code": code, "label": label, "auto": auto}
-        for t, code, label, auto in EKS_FELDER_META
+        {"tabelle": t, "code": code, "label": label, "auto": auto, "negativ": negativ}
+        for t, code, label, auto, negativ in EKS_FELDER_META
     ]
 
     return {

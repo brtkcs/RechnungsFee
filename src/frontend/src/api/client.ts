@@ -291,6 +291,7 @@ export type JournalEintrag = {
   konto_ust_skr04?: string | null
   immutable: boolean
   erstellt_am: string
+  km_anzahl?: number | null
 }
 
 export type JournalEintragCreate = {
@@ -304,6 +305,7 @@ export type JournalEintragCreate = {
   ust_satz: string
   vorsteuerabzug?: boolean
   externe_belegnr?: string
+  km_anzahl?: number | null
 }
 
 export type MonatsUebersicht = {
@@ -526,6 +528,7 @@ export type EksFeld = {
   tabelle: string
   code: string
   label: string
+  negativ?: boolean
   auto: boolean
 }
 

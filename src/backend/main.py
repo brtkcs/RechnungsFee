@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 42
+SCHEMA_VERSION = 43
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -982,6 +982,17 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 38"))
             conn.commit()
             print("[Migration] Schema auf Version 38 gebracht (differenzbesteuerung §25a UStG)")
+
+        if version < 43:
+            # journal.km_anzahl: Kilometeranzahl für km-Pauschale-Buchungen (Fahrtkosten Privat-PKW).
+            # Optional – nur bei Fahrtkosten relevant. EÜR rechnet km × 0,30 €, EKS km × 0,10 €.
+            # Ohne Eintrag: EKS-Berechnung fällt auf brutto_betrag zurück (Rückwärtskompatibilität).
+            cols_j = {r[1] for r in conn.execute(text("PRAGMA table_info(journal)")).fetchall()}
+            if "km_anzahl" not in cols_j:
+                conn.execute(text("ALTER TABLE journal ADD COLUMN km_anzahl NUMERIC(10,1)"))
+            conn.execute(text("PRAGMA user_version = 43"))
+            conn.commit()
+            print("[Migration] Schema auf Version 43 (journal.km_anzahl fuer Fahrtkosten/EKS B6_5)")
 
         if version < 42:
             # EDV / Software (Sofortabschreibung): war fälschlicherweise kontenart=Aufwand.

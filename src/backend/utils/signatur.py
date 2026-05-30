@@ -37,6 +37,7 @@ def signatur_journaleintrag(e: "Journaleintrag") -> str:
         "ust_satz": str(e.ust_satz),
         "vorsteuerabzug": bool(e.vorsteuerabzug),
         "zahlungsart": str(e.zahlungsart),
+        "km_anzahl": str(e.km_anzahl) if e.km_anzahl is not None else "",
     })
 
 

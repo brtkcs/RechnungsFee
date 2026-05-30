@@ -277,6 +277,7 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
         vorsteuerabzug=vorsteuerabzug,
         steuerbefreiung_grund=steuerbefreiung_grund,
         externe_belegnr=data.externe_belegnr,
+        km_anzahl=data.km_anzahl,
         immutable=True,
     )
     journaleintrag.signatur = signatur_journaleintrag(journaleintrag)

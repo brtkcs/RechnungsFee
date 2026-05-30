@@ -77,6 +77,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
   const [isSplit, setIsSplit] = useState(false)
   const [eingabeModus, setEingabeModus] = useState<'brutto' | 'netto'>('brutto')
   const [keineGeldbewegung, setKeineGeldbewegung] = useState(false)
+  const [kmAnzahl, setKmAnzahl] = useState<string>('')
 
   const { data: kategorien } = useQuery({ queryKey: ['kategorien', 'aktiv'], queryFn: () => getKategorien(true) })
   const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
@@ -192,6 +193,16 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
 
   const gewaehlteKat = (kategorien ?? []).find((k) => String(k.id) === kategorie_id)
   const istPrivatKategorie = gewaehlteKat?.kontenart === 'Privat'
+  const istFahrtkostenKat = gewaehlteKat?.eks_kategorie === 'B6_5'
+
+  // km-Eingabe: brutto_betrag auto-berechnen (EÜR: 0,30 €/km)
+  useEffect(() => {
+    if (!istFahrtkostenKat) { setKmAnzahl(''); return }
+    const km = parseFloat(kmAnzahl)
+    if (!isNaN(km) && km > 0) {
+      setValue('brutto_betrag', (km * 0.30).toFixed(2))
+    }
+  }, [kmAnzahl, istFahrtkostenKat, setValue])
 
   // USt-Vorschau (einfache Buchung) – je nach Eingabemodus
   const eingabeWert = parseFloat(bruttoStr) || 0
@@ -329,6 +340,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
       kunde_id: values.kunde_id ? Number(values.kunde_id) : undefined,
       vorsteuerabzug: values.vorsteuerabzug,
       externe_belegnr: values.externe_belegnr || undefined,
+      km_anzahl: istFahrtkostenKat && kmAnzahl ? parseFloat(kmAnzahl) || null : null,
     })
   }
 
@@ -544,6 +556,33 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
                       )
                     })}
                 </select>
+              </div>
+            )}
+
+            {/* km-Pauschale (nur bei Fahrtkosten Privat-PKW / B6_5) */}
+            {istFahrtkostenKat && (
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2.5 space-y-1.5">
+                <label className="block text-xs font-semibold text-blue-700 dark:text-blue-300">
+                  🚗 km-Pauschale
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={kmAnzahl}
+                    onChange={(e) => setKmAnzahl(e.target.value)}
+                    placeholder="0"
+                    className="w-28 border border-blue-300 dark:border-blue-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+                  />
+                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                    km × 0,30 € = <strong>{((parseFloat(kmAnzahl) || 0) * 0.30).toFixed(2).replace('.', ',')} €</strong> (EÜR)
+                    <span className="ml-2 text-slate-500 dark:text-slate-400">| EKS: {((parseFloat(kmAnzahl) || 0) * 0.10).toFixed(2).replace('.', ',')} €</span>
+                  </span>
+                </div>
+                <p className="text-xs text-blue-500 dark:text-blue-500">
+                  Betrag wird automatisch berechnet. km-Anzahl wird gespeichert – EKS verwendet 0,10 €/km.
+                </p>
               </div>
             )}
 

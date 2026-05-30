@@ -45,22 +45,28 @@ const TABELLEN_FARBE: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function MatrixTabelle({
-  tabelle, felder, res,
+  tabelle, felder, res, b64PrivKm, onB64PrivKmChange,
 }: {
   tabelle: 'A' | 'B'
   felder: EksFeld[]
   res: EksHalbjahr
+  b64PrivKm?: string
+  onB64PrivKmChange?: (km: string) => void
 }) {
   const { monate, werte, spaltensummen_a, spaltensummen_b } = res
   const spaltensummen = tabelle === 'A' ? spaltensummen_a : spaltensummen_b
-  const gesamt = felder.reduce((s, f) => s + zeilenSumme(res, f.code), 0)
+  const b64PrivBetrag = (parseFloat(b64PrivKm || '0') || 0) * 0.10
+  const gesamt = felder.reduce((s, f) => {
+    if (f.negativ) return s  // negativ-Felder aus Journal-Summe raus (manuell)
+    return s + zeilenSumme(res, f.code)
+  }, 0) - (tabelle === 'B' ? b64PrivBetrag : 0)
 
   // Tabellenabschnitte für B (Teil 1 / 2 / 3)
   const abschnitte: { label: string; codes: string[] }[] = tabelle === 'A' ? [
     { label: '', codes: felder.map(f => f.code) },
   ] : [
     { label: 'Teil 1', codes: ['B1','B2_1','B2_2','B2_3','B2_4','B3','B4','B5'] },
-    { label: 'Teil 2', codes: ['B6_1','B6_2','B6_3','B6_4','B6_5','B7_1','B7_2','B7_3','B8','B9','B10'] },
+    { label: 'Teil 2', codes: ['B6_1','B6_2','B6_3','B6_4','B6_4_priv','B6_5','B7_1','B7_2','B7_3','B8','B9','B10'] },
     { label: 'Teil 3', codes: ['B11','B12','B13','B14_1','B14_2','B14_3','B14_4','B14_5','B15','B16','B17','B18'] },
   ]
 
@@ -115,6 +121,42 @@ function MatrixTabelle({
                   )}
 
                   {abschnittFelder.map((f) => {
+                    // B6_4_priv: manuelles km-Eingabefeld mit Abzugsdarstellung
+                    if (f.negativ) {
+                      const abzugBetrag = (parseFloat(b64PrivKm || '0') || 0) * 0.10
+                      const hatAbzug = abzugBetrag >= 0.005
+                      return (
+                        <tr key={f.code} className="border-b border-orange-100 dark:border-orange-900 bg-orange-50/40 dark:bg-orange-950/20">
+                          <td className="px-3 py-2 font-mono text-xs font-bold text-orange-400 dark:text-orange-600 border-r border-orange-100 dark:border-orange-900">
+                            {f.code}
+                          </td>
+                          <td className="px-3 py-2 text-slate-600 dark:text-slate-300 italic text-xs border-r border-orange-100 dark:border-orange-900">
+                            {f.label}
+                          </td>
+                          {monate.map(m => (
+                            <td key={m} className="px-2 py-2 text-right tabular-nums text-slate-300 dark:text-slate-600 border-r border-orange-100 dark:border-orange-900">—</td>
+                          ))}
+                          <td className="px-3 py-2 bg-orange-50 dark:bg-orange-950">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                value={b64PrivKm ?? ''}
+                                onChange={e => onB64PrivKmChange?.(e.target.value)}
+                                placeholder="0"
+                                className="w-20 border border-orange-300 dark:border-orange-700 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-orange-400 dark:bg-slate-700 dark:text-slate-100"
+                              />
+                              <span className="text-xs text-orange-600 dark:text-orange-400">km</span>
+                              <span className={`text-xs font-semibold tabular-nums ${hatAbzug ? 'text-red-600 dark:text-red-400' : 'text-slate-300 dark:text-slate-600'}`}>
+                                {hatAbzug ? `−${abzugBetrag.toFixed(2).replace('.', ',')}` : '–'}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    }
+
                     const zeilSum = zeilenSumme(res, f.code)
                     const hatWert = Math.abs(zeilSum) >= 0.005
                     return (
@@ -272,6 +314,7 @@ export function EksPage() {
   const [exportiert, setExportiert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [showEinstellungen, setShowEinstellungen] = useState(false)
+  const [b64PrivKm, setB64PrivKm] = useState<string>('')  // km privat gefahren mit Betriebs-KFZ (B6_4_priv)
 
   async function handleBerechnen() {
     setLaedt(true)
@@ -305,8 +348,11 @@ export function EksPage() {
   const felderB = ergebnis?.felder.filter(f => f.tabelle === 'B') ?? []
   const felderC = ergebnis?.felder.filter(f => f.tabelle === 'C') ?? []
 
+  const b64PrivBetrag = (parseFloat(b64PrivKm) || 0) * 0.10
   const sumA = ergebnis ? felderA.reduce((s, f) => s + zeilenSumme(ergebnis, f.code), 0) : 0
-  const sumB = ergebnis ? felderB.reduce((s, f) => s + zeilenSumme(ergebnis, f.code), 0) : 0
+  const sumB = ergebnis
+    ? felderB.filter(f => !f.negativ).reduce((s, f) => s + zeilenSumme(ergebnis, f.code), 0) - b64PrivBetrag
+    : 0
   const sumC = ergebnis ? felderC.reduce((s, f) => s + zeilenSumme(ergebnis, f.code), 0) : 0
   const gewinn    = sumA - sumB
   const einkommen = gewinn - sumC
@@ -399,7 +445,10 @@ export function EksPage() {
       {ergebnis && (
         <>
           <MatrixTabelle tabelle="A" felder={felderA} res={ergebnis} />
-          <MatrixTabelle tabelle="B" felder={felderB} res={ergebnis} />
+          <MatrixTabelle
+            tabelle="B" felder={felderB} res={ergebnis}
+            b64PrivKm={b64PrivKm} onB64PrivKmChange={setB64PrivKm}
+          />
 
           {/* Gewinn-Box */}
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
