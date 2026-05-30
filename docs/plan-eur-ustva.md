@@ -261,6 +261,24 @@ Phase 3 – UStVA
 
 ---
 
+## Anlage AVEUR (Anlagenverzeichnis)
+
+Wer Anlagevermögen hat, muss die **Anlage AVEUR** zur EÜR einreichen. Sie listet alle
+Wirtschaftsgüter mit Anschaffungskosten, jährlicher AfA und Restbuchwert – getrennt nach:
+
+| AVEUR-Kategorie | Unsere Kategorie |
+|-----------------|-----------------|
+| Kraftfahrzeuge | **KFZ (Kauf)** (SKR03 0320 / SKR04 0540) – neu ab Schema v41 |
+| Andere bewegliche WG | **Anlagevermögen (Kauf)** (SKR03 0400 / SKR04 0400) |
+| Immaterielle WG | *(kein eigenes Konto geplant – selten bei Freiberuflern)* |
+
+**Phase 2 EÜR-PDF** muss deshalb unterscheiden:
+- Zeilen 35/36 (Anschaffungskosten) aus Journal-Einträgen beider Anlage-Kategorien
+- Anlage AVEUR als separate Seite im PDF (vereinfacht: tabellarische Auflistung der Buchungen)
+- Hinweiszeilen Privatentnahme (Z106) und Privateinlage (Z107) ausweisen, aber nicht in Gewinnberechnung einbeziehen
+
+---
+
 ## EKS-Auswirkungen
 
 | Bereich | Verhalten | Begründung |

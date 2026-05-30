@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks
 
-SCHEMA_VERSION = 40
+SCHEMA_VERSION = 41
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -911,7 +911,8 @@ def _run_migrations() -> None:
                 "Mitgliedsbeiträge":           "z. B. IHK-Beitrag, Berufsverbände, Wirtschaftsvereinigungen, Fachverbände",
                 "Spenden (betrieblich)":       "z. B. Geld- oder Sachspenden an gemeinnützige Organisationen (Spendenquittung aufheben)",
                 "Gewerbesteuer":               "z. B. vierteljährliche Gewerbesteuer-Vorauszahlungen oder Jahresausgleich",
-                "Anlagevermögen (Kauf)":       "z. B. Computer, Maschinen, Fahrzeuge über 800 € netto – Abschreibung über Nutzungsdauer (AfA-Tabelle)",
+                "Anlagevermögen (Kauf)":       "z. B. Computer, Maschinen, Geräte über 800 € netto – für Fahrzeuge bitte „KFZ (Kauf)" verwenden (Anlage AVEUR)",
+                "KFZ (Kauf)":                  "Kauf eines Kraftfahrzeugs über 800 € netto (Anlage AVEUR: Kategorie Kraftfahrzeuge) – laufende KFZ-Kosten separat unter KFZ-Kosten / KFZ-Versicherung etc. buchen",
                 "Abschreibungen (AfA)":        "z. B. Jahres-AfA für Wirtschaftsgüter des Anlagevermögens (vom Steuerberater berechnet)",
                 "Investition aus Zuwendung Dritter": "z. B. Anschaffungen die aus Fördergeldern oder Zuschüssen finanziert wurden",
                 "Gewährte Skonti":             "Skonto den du Kunden gewährst – wird automatisch beim Buchen einer Zahlung mit Skonto zugewiesen (Erlösschmälerung)",
@@ -979,6 +980,20 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 38"))
             conn.commit()
             print("[Migration] Schema auf Version 38 gebracht (differenzbesteuerung §25a UStG)")
+
+        if version < 41:
+            # Privatentnahme / Privateinlage: euer_zeile war None, muss 106/107 sein.
+            # Anlage EÜR 2025 Zeile 106 = Entnahmen, Zeile 107 = Einlagen (Hinweiszeilen,
+            # fließen nicht in den Gewinn ein, müssen aber ausgewiesen werden).
+            conn.execute(text(
+                "UPDATE kategorien SET euer_zeile = 106 WHERE name = 'Privatentnahme' AND euer_zeile IS NULL"
+            ))
+            conn.execute(text(
+                "UPDATE kategorien SET euer_zeile = 107 WHERE name = 'Privateinlage' AND euer_zeile IS NULL"
+            ))
+            conn.execute(text("PRAGMA user_version = 41"))
+            conn.commit()
+            print("[Migration] Schema auf Version 41 (Privatentnahme Z106 / Privateinlage Z107)")
 
         if version < 40:
             # journal.vorsteuer_betrag: tatsächlich abziehbarer Vorsteuer-Anteil
@@ -1149,6 +1164,8 @@ def _migrate_kategorien() -> None:
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Bewirtungskosten nicht abzugsfähiger Anteil
             {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
+            # Anlagevermögen KFZ (Anlage AVEUR: eigene Kategorie „Kraftfahrzeuge")
+            {"name": "KFZ (Kauf)",                           "kontenart": "Anlage",  "konto_skr03": "0320", "konto_skr04": "0540", "eks_kategorie": "B8",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
         ]
         for data in neue:
             if not db.query(Kategorie).filter(Kategorie.name == data["name"]).first():
