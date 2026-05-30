@@ -115,7 +115,7 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 ## v0.3 – Buchhalterische Vollständigkeit *(Ziel: Juni 2026)*
 
-### Phase 1 – Korrekturbuchungen ✅ *v0.3.0*
+### Phase 1 – Korrekturbuchungen ✅ *v0.2.15*
 
 - [x] Buchungen ohne Geldfluss (`zahlungsart='Keine'`) – für AfA, Sachentnahmen, Eigenverbrauch (Issue #55)
 - [x] Forderungsausfall mit §17-UStG-Korrekturbuchung und Status „Uneinbringlich" (Issue #61)
@@ -256,4 +256,5 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2.11** (Mai 2026): Storno-Begründung (Pflichtfeld, Schnellauswahl, `storno_grund` in DB + Journal, Schema 34); Backend-Start-Timeout 10 s → 60 s (Defender-Scan / PyInstaller nach Windows-Update)
 - [x] **v0.2.12 – Gutschriften** (Mai 2026, Issue #103): Schema 37 (`dokument_typ`, `gutschrift_zu_rechnung_id`); `POST /rechnungen/{id}/gutschrift` (Positionen negiert, eigene GS-Nummer, Entwurf); Betragslimit (Summe aller Gutschriften ≤ Originalbrutto); Rückerstattung als negative Einnahme im Journal; PDF-Deckblatt „Gutschrift" + Bezugszeile; Storno einer Gutschrift mit GoBD-Gegenbuchung; Frontend: Button, Badge, Detail-Bereich
 - [x] **v0.2.13 – §25a UStG** (Mai 2026): Schema 38 (`artikel.differenzbesteuerung`, `rechnungspositionen.differenzbesteuerung`); Margenberechnung live im Artikelformular (Ankaufspreis, Marge, USt auf Marge); §25a-Badge in Artikelliste + Autocomplete-Dropdown; gemischte Rechnungen (§25a + Regelbesteuerung); PDF-Pflichthinweis nach § 25a UStG (multi_cell, kein Überlauf); Scroll-Layout-Fix (Header + Detailspalte fest, Liste scrollt); Storno-Buchungen: Betrag immer positiv, Art korrekt für Gutschriften
-- [x] **v0.3.0 – Korrekturbuchungen Phase 1** (Mai 2026): Buchungen ohne Geldfluss `zahlungsart='Keine'` (Issue #55); Forderungsausfall §17 UStG mit Status „Uneinbringlich" (Issue #61); `vorsteuer_betrag`-Snapshot; Kategorien Forderungsausfall + KFZ (Kauf) + Bewirtungskosten (nicht abzugsfähig); EDV/Software Aufwand→Anlage nach BMF 2021 (Issue #111); Schema 42
+- [x] **v0.2.14 – Korrekturbuchungen Phase 1** (Mai 2026): Buchungen ohne Geldfluss `zahlungsart='Keine'` (Issue #55); Forderungsausfall §17 UStG mit Status „Uneinbringlich" (Issue #61); `vorsteuer_betrag`-Snapshot; Kategorien Forderungsausfall + KFZ (Kauf) + Bewirtungskosten (nicht abzugsfähig); EDV/Software Aufwand→Anlage nach BMF 2021 (Issue #111); Schema 42
+- [x] **v0.2.15 – km-Pauschale EKS** (Mai 2026): `journal.km_anzahl` (Schema 43); BuchungForm km-Eingabe bei B6_5 (EÜR km×0,30, EKS-Vorschau km×0,10); EKS B6_5 auto-Berechnung km×0,10; EKS B6_4_priv (privat gefahrene km Betriebs-KFZ, Abzugsposten); GoBD-Hash erweitert

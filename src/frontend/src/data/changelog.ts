@@ -23,8 +23,8 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
-    version: 'v0.3.0',
-    datum: 'Juni 2026',
+    version: 'v0.2.15',
+    datum: 'Mai 2026',
     eintraege: [
       { typ: 'neu',          text: 'Buchungen ohne Geldfluss – neue Checkbox „Kein Geldfluss" im Buchungsformular für AfA, Sachentnahmen, Eigenverbrauch; kein Kassenstand-Einfluss, kein Tagesabschluss (Issue #55)' },
       { typ: 'neu',          text: 'Forderungsausfall – Rechnungen als uneinbringlich ausbuchen: Status-Badge, Filter, eigener Eintrag im Journal; für USt-Pflichtige automatisch §17-UStG-Korrekturbuchung (Issue #61)' },
