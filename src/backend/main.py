@@ -892,6 +892,7 @@ def _run_migrations() -> None:
                 "Reisekosten – ÖPNV":           "z. B. Bahn, Bus, U-Bahn, Straßenbahn für betriebliche Fahrten",
                 "Verpflegungsmehraufwand":      "z. B. Tagespauschalen auf Dienstreisen: 8 € (bis 8 Std.), 14 € (ab 8 Std.), 28 € (ganztägig)",
                 "Bewirtungskosten":             "z. B. Geschäftsessen mit Kunden oder Partnern – 70 % abziehbar; Anlass und Teilnehmer auf dem Beleg notieren",
+                "Bewirtungskosten (nicht abzugsfähig)": "Der nicht abziehbare 30 %-Anteil von Bewirtungskosten (§ 4 Abs. 5 Nr. 2 EStG) – separat buchen, kein Vorsteuerabzug",
                 "Steuerberatung":               "z. B. Steuerberater-Honorar, Jahresabschluss, Lohnbuchhaltung",
                 "Rechts- & Beratungskosten":   "z. B. Anwaltskosten, Unternehmensberatung, Notargebühren",
                 "Buchführungskosten":           "z. B. Buchhaltungssoftware-Abo, externe Buchführung",
@@ -1119,6 +1120,8 @@ def _migrate_kategorien() -> None:
             # Skonti
             {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": 15,   "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            # Bewirtungskosten nicht abzugsfähiger Anteil
+            {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": "B14_5", "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
         ]
         for data in neue:
             if not db.query(Kategorie).filter(Kategorie.name == data["name"]).first():
