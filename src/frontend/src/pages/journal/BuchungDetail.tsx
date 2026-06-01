@@ -23,7 +23,13 @@ function BelegnrKopieren({ belegnr }: { belegnr: string }) {
       {kopiert ? (
         <span className="text-green-500 dark:text-green-400 not-italic">✓ Kopiert</span>
       ) : (
-        belegnr
+        <>
+          {belegnr}
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </>
       )}
     </button>
   )
@@ -232,12 +238,6 @@ export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose }: Props) 
             </div>
             <div className="text-xs text-slate-400 dark:text-slate-500 pt-1 flex items-center gap-1 flex-wrap">
               {e.externe_belegnr && <span>Ext. Belegnr.: {e.externe_belegnr} &nbsp;·&nbsp;</span>}
-              {e.rechnung_nr && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium">
-                  🧾 {e.rechnung_nr}
-                </span>
-              )}
-              {e.rechnung_nr && <span>&nbsp;·&nbsp;</span>}
               {e.zahlungsart === 'Keine' ? '—' : e.zahlungsart} &nbsp;·&nbsp; {new Date(e.erstellt_am).toLocaleString('de-DE')}
               &nbsp;·&nbsp;
               <BelegnrKopieren belegnr={e.belegnr} />
