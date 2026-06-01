@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getRechnungen, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
+  getRechnungen, getRechnung, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl,
   sucheArtikel, getUstSaetze, getKassenstand,
@@ -2582,6 +2583,7 @@ type FilterModus = 'monat' | 'datum' | 'zeitraum' | 'jahr'
 
 export function RechnungenPage() {
   const qc = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [typ, setTyp] = useState<'eingang' | 'ausgang'>('ausgang')
   const [zahlungsstatus, setZahlungsstatus] = useState('')
   const [suche, setSuche] = useState('')
@@ -2592,6 +2594,26 @@ export function RechnungenPage() {
   const [datumBis, setDatumBis] = useState(heuteIso())
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [pendingEditRechnung, setPendingEditRechnung] = useState<Rechnung | null>(null)
+
+  // ?open=ID: direkt zur Rechnung springen (z.B. aus dem Journal-Link)
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId) return
+    const id = parseInt(openId, 10)
+    if (isNaN(id)) return
+    getRechnung(id)
+      .then((r) => {
+        setTyp(r.typ)
+        setFilterModus('alle')
+        setSelectedId(r.id)
+        setPendingEditRechnung(r)
+        setSearchParams({}, { replace: true })
+      })
+      .catch(() => {
+        setSearchParams({}, { replace: true })
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [formModus, setFormModus] = useState<'neu' | 'bearbeiten' | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [sortFaellig, setSortFaellig] = useState<'asc' | 'desc' | null>(null)
@@ -2608,7 +2630,9 @@ export function RechnungenPage() {
         ? { datum_von: datum, datum_bis: datum }
         : filterModus === 'zeitraum'
           ? { datum_von: datumVon, datum_bis: datumBis }
-          : { datum_von: `${aktivesJahr}-01-01`, datum_bis: `${aktivesJahr}-12-31` }
+          : filterModus === 'alle'
+            ? {}  // kein Datumsfilter – alle Rechnungen
+            : { datum_von: `${aktivesJahr}-01-01`, datum_bis: `${aktivesJahr}-12-31` }
 
   const { data: rechnungen, isLoading } = useQuery({
     queryKey: ['rechnungen', typ, zahlungsstatus, filterModus, monat, datum, datumVon, datumBis],
