@@ -79,19 +79,34 @@ export async function getApiBase(): Promise<string> {
 }
 
 /** Öffnet eine URL in Tauri per Shell-Plugin (Systembrowser), im Browser per window.open. */
+/** Öffnet eine URL (PDF, Export) in einem neuen Tauri-Fenster bzw. Browser-Tab. */
 export async function openUrl(url: string) {
   if (isTauri()) {
     const isLocal = url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')
+      || url.startsWith('blob:')
     if (isLocal) {
-      // Lokale Dokumente immer im eingebetteten Inline-Viewer anzeigen (App.tsx iframe).
-      // Verhindert doppeltes Öffnen (Systembrowser + Acrobat) auf Windows und macOS.
-      window.dispatchEvent(new CustomEvent('rechnungsfee:inline-viewer', { detail: { url } }))
+      await openInPdfWindow(url)
       return
     }
     try { await invoke('open_url', { url }) } catch { /* ignorieren */ }
   } else {
     window.open(url, '_blank')
   }
+}
+
+/** Öffnet ein Dokument in einem neuen Tauri-WebView-Fenster (eigenes OS-Fenster).
+ *  Funktioniert für HTTP-URLs und blob:-URLs gleichermaßen. */
+export async function openInPdfWindow(url: string, title = 'Dokument') {
+  const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+  const label = `pdf-${Date.now()}`
+  new WebviewWindow(label, {
+    url,
+    title,
+    width: 960,
+    height: 800,
+    center: true,
+    resizable: true,
+  })
 }
 
 // --- Setup ---

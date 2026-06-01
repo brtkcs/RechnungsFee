@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRechnungen, getRechnung, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
-  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl,
+  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow,
   sucheArtikel, getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate,
@@ -588,7 +588,7 @@ function RechnungDetail({
 
   function _zeigeBlob(blobUrl: string) {
     if (isTauri()) {
-      window.dispatchEvent(new CustomEvent('rechnungsfee:inline-viewer', { detail: { url: blobUrl } }))
+      openInPdfWindow(blobUrl, 'Rechnung')
     } else {
       window.open(blobUrl, '_blank')
     }
@@ -599,7 +599,8 @@ function RechnungDetail({
     const blobUrl = await _fetchPdfBlob()
     qc.invalidateQueries({ queryKey: ['rechnungen'] })
     if (isTauri()) {
-      window.dispatchEvent(new CustomEvent('rechnungsfee:inline-viewer', { detail: { url: blobUrl } }))
+      openInPdfWindow(blobUrl, 'Rechnung drucken')
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
     } else {
       const win = window.open(blobUrl, '_blank')
       if (win) win.addEventListener('load', () => win.print())
