@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getJournal, getKategorien } from '../../api/client'
 import { BuchungForm } from './BuchungForm'
@@ -28,6 +29,7 @@ function heuteIso(): string {
 }
 
 export function JournalPage() {
+  const navigate = useNavigate()
   const [filterModus, setFilterModus] = useState<FilterModus>('monat')
   const [monat, setMonat] = useState(aktuellerMonat)
   const [datum, setDatum] = useState(heuteIso)
@@ -265,8 +267,15 @@ export function JournalPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-200">
                         {e.beschreibung}
-                        {e.rechnung_nr && (
-                          <span className="ml-2 text-xs bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded px-1.5 py-0.5">🧾 {e.rechnung_nr}</span>
+                        {e.rechnung_nr && e.rechnung_id && (
+                          <button
+                            type="button"
+                            title="Zur Rechnung springen"
+                            onClick={(ev) => { ev.stopPropagation(); navigate(`/rechnungen?open=${e.rechnung_id}`) }}
+                            className="ml-2 text-xs bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded px-1.5 py-0.5 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                          >
+                            🧾 {e.rechnung_nr} ↗
+                          </button>
                         )}
                         {e.steuerbefreiung_grund && (
                           <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">({e.steuerbefreiung_grund})</span>

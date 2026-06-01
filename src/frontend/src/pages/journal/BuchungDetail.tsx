@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { stornoJournaleintrag, getUnternehmen, getJournalBelegUrl, openUrl, isTauri, type JournalEintrag } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
@@ -47,7 +46,6 @@ async function oeffneBelegFenster(id: number, drucken: boolean) {
 
 export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose }: Props) {
   const qc = useQueryClient()
-  const navigate = useNavigate()
   const [stornoGrund, setStornoGrund] = useState('')
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
@@ -234,15 +232,10 @@ export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose }: Props) 
             </div>
             <div className="text-xs text-slate-400 dark:text-slate-500 pt-1 flex items-center gap-1 flex-wrap">
               {e.externe_belegnr && <span>Ext. Belegnr.: {e.externe_belegnr} &nbsp;·&nbsp;</span>}
-              {e.rechnung_nr && e.rechnung_id && (
-                <button
-                  type="button"
-                  title="Zur Rechnung springen"
-                  onClick={() => navigate(`/rechnungen?open=${e.rechnung_id}`)}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors cursor-pointer"
-                >
-                  🧾 {e.rechnung_nr} ↗
-                </button>
+              {e.rechnung_nr && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-medium">
+                  🧾 {e.rechnung_nr}
+                </span>
               )}
               {e.rechnung_nr && <span>&nbsp;·&nbsp;</span>}
               {e.zahlungsart === 'Keine' ? '—' : e.zahlungsart} &nbsp;·&nbsp; {new Date(e.erstellt_am).toLocaleString('de-DE')}
