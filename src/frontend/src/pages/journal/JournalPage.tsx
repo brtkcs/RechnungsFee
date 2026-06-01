@@ -291,7 +291,10 @@ export function JournalPage() {
                           {e.konto_ust_skr03 ?? ''}
                         </td>
                         <td className="px-4 py-2 text-xs text-slate-400 dark:text-slate-500 italic">
-                          {e.art === 'Einnahme' ? `Umsatzsteuer ${e.ust_satz} %` : `Vorsteuer ${e.ust_satz} %`}
+                          {/* 1776/1771 = Umsatzsteuer-Konto (auch bei Forderungsausfall art='Ausgabe', Issue #113) */}
+                          {(e.art === 'Einnahme' || e.konto_ust_skr03 === '1776' || e.konto_ust_skr03 === '1771')
+                            ? `Umsatzsteuer ${e.ust_satz} %`
+                            : `Vorsteuer ${e.ust_satz} %`}
                         </td>
                         <td className="px-4 py-2"></td>
                         <td className="px-4 py-2 text-right text-xs font-medium text-green-500 dark:text-green-700">
