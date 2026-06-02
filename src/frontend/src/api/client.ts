@@ -1099,3 +1099,29 @@ export const saveEksEinstellungen = (data: EksEinstellungen) =>
     method: 'PUT',
     body: JSON.stringify(data),
   })
+
+
+// ---------------------------------------------------------------------------
+// System – Tesseract OCR
+// ---------------------------------------------------------------------------
+
+export type TesseractVoraussetzungen = {
+  os: 'Windows' | 'Darwin' | 'Linux'
+  winget: boolean
+  brew: boolean
+  apt: boolean
+  dnf: boolean
+  pacman: boolean
+  pkexec: boolean
+}
+
+export const pruefeTesseract = () =>
+  request<{ installiert: boolean }>('/system/tesseract')
+
+export const tesseractVoraussetzungen = () =>
+  request<TesseractVoraussetzungen>('/system/tesseract/voraussetzungen')
+
+export const installiereTesseract = () =>
+  request<{ erfolg: boolean; fehler?: string }>('/system/tesseract/installieren', {
+    method: 'POST',
+  })

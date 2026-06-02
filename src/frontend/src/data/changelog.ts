@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.17',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu',          text: 'Tesseract-Assistent: benutzerfreundlicher Einrichtungsdialog für OCR – Ein-Klick-Installation ohne Terminal, plattformspezifisch (Windows: winget, Linux: pkexec + apt/dnf/pacman, macOS: Anleitung)' },
+      { typ: 'fix',          text: 'Windows-Installer: Tesseract-Installation wird jetzt per Dialog angeboten statt still im Hintergrund zu laufen (Issue #115)' },
+    ],
+  },
+  {
     version: 'v0.2.16',
     datum: 'Juni 2026',
     eintraege: [

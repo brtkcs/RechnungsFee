@@ -45,71 +45,306 @@ function aktuellerMonat(): string {
 
 
 // ---------------------------------------------------------------------------
-// OCR-Installationshinweis (Tesseract fehlt)
+// Tesseract-Assistent (OCR einrichten)
 // ---------------------------------------------------------------------------
 
-function ermittleOs(): 'windows' | 'macos' | 'linux' {
-  const ua = navigator.userAgent.toLowerCase()
-  if (ua.includes('win')) return 'windows'
-  if (ua.includes('mac')) return 'macos'
-  return 'linux'
-}
+type AssistentSchritt =
+  | 'pruefe'          // initiale Prüfung
+  | 'bereit'          // Voraussetzungen laden, zeige "Einrichten"-Button
+  | 'installiere'     // läuft
+  | 'erfolg'          // fertig, Neustart nötig
+  | 'fehler_brew'     // macOS, Homebrew fehlt
+  | 'fehler_winget'   // Windows, winget fehlt
+  | 'fehler_pkexec'   // Linux, pkexec fehlt
+  | 'fehler_manager'  // Linux, kein Paketmanager
+  | 'fehler_sonstig'  // sonstiger Fehler
 
-const OCR_INSTALL: Record<'windows' | 'macos' | 'linux', { label: string; cmd: string; hinweis?: string }> = {
-  windows: {
-    label: 'Windows',
-    cmd: 'winget install UB-Mannheim.TesseractOCR',
-    hinweis: 'Alternativ: https://github.com/UB-Mannheim/tesseract/wiki',
-  },
-  macos: {
-    label: 'macOS (Homebrew)',
-    cmd: 'brew install tesseract tesseract-lang',
-    hinweis: 'Homebrew noch nicht installiert? https://brew.sh',
-  },
-  linux: {
-    label: 'Linux',
-    cmd: 'sudo apt install tesseract-ocr tesseract-ocr-deu',
-    hinweis: 'Fedora: sudo dnf install tesseract tesseract-langpack-deu  |  Arch: sudo pacman -S tesseract tesseract-data-deu',
-  },
-}
+function TesseractAssistentModal({ onClose }: { onClose: () => void }) {
+  const [schritt, setSchritt] = useState<AssistentSchritt>('pruefe')
+  const [vorausset, setVorausset] = useState<import('../../api/client').TesseractVoraussetzungen | null>(null)
 
-function OcrInstallHinweis() {
-  const [kopiert, setKopiert] = useState(false)
-  const info = OCR_INSTALL[ermittleOs()]
+  useEffect(() => {
+    Promise.all([
+      import('../../api/client').then(m => m.pruefeTesseract()),
+      import('../../api/client').then(m => m.tesseractVoraussetzungen()),
+    ]).then(([status, v]) => {
+      if (status.installiert) { onClose(); return }
+      setVorausset(v)
+      setSchritt('bereit')
+    }).catch(() => setSchritt('bereit'))
+  }, [])
 
-  function kopieren() {
-    navigator.clipboard.writeText(info.cmd).catch(() => {})
-    setKopiert(true)
-    setTimeout(() => setKopiert(false), 2000)
+  async function starten() {
+    setSchritt('installiere')
+    try {
+      const { installiereTesseract } = await import('../../api/client')
+      const res = await installiereTesseract()
+      if (res.erfolg) {
+        setSchritt('erfolg')
+      } else {
+        const f = res.fehler ?? ''
+        if (f === 'BREW_FEHLT')        setSchritt('fehler_brew')
+        else if (f === 'WINGET_FEHLT') setSchritt('fehler_winget')
+        else if (f === 'PKEXEC_FEHLT') setSchritt('fehler_pkexec')
+        else if (f === 'KEIN_PAKETMANAGER') setSchritt('fehler_manager')
+        else setSchritt('fehler_sonstig')
+      }
+    } catch {
+      setSchritt('fehler_sonstig')
+    }
   }
 
+  const os = vorausset?.os ?? (navigator.userAgent.includes('Win') ? 'Windows' : navigator.userAgent.includes('Mac') ? 'Darwin' : 'Linux')
+  const osLabel = os === 'Windows' ? 'Windows' : os === 'Darwin' ? 'macOS' : 'Linux'
+  const kannAutoInstall =
+    (os === 'Windows' && vorausset?.winget) ||
+    (os === 'Darwin'  && vorausset?.brew) ||
+    (os === 'Linux'   && vorausset?.pkexec && (vorausset.apt || vorausset.dnf || vorausset.pacman))
+
   return (
-    <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3 space-y-2">
-      <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
-        🔍 OCR nicht verfügbar – Tesseract OCR ist nicht installiert
-      </p>
-      <p className="text-xs text-orange-700 dark:text-orange-300">
-        Für gescannte Belege und Kassenbons wird Tesseract OCR benötigt. Einmalig installieren:
-      </p>
-      <div className="flex items-center gap-2">
-        <code className="flex-1 text-xs bg-orange-100 dark:bg-orange-900 px-2 py-1.5 rounded font-mono break-all">
-          {info.cmd}
-        </code>
-        <button
-          type="button"
-          onClick={kopieren}
-          className="shrink-0 text-xs px-2.5 py-1.5 bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded hover:bg-orange-300 dark:hover:bg-orange-700 transition-colors"
-        >
-          {kopiert ? '✓' : 'Kopieren'}
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">🔍 Texterkennung einrichten</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xl leading-none">×</button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+
+          {/* Prüfen */}
+          {schritt === 'pruefe' && (
+            <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+              <div className="w-5 h-5 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
+              <span className="text-sm">Prüfe Installation…</span>
+            </div>
+          )}
+
+          {/* Bereit – kann automatisch installieren */}
+          {schritt === 'bereit' && kannAutoInstall && (
+            <>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Für gescannte Eingangsrechnungen und Kassenbons wird <strong>Tesseract OCR</strong> benötigt.
+                RechnungsFee richtet es automatisch ein.
+              </p>
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-1 text-sm text-slate-500 dark:text-slate-400">
+                <p>✓ {osLabel}-System erkannt</p>
+                {os === 'Windows' && <p>✓ Windows-Paketmanager (winget) verfügbar</p>}
+                {os === 'Darwin'  && <p>✓ Homebrew verfügbar</p>}
+                {os === 'Linux'   && <p>✓ Paketmanager und Rechteverwaltung verfügbar</p>}
+                <p className="text-xs pt-1">Dauer: ca. 1–3 Minuten · benötigt Internetverbindung</p>
+              </div>
+              {os === 'Linux' && (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  ℹ️ Dein System fragt gleich nach dem Administratorpasswort – das ist normal.
+                </p>
+              )}
+              <button
+                onClick={starten}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+              >
+                Texterkennung einrichten
+              </button>
+            </>
+          )}
+
+          {/* Bereit – KEIN Auto-Install möglich → Anleitung */}
+          {schritt === 'bereit' && !kannAutoInstall && (
+            <TesseractAnleitung os={os as 'Windows' | 'Darwin' | 'Linux'} vorausset={vorausset} />
+          )}
+
+          {/* Läuft */}
+          {schritt === 'installiere' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin shrink-0" />
+                <p className="text-sm text-slate-600 dark:text-slate-300">Texterkennung wird eingerichtet…</p>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Das kann 1–3 Minuten dauern. Bitte warten.
+              </p>
+            </div>
+          )}
+
+          {/* Erfolg */}
+          {schritt === 'erfolg' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <span className="text-xl">✓</span>
+                <p className="font-medium text-sm">Texterkennung erfolgreich eingerichtet!</p>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Bitte starte RechnungsFee neu, damit die Texterkennung aktiv wird.
+                Danach einfach den Import erneut starten.
+              </p>
+              <button
+                onClick={onClose}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-colors"
+              >
+                Verstanden
+              </button>
+            </div>
+          )}
+
+          {/* Fehler: Homebrew fehlt (macOS) */}
+          {schritt === 'fehler_brew' && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Homebrew ist nicht installiert</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Homebrew ist ein kostenloser Paketmanager für macOS, der für die Installation benötigt wird.
+              </p>
+              <a
+                href="https://brew.sh"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => import('../../api/client').then(m => m.openUrl('https://brew.sh'))}
+                className="block w-full py-2.5 text-center bg-slate-700 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors"
+              >
+                brew.sh öffnen →
+              </a>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Nach der Homebrew-Installation diesen Assistenten erneut öffnen.
+              </p>
+            </div>
+          )}
+
+          {/* Fehler: winget fehlt (Windows) */}
+          {schritt === 'fehler_winget' && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Automatische Installation nicht möglich</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Der Windows-Paketmanager (winget) ist nicht verfügbar. Bitte Tesseract OCR manuell installieren:
+              </p>
+              <a
+                href="https://github.com/UB-Mannheim/tesseract/wiki"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => import('../../api/client').then(m => m.openUrl('https://github.com/UB-Mannheim/tesseract/wiki'))}
+                className="block w-full py-2.5 text-center bg-slate-700 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors"
+              >
+                Tesseract Installer herunterladen →
+              </a>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Nach der Installation RechnungsFee neu starten.
+              </p>
+            </div>
+          )}
+
+          {/* Fehler: pkexec oder Paketmanager fehlt (Linux) */}
+          {(schritt === 'fehler_pkexec' || schritt === 'fehler_manager') && (
+            <TesseractAnleitung os="Linux" vorausset={vorausset} />
+          )}
+
+          {/* Fehler: sonstiger Fehler */}
+          {schritt === 'fehler_sonstig' && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">Installation fehlgeschlagen</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Die automatische Installation konnte nicht abgeschlossen werden. Bitte versuche es erneut oder installiere Tesseract OCR manuell.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setSchritt('bereit') }}
+                  className="flex-1 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-sm transition-colors"
+                >
+                  Erneut versuchen
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-sm transition-colors"
+                >
+                  Schließen
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
-      {info.hinweis && (
-        <p className="text-xs text-orange-500 dark:text-orange-400">{info.hinweis}</p>
-      )}
-      <p className="text-xs text-orange-600 dark:text-orange-400">
+    </div>
+  )
+}
+
+/** Manuelle Anleitung wenn kein Auto-Install möglich (Linux ohne pkexec, etc.) */
+function TesseractAnleitung({
+  os,
+  vorausset,
+}: {
+  os: 'Windows' | 'Darwin' | 'Linux'
+  vorausset: import('../../api/client').TesseractVoraussetzungen | null
+}) {
+  const pkg = vorausset?.dnf ? 'dnf' : vorausset?.pacman ? 'pacman' : 'apt'
+  const schritte: { label: string; url?: string; hinweis?: string }[] = os === 'Windows'
+    ? [{ label: 'Tesseract Installer herunterladen und ausführen', url: 'https://github.com/UB-Mannheim/tesseract/wiki', hinweis: 'Deutsch-Sprachpaket im Installer auswählen' }]
+    : os === 'Darwin'
+      ? [
+          { label: 'Homebrew installieren (kostenloser macOS-Paketmanager)', url: 'https://brew.sh' },
+          { label: 'Diesen Assistenten erneut öffnen – er richtet Tesseract dann automatisch ein' },
+        ]
+      : pkg === 'apt'
+        ? [{ label: 'Terminal öffnen und folgendes eingeben:', hinweis: 'sudo apt install tesseract-ocr tesseract-ocr-deu' }]
+        : pkg === 'dnf'
+          ? [{ label: 'Terminal öffnen und folgendes eingeben:', hinweis: 'sudo dnf install tesseract tesseract-langpack-deu' }]
+          : [{ label: 'Terminal öffnen und folgendes eingeben:', hinweis: 'sudo pacman -S tesseract tesseract-data-deu' }]
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Für gescannte Eingangsrechnungen und Kassenbons wird <strong>Tesseract OCR</strong> benötigt.
+        Bitte einmalig installieren:
+      </p>
+      <ol className="space-y-2">
+        {schritte.map((s, i) => (
+          <li key={i} className="text-sm text-slate-600 dark:text-slate-300 flex gap-2">
+            <span className="shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs flex items-center justify-center font-medium">{i + 1}</span>
+            <span>
+              {s.label}
+              {s.url && (
+                <button
+                  type="button"
+                  onClick={() => import('../../api/client').then(m => m.openUrl(s.url!))}
+                  className="ml-1 text-blue-600 dark:text-blue-400 underline"
+                >
+                  {s.url.replace('https://', '')}
+                </button>
+              )}
+              {s.hinweis && <span className="block mt-0.5 text-xs text-slate-400 font-mono">{s.hinweis}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs text-slate-400 dark:text-slate-500">
         Nach der Installation RechnungsFee neu starten.
       </p>
     </div>
+  )
+}
+
+/** Kleiner Hinweis-Banner der den Assistenten öffnet */
+function OcrInstallHinweis() {
+  const [zeigAssistent, setZeigAssistent] = useState(false)
+  return (
+    <>
+      <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+            🔍 Texterkennung (OCR) nicht verfügbar
+          </p>
+          <p className="text-xs text-orange-600 dark:text-orange-400">
+            Für gescannte Belege und Kassenbons wird Tesseract OCR benötigt.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setZeigAssistent(true)}
+          className="shrink-0 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium rounded-lg transition-colors"
+        >
+          Einrichten →
+        </button>
+      </div>
+      {zeigAssistent && <TesseractAssistentModal onClose={() => setZeigAssistent(false)} />}
+    </>
   )
 }
 
