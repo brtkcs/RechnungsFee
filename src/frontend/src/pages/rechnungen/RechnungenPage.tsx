@@ -2655,7 +2655,7 @@ function ImportDialog({
 // Haupt-Seite
 // ---------------------------------------------------------------------------
 
-type FilterModus = 'monat' | 'datum' | 'zeitraum' | 'jahr'
+type FilterModus = 'monat' | 'datum' | 'zeitraum' | 'jahr' | 'alle'
 
 export function RechnungenPage() {
   const qc = useQueryClient()
