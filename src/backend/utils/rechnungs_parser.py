@@ -264,11 +264,13 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
     )
     _SUMMENLABEL = re.compile(
         r"^(?:netto(?:betrag|summe|preis)?|brutto(?:betrag|summe)?|"
-        r"gesamt(?:betrag|summe)?|zwischensumme|rechnungsbetrag|"
+        r"gesamt(?:betrag|summe)?|zwischensumme|rechnungsbetrag|total|"
         r"zu\s+zahlen(?:\w+)?|summe(?:betrag)?(?:\s+netto)?|"
         r"(?:ust|mwst|umsatzsteuer)\.?\s*\d*\s*%?|"
         r"\d+\s*%\s*(?:ust|mwst|umsatzsteuer)|"
-        r"rabatt|skonto|aufschlag|mindermenge)\s*(?:[:\s]|$)",
+        r"rabatt|skonto|aufschlag|mindermenge)"
+        r"\s*(?:[:\s]|$)"                       # Label-Ende (Doppelpunkt, Leerzeichen …)
+        r"(?:€|EUR|CHF|USD|GBP)?\s*",           # optionales Währungssymbol nach Label
         re.IGNORECASE,
     )
     _HEADER = re.compile(
@@ -443,6 +445,10 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
         prev_zeile = ""  # nach jeder gefundenen Position zurücksetzen
 
         if len(vor) < 2 or re.match(r"^\d+$", vor):
+            continue
+        # Währungssymbol allein → keine valide Beschreibung
+        # (z.B. OCR trennt "SUMME" und "EUR 30,85" auf eigene Zeilen → vor = "EUR")
+        if re.match(r"^(?:€|EUR|CHF|USD|GBP)\s*$", vor, re.IGNORECASE):
             continue
 
         positionen.append(AnalysePosition(
@@ -893,20 +899,21 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
                     felder["gesamt_ust"] = v
 
     # Brutto-Gesamtbetrag: spezifische Labels zuerst, dann "Gesamt / Total" (kein Sub Total), Fallback
+    # (?:€|EUR|CHF)?\s* erlaubt Währungssymbol zwischen Label und Zahl (z.B. "SUMME EUR 30,85")
     m = re.search(
         r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|Brutto(?:summe|betrag)?)"
-        r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s]*([\d.,]+)\s*(?:€|EUR)?",
+        r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?",
         text, re.IGNORECASE,
     )
     if not m:
         # "Gesamt / Total" aber NICHT "Gesamt / Sub Total"
         m = re.search(
-            r"Gesamt(?:summe)?\s*/\s*(?!Sub\b)[^\n0-9]{0,25}([\d.,]+)\s*(?:€|EUR)?",
+            r"Gesamt(?:summe)?\s*/\s*(?!Sub\b)[^\n0-9]{0,25}([\d.,]+)\s*(?:€|EUR|CHF)?",
             text, re.IGNORECASE,
         )
     if not m:
         m = re.search(
-            r"(?:Gesamt(?:summe)?|Summe)\s*[:\s]*([\d.,]+)\s*(?:€|EUR)?",
+            r"(?:Gesamt(?:summe)?|Summe)\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?",
             text, re.IGNORECASE,
         )
     if m:
