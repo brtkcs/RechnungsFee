@@ -1,22 +1,22 @@
 ; RechnungsFee – Benutzerdefinierter NSIS-Installer-Hook
 ; Wird nach der Hauptinstallation ausgefuehrt.
-; Installiert Tesseract OCR optional ueber winget (Windows-Paketmanager).
+; Bietet die Installation von Tesseract OCR per MessageBox an.
 
 !macro customInstall
-  ; --- Tesseract OCR (optional, fuer gescannte Eingangsrechnungen) ---
-  DetailPrint ""
-  DetailPrint "Optionale Komponente: Tesseract OCR"
-  DetailPrint "Wird benoetigt, um gescannte Eingangsrechnungen automatisch zu erkennen."
-  DetailPrint ""
 
   ; Pruefen ob tesseract bereits im PATH vorhanden ist
   nsExec::ExecToStack 'cmd /c where tesseract 2>nul'
-  Pop $0  ; Exit-Code
-  Pop $1  ; Ausgabe
+  Pop $0
+  Pop $1
 
-  ${If} $0 == 0
-    DetailPrint "Tesseract OCR ist bereits installiert."
-  ${Else}
+  ${If} $0 != 0
+    ; Tesseract fehlt – Nutzer fragen
+    MessageBox MB_YESNO|MB_ICONQUESTION \
+      "Tesseract OCR installieren?$\n$\nFür gescannte Eingangsrechnungen und Kassenbons \
+(Fotos, Scans) benötigt RechnungsFee Tesseract OCR.$\n$\nJetzt automatisch installieren \
+(ca. 50 MB, benötigt Internetverbindung)?" \
+      IDNO ocr_skip
+
     ; Pruefen ob winget verfuegbar ist
     nsExec::ExecToStack 'cmd /c where winget 2>nul'
     Pop $2
@@ -24,28 +24,29 @@
 
     ${If} $2 == 0
       DetailPrint "Installiere Tesseract OCR ueber winget..."
-      DetailPrint "(Dieser Schritt kann einige Sekunden dauern)"
-      nsExec::ExecToLog 'cmd /c winget install -e --id UB-Mannheim.TesseractOCR --silent --accept-source-agreements --accept-package-agreements'
+      nsExec::ExecToLog \
+        'cmd /c winget install -e --id UB-Mannheim.TesseractOCR --silent \
+--accept-source-agreements --accept-package-agreements'
       Pop $4
       ${If} $4 == 0
-        DetailPrint "Tesseract OCR wurde erfolgreich installiert."
-        DetailPrint "OCR fuer gescannte Eingangsrechnungen ist jetzt verfuegbar."
+        DetailPrint "Tesseract OCR erfolgreich installiert."
       ${ElseIf} $4 == -1978335189
-        ; WINGET_INSTALLED_STATUS_ALREADY_INSTALLED (0x8A15002B)
         DetailPrint "Tesseract OCR ist bereits installiert."
       ${Else}
-        DetailPrint "Tesseract OCR konnte nicht automatisch installiert werden."
-        DetailPrint "Fuer OCR-Unterstuetzung bitte manuell installieren:"
-        DetailPrint "  winget install UB-Mannheim.TesseractOCR"
+        MessageBox MB_OK|MB_ICONEXCLAMATION \
+          "Tesseract OCR konnte nicht automatisch installiert werden.$\n$\n\
+Bitte manuell nachinstallieren:$\n  winget install UB-Mannheim.TesseractOCR$\n$\n\
+Oder Download: https://github.com/UB-Mannheim/tesseract/wiki"
       ${EndIf}
     ${Else}
-      DetailPrint "winget ist nicht verfuegbar (Windows 10 vor 1709?)."
-      DetailPrint "Fuer OCR-Unterstuetzung bitte Tesseract manuell installieren:"
-      DetailPrint "  https://github.com/UB-Mannheim/tesseract/wiki"
+      MessageBox MB_OK|MB_ICONEXCLAMATION \
+        "Windows-Paketmanager (winget) nicht gefunden.$\n$\n\
+Bitte Tesseract OCR manuell installieren:$\nhttps://github.com/UB-Mannheim/tesseract/wiki"
     ${EndIf}
+
+    ocr_skip:
   ${EndIf}
 
-  DetailPrint ""
 !macroend
 
 !macro customUnInstall
