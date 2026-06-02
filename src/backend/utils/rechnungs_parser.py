@@ -594,11 +594,7 @@ def _ocr_pdf(pdf_bytes: bytes) -> "tuple[str, str]":
                 pytesseract.image_to_string(img, lang="deu+eng", config="--psm 3")
             )
         except pytesseract.TesseractNotFoundError:
-            return "", (
-                "tesseract-ocr ist nicht installiert. Bitte installieren: "
-                "Linux: sudo apt install tesseract-ocr tesseract-ocr-deu | "
-                "Windows: https://github.com/UB-Mannheim/tesseract/wiki"
-            )
+            return "", "TESSERACT_FEHLT"
         except Exception as exc:
             return "", f"OCR-Fehler auf Seite {page.number + 1}: {exc}"
 

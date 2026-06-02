@@ -170,6 +170,19 @@ sonst findet GitHub Actions die Workflow-Datei nicht.
 Tauri verwendet Unterstriche und `amd64`/`aarch64` (nicht Bindestriche/`x86_64`). Installer heißt `install-linux.sh`.
 macOS: kein Apple-Zertifikat → Hinweis `xattr -cr` in Release-Notes ergänzen.
 
+**Release-Notes Pflicht-Abschnitte nach Download-Tabelle:**
+```markdown
+> 🍎 **macOS:** Nicht signiert – beim ersten Start Rechtsklick → Öffnen, oder:
+> `xattr -cr RechnungsFee_X.X.X_aarch64.dmg`
+
+> 🔍 **OCR für gescannte Belege & Kassenbons** (Tesseract OCR):
+> - 🪟 Windows: automatisch durch den Installer
+> - 🐧 Linux: wird vom `install-linux.sh`-Skript angeboten; manuell: `sudo apt install tesseract-ocr tesseract-ocr-deu`
+> - 🍎 macOS: `brew install tesseract tesseract-lang`
+>
+> Ohne Tesseract zeigt RechnungsFee einen Installationshinweis sobald ein gescannter Beleg importiert wird.
+```
+
 ### Tauri Updater (`tauri-plugin-updater`)
 - Signing-Key lokal: `~/.tauri/rechnungsfee.key` (privat, nie committen!)
 - Public Key in `src-tauri/tauri.conf.json` unter `plugins.updater.pubkey`
