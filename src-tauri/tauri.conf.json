@@ -42,6 +42,13 @@
     ],
     "externalBin": [
       "binaries/backend"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "languages": ["German"],
+        "displayLanguageSelector": false,
+        "installerHooks": "nsis/installer.nsh"
+      }
+    }
   }
 }

@@ -30,6 +30,59 @@ echo "AppImage: $APPIMAGE"
 chmod +x "$APPIMAGE"
 
 # ── Systemabhängigkeiten prüfen und ggf. reparieren ───────────────────────────
+_check_and_install_tesseract() {
+  local pkg_manager="${1:-}"
+
+  echo "── Optionale Komponente: Tesseract OCR ─────────────────────────────────"
+  echo "  Wird benötigt um gescannte Eingangsrechnungen automatisch zu erkennen."
+  echo ""
+
+  if command -v tesseract &>/dev/null; then
+    echo "  ✓ tesseract-ocr bereits installiert ($(tesseract --version 2>&1 | head -1))"
+    echo "────────────────────────────────────────────────────────────────────────"
+    return 0
+  fi
+
+  echo "  ○ tesseract-ocr ist nicht installiert."
+  echo ""
+
+  local tess_pkg="" tess_lang_pkg=""
+  case "$pkg_manager" in
+    apt)    tess_pkg="tesseract-ocr";  tess_lang_pkg="tesseract-ocr-deu" ;;
+    dnf)    tess_pkg="tesseract";      tess_lang_pkg="tesseract-langpack-deu" ;;
+    zypper) tess_pkg="tesseract-ocr";  tess_lang_pkg="tesseract-ocr-traineddata-german" ;;
+    pacman) tess_pkg="tesseract";      tess_lang_pkg="tesseract-data-deu" ;;
+    *)
+      echo "  Für OCR bitte manuell installieren: tesseract-ocr + Sprachpaket Deutsch"
+      echo "────────────────────────────────────────────────────────────────────────"
+      return 0
+      ;;
+  esac
+
+  printf "  Jetzt installieren? [J/n] "
+  read -r answer
+  answer="${answer:-j}"
+
+  if [[ "$answer" =~ ^[jJyY]$ ]]; then
+    case "$pkg_manager" in
+      apt)    sudo apt install -y "$tess_pkg" "$tess_lang_pkg" ;;
+      dnf)    sudo dnf install -y "$tess_pkg" "$tess_lang_pkg" ;;
+      zypper) sudo zypper install -y "$tess_pkg" "$tess_lang_pkg" ;;
+      pacman) sudo pacman -S --noconfirm "$tess_pkg" "$tess_lang_pkg" ;;
+    esac
+    echo ""
+    if command -v tesseract &>/dev/null; then
+      echo "  ✓ Tesseract OCR installiert. OCR für gescannte Rechnungen ist aktiv."
+    else
+      echo "  ✗ Installation fehlgeschlagen. OCR wird übersprungen."
+    fi
+  else
+    echo "  Übersprungen. OCR für gescannte Rechnungen ist nicht verfügbar."
+    echo "  Manuell nachinstallieren: sudo $pkg_manager install $tess_pkg $tess_lang_pkg"
+  fi
+  echo "────────────────────────────────────────────────────────────────────────"
+}
+
 check_and_fix_deps() {
   local pkg_manager="" webkit_pkg="" egl_pkg="" fuse_pkg="" extra_pkgs=""
 
@@ -114,24 +167,7 @@ check_and_fix_deps() {
     echo "  kann ein Defekt in einer Systembibliothek die Ursache sein."
     echo "  Reparatur-Option: $0 --repair $APPIMAGE"
     echo ""
-    echo "── Optionale Abhängigkeiten ────────────────────────────────────────────"
-    echo "  OCR für gescannte Eingangsrechnungen (Stufe 4):"
-    if command -v tesseract &>/dev/null; then
-      echo "  ✓ tesseract-ocr installiert ($(tesseract --version 2>&1 | head -1))"
-    else
-      echo "  ○ tesseract-ocr nicht installiert – OCR wird übersprungen."
-      echo "    Für OCR-Unterstützung:"
-      if [ -n "$pkg_manager" ] && [ "$pkg_manager" = "apt" ]; then
-        echo "    sudo apt install tesseract-ocr tesseract-ocr-deu"
-      elif [ -n "$pkg_manager" ] && [ "$pkg_manager" = "dnf" ]; then
-        echo "    sudo dnf install tesseract tesseract-langpack-deu"
-      elif [ -n "$pkg_manager" ] && [ "$pkg_manager" = "pacman" ]; then
-        echo "    sudo pacman -S tesseract tesseract-data-deu"
-      else
-        echo "    tesseract-ocr + tesseract-ocr-deu (je nach Distribution)"
-      fi
-    fi
-    echo "────────────────────────────────────────────────────────────────────────"
+    _check_and_install_tesseract "$pkg_manager"
     return 0
   fi
 
@@ -154,6 +190,8 @@ check_and_fix_deps() {
   fi
 
   _install_deps "$pkg_manager" "$webkit_pkg" "$egl_pkg" "$fuse_pkg" "$extra_pkgs"
+  echo ""
+  _check_and_install_tesseract "$pkg_manager"
 }
 
 # ── Reparatur-Modus: Pakete neu installieren (auch wenn vorhanden) ─────────────
