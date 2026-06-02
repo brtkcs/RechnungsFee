@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.18',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'fix', text: 'OCR-Import: Positionen aus Tankquittungen erkannt – Produktname (z.B. „Super 95") und Menge (z.B. 32,69 l) werden jetzt korrekt extrahiert, auch wenn sie auf getrennten Zeilen oder in einem Einzeiler stehen' },
+      { typ: 'fix', text: 'OCR-Import: Sternchen (*) aus OCR-Text entfernt – verhinderte Fehlinterpretationen bei Kassenbons die * um Produktnamen oder Preise verwenden' },
+      { typ: 'fix', text: 'OCR-Import: „SUMME EUR 30,85" wird als Rechnungsbetrag erkannt (nicht als Position) – Währungssymbol zwischen Label und Betrag wird jetzt korrekt ignoriert' },
+    ],
+  },
+  {
     version: 'v0.2.17',
     datum: 'Juni 2026',
     eintraege: [
