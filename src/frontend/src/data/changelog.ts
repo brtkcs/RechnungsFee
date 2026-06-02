@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.19',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'fix', text: 'OCR-Import: Leerzeichen in Geldbeträgen (Tesseract-Artefakt „25, 95" statt „25,95") werden vor der Auswertung entfernt – betraf alle Kassenbons bei denen Tesseract Dezimalstellen abtrennt' },
+      { typ: 'fix', text: 'OCR-Import: USt-Aufschlüsselungs-Tabellenzeilen mit Dezimalrate (z.B. „fz 19,0% 4,12 6,78 4,90") werden nicht mehr als Positionen importiert' },
+    ],
+  },
+  {
     version: 'v0.2.18',
     datum: 'Juni 2026',
     eintraege: [

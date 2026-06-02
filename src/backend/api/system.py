@@ -7,9 +7,43 @@ import os
 import platform
 import shutil
 import subprocess
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File
 
 router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+@router.post("/ocr-debug")
+async def ocr_debug(datei: UploadFile = File(...)):
+    """
+    Gibt den rohen OCR-Text zurück den Tesseract aus einer PDF/Bilddatei liest.
+    Nur für Entwicklungszwecke – hilft beim Debuggen von Parser-Problemen.
+    """
+    from utils.rechnungs_parser import _ocr_pdf, _finde_tesseract_binary
+    import fitz  # pymupdf
+    import pytesseract
+    from PIL import Image
+    import io
+
+    inhalt = await datei.read()
+    tess = _finde_tesseract_binary()
+    if not tess:
+        return {"fehler": "Tesseract nicht gefunden", "text": ""}
+
+    pytesseract.pytesseract.tesseract_cmd = tess
+
+    try:
+        doc = fitz.open(stream=inhalt, filetype="pdf")
+    except Exception as exc:
+        return {"fehler": str(exc), "text": ""}
+
+    seiten = []
+    for page in doc:
+        mat = fitz.Matrix(300 / 72, 300 / 72)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        seiten.append(pytesseract.image_to_string(img, lang="deu+eng", config="--psm 3"))
+
+    return {"fehler": None, "text": "\n--- SEITENUMBRUCH ---\n".join(seiten)}
 
 
 # ---------------------------------------------------------------------------

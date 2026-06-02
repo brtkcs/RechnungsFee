@@ -326,6 +326,11 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
         # USt-Aufschlüsselungszeile überspringen: "A 19 10,08 1,92 12,00" (auch Punktformat)
         if re.match(r"^[A-Z]\s+\d{1,2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s*$", s):
             continue
+        # USt-Aufschlüsselungs-Tabellenzeile mit Dezimalrate: "fz 19,0% 4,12 6,78 4,90"
+        # oder "B= 7,0% 24,25 1,70 25,95" – Code + %-Rate + 3 Beträge → kein Positionseintrag
+        if (re.search(r"\d+[,.]?\d*\s*%", s)
+                and len(re.findall(r"\d+[,.]\d{2}", s)) >= 3):
+            continue
         m = _BETRAG_END.search(s)
         if not m:
             # Zeile ohne Preis merken (nur wenn sie wie ein Produktname aussieht)
@@ -767,6 +772,9 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
     text = text.replace("*", " ")
     # Mehrfach-Leerzeichen zusammenführen (nach * -Entfernung können sie entstehen)
     text = re.sub(r"[ \t]{2,}", " ", text)
+    # OCR-Artefakt: Leerzeichen nach Komma in Geldbeträgen: "25, 95" → "25,95"
+    # Tesseract setzt manchmal ein Leerzeichen zwischen Komma und Nachkommastellen
+    text = re.sub(r"(\d),\s+(\d{2})\b", r"\1,\2", text)
 
     felder: dict = {}
 
