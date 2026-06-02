@@ -308,15 +308,23 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
             end = i
             break
 
+    prev_zeile = ""   # letzte Zeile ohne Preis → potenzieller Produktname (z.B. "Super 95")
+
     for z in alle_zeilen[start:end]:
         s = z.strip()
         if not s:
+            prev_zeile = ""
             continue
         # USt-Aufschlüsselungszeile überspringen: "A 19 10,08 1,92 12,00" (auch Punktformat)
         if re.match(r"^[A-Z]\s+\d{1,2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s*$", s):
             continue
         m = _BETRAG_END.search(s)
         if not m:
+            # Zeile ohne Preis merken (nur wenn sie wie ein Produktname aussieht)
+            if (len(s) > 2
+                    and not _SUMMENLABEL.match(s)
+                    and not re.match(r"^\d+[,.]\d+$", s)):
+                prev_zeile = s
             continue
         betrag = _betrag_de(m.group(1))
         if not betrag:
@@ -394,6 +402,45 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
                     vor = nach_zahl[m_ein.end():].strip()
                 else:
                     vor = nach_zahl[m_x.end():].strip()
+
+        # ── Menge mitten in der Beschreibung (z.B. "Super 95  32,69 l  1,759 €/l")
+        # Tritt auf wenn der Produktname vor der Mengenzahl steht (Tankquittung, Waage-Bon …)
+        if menge == "1.000" and einheit == "Stück":
+            m_menge_mitte = re.search(
+                r"(?<!\d)(\d+[,.]\d+)\s*(l(?:iter)?|kg|g|ml|m³|m²|km)\b",
+                vor, re.IGNORECASE,
+            )
+            if m_menge_mitte:
+                try:
+                    menge = f"{float(m_menge_mitte.group(1).replace(',', '.')):.3f}"
+                except ValueError:
+                    pass
+                einheit_roh = m_menge_mitte.group(2).lower().rstrip(".")
+                einheit = {
+                    "l": "l", "liter": "l",
+                    "kg": "kg", "g": "g", "ml": "ml",
+                    "m³": "m³", "m²": "m²", "km": "km",
+                }.get(einheit_roh, m_menge_mitte.group(2))
+                vor_neu = vor[:m_menge_mitte.start()].strip()
+                if len(vor_neu) >= 2:
+                    vor = vor_neu
+                # sonst: Menge war am Anfang, kein Produktname davor
+
+        # ── Preis-pro-Einheit aus Beschreibung entfernen
+        # "× 1,759 €/l" / "à 1,759 €/l" / "@ 1,759 €/l" am Zeilenende
+        vor = re.sub(
+            r"\s*[×xXà@]\s*\d+[,.]\d+\s*(?:€|EUR)?/\S+\s*$", "", vor
+        ).strip()
+        # "1,759 €/l" ohne Multiplikationszeichen (falls noch nicht entfernt)
+        vor = re.sub(
+            r"\s+\d+[,.]\d+\s*(?:€|EUR)/\S+\s*$", "", vor
+        ).strip()
+
+        # ── Produktname aus vorheriger Zeile wenn Beschreibung leer/bedeutungslos
+        # (mehrzeiliges Format: "Super 95\n32,69 l × 1,759 €/l  57,48 €")
+        if prev_zeile and (len(vor) < 2 or re.match(r"^[\d×xXà@€/,.:\s]+$", vor)):
+            vor = prev_zeile
+        prev_zeile = ""  # nach jeder gefundenen Position zurücksetzen
 
         if len(vor) < 2 or re.match(r"^\d+$", vor):
             continue
