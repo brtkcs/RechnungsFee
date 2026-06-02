@@ -1894,9 +1894,26 @@ function RechnungForm({
 
   const partnerListe = typ === 'ausgang' ? (kunden ?? []) : (lieferanten ?? [])
 
-  // Lieferant aus Analyse-Prefill per Name matchen
+  // Lieferant aus Analyse-Prefill setzen:
+  // 1. Backend-Vorschlag (lieferant_vorschlaege[0]) hat Vorrang – das Backend normalisiert
+  //    OCR-Artefakte (z.B. "GimbH" → GmbH) bereits korrekt per Fuzzy-Matching.
+  // 2. Fallback: einfacher includes()-Vergleich über den erkannten Namen.
   useEffect(() => {
-    if (!prefillFromAnalyse || !pf?.lieferant_name || !lieferanten?.length) return
+    if (!prefillFromAnalyse || !lieferanten?.length) return
+
+    // Backend-Vorschlag direkt übernehmen (beste Qualität)
+    const vorschlagId = prefillFromAnalyse.lieferant_vorschlaege?.[0]?.id
+    if (vorschlagId) {
+      const found = lieferanten.find((l) => l.id === vorschlagId)
+      if (found) {
+        setPartnerId(String(found.id))
+        setPartnerFreitext('')
+        return
+      }
+    }
+
+    // Fallback: einfacher Namensvergleich
+    if (!pf?.lieferant_name) return
     const name = pf.lieferant_name.toLowerCase()
     const match = lieferanten.find(
       (l) => (l.firmenname || `${l.vorname ?? ''} ${l.nachname ?? ''}`).toLowerCase().includes(name)

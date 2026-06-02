@@ -151,6 +151,10 @@ def _datum_de_zu_iso(text: str) -> Optional[str]:
     day, month, year = m.group(1), m.group(2), m.group(3)
     if len(year) == 2:
         year = f"20{year}"
+    # Plausibilitätsprüfung: Jahreszahl muss im realistischen Bereich liegen
+    # (verhindert z.B. "0172" wenn OCR "2025-02-01720..." als "25-02-0172" liest)
+    if not (1990 <= int(year) <= 2099):
+        return None
     try:
         return date(int(year), int(month), int(day)).isoformat()
     except ValueError:
@@ -256,15 +260,17 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
     Gibt leere Liste zurück wenn kein verwertbares Ergebnis erkennbar ist.
     """
     # Betrag am Zeilenende.
-    # Erlaubt nach dem Betrag: Währung, Steuerklassen-Kürzel (A/B/C),
+    # Erlaubt nach dem Betrag: Währung, Steuerklassen-Kürzel (A/B/C oder "fz" etc.),
     # dezimalen USt-Satz (19%, 19,0%, 7,0%) in beliebiger Reihenfolge.
     # Typisches Tankquittungs-Format: "57,48  B  19,0%"  oder  "57,48  19,0%  B"
+    # Kassenbon-Format: "Produkt 1,99 B"  oder  "Produkt 1,99 fz"
+    # group(3): nachgestelltes Steuerklassen-Kürzel (1-3 Buchstaben, z.B. "B", "fz", "sz")
     _BETRAG_END = re.compile(
-        r"\s+(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})"  # Betrag
-        r"\s*(?:€|EUR|CHF)?"                                        # optionale Währung
-        r"\s*(?:[A-C]\s*)?"                                         # optionaler Steuerkürzel vorn (A, B, C)
-        r"(?:(\d+)[,.]?\d*\s*%)?"                                  # opt. USt-Satz (19%, 19,0%, 7,0%)
-        r"\s*(?:[A-C]\s*)?"                                         # optionaler Steuerkürzel hinten
+        r"\s+(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})"   # group(1): Betrag
+        r"\s*(?:€|EUR|CHF)?"                                         # optionale Währung
+        r"\s*(?:[A-C]\s*(?=\d))?"                                    # Steuerkürzel VOR %-Zahl (nur wenn Zahl folgt)
+        r"(?:(\d+)[,.]?\d*\s*%)?"                                   # group(2): opt. USt-Satz
+        r"\s*(?:([A-Za-z]{1,3})\s*)?"                               # group(3): nachgestelltes Steuerklassen-Kürzel
         r"\s*$",
         re.IGNORECASE,
     )
@@ -307,6 +313,24 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
     alle_zeilen = text.split("\n")
     positionen: list[AnalysePosition] = []
 
+    # Steuerklassen-Karte aus USt-Tabellenzeilen aufbauen
+    # Format: "B= 7,0% 24,25 1,70 25,95"  oder  "fz 19,0% 4,12 6,78 4,90"
+    # Ermöglicht Zuordnung nachgestellter Kürzel ("1,99 B", "1,99 fz") zum USt-Satz
+    #
+    # Voreinstellung: EU/DE Standard-Retail-Codes (A = Regelsatz 19%, B = erm. Satz 7%)
+    # Hintergrund: Tesseract liest "A" in der Steuertabelle gelegentlich als "fz" →
+    # dann fehlt "A" in der Karte. Die Voreinstellung stellt sicher, dass "Produkt 4,90 A"
+    # auch ohne expliziten Tabelleneintrag mit 19% importiert wird.
+    # Dokumenten-eigene Tabellenzeilen überschreiben diese Voreinstellung.
+    steuerklassen_map: dict[str, str] = {"A": "19", "B": "7"}
+    for z_scan in alle_zeilen:
+        s_scan = z_scan.strip()
+        m_smap = re.match(r"^([A-Za-z]{1,3})[=\s]+(\d+)[,.]?\d*\s*%", s_scan, re.IGNORECASE)
+        if (m_smap
+                and len(re.findall(r"\d+[,.]\d{2}", s_scan)) >= 2
+                and int(m_smap.group(2)) in _GUELTIGE_UST):
+            steuerklassen_map[m_smap.group(1).upper()] = m_smap.group(2)
+
     start, end = 0, len(alle_zeilen)
     for i, z in enumerate(alle_zeilen):
         s = z.strip()
@@ -317,11 +341,18 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
             break
 
     prev_zeile = ""   # letzte Zeile ohne Preis → potenzieller Produktname (z.B. "Super 95")
+    kontext_ust = ust_satz_default or "0"  # Abschnitts-USt: "19" oder "7" als eigene Zeile (PENNY)
 
     for z in alle_zeilen[start:end]:
         s = z.strip()
         if not s:
             prev_zeile = ""
+            continue
+        # USt-Abschnitts-Header: "19" oder "7" allein auf einer Zeile → Kontext-USt setzen
+        # PENNY druckt die Rate als Gruppen-Header vor jedem Steuerblock
+        m_ust_hdr = re.match(r"^(\d{1,2})\s*%?\s*$", s)
+        if m_ust_hdr and int(m_ust_hdr.group(1)) in _GUELTIGE_UST:
+            kontext_ust = m_ust_hdr.group(1)
             continue
         # USt-Aufschlüsselungszeile überspringen: "A 19 10,08 1,92 12,00" (auch Punktformat)
         if re.match(r"^[A-Z]\s+\d{1,2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s+\d+[,.]\d{2}\s*$", s):
@@ -330,6 +361,10 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
         # oder "B= 7,0% 24,25 1,70 25,95" – Code + %-Rate + 3 Beträge → kein Positionseintrag
         if (re.search(r"\d+[,.]?\d*\s*%", s)
                 and len(re.findall(r"\d+[,.]\d{2}", s)) >= 3):
+            continue
+        # Mengen-Aufschlüsselung überspringen: "2 Stk x 2,45" / "1,5 l x 1,599" / "2 x 2,45"
+        # Format: Zahl [optionale Einheit] × Einzelpreis → ist Preisdetail, keine eigene Position
+        if re.match(r"^\d+[,.]?\d*\s+(?:\S+\s+)?[x×]\s+\d+[,.]\d+", s, re.IGNORECASE):
             continue
         m = _BETRAG_END.search(s)
         if not m:
@@ -349,6 +384,9 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
             continue
 
         vor = s[:m.start()].strip()
+        # OCR-Artefakt: führendes Sonderzeichen entfernen
+        # Kassenbon-Asterisks → Leerzeichen → bleibt manchmal " oder ` am Anfang
+        vor = re.sub(r'^[“”"""\'`°]+\s*', '', vor).strip()
         if not vor or _SUMMENLABEL.match(vor):
             continue
 
@@ -392,6 +430,17 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
                     m_stk_ust = re.search(r"(\d+)[,.]?\d*", m_stklasse.group(0))
                     if m_stk_ust and int(m_stk_ust.group(1)) in _GUELTIGE_UST:
                         ust_pos = m_stk_ust.group(1)
+
+        # Nachgestelltes Steuerklassen-Kürzel (group(3) von _BETRAG_END) über die
+        # Steuerklassen-Karte auflösen: "Produkt 1,99 B" → B aus "B= 7,0% ..." → 7%
+        # Greift auch bei 2-Zeichen-Codes wie "fz" die _BETRAG_END jetzt erfasst
+        # Fallback: Kontext-USt aus Abschnitts-Header ("19" / "7" als eigene Zeile, PENNY)
+        if ust_pos == (ust_satz_default or "0"):
+            stk_code = (m.group(3) or "").upper().strip()
+            if stk_code and stk_code in steuerklassen_map:
+                ust_pos = steuerklassen_map[stk_code]
+            elif kontext_ust != (ust_satz_default or "0"):
+                ust_pos = kontext_ust
 
         # Artikelnummer am Anfang: Ziffernfolge (≥4) oder alphanumerischer Code mit Trennzeichen
         artikel_nr: Optional[str] = None
@@ -465,7 +514,13 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
 
         # ── Produktname aus vorheriger Zeile wenn Beschreibung leer/bedeutungslos
         # (mehrzeiliges Format: "Super 95\n32,69 l × 1,759 €/l  57,48 €")
-        if prev_zeile and (len(vor) < 2 or re.match(r"^[\d×xXà@€/,.:\s]+$", vor)):
+        # Auch bei reinen Mengenzeilen wie "88 Liter" oder "34,89 l" → Produktname davor verwenden
+        _ist_reine_menge = re.match(
+            r'^\d+[,.]?\d*\s+(?:Liter|ltr|[Ll](?:tr)?\.?\b|[Kk][Gg]\b|[Gg]\b|[Mm][Ll]\b|'
+            r'm³|kWh|kwh|Stk\.?|Stück|[Hh](?:rs?|std)?\.?\b|m\b|km\b)\s*$',
+            vor, re.IGNORECASE
+        )
+        if prev_zeile and (len(vor) < 2 or re.match(r"^[\d×xXà@€/,.:\s]+$", vor) or _ist_reine_menge):
             vor = prev_zeile
         prev_zeile = ""  # nach jeder gefundenen Position zurücksetzen
 
@@ -775,11 +830,13 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
     # OCR-Artefakt: Leerzeichen nach Komma in Geldbeträgen: "25, 95" → "25,95"
     # Tesseract setzt manchmal ein Leerzeichen zwischen Komma und Nachkommastellen
     text = re.sub(r"(\d),\s+(\d{2})\b", r"\1,\2", text)
+    # OCR-Artefakt: Leerzeichen in Datumsangaben: "01. 02. 2025" → "01.02.2025"
+    text = re.sub(r"(\d{1,2})\.\s+(\d{1,2})\.\s+(20\d{2}|\d{2})\b", r"\1.\2.\3", text)
 
     felder: dict = {}
 
     # Datum – zuerst suchen, damit spätere Felder darauf aufbauen können
-    _datum_pattern = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}"
+    _datum_pattern = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}(?!\d)"  # (?!\d) verhindert 0172 aus "01720"
     m = re.search(
         r"(?:Rechnungs(?:datum)?|Ausstellungsdatum|Ausgestellt(?:\s+am)?|Datum)\s*:?\s*(" + _datum_pattern + r")",
         text, re.IGNORECASE,
@@ -788,7 +845,16 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
         iso = _datum_de_zu_iso(m.group(1))
         if iso:
             felder["datum"] = iso
-    else:
+    if not felder.get("datum"):
+        # ISO-Format YYYY-MM-DD: kein \b am Ende, weil Datum oft direkt vor Transaktionsnummer steht
+        # ("2025-02-01720" → groups 2025/02/01 werden korrekt extrahiert, "720" wird ignoriert)
+        m_iso = re.search(r"\b(20\d{2})-(0[1-9]|1[0-2])-([0-2]\d|3[01])", text)
+        if m_iso:
+            try:
+                felder["datum"] = date(int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))).isoformat()
+            except ValueError:
+                pass
+    if not felder.get("datum"):
         # Fallback: alle Datumstreffer sammeln, neuestes plausibles nehmen
         alle_daten = re.findall(_datum_pattern, text)
         for treffer in alle_daten:
@@ -950,11 +1016,13 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             felder["gesamt_brutto"] = v
 
     # Netto-Betrag: Standard-Labels + bilinguales "Gesamt ohne MwSt."
+    # Separator [:\s.·*-]* erlaubt auch Punkte/Sternchen als Trennzeichen
+    # (z.B. "GESAMT NETTO . 50,40 EUR" auf Tankquittungen mit OCR-Artefakt)
     m = re.search(
         r"(?:Netto(?:betrag|summe)?|Zwischensumme(?:\s+netto)?|"
         r"Gesamt\s+ohne\s+(?:MwSt\.?|USt\.?|Steuer|Umsatzsteuer)|"
         r"net\s+amount)"
-        r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s]*([\d.,]+)\s*(?:€|EUR)?",
+        r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s.·*\-]*([\d.,]+)\s*(?:€|EUR)?",
         text, re.IGNORECASE,
     )
     if m:
@@ -1028,17 +1096,50 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
 
     # Brutto/Netto-Modus: Summe der Positionen mit bekannten Gesamtbeträgen vergleichen
     positionen_modus = "netto"
+    netto_total = Decimal("0")
+    pos_summe   = Decimal("0")
     if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
         try:
-            pos_summe = sum(Decimal(p.netto) for p in positionen)
-            toleranz = Decimal("0.15")
-            netto_total = Decimal(felder.get("gesamt_netto") or "0")
+            pos_summe    = sum(Decimal(p.netto) for p in positionen)
+            toleranz     = Decimal("0.15")
+            netto_total  = Decimal(felder.get("gesamt_netto") or "0")
             brutto_total = Decimal(felder.get("gesamt_brutto") or "0")
-            diff_netto = abs(pos_summe - netto_total) if netto_total else Decimal("9999")
-            diff_brutto = abs(pos_summe - brutto_total) if brutto_total else Decimal("9999")
+            diff_netto   = abs(pos_summe - netto_total)  if netto_total  else Decimal("9999")
+            diff_brutto  = abs(pos_summe - brutto_total) if brutto_total else Decimal("9999")
             if diff_brutto <= toleranz and diff_brutto < diff_netto:
                 positionen_modus = "brutto"
         except (InvalidOperation, Exception):
+            pass
+
+    # Fallback: Verhältnis pos_summe / netto_total prüfen wenn kein direkter Treffer
+    # Typisch für Belege mit OCR-korrumpiertem Brutto-Label ("GES Au BRUTTO 59 3,8 EUR")
+    # Wenn pos_summe / netto_total ≈ 1,19 oder 1,07 → pos_summe ist Brutto
+    if positionen_modus == "netto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
+        try:
+            ratio = pos_summe / netto_total
+            for satz_dec in [Decimal("0.19"), Decimal("0.07"), Decimal("0.20"), Decimal("0.10")]:
+                target = 1 + satz_dec
+                if abs(ratio - target) / target < Decimal("0.005"):   # 0,5 % Toleranz
+                    positionen_modus = "brutto"
+                    break
+        except (InvalidOperation, ZeroDivisionError):
+            pass
+
+    # USt-Satz aus Brutto/Netto-Verhältnis ableiten
+    # Greift wenn Beleg alle Positionen in Brutto ausweist, aber kein Steuerkennzeichen
+    # auf den Produktzeilen steht (z.B. Tankquittungen ohne A/B-Code)
+    if positionen_modus == "brutto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
+        try:
+            ratio = pos_summe / netto_total
+            for satz_str, satz_dec in [("19", Decimal("0.19")), ("7", Decimal("0.07")),
+                                        ("20", Decimal("0.20")), ("10", Decimal("0.10"))]:
+                target = 1 + satz_dec
+                if abs(ratio - target) / target < Decimal("0.005"):
+                    for pos in positionen:
+                        if pos.ust_satz in ("0", "0.00", None):
+                            pos.ust_satz = satz_str
+                    break
+        except (InvalidOperation, ZeroDivisionError):
             pass
 
     return AnalyseErgebnis(

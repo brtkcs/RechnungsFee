@@ -4,6 +4,7 @@ Rechnungen-API (Eingang + Ausgang) mit Journal-Verknüpfung.
 
 import difflib
 import hashlib
+import re
 import shutil
 import uuid
 from datetime import date, datetime
@@ -202,16 +203,40 @@ async def analysiere_rechnung(datei: UploadFile = File(...), db: Session = Depen
     lieferant_vorschlaege: list[LieferantVorschlag] = []
     erkannter_name = ergebnis.felder.get("lieferant_name", "")
     erkannte_ust_id = ergebnis.felder.get("lieferant_ust_id", "")
+    import logging as _logging
+    _logging.getLogger("rechnungen").info(
+        "Lieferant-Match: erkannt=%r ust_id=%r", erkannter_name, erkannte_ust_id
+    )
     if erkannter_name or erkannte_ust_id:
         alle_lieferanten = db.query(Lieferant).filter(Lieferant.aktiv == True).all()
         scored: list[tuple[float, Lieferant]] = []
+        # Rechtsformkürzel entfernen, Trennzeichen normalisieren → besserer Textvergleich
+        # "Penny-Markt GmbH" → "penny markt"  |  "PENNY" → "penny"
+        _re_rechtsform = re.compile(
+            r"\b(?:GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.?|SE|GbR)\b",
+            re.IGNORECASE,
+        )
+        def _norm(name: str) -> str:
+            n = _re_rechtsform.sub("", name)
+            n = re.sub(r"[-_/\\|]", " ", n)
+            return re.sub(r"\s+", " ", n).strip().lower()
+
+        norm_erkannt = _norm(erkannter_name)
+        _log = _logging.getLogger("rechnungen")
+        _log.info("norm_erkannt=%r", norm_erkannt)
         for lief in alle_lieferanten:
             score = 0.0
             if erkannte_ust_id and lief.ust_idnr and erkannte_ust_id.replace(" ", "") == lief.ust_idnr.replace(" ", ""):
                 score = 1.0
             elif erkannter_name and lief.firmenname:
-                score = difflib.SequenceMatcher(None, erkannter_name.lower(), lief.firmenname.lower()).ratio()
-            if score > 0.5:
+                norm_lief = _norm(lief.firmenname)
+                # Teilstring-Check: "penny" ⊂ "penny markt" → hoher Score
+                if len(norm_erkannt) >= 4 and (norm_erkannt in norm_lief or norm_lief in norm_erkannt):
+                    score = 0.8
+                else:
+                    score = difflib.SequenceMatcher(None, norm_erkannt, norm_lief).ratio()
+                _log.info("  lief=%r norm=%r score=%.2f", lief.firmenname, norm_lief, score)
+            if score > 0.4:
                 scored.append((score, lief))
         scored.sort(key=lambda x: x[0], reverse=True)
         lieferant_vorschlaege = [
@@ -263,13 +288,27 @@ def analysiere_rechnung_pfad(body: AnalysierePfadRequest, db: Session = Depends(
     if erkannter_name or erkannte_ust_id:
         alle_lieferanten = db.query(Lieferant).filter(Lieferant.aktiv == True).all()
         scored: list[tuple[float, Lieferant]] = []
+        _re_rechtsform2 = re.compile(
+            r"\b(?:GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.?|SE|GbR)\b",
+            re.IGNORECASE,
+        )
+        def _norm2(name: str) -> str:
+            n = _re_rechtsform2.sub("", name)
+            n = re.sub(r"[-_/\\|]", " ", n)
+            return re.sub(r"\s+", " ", n).strip().lower()
+
+        norm_erkannt2 = _norm2(erkannter_name)
         for lief in alle_lieferanten:
             score = 0.0
             if erkannte_ust_id and lief.ust_idnr and erkannte_ust_id.replace(" ", "") == lief.ust_idnr.replace(" ", ""):
                 score = 1.0
             elif erkannter_name and lief.firmenname:
-                score = difflib.SequenceMatcher(None, erkannter_name.lower(), lief.firmenname.lower()).ratio()
-            if score > 0.5:
+                norm_lief2 = _norm2(lief.firmenname)
+                if len(norm_erkannt2) >= 4 and (norm_erkannt2 in norm_lief2 or norm_lief2 in norm_erkannt2):
+                    score = 0.8
+                else:
+                    score = difflib.SequenceMatcher(None, norm_erkannt2, norm_lief2).ratio()
+            if score > 0.4:
                 scored.append((score, lief))
         scored.sort(key=lambda x: x[0], reverse=True)
         lieferant_vorschlaege = [
