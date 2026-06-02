@@ -45,6 +45,75 @@ function aktuellerMonat(): string {
 
 
 // ---------------------------------------------------------------------------
+// OCR-Installationshinweis (Tesseract fehlt)
+// ---------------------------------------------------------------------------
+
+function ermittleOs(): 'windows' | 'macos' | 'linux' {
+  const ua = navigator.userAgent.toLowerCase()
+  if (ua.includes('win')) return 'windows'
+  if (ua.includes('mac')) return 'macos'
+  return 'linux'
+}
+
+const OCR_INSTALL: Record<'windows' | 'macos' | 'linux', { label: string; cmd: string; hinweis?: string }> = {
+  windows: {
+    label: 'Windows',
+    cmd: 'winget install UB-Mannheim.TesseractOCR',
+    hinweis: 'Alternativ: https://github.com/UB-Mannheim/tesseract/wiki',
+  },
+  macos: {
+    label: 'macOS (Homebrew)',
+    cmd: 'brew install tesseract tesseract-lang',
+    hinweis: 'Homebrew noch nicht installiert? https://brew.sh',
+  },
+  linux: {
+    label: 'Linux',
+    cmd: 'sudo apt install tesseract-ocr tesseract-ocr-deu',
+    hinweis: 'Fedora: sudo dnf install tesseract tesseract-langpack-deu  |  Arch: sudo pacman -S tesseract tesseract-data-deu',
+  },
+}
+
+function OcrInstallHinweis() {
+  const [kopiert, setKopiert] = useState(false)
+  const info = OCR_INSTALL[ermittleOs()]
+
+  function kopieren() {
+    navigator.clipboard.writeText(info.cmd).catch(() => {})
+    setKopiert(true)
+    setTimeout(() => setKopiert(false), 2000)
+  }
+
+  return (
+    <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3 space-y-2">
+      <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+        🔍 OCR nicht verfügbar – Tesseract OCR ist nicht installiert
+      </p>
+      <p className="text-xs text-orange-700 dark:text-orange-300">
+        Für gescannte Belege und Kassenbons wird Tesseract OCR benötigt. Einmalig installieren:
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 text-xs bg-orange-100 dark:bg-orange-900 px-2 py-1.5 rounded font-mono break-all">
+          {info.cmd}
+        </code>
+        <button
+          type="button"
+          onClick={kopieren}
+          className="shrink-0 text-xs px-2.5 py-1.5 bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded hover:bg-orange-300 dark:hover:bg-orange-700 transition-colors"
+        >
+          {kopiert ? '✓' : 'Kopieren'}
+        </button>
+      </div>
+      {info.hinweis && (
+        <p className="text-xs text-orange-500 dark:text-orange-400">{info.hinweis}</p>
+      )}
+      <p className="text-xs text-orange-600 dark:text-orange-400">
+        Nach der Installation RechnungsFee neu starten.
+      </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Status-Badge
 // ---------------------------------------------------------------------------
 
@@ -1803,12 +1872,15 @@ function RechnungForm({
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
       {/* Import-Warnungen */}
-      {prefillFromAnalyse && prefillFromAnalyse.warnungen.length > 0 && (
+      {prefillFromAnalyse && prefillFromAnalyse.warnungen.some(w => w === 'TESSERACT_FEHLT') && (
+        <OcrInstallHinweis />
+      )}
+      {prefillFromAnalyse && prefillFromAnalyse.warnungen.filter(w => w !== 'TESSERACT_FEHLT').length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 space-y-1">
           <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1">
             Hinweise aus dem Import ({formatLabel[prefillFromAnalyse.format] ?? prefillFromAnalyse.format}):
           </p>
-          {prefillFromAnalyse.warnungen.map((w, i) => (
+          {prefillFromAnalyse.warnungen.filter(w => w !== 'TESSERACT_FEHLT').map((w, i) => (
             <p key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠️ {w}</p>
           ))}
         </div>
@@ -2480,9 +2552,12 @@ function ImportDialog({
               </div>
 
               {/* Warnungen */}
-              {ergebnis.warnungen.length > 0 && (
+              {ergebnis.warnungen.some(w => w === 'TESSERACT_FEHLT') && (
+                <OcrInstallHinweis />
+              )}
+              {ergebnis.warnungen.filter(w => w !== 'TESSERACT_FEHLT').length > 0 && (
                 <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 space-y-1">
-                  {ergebnis.warnungen.map((w, i) => (
+                  {ergebnis.warnungen.filter(w => w !== 'TESSERACT_FEHLT').map((w, i) => (
                     <p key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠️ {w}</p>
                   ))}
                 </div>
