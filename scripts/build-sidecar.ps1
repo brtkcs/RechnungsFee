@@ -84,6 +84,10 @@ try {
         --collect-all drafthorse `
         --collect-all facturx `
         --collect-all saxonche `
+        --collect-all pdfplumber `
+        --collect-all fitz `
+        --hidden-import pytesseract `
+        --hidden-import utils.rechnungs_parser `
         "--add-data=$BackendDir\fonts;fonts" `
         main.py
 } finally {

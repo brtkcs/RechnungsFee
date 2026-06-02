@@ -113,6 +113,25 @@ check_and_fix_deps() {
     echo "  Hinweis: Falls RechnungsFee trotzdem ein weißes Fenster zeigt,"
     echo "  kann ein Defekt in einer Systembibliothek die Ursache sein."
     echo "  Reparatur-Option: $0 --repair $APPIMAGE"
+    echo ""
+    echo "── Optionale Abhängigkeiten ────────────────────────────────────────────"
+    echo "  OCR für gescannte Eingangsrechnungen (Stufe 4):"
+    if command -v tesseract &>/dev/null; then
+      echo "  ✓ tesseract-ocr installiert ($(tesseract --version 2>&1 | head -1))"
+    else
+      echo "  ○ tesseract-ocr nicht installiert – OCR wird übersprungen."
+      echo "    Für OCR-Unterstützung:"
+      if [ -n "$pkg_manager" ] && [ "$pkg_manager" = "apt" ]; then
+        echo "    sudo apt install tesseract-ocr tesseract-ocr-deu"
+      elif [ -n "$pkg_manager" ] && [ "$pkg_manager" = "dnf" ]; then
+        echo "    sudo dnf install tesseract tesseract-langpack-deu"
+      elif [ -n "$pkg_manager" ] && [ "$pkg_manager" = "pacman" ]; then
+        echo "    sudo pacman -S tesseract tesseract-data-deu"
+      else
+        echo "    tesseract-ocr + tesseract-ocr-deu (je nach Distribution)"
+      fi
+    fi
+    echo "────────────────────────────────────────────────────────────────────────"
     return 0
   fi
 

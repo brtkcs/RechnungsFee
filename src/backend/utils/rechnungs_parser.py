@@ -555,26 +555,99 @@ def _extrahiere_positionen_pos_kassenbeleg(text: str) -> list["AnalysePosition"]
     return positionen
 
 
-def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
-    """Fallback: Text aus PDF lesen und per Regex Rechnungsfelder suchen."""
-    warnungen: list[str] = []
+def _ocr_pdf(pdf_bytes: bytes) -> "tuple[str, str]":
+    """
+    OCR-Fallback für gescannte PDFs / Foto-Scans.
+    Gibt (extrahierter_text, warnung_wenn_fehler) zurück.
+
+    Abhängigkeiten:
+    - pymupdf  (pip install pymupdf)  – Seiten-Rendering, keine Systemabhängigkeit
+    - pytesseract (pip install pytesseract) + tesseract-ocr (Systempaket)
+      Linux:   sudo apt install tesseract-ocr tesseract-ocr-deu
+      Windows: https://github.com/UB-Mannheim/tesseract/wiki
+    """
     try:
-        import io
-        from pypdf import PdfReader
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        import fitz  # pymupdf
+    except ImportError:
+        return "", "OCR nicht verfügbar: 'pymupdf' fehlt (pip install pymupdf)."
+
+    try:
+        import pytesseract
+        from PIL import Image
+        import io as _io
+    except ImportError:
+        return "", "OCR nicht verfügbar: 'pytesseract' fehlt (pip install pytesseract)."
+
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     except Exception as exc:
-        return AnalyseErgebnis(
-            format="pdf",
-            warnungen=["Kein eingebettetes XML – Textextraktion fehlgeschlagen.", str(exc)],
-        )
+        return "", f"PDF konnte nicht für OCR geöffnet werden: {exc}"
+
+    texte: list[str] = []
+    for page in doc:
+        # 300 DPI – optimale Auflösung für OCR (scale = DPI / 72)
+        mat = fitz.Matrix(300 / 72, 300 / 72)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        img = Image.open(_io.BytesIO(pix.tobytes("png")))
+        try:
+            texte.append(
+                pytesseract.image_to_string(img, lang="deu+eng", config="--psm 3")
+            )
+        except pytesseract.TesseractNotFoundError:
+            return "", (
+                "tesseract-ocr ist nicht installiert. Bitte installieren: "
+                "Linux: sudo apt install tesseract-ocr tesseract-ocr-deu | "
+                "Windows: https://github.com/UB-Mannheim/tesseract/wiki"
+            )
+        except Exception as exc:
+            return "", f"OCR-Fehler auf Seite {page.number + 1}: {exc}"
+
+    return "\n".join(texte), ""
 
 
+def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
+    """Fallback: Text aus PDF lesen und per Regex Rechnungsfelder suchen.
+
+    Schritte:
+    1. pdfplumber  – bessere Erkennung bei maschinenlesbaren PDFs (Tabellen, Spalten)
+    2. pypdf       – Fallback, falls pdfplumber nicht verfügbar
+    3. _ocr_pdf()  – OCR für gescannte Dokumente ohne Textlayer (benötigt tesseract)
+    """
+    import io
+    warnungen: list[str] = []
+    text = ""
+
+    # Schritt 1: pdfplumber (bessere Tabellenextraktion als pypdf)
+    try:
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            text = "\n".join((page.extract_text() or "") for page in pdf.pages)
+    except Exception:
+        pass  # pdfplumber fehlt oder Fehler → pypdf-Fallback
+
+    # Schritt 2: pypdf-Fallback
     if not text.strip():
-        return AnalyseErgebnis(
-            format="pdf",
-            warnungen=["Kein eingebettetes XML – kein extrahierbarer Text (gescanntes Dokument?)."],
-        )
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as exc:
+            return AnalyseErgebnis(
+                format="pdf",
+                warnungen=["Kein eingebettetes XML – Textextraktion fehlgeschlagen.", str(exc)],
+            )
+
+    # Schritt 3: Kein Textlayer → OCR-Fallback für gescannte Dokumente
+    if not text.strip():
+        ocr_text, ocr_warnung = _ocr_pdf(pdf_bytes)
+        if ocr_text.strip():
+            text = ocr_text
+            warnungen.append("Kein eingebettetes XML – Text per OCR erkannt, bitte prüfen.")
+        else:
+            w = ["Kein eingebettetes XML – kein extrahierbarer Text (gescanntes Dokument?)."]
+            if ocr_warnung:
+                w.append(ocr_warnung)
+            return AnalyseErgebnis(format="pdf", warnungen=w)
 
     felder: dict = {}
 

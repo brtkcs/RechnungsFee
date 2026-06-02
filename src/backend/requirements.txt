@@ -10,3 +10,6 @@ drafthorse
 factur-x
 lxml
 pypdf
+pdfplumber
+pymupdf
+pytesseract

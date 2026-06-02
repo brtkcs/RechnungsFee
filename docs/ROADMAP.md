@@ -90,10 +90,10 @@ Eingangsrechnungen mit Beleg belegen, ZUGFeRD/XRechnung automatisch einlesen.
 - [x] Niedrige Konfidenz visuell markieren (Konfidenz-Dots, Amber-Ring)
 - [x] Abgleich Lieferantenname mit Lieferantenstamm (Fuzzy-Matching, LieferantVorschlagBox)
 
-**Stufe 4 – OCR-Fallback** *(offen)*
-- [ ] `pdfplumber` für maschinenlesbare PDFs
-- [ ] `pytesseract` für Scans/Fotos
-- [ ] Regex-/Heuristik-Extraktion für DE/AT/CH-Formate
+**Stufe 4 – OCR-Fallback** ✅ *v0.3.x*
+- [x] `pdfplumber` für maschinenlesbare PDFs (bessere Tabellen-/Spaltenextraktion)
+- [x] `pytesseract` + `pymupdf` für Scans/Fotos (graceful fallback wenn tesseract fehlt)
+- [x] Regex-/Heuristik-Extraktion für DE/AT/CH-Formate (war bereits vorhanden)
 
 **Stufe 5 – GoBD-Export-Erweiterung** *(offen)*
 - [ ] `belege.csv` (Manifest mit SHA256) im GoBD-ZIP
