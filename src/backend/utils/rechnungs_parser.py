@@ -736,6 +736,12 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
                 w.append(ocr_warnung)
             return AnalyseErgebnis(format="pdf", warnungen=w)
 
+    # Sonderzeichen normalisieren – treten häufig in OCR-Ausgaben und POS-PDFs auf
+    # * → Leerzeichen (Tankkquittungen, Kassenbons: "*Super 95*", "57,48 *")
+    text = text.replace("*", " ")
+    # Mehrfach-Leerzeichen zusammenführen (nach * -Entfernung können sie entstehen)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+
     felder: dict = {}
 
     # Datum – zuerst suchen, damit spätere Felder darauf aufbauen können
