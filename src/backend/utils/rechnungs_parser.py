@@ -177,6 +177,43 @@ def _betrag_de(text: str) -> Optional[str]:
 _GUELTIGE_UST = {0, 7, 9, 16, 19}  # in DE vorkommende Sätze
 
 
+# ---------------------------------------------------------------------------
+# Belegtyp-Erkennung (strukturbasiert, markenunabhängig)
+# ---------------------------------------------------------------------------
+
+def _erkenne_belegtyp(text: str) -> str:
+    """
+    Erkennt den Belegtyp anhand der Dokumentstruktur – ohne Markennamen.
+
+    Rückgabe: "kassenbon" | "tankquittung" | "rechnung"
+
+    Kassenbon  (Supermarkt, Drogerie, …)
+      – Betragszeilen enden mit Steuerklasse A oder B
+      – ODER Steuertabelle mit A/B-Codes am Bon-Ende
+    Tankquittung  (Markentankstellen, freie Tankstellen)
+      – Mengenangabe in Liter + Preis pro Liter auf Produktzeilen
+    Rechnung  (Standard-Lieferantenrechnung, Dienstleister)
+      – Keines der obigen Muster
+    """
+    ausschnitt = text[:1500]
+
+    # Kassenbon: Betrag gefolgt von Steuercode A oder B am Zeilenende
+    # "Happy End 8x200  4,90 A"  /  "Milch 0,5l  0,99 B"
+    if re.search(r"\d+[,.]\d{2}\s+[AB]\s*$", ausschnitt, re.MULTILINE):
+        return "kassenbon"
+    # Kassenbon: Steuertabelle "A= 19,0% ..."  /  "B= 7,0% ..."
+    if re.search(r"\b[AB]\s*[=:]\s*\d+[,.]\d+\s*%", ausschnitt, re.IGNORECASE):
+        return "kassenbon"
+
+    # Tankquittung: Mengenangabe in Liter + Preis pro Liter
+    if (re.search(r"\b(?:Liter|[Ll]tr\.?)\b", ausschnitt, re.IGNORECASE) and
+            re.search(r"(?:pro\s+Liter|EUR\s+pro\s+Liter|€\s*/\s*[Ll]\b|EUR\s*/\s*[Ll]\b)",
+                      ausschnitt, re.IGNORECASE)):
+        return "tankquittung"
+
+    return "rechnung"
+
+
 def _faellig_aus_text(text: str, datum_iso: Optional[str]) -> Optional[str]:
     """Fälligkeitsdatum aus Freitext: erst explizites Datum, dann X-Tage-Berechnung."""
     _dp = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}"
@@ -833,6 +870,9 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
     # OCR-Artefakt: Leerzeichen in Datumsangaben: "01. 02. 2025" → "01.02.2025"
     text = re.sub(r"(\d{1,2})\.\s+(\d{1,2})\.\s+(20\d{2}|\d{2})\b", r"\1.\2.\3", text)
 
+    # Belegtyp strukturell erkennen – vor der Feldextraktion, damit Positionen-Modus früh feststeht
+    belegtyp = _erkenne_belegtyp(text)
+
     felder: dict = {}
 
     # Datum – zuerst suchen, damit spätere Felder darauf aufbauen können
@@ -1081,12 +1121,17 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
         if k not in felder:
             konfidenz[k] = "fehlt"
 
-    positionen = _extrahiere_positionen(text, felder.get("ust_satz"))
+    # Belegtyp-spezifischer USt-Default: Tankquittungen immer 19%, Kassenbon über steuerklassen_map
+    ust_fuer_pos = felder.get("ust_satz")
+    if belegtyp == "tankquittung" and not ust_fuer_pos:
+        ust_fuer_pos = "19"
+
+    positionen = _extrahiere_positionen(text, ust_fuer_pos)
     # Fallback wenn keine oder nur wertlose Positionen (Beschreibung = nur Zahlen/Beträge)
     _nur_betraege = re.compile(r'^[\d\s,.\-EUR€/]+$', re.IGNORECASE)
     if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
         alle_zeilen = text.split("\n")
-        pos2 = _extrahiere_positionen_multi_amt(alle_zeilen, felder.get("ust_satz"))
+        pos2 = _extrahiere_positionen_multi_amt(alle_zeilen, ust_fuer_pos)
         if pos2:
             positionen = pos2
     if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
@@ -1094,40 +1139,45 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
         if pos3:
             positionen = pos3
 
-    # Brutto/Netto-Modus: Summe der Positionen mit bekannten Gesamtbeträgen vergleichen
-    positionen_modus = "netto"
-    netto_total = Decimal("0")
-    pos_summe   = Decimal("0")
-    if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
-        try:
-            pos_summe    = sum(Decimal(p.netto) for p in positionen)
-            toleranz     = Decimal("0.15")
-            netto_total  = Decimal(felder.get("gesamt_netto") or "0")
-            brutto_total = Decimal(felder.get("gesamt_brutto") or "0")
-            diff_netto   = abs(pos_summe - netto_total)  if netto_total  else Decimal("9999")
-            diff_brutto  = abs(pos_summe - brutto_total) if brutto_total else Decimal("9999")
-            if diff_brutto <= toleranz and diff_brutto < diff_netto:
-                positionen_modus = "brutto"
-        except (InvalidOperation, Exception):
-            pass
-
-    # Fallback: Verhältnis pos_summe / netto_total prüfen wenn kein direkter Treffer
-    # Typisch für Belege mit OCR-korrumpiertem Brutto-Label ("GES Au BRUTTO 59 3,8 EUR")
-    # Wenn pos_summe / netto_total ≈ 1,19 oder 1,07 → pos_summe ist Brutto
-    if positionen_modus == "netto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
-        try:
-            ratio = pos_summe / netto_total
-            for satz_dec in [Decimal("0.19"), Decimal("0.07"), Decimal("0.20"), Decimal("0.10")]:
-                target = 1 + satz_dec
-                if abs(ratio - target) / target < Decimal("0.005"):   # 0,5 % Toleranz
+    # Brutto/Netto-Modus
+    # Kassenbon / Tankquittung: Preise sind immer Brutto – kein Ratio-Check nötig
+    if belegtyp in ("kassenbon", "tankquittung"):
+        positionen_modus = "brutto"
+        netto_total = Decimal(felder.get("gesamt_netto") or "0")
+        pos_summe   = sum((Decimal(p.netto) for p in positionen), Decimal("0")) if positionen else Decimal("0")
+    else:
+        # Rechnung: Summe der Positionen mit bekannten Gesamtbeträgen vergleichen
+        positionen_modus = "netto"
+        netto_total = Decimal("0")
+        pos_summe   = Decimal("0")
+        if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
+            try:
+                pos_summe    = sum(Decimal(p.netto) for p in positionen)
+                toleranz     = Decimal("0.15")
+                netto_total  = Decimal(felder.get("gesamt_netto") or "0")
+                brutto_total = Decimal(felder.get("gesamt_brutto") or "0")
+                diff_netto   = abs(pos_summe - netto_total)  if netto_total  else Decimal("9999")
+                diff_brutto  = abs(pos_summe - brutto_total) if brutto_total else Decimal("9999")
+                if diff_brutto <= toleranz and diff_brutto < diff_netto:
                     positionen_modus = "brutto"
-                    break
-        except (InvalidOperation, ZeroDivisionError):
-            pass
+            except (InvalidOperation, Exception):
+                pass
+
+        # Fallback: Verhältnis pos_summe / netto_total prüfen wenn kein direkter Treffer
+        # Typisch für Belege mit OCR-korrumpiertem Brutto-Label ("GES Au BRUTTO 59 3,8 EUR")
+        if positionen_modus == "netto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
+            try:
+                ratio = pos_summe / netto_total
+                for satz_dec in [Decimal("0.19"), Decimal("0.07"), Decimal("0.20"), Decimal("0.10")]:
+                    target = 1 + satz_dec
+                    if abs(ratio - target) / target < Decimal("0.005"):
+                        positionen_modus = "brutto"
+                        break
+            except (InvalidOperation, ZeroDivisionError):
+                pass
 
     # USt-Satz aus Brutto/Netto-Verhältnis ableiten
-    # Greift wenn Beleg alle Positionen in Brutto ausweist, aber kein Steuerkennzeichen
-    # auf den Produktzeilen steht (z.B. Tankquittungen ohne A/B-Code)
+    # Greift wenn alle Positionen Brutto ausweisen, aber kein Steuerkennzeichen auf den Zeilen
     if positionen_modus == "brutto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
         try:
             ratio = pos_summe / netto_total
