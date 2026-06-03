@@ -313,8 +313,9 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
     )
     _SUMMENLABEL = re.compile(
         r"^(?:netto(?:betrag|summe|preis)?|brutto(?:betrag|summe)?|"
-        r"gesamt(?:betrag|summe)?|zwischensumme|rechnungsbetrag|total|"
+        r"gesamt(?:betrag|summe|preis)?|zwischensumme|rechnungsbetrag|total|"
         r"zu\s+zahlen(?:\w+)?|summe(?:betrag)?(?:\s+netto)?|"
+        r"(?:\w*preis)(?:\s+(?:netto|brutto|gesamt))?|"  # "Preis", "Gesamtpreis", "Preis Netto" …
         r"(?:ust|mwst|umsatzsteuer)\.?\s*(?:\d+[,.]?\d*)?\s*%?|"  # auch 19,0% / 7,0%
         r"\d+[,.]?\d*\s*%\s*(?:ust|mwst|umsatzsteuer)|"
         r"rabatt|skonto|aufschlag|mindermenge)"
