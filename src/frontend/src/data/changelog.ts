@@ -26,8 +26,14 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.2.19',
     datum: 'Juni 2026',
     eintraege: [
-      { typ: 'fix', text: 'OCR-Import: Leerzeichen in Geldbeträgen (Tesseract-Artefakt „25, 95" statt „25,95") werden vor der Auswertung entfernt – betraf alle Kassenbons bei denen Tesseract Dezimalstellen abtrennt' },
-      { typ: 'fix', text: 'OCR-Import: USt-Aufschlüsselungs-Tabellenzeilen mit Dezimalrate (z.B. „fz 19,0% 4,12 6,78 4,90") werden nicht mehr als Positionen importiert' },
+      { typ: 'verbesserung', text: 'OCR-Import: Belegtyp-Erkennung – Kassenbons und Tankquittungen werden strukturbasiert erkannt (A/B-Steuercode, Liter+Literpreis) und immer im Brutto-Modus verarbeitet; keine Markennamen nötig' },
+      { typ: 'fix', text: 'OCR-Import: Kassenbons – 19% USt wird auch dann korrekt zugeordnet wenn Tesseract das Steuerklassen-Kürzel „A" als „fz" fehlgelesen hat; DE-Standard A=19%/B=7% als Voreinstellung' },
+      { typ: 'fix', text: 'OCR-Import: Tankquittung – Produktname (z.B. „Super 95"), Literanzahl und Brutto-Preis werden jetzt korrekt extrahiert; USt-Satz 19% wird aus dem Brutto/Netto-Verhältnis abgeleitet wenn kein Steuercode auf der Zeile steht' },
+      { typ: 'fix', text: 'OCR-Import: Lieferant-Matching – der Backend-Vorschlag wird direkt übernommen statt nochmals im Frontend verglichen zu werden; verhindert „Kein Treffer" bei OCR-verzerrten Firmennamen (z.B. „GimbH" statt „GmbH")' },
+      { typ: 'fix', text: 'OCR-Import: „Preis Netto", „Gesamtpreis Netto", „Einzelpreis" und vergleichbare Summenzeilen werden nicht mehr als Positionen importiert' },
+      { typ: 'fix', text: 'OCR-Import: Leerzeichen in Geldbeträgen (Tesseract-Artefakt „25, 95" → „25,95") werden vor der Auswertung entfernt' },
+      { typ: 'fix', text: 'OCR-Import: USt-Aufschlüsselungs-Tabellenzeilen (z.B. „fz 19,0% 4,12 6,78 4,90") werden nicht mehr als Positionen importiert' },
+      { typ: 'fix', text: 'ZUGFeRD/XRechnung-Import: PDF wird jetzt automatisch zur Kontrolle geöffnet (bisher nur bei Plain-PDF)' },
     ],
   },
   {

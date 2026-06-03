@@ -95,6 +95,14 @@ Eingangsrechnungen mit Beleg belegen, ZUGFeRD/XRechnung automatisch einlesen.
 - [x] `pytesseract` + `pymupdf` für Scans/Fotos (graceful fallback wenn tesseract fehlt)
 - [x] Regex-/Heuristik-Extraktion für DE/AT/CH-Formate (war bereits vorhanden)
 
+**OCR-Qualitätsverbesserungen** ✅ *v0.2.17–v0.2.19*
+- [x] Belegtyp-Erkennung (Kassenbon / Tankquittung / Rechnung) – strukturbasiert, markenunabhängig
+- [x] Kassenbons: A/B-Steuerklassen-Voreinstellung (A=19%, B=7%) – robust gegen OCR-Fehllesungen
+- [x] Tankquittungen: Produktname, Literanzahl, Brutto-Modus, USt-Inference aus Brutto/Netto-Ratio
+- [x] Summenlabels generalisiert: `{*}preis Netto/Brutto` werden nie als Positionen importiert
+- [x] Lieferant-Matching: Backend-Vorschlag direkt übernommen, Fuzzy-Match mit Rechtsformbereinigung
+- [x] ZUGFeRD/XRechnung: PDF zur Kontrolle automatisch geöffnet
+
 **Stufe 5 – GoBD-Export-Erweiterung** *(offen)*
 - [ ] `belege.csv` (Manifest mit SHA256) im GoBD-ZIP
 - [ ] `belege/`-Ordner mit Original-Dateien im ZIP
