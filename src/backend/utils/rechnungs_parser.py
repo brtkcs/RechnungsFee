@@ -816,39 +816,33 @@ def _ocr_pdf(pdf_bytes: bytes) -> "tuple[str, str]":
     return "\n".join(texte), ""
 
 
-def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
-    """Fallback: Text aus PDF lesen und per Regex Rechnungsfelder suchen.
+# ---------------------------------------------------------------------------
+# Text-Extraktion (Schritt 1–3, kein Parsing)
+# ---------------------------------------------------------------------------
 
-    Schritte:
-    1. pdfplumber  – bessere Erkennung bei maschinenlesbaren PDFs (Tabellen, Spalten)
-    2. pypdf       – Fallback, falls pdfplumber nicht verfügbar
-    3. _ocr_pdf()  – OCR für gescannte Dokumente ohne Textlayer (benötigt tesseract)
+def _extrahiere_text(pdf_bytes: bytes) -> "tuple[str, list[str]]":
+    """Rohtext aus PDF extrahieren – pdfplumber → pypdf → OCR.
+    Gibt (text, warnungen) zurück; text ist leer wenn alle Methoden scheitern.
     """
     import io
     warnungen: list[str] = []
     text = ""
 
-    # Schritt 1: pdfplumber (bessere Tabellenextraktion als pypdf)
     try:
         import pdfplumber
         with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
             text = "\n".join((page.extract_text() or "") for page in pdf.pages)
     except Exception:
-        pass  # pdfplumber fehlt oder Fehler → pypdf-Fallback
+        pass
 
-    # Schritt 2: pypdf-Fallback
     if not text.strip():
         try:
             from pypdf import PdfReader
             reader = PdfReader(io.BytesIO(pdf_bytes))
             text = "\n".join(page.extract_text() or "" for page in reader.pages)
         except Exception as exc:
-            return AnalyseErgebnis(
-                format="pdf",
-                warnungen=["Kein eingebettetes XML – Textextraktion fehlgeschlagen.", str(exc)],
-            )
+            return "", ["Kein eingebettetes XML – Textextraktion fehlgeschlagen.", str(exc)]
 
-    # Schritt 3: Kein Textlayer → OCR-Fallback für gescannte Dokumente
     if not text.strip():
         ocr_text, ocr_warnung = _ocr_pdf(pdf_bytes)
         if ocr_text.strip():
@@ -858,299 +852,54 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             w = ["Kein eingebettetes XML – kein extrahierbarer Text (gescanntes Dokument?)."]
             if ocr_warnung:
                 w.append(ocr_warnung)
-            return AnalyseErgebnis(format="pdf", warnungen=w)
+            return "", w
 
-    # Sonderzeichen normalisieren – treten häufig in OCR-Ausgaben und POS-PDFs auf
-    # * → Leerzeichen (Tankkquittungen, Kassenbons: "*Super 95*", "57,48 *")
+    return text, warnungen
+
+
+def _normalisiere_text(text: str) -> str:
+    """Sonderzeichen und OCR-Artefakte bereinigen – gilt für alle Belegtypen."""
+    # * → Leerzeichen (Kassenbons: "*Super 95*", Tankquittungen: "57,48 *")
     text = text.replace("*", " ")
-    # Mehrfach-Leerzeichen zusammenführen (nach * -Entfernung können sie entstehen)
+    # Mehrfach-Leerzeichen zusammenführen
     text = re.sub(r"[ \t]{2,}", " ", text)
-    # OCR-Artefakt: Leerzeichen nach Komma in Geldbeträgen: "25, 95" → "25,95"
-    # Tesseract setzt manchmal ein Leerzeichen zwischen Komma und Nachkommastellen
+    # OCR-Artefakt: "25, 95" → "25,95"
     text = re.sub(r"(\d),\s+(\d{2})\b", r"\1,\2", text)
-    # OCR-Artefakt: Leerzeichen in Datumsangaben: "01. 02. 2025" → "01.02.2025"
+    # OCR-Artefakt: "01. 02. 2025" → "01.02.2025"
     text = re.sub(r"(\d{1,2})\.\s+(\d{1,2})\.\s+(20\d{2}|\d{2})\b", r"\1.\2.\3", text)
+    return text
 
-    # Belegtyp strukturell erkennen – vor der Feldextraktion, damit Positionen-Modus früh feststeht
-    belegtyp = _erkenne_belegtyp(text)
 
-    felder: dict = {}
+# ---------------------------------------------------------------------------
+# Basisklasse + Spezialisierungen
+# ---------------------------------------------------------------------------
 
-    # Datum – zuerst suchen, damit spätere Felder darauf aufbauen können
-    _datum_pattern = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}(?!\d)"  # (?!\d) verhindert 0172 aus "01720"
-    m = re.search(
-        r"(?:Rechnungs(?:datum)?|Ausstellungsdatum|Ausgestellt(?:\s+am)?|Datum)\s*:?\s*(" + _datum_pattern + r")",
-        text, re.IGNORECASE,
-    )
-    if m:
-        iso = _datum_de_zu_iso(m.group(1))
-        if iso:
-            felder["datum"] = iso
-    if not felder.get("datum"):
-        # ISO-Format YYYY-MM-DD: kein \b am Ende, weil Datum oft direkt vor Transaktionsnummer steht
-        # ("2025-02-01720" → groups 2025/02/01 werden korrekt extrahiert, "720" wird ignoriert)
-        m_iso = re.search(r"\b(20\d{2})-(0[1-9]|1[0-2])-([0-2]\d|3[01])", text)
-        if m_iso:
-            try:
-                felder["datum"] = date(int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))).isoformat()
-            except ValueError:
-                pass
-    if not felder.get("datum"):
-        # Fallback: alle Datumstreffer sammeln, neuestes plausibles nehmen
-        alle_daten = re.findall(_datum_pattern, text)
-        for treffer in alle_daten:
-            iso = _datum_de_zu_iso(treffer)
-            if iso:
-                felder["datum"] = iso
-                break
+class BelegParser:
+    """
+    Basisparser – gemeinsame Feld- und Positions-Extraktion für alle Belegtypen.
 
-    # Rechnungsnummer – gängige deutsche Label (Wert in derselben Zeile)
-    _belegnr_label = (
-        r"(?:Rechnungs(?:nummer|[-\s]?Nr\.?|nr\.?|snr\.?)"
-        r"|Rechnung(?!s?[\s]*(?:datum|sDatum))\s*(?:[-]?\s*Nr\.?|#|:|\s)"
-        r"|RE[-.\s]?Nr\.?|RE(?=[\s:]+[A-Z0-9\-])"
-        r"|Beleg(?:nummer|[-\s]?Nr\.?|nr\.?)|Beleg(?=[\s:]+\d)"
-        r"|Faktura[-\s]?(?:Nr\.?|nummer)?"
-        r"|Invoice\s*(?:No\.?|Nr\.?|#))"
-    )
-    def _belegnr_filter(kandidat: str) -> bool:
-        return (bool(re.search(r"\d", kandidat))
-                and not re.match(r"^\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}$", kandidat))
+    Unterklassen überschreiben nur was sich unterscheidet:
+      ust_satz_default()  – welcher USt-Satz für Positionen gilt wenn keiner erkannt
+      bestimme_modus()    – Brutto/Netto-Erkennung
+    """
 
-    for m in re.finditer(_belegnr_label + r"[\s:]*([A-Z0-9][A-Z0-9/\-_.]{1,29})", text, re.IGNORECASE):
-        kandidat = m.group(1).strip()
-        if _belegnr_filter(kandidat):
-            felder["externe_belegnr"] = kandidat
-            break
+    # ── Überschreibbare Methoden ────────────────────────────────────────────
 
-    # Fallback: Label als Tabellen-Header, Wert steht auf der nächsten Zeile
-    if not felder.get("externe_belegnr"):
-        for m2 in re.finditer(
-            _belegnr_label + r"[^\n]*\n\s*([A-Z0-9][A-Z0-9/\-_.]{1,29})",
-            text, re.IGNORECASE,
-        ):
-            kandidat = m2.group(1).strip()
-            if _belegnr_filter(kandidat):
-                felder["externe_belegnr"] = kandidat
-                break
+    def ust_satz_default(self, felder: dict) -> Optional[str]:
+        """USt-Satz für Positionen wenn kein Satz aus Feldern bekannt."""
+        return felder.get("ust_satz")
 
-    # POS-Kassenbeleg: "Beleg Nr." → weitere Spaltenheader (Kasse/Zahlungsart/Datum) → erste Zahl
-    if not felder.get("externe_belegnr"):
-        m_pos = re.search(
-            r"Beleg\s+Nr\..*?Datum\s*\n(\d{1,15})\b",
-            text, re.IGNORECASE | re.DOTALL,
-        )
-        if m_pos:
-            felder["externe_belegnr"] = m_pos.group(1)
-
-    # Fälligkeitsdatum – explizites Datum ODER "X Tage Zahlungsziel"
-    m_faellig = re.search(
-        r"(?:F[äa]llig(?:keit(?:s?datum)?)?|zahlbar\s+bis|zu\s+zahlen\s+bis)\s*:?\s*(" + _datum_pattern + r")",
-        text, re.IGNORECASE,
-    )
-    if m_faellig:
-        iso = _datum_de_zu_iso(m_faellig.group(1))
-        if iso:
-            felder["faellig_am"] = iso
-    else:
-        # "14 Tage", "14 Werktage", "Zahlungsziel 14 Tage", "netto 14 Tage" usw.
-        m_ziel = re.search(
-            r"Rechnungsdatum\s*\+\s*(\d+)\s*(?:Werk)?[Tt]age?"
-            r"|(?:Zahlungsziel|Zahlbar\s+innerhalb|netto\s+(?:sofort\s+)?innerhalb|innerhalb)\s*[:\s]*(\d+)\s*(?:Werk)?[Tt]age?"
-            r"|(\d+)\s*(?:Werk)?[Tt]age?\s*(?:Zahlungsziel|netto|Zahlung|ab\s+Rechnung)"
-            r"|Zahlung\s+(?:innerhalb|binnen)\s*(\d+)\s*(?:Werk)?[Tt]age?"
-            r"|netto\s+(\d+)\s*[Tt]age?",
-            text, re.IGNORECASE,
-        )
-        if m_ziel and felder.get("datum"):
-            try:
-                from datetime import timedelta
-                tage = int(next(g for g in m_ziel.groups() if g is not None))
-                felder["faellig_am"] = (date.fromisoformat(felder["datum"]) + timedelta(days=tage)).isoformat()
-            except (ValueError, TypeError):
-                pass
-
-    # USt-Aufschlüsselung Tabellenformat: "[A-Z] 19 10,08 1,92 12,00" → Netto/USt/Brutto
-    # Akzeptiert Komma und Punkt als Dezimaltrennzeichen (pypdf-Varianten).
-    m_ust_tab = re.search(
-        r"^[A-Z]\s+(\d{1,2})\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s*$",
-        text, re.IGNORECASE | re.MULTILINE,
-    )
-    if m_ust_tab:
-        if not felder.get("ust_satz"):
-            felder["ust_satz"] = m_ust_tab.group(1)
-        if not felder.get("gesamt_netto"):
-            felder["gesamt_netto"] = _betrag_de(m_ust_tab.group(2))
-        if not felder.get("gesamt_ust"):
-            felder["gesamt_ust"] = _betrag_de(m_ust_tab.group(3))
-        if not felder.get("gesamt_brutto"):
-            felder["gesamt_brutto"] = _betrag_de(m_ust_tab.group(4))
-
-    # POS-Kassenbeleg: USt-Tabelle mit je einem Wert pro Zeile
-    # "Brutto €\nA\n19\n30,92\n5,88\n36,80"
-    if not felder.get("gesamt_netto"):
-        m_ust_pos = re.search(
-            r"Brutto\s*€?\s*\n[A-Z]\s*\n(\d{1,2})\s*\n(\d+[,.]\d{2})\s*\n(\d+[,.]\d{2})\s*\n(\d+[,.]\d{2})",
-            text, re.IGNORECASE,
-        )
-        if m_ust_pos:
-            if not felder.get("ust_satz"):
-                felder["ust_satz"] = m_ust_pos.group(1)
-            felder["gesamt_netto"] = _betrag_de(m_ust_pos.group(2))
-            if not felder.get("gesamt_ust"):
-                felder["gesamt_ust"] = _betrag_de(m_ust_pos.group(3))
-            if not felder.get("gesamt_brutto"):
-                felder["gesamt_brutto"] = _betrag_de(m_ust_pos.group(4))
-
-    # USt-Satz von eigener Zeile: "MwSt-Satz: 19 %" oder "VAT Rate 19 %"
-    if not felder.get("ust_satz"):
-        m = re.search(
-            r"(?:MwSt|USt|VAT)\s*[-/ ]*(?:Satz|Rate)\s*[:/\s]+(\d{1,2})\s*%",
-            text, re.IGNORECASE,
-        )
-        if m:
-            felder["ust_satz"] = m.group(1)
-
-    # USt-Satz + USt-Betrag (kombiniert, mit %-Zeichen)
-    if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
-        m = re.search(
-            r"(\d{1,2})\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*[:\s]+([\d.,]+)",
-            text, re.IGNORECASE,
-        )
-        if m:
-            felder["ust_satz"] = felder.get("ust_satz") or m.group(1)
-            v = _betrag_de(m.group(2))
-            if v:
-                felder["gesamt_ust"] = v
-        else:
-            # Bilingual: "MwSt. / VAT 7,17 EUR" – nur am Zeilenanfang um False-Positives zu vermeiden
-            m = re.search(
-                r"^(?:MwSt\.?|USt\.?|Umsatzsteuer)(?:\s*/[^\n0-9]{0,20})?\s*(?:\d+\s*%\s*)?:?\s*([\d.,]+)\s*(?:€|EUR)?",
-                text, re.IGNORECASE | re.MULTILINE,
-            )
-            if m:
-                v = _betrag_de(m.group(1))
-                if v:
-                    felder["gesamt_ust"] = v
-
-    # Brutto-Gesamtbetrag: spezifische Labels zuerst, dann "Gesamt / Total" (kein Sub Total), Fallback
-    # (?:€|EUR|CHF)?\s* erlaubt Währungssymbol zwischen Label und Zahl (z.B. "SUMME EUR 30,85")
-    m = re.search(
-        r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|Brutto(?:summe|betrag)?)"
-        r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?",
-        text, re.IGNORECASE,
-    )
-    if not m:
-        # "Gesamt / Total" aber NICHT "Gesamt / Sub Total"
-        m = re.search(
-            r"Gesamt(?:summe)?\s*/\s*(?!Sub\b)[^\n0-9]{0,25}([\d.,]+)\s*(?:€|EUR|CHF)?",
-            text, re.IGNORECASE,
-        )
-    if not m:
-        m = re.search(
-            r"(?:Gesamt(?:summe)?|Summe)\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?",
-            text, re.IGNORECASE,
-        )
-    if m:
-        v = _betrag_de(m.group(1))
-        if v:
-            felder["gesamt_brutto"] = v
-
-    # Netto-Betrag: Standard-Labels + bilinguales "Gesamt ohne MwSt."
-    # Separator [:\s.·*-]* erlaubt auch Punkte/Sternchen als Trennzeichen
-    # (z.B. "GESAMT NETTO . 50,40 EUR" auf Tankquittungen mit OCR-Artefakt)
-    m = re.search(
-        r"(?:Netto(?:betrag|summe)?|Zwischensumme(?:\s+netto)?|"
-        r"Gesamt\s+ohne\s+(?:MwSt\.?|USt\.?|Steuer|Umsatzsteuer)|"
-        r"net\s+amount)"
-        r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s.·*\-]*([\d.,]+)\s*(?:€|EUR)?",
-        text, re.IGNORECASE,
-    )
-    if m:
-        v = _betrag_de(m.group(1))
-        if v:
-            felder["gesamt_netto"] = v
-
-    # USt-ID
-    m = re.search(r"(?:USt\.?-?IdNr\.?|UStIdNr|UID)\s*:?\s*(DE\d{9})", text, re.IGNORECASE)
-    if m:
-        felder["lieferant_ust_id"] = m.group(1).strip()
-
-    # Lieferanten-Name: erste Zeile mit Unternehmensform-Marker
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-    for line in lines[:25]:
-        if re.search(r"\b(GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.)\b", line, re.IGNORECASE):
-            felder["lieferant_name"] = line
-            break
-
-    # POS: erste Zeile "Name Straße HausNr" → Name vor dem Straßennamen extrahieren
-    if not felder.get("lieferant_name") and lines:
-        m_name_str = re.match(
-            r"^(.+?)\s+\S*(?:str\.|straße|gasse|weg|allee|platz|ring|damm)\s+\d+[a-zA-Z]?\s*$",
-            lines[0], re.IGNORECASE,
-        )
-        if m_name_str:
-            kandidat = m_name_str.group(1).strip()
-            if (2 <= len(kandidat) <= 80
-                    and not re.search(r"@|www\.|https?://|tel\b|fax\b", kandidat, re.IGNORECASE)):
-                felder["lieferant_name"] = kandidat
-
-    # Fallback: erste Zeile als Unternehmensname wenn zweite Zeile eine Straße ist
-    # (Freelancer / Kleinunternehmen ohne Rechtsformkürzel)
-    if not felder.get("lieferant_name") and len(lines) >= 2:
-        first, second = lines[0], lines[1]
-        if (3 <= len(first) <= 80
-                and not re.search(r"@|www\.|https?://|tel\b|fax\b|steuernr|ust\.?-?id", first, re.IGNORECASE)
-                and not re.match(r"^\d", first)
-                and re.search(r"\d+[a-zA-Z]?\s*$", second)):  # Zweite Zeile endet auf Hausnummer
-            felder["lieferant_name"] = first
-
-    felder = {k: v for k, v in felder.items() if v is not None}
-    _berechne_fehlende_summen(felder)
-
-    if felder:
-        warnungen.append("Kein eingebettetes XML – Felder aus PDF-Text extrahiert, bitte prüfen.")
-    else:
-        warnungen.append("Kein eingebettetes XML – keine Felder erkannt, bitte manuell ausfüllen.")
-
-    konfidenz = _build_konfidenz(felder)
-    # Alle per Regex extrahierten Felder mindestens auf "warnung" setzen
-    for k in list(konfidenz):
-        if konfidenz[k] == "ok":
-            konfidenz[k] = "warnung"
-    for k in ("externe_belegnr", "datum", "gesamt_brutto", "lieferant_name"):
-        if k not in felder:
-            konfidenz[k] = "fehlt"
-
-    # Belegtyp-spezifischer USt-Default: Tankquittungen immer 19%, Kassenbon über steuerklassen_map
-    ust_fuer_pos = felder.get("ust_satz")
-    if belegtyp == "tankquittung" and not ust_fuer_pos:
-        ust_fuer_pos = "19"
-
-    positionen = _extrahiere_positionen(text, ust_fuer_pos)
-    # Fallback wenn keine oder nur wertlose Positionen (Beschreibung = nur Zahlen/Beträge)
-    _nur_betraege = re.compile(r'^[\d\s,.\-EUR€/]+$', re.IGNORECASE)
-    if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
-        alle_zeilen = text.split("\n")
-        pos2 = _extrahiere_positionen_multi_amt(alle_zeilen, ust_fuer_pos)
-        if pos2:
-            positionen = pos2
-    if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
-        pos3 = _extrahiere_positionen_pos_kassenbeleg(text)
-        if pos3:
-            positionen = pos3
-
-    # Brutto/Netto-Modus
-    # Kassenbon / Tankquittung: Preise sind immer Brutto – kein Ratio-Check nötig
-    if belegtyp in ("kassenbon", "tankquittung"):
-        positionen_modus = "brutto"
-        netto_total = Decimal(felder.get("gesamt_netto") or "0")
-        pos_summe   = sum((Decimal(p.netto) for p in positionen), Decimal("0")) if positionen else Decimal("0")
-    else:
-        # Rechnung: Summe der Positionen mit bekannten Gesamtbeträgen vergleichen
+    def bestimme_modus(
+        self, felder: dict, positionen: "list[AnalysePosition]"
+    ) -> "tuple[str, Decimal, Decimal]":
+        """
+        Ermittelt positionen_modus ('netto'|'brutto') und Summen.
+        Rückgabe: (modus, netto_total, pos_summe)
+        """
         positionen_modus = "netto"
         netto_total = Decimal("0")
         pos_summe   = Decimal("0")
+
         if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
             try:
                 pos_summe    = sum(Decimal(p.netto) for p in positionen)
@@ -1164,39 +913,310 @@ def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
             except (InvalidOperation, Exception):
                 pass
 
-        # Fallback: Verhältnis pos_summe / netto_total prüfen wenn kein direkter Treffer
-        # Typisch für Belege mit OCR-korrumpiertem Brutto-Label ("GES Au BRUTTO 59 3,8 EUR")
+        # Ratio-Fallback: pos_summe / netto_total ≈ 1,19 / 1,07 → Positionen sind Brutto
         if positionen_modus == "netto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
             try:
                 ratio = pos_summe / netto_total
                 for satz_dec in [Decimal("0.19"), Decimal("0.07"), Decimal("0.20"), Decimal("0.10")]:
-                    target = 1 + satz_dec
-                    if abs(ratio - target) / target < Decimal("0.005"):
+                    if abs(ratio - (1 + satz_dec)) / (1 + satz_dec) < Decimal("0.005"):
                         positionen_modus = "brutto"
                         break
             except (InvalidOperation, ZeroDivisionError):
                 pass
 
-    # USt-Satz aus Brutto/Netto-Verhältnis ableiten
-    # Greift wenn alle Positionen Brutto ausweisen, aber kein Steuerkennzeichen auf den Zeilen
-    if positionen_modus == "brutto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
-        try:
-            ratio = pos_summe / netto_total
-            for satz_str, satz_dec in [("19", Decimal("0.19")), ("7", Decimal("0.07")),
-                                        ("20", Decimal("0.20")), ("10", Decimal("0.10"))]:
-                target = 1 + satz_dec
-                if abs(ratio - target) / target < Decimal("0.005"):
-                    for pos in positionen:
-                        if pos.ust_satz in ("0", "0.00", None):
-                            pos.ust_satz = satz_str
-                    break
-        except (InvalidOperation, ZeroDivisionError):
-            pass
+        return positionen_modus, netto_total, pos_summe
 
-    return AnalyseErgebnis(
-        format="pdf", felder=felder, positionen=positionen,
-        positionen_modus=positionen_modus, warnungen=warnungen, konfidenz=konfidenz,
-    )
+    # ── Gemeinsame Logik ────────────────────────────────────────────────────
+
+    def extrahiere_positionen(
+        self, text: str, ust_default: Optional[str]
+    ) -> "list[AnalysePosition]":
+        """Positions-Extraktion mit dreistufigem Fallback."""
+        _nur_betraege = re.compile(r'^[\d\s,.\-EUR€/]+$', re.IGNORECASE)
+
+        positionen = _extrahiere_positionen(text, ust_default)
+        if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
+            pos2 = _extrahiere_positionen_multi_amt(text.split("\n"), ust_default)
+            if pos2:
+                positionen = pos2
+        if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
+            pos3 = _extrahiere_positionen_pos_kassenbeleg(text)
+            if pos3:
+                positionen = pos3
+        return positionen
+
+    def _extrahiere_felder(self, text: str) -> dict:
+        """Alle Felder per Regex aus dem Text extrahieren."""
+        felder: dict = {}
+
+        # Datum
+        _datum_pattern = r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}(?!\d)"
+        m = re.search(
+            r"(?:Rechnungs(?:datum)?|Ausstellungsdatum|Ausgestellt(?:\s+am)?|Datum)\s*:?\s*(" + _datum_pattern + r")",
+            text, re.IGNORECASE,
+        )
+        if m:
+            iso = _datum_de_zu_iso(m.group(1))
+            if iso:
+                felder["datum"] = iso
+        if not felder.get("datum"):
+            m_iso = re.search(r"\b(20\d{2})-(0[1-9]|1[0-2])-([0-2]\d|3[01])", text)
+            if m_iso:
+                try:
+                    felder["datum"] = date(
+                        int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))
+                    ).isoformat()
+                except ValueError:
+                    pass
+        if not felder.get("datum"):
+            for treffer in re.findall(_datum_pattern, text):
+                iso = _datum_de_zu_iso(treffer)
+                if iso:
+                    felder["datum"] = iso
+                    break
+
+        # Rechnungsnummer / Belegnummer
+        _belegnr_label = (
+            r"(?:Rechnungs(?:nummer|[-\s]?Nr\.?|nr\.?|snr\.?)"
+            r"|Rechnung(?!s?[\s]*(?:datum|sDatum))\s*(?:[-]?\s*Nr\.?|#|:|\s)"
+            r"|RE[-.\s]?Nr\.?|RE(?=[\s:]+[A-Z0-9\-])"
+            r"|Beleg(?:nummer|[-\s]?Nr\.?|nr\.?)|Beleg(?=[\s:]+\d)"
+            r"|Faktura[-\s]?(?:Nr\.?|nummer)?"
+            r"|Invoice\s*(?:No\.?|Nr\.?|#))"
+        )
+        def _belegnr_filter(k: str) -> bool:
+            return bool(re.search(r"\d", k)) and not re.match(r"^\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}$", k)
+
+        for m in re.finditer(_belegnr_label + r"[\s:]*([A-Z0-9][A-Z0-9/\-_.]{1,29})", text, re.IGNORECASE):
+            if _belegnr_filter(m.group(1)):
+                felder["externe_belegnr"] = m.group(1).strip()
+                break
+        if not felder.get("externe_belegnr"):
+            for m2 in re.finditer(_belegnr_label + r"[^\n]*\n\s*([A-Z0-9][A-Z0-9/\-_.]{1,29})", text, re.IGNORECASE):
+                if _belegnr_filter(m2.group(1)):
+                    felder["externe_belegnr"] = m2.group(1).strip()
+                    break
+        if not felder.get("externe_belegnr"):
+            m_pos = re.search(r"Beleg\s+Nr\..*?Datum\s*\n(\d{1,15})\b", text, re.IGNORECASE | re.DOTALL)
+            if m_pos:
+                felder["externe_belegnr"] = m_pos.group(1)
+
+        # Fälligkeitsdatum
+        m_faellig = re.search(
+            r"(?:F[äa]llig(?:keit(?:s?datum)?)?|zahlbar\s+bis|zu\s+zahlen\s+bis)\s*:?\s*(" + _datum_pattern + r")",
+            text, re.IGNORECASE,
+        )
+        if m_faellig:
+            iso = _datum_de_zu_iso(m_faellig.group(1))
+            if iso:
+                felder["faellig_am"] = iso
+        else:
+            m_ziel = re.search(
+                r"Rechnungsdatum\s*\+\s*(\d+)\s*(?:Werk)?[Tt]age?"
+                r"|(?:Zahlungsziel|Zahlbar\s+innerhalb|netto\s+(?:sofort\s+)?innerhalb|innerhalb)\s*[:\s]*(\d+)\s*(?:Werk)?[Tt]age?"
+                r"|(\d+)\s*(?:Werk)?[Tt]age?\s*(?:Zahlungsziel|netto|Zahlung|ab\s+Rechnung)"
+                r"|Zahlung\s+(?:innerhalb|binnen)\s*(\d+)\s*(?:Werk)?[Tt]age?"
+                r"|netto\s+(\d+)\s*[Tt]age?",
+                text, re.IGNORECASE,
+            )
+            if m_ziel and felder.get("datum"):
+                try:
+                    from datetime import timedelta
+                    tage = int(next(g for g in m_ziel.groups() if g is not None))
+                    felder["faellig_am"] = (date.fromisoformat(felder["datum"]) + timedelta(days=tage)).isoformat()
+                except (ValueError, TypeError):
+                    pass
+
+        # USt-Tabelle "[A-Z] 19 10,08 1,92 12,00"
+        m_ust_tab = re.search(
+            r"^[A-Z]\s+(\d{1,2})\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s+(\d+[,.]\d{2})\s*$",
+            text, re.IGNORECASE | re.MULTILINE,
+        )
+        if m_ust_tab:
+            felder.setdefault("ust_satz",    m_ust_tab.group(1))
+            felder.setdefault("gesamt_netto", _betrag_de(m_ust_tab.group(2)))
+            felder.setdefault("gesamt_ust",   _betrag_de(m_ust_tab.group(3)))
+            felder.setdefault("gesamt_brutto",_betrag_de(m_ust_tab.group(4)))
+
+        # POS-Kassenbeleg USt-Tabelle "Brutto €\nA\n19\n30,92\n5,88\n36,80"
+        if not felder.get("gesamt_netto"):
+            m_ust_pos = re.search(
+                r"Brutto\s*€?\s*\n[A-Z]\s*\n(\d{1,2})\s*\n(\d+[,.]\d{2})\s*\n(\d+[,.]\d{2})\s*\n(\d+[,.]\d{2})",
+                text, re.IGNORECASE,
+            )
+            if m_ust_pos:
+                felder.setdefault("ust_satz",    m_ust_pos.group(1))
+                felder["gesamt_netto"]  = _betrag_de(m_ust_pos.group(2))
+                felder.setdefault("gesamt_ust",   _betrag_de(m_ust_pos.group(3)))
+                felder.setdefault("gesamt_brutto",_betrag_de(m_ust_pos.group(4)))
+
+        # USt-Satz "MwSt-Satz: 19 %"
+        if not felder.get("ust_satz"):
+            m = re.search(r"(?:MwSt|USt|VAT)\s*[-/ ]*(?:Satz|Rate)\s*[:/\s]+(\d{1,2})\s*%", text, re.IGNORECASE)
+            if m:
+                felder["ust_satz"] = m.group(1)
+
+        # USt-Satz + Betrag "19 % MwSt: 7,17"
+        if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
+            m = re.search(r"(\d{1,2})\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*[:\s]+([\d.,]+)", text, re.IGNORECASE)
+            if m:
+                felder["ust_satz"] = felder.get("ust_satz") or m.group(1)
+                v = _betrag_de(m.group(2))
+                if v:
+                    felder["gesamt_ust"] = v
+            else:
+                m = re.search(
+                    r"^(?:MwSt\.?|USt\.?|Umsatzsteuer)(?:\s*/[^\n0-9]{0,20})?\s*(?:\d+\s*%\s*)?:?\s*([\d.,]+)\s*(?:€|EUR)?",
+                    text, re.IGNORECASE | re.MULTILINE,
+                )
+                if m:
+                    v = _betrag_de(m.group(1))
+                    if v:
+                        felder["gesamt_ust"] = v
+
+        # Brutto-Gesamtbetrag
+        m = re.search(
+            r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|Brutto(?:summe|betrag)?)"
+            r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?",
+            text, re.IGNORECASE,
+        )
+        if not m:
+            m = re.search(r"Gesamt(?:summe)?\s*/\s*(?!Sub\b)[^\n0-9]{0,25}([\d.,]+)\s*(?:€|EUR|CHF)?", text, re.IGNORECASE)
+        if not m:
+            m = re.search(r"(?:Gesamt(?:summe)?|Summe)\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?", text, re.IGNORECASE)
+        if m:
+            v = _betrag_de(m.group(1))
+            if v:
+                felder["gesamt_brutto"] = v
+
+        # Netto-Betrag
+        m = re.search(
+            r"(?:Netto(?:betrag|summe)?|Zwischensumme(?:\s+netto)?|"
+            r"Gesamt\s+ohne\s+(?:MwSt\.?|USt\.?|Steuer|Umsatzsteuer)|net\s+amount)"
+            r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s.·*\-]*([\d.,]+)\s*(?:€|EUR)?",
+            text, re.IGNORECASE,
+        )
+        if m:
+            v = _betrag_de(m.group(1))
+            if v:
+                felder["gesamt_netto"] = v
+
+        # USt-ID
+        m = re.search(r"(?:USt\.?-?IdNr\.?|UStIdNr|UID)\s*:?\s*(DE\d{9})", text, re.IGNORECASE)
+        if m:
+            felder["lieferant_ust_id"] = m.group(1).strip()
+
+        # Lieferantenname
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        for line in lines[:25]:
+            if re.search(r"\b(GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.)\b", line, re.IGNORECASE):
+                felder["lieferant_name"] = line
+                break
+        if not felder.get("lieferant_name") and lines:
+            m_str = re.match(
+                r"^(.+?)\s+\S*(?:str\.|straße|gasse|weg|allee|platz|ring|damm)\s+\d+[a-zA-Z]?\s*$",
+                lines[0], re.IGNORECASE,
+            )
+            if m_str:
+                k = m_str.group(1).strip()
+                if 2 <= len(k) <= 80 and not re.search(r"@|www\.|https?://|tel\b|fax\b", k, re.IGNORECASE):
+                    felder["lieferant_name"] = k
+        if not felder.get("lieferant_name") and len(lines) >= 2:
+            first, second = lines[0], lines[1]
+            if (3 <= len(first) <= 80
+                    and not re.search(r"@|www\.|https?://|tel\b|fax\b|steuernr|ust\.?-?id", first, re.IGNORECASE)
+                    and not re.match(r"^\d", first)
+                    and re.search(r"\d+[a-zA-Z]?\s*$", second)):
+                felder["lieferant_name"] = first
+
+        return felder
+
+    def parse(self, text: str, warnungen: list) -> "AnalyseErgebnis":
+        """Vollständiges Parsing: Felder → Konfidenz → Positionen → Modus → Ergebnis."""
+        felder = {k: v for k, v in self._extrahiere_felder(text).items() if v is not None}
+        _berechne_fehlende_summen(felder)
+
+        warnungen.append(
+            "Kein eingebettetes XML – Felder aus PDF-Text extrahiert, bitte prüfen."
+            if felder else
+            "Kein eingebettetes XML – keine Felder erkannt, bitte manuell ausfüllen."
+        )
+
+        konfidenz = _build_konfidenz(felder)
+        for k in list(konfidenz):
+            if konfidenz[k] == "ok":
+                konfidenz[k] = "warnung"
+        for k in ("externe_belegnr", "datum", "gesamt_brutto", "lieferant_name"):
+            if k not in felder:
+                konfidenz[k] = "fehlt"
+
+        ust_default  = self.ust_satz_default(felder)
+        positionen   = self.extrahiere_positionen(text, ust_default)
+        positionen_modus, netto_total, pos_summe = self.bestimme_modus(felder, positionen)
+
+        # USt-Satz aus Brutto/Netto-Verhältnis ableiten (alle Typen)
+        if positionen_modus == "brutto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
+            try:
+                ratio = pos_summe / netto_total
+                for satz_str, satz_dec in [("19", Decimal("0.19")), ("7", Decimal("0.07")),
+                                            ("20", Decimal("0.20")), ("10", Decimal("0.10"))]:
+                    if abs(ratio - (1 + satz_dec)) / (1 + satz_dec) < Decimal("0.005"):
+                        for pos in positionen:
+                            if pos.ust_satz in ("0", "0.00", None):
+                                pos.ust_satz = satz_str
+                        break
+            except (InvalidOperation, ZeroDivisionError):
+                pass
+
+        return AnalyseErgebnis(
+            format="pdf", felder=felder, positionen=positionen,
+            positionen_modus=positionen_modus, warnungen=warnungen, konfidenz=konfidenz,
+        )
+
+
+class _PosBeleg(BelegParser):
+    """Kassenbon und Tankquittung: Positionen sind immer Brutto – kein Ratio-Check."""
+
+    def bestimme_modus(self, felder, positionen):
+        netto_total = Decimal(felder.get("gesamt_netto") or "0")
+        pos_summe   = sum((Decimal(p.netto) for p in positionen), Decimal("0")) if positionen else Decimal("0")
+        return "brutto", netto_total, pos_summe
+
+
+class KassenbonParser(_PosBeleg):
+    """Supermarkt-Kassenbons, Drogerie-Bons – A/B-Steuerklassen, Brutto-Preise."""
+
+
+class TankquittungParser(_PosBeleg):
+    """Tankstellen-Quittungen – USt 19 % als Default, Brutto-Preise."""
+
+    def ust_satz_default(self, felder):
+        return felder.get("ust_satz") or "19"
+
+
+class RechnungParser(BelegParser):
+    """Standard-Rechnung – Brutto/Netto per Ratio-Vergleich ermittelt."""
+
+
+_PARSER_REGISTRY: dict[str, type[BelegParser]] = {
+    "kassenbon":    KassenbonParser,
+    "tankquittung": TankquittungParser,
+    "rechnung":     RechnungParser,
+}
+
+
+# ---------------------------------------------------------------------------
+# Öffentlicher Einstiegspunkt
+# ---------------------------------------------------------------------------
+
+def _extrahiere_pdf_text(pdf_bytes: bytes) -> "AnalyseErgebnis":
+    """Text aus PDF extrahieren, Belegtyp erkennen und belegtyp-spezifisch parsen."""
+    text, warnungen = _extrahiere_text(pdf_bytes)
+    if not text:
+        return AnalyseErgebnis(format="pdf", warnungen=warnungen)
+    text     = _normalisiere_text(text)
+    belegtyp = _erkenne_belegtyp(text)
+    return _PARSER_REGISTRY.get(belegtyp, RechnungParser)().parse(text, warnungen)
 
 
 def _x(elem, xpath: str, ns: dict) -> Optional[str]:
