@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, type Rechnung } from '../../api/client'
 import { guardedDateChange } from '../../utils/dateInput'
+import { dashboardFilter } from '../../store/filterStore'
 
 function formatEuro(val: string | number): string {
   const n = typeof val === 'string' ? parseFloat(val) : val
@@ -261,11 +262,21 @@ function FaelligeKachel({ rechnungen }: { rechnungen: Rechnung[] }) {
 }
 
 export function Dashboard() {
-  const [filterModus, setFilterModus] = useState<FilterModus>('monat')
-  const [monat, setMonat] = useState(aktuellerMonat)
-  const [datum, setDatum] = useState(heuteIso)
-  const [datumVon, setDatumVon] = useState(heuteIso)
-  const [datumBis, setDatumBis] = useState(heuteIso)
+  // Filter: Lazy-Init aus Store → bleibt beim Navigieren erhalten bis Programmende
+  const [filterModus, _setFilterModus] = useState<FilterModus>(() => (dashboardFilter.modus as FilterModus) ?? 'monat')
+  const setFilterModus = (m: FilterModus) => { dashboardFilter.modus = m; _setFilterModus(m) }
+
+  const [monat, _setMonat] = useState<string>(() => dashboardFilter.monat)
+  const setMonat = (m: string) => { dashboardFilter.monat = m; _setMonat(m) }
+
+  const [datum, _setDatum] = useState<string>(() => dashboardFilter.datum)
+  const setDatum = (d: string) => { dashboardFilter.datum = d; _setDatum(d) }
+
+  const [datumVon, _setDatumVon] = useState<string>(() => dashboardFilter.datumVon)
+  const setDatumVon = (d: string) => { dashboardFilter.datumVon = d; _setDatumVon(d) }
+
+  const [datumBis, _setDatumBis] = useState<string>(() => dashboardFilter.datumBis)
+  const setDatumBis = (d: string) => { dashboardFilter.datumBis = d; _setDatumBis(d) }
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams =

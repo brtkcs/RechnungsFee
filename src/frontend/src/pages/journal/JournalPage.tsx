@@ -6,6 +6,7 @@ import { BuchungForm } from './BuchungForm'
 import { TagesabschlussDialog } from './TagesabschlussDialog'
 import { BuchungDetail } from './BuchungDetail'
 import { guardedDateChange } from '../../utils/dateInput'
+import { journalFilter } from '../../store/filterStore'
 
 function formatEuro(val: string | number): string {
   const n = typeof val === 'string' ? parseFloat(val) : val
@@ -30,14 +31,31 @@ function heuteIso(): string {
 
 export function JournalPage() {
   const navigate = useNavigate()
-  const [filterModus, setFilterModus] = useState<FilterModus>('monat')
-  const [monat, setMonat] = useState(aktuellerMonat)
-  const [datum, setDatum] = useState(heuteIso)
-  const [datumVon, setDatumVon] = useState(heuteIso)
-  const [datumBis, setDatumBis] = useState(heuteIso)
-  const [art, setArt] = useState<'' | 'Einnahme' | 'Ausgabe'>('')
-  const [kategorieId, setKategorieId] = useState<string>('')
-  const [zahlungsartTyp, setZahlungsartTyp] = useState<'' | 'bar' | 'unbar'>('')
+
+  // Filter: Lazy-Init aus Store → bleibt beim Navigieren erhalten bis Programmende
+  const [filterModus, _setFilterModus] = useState<FilterModus>(() => journalFilter.modus)
+  const setFilterModus = (m: FilterModus) => { journalFilter.modus = m; _setFilterModus(m) }
+
+  const [monat, _setMonat] = useState<string>(() => journalFilter.monat)
+  const setMonat = (m: string) => { journalFilter.monat = m; _setMonat(m) }
+
+  const [datum, _setDatum] = useState<string>(() => journalFilter.datum)
+  const setDatum = (d: string) => { journalFilter.datum = d; _setDatum(d) }
+
+  const [datumVon, _setDatumVon] = useState<string>(() => journalFilter.datumVon)
+  const setDatumVon = (d: string) => { journalFilter.datumVon = d; _setDatumVon(d) }
+
+  const [datumBis, _setDatumBis] = useState<string>(() => journalFilter.datumBis)
+  const setDatumBis = (d: string) => { journalFilter.datumBis = d; _setDatumBis(d) }
+
+  const [art, _setArt] = useState<'' | 'Einnahme' | 'Ausgabe'>(() => journalFilter.art)
+  const setArt = (a: '' | 'Einnahme' | 'Ausgabe') => { journalFilter.art = a; _setArt(a) }
+
+  const [kategorieId, _setKategorieId] = useState<string>(() => journalFilter.kategorieId)
+  const setKategorieId = (k: string) => { journalFilter.kategorieId = k; _setKategorieId(k) }
+
+  const [zahlungsartTyp, _setZahlungsartTyp] = useState<'' | 'bar' | 'unbar'>(() => journalFilter.zahlungsartTyp)
+  const setZahlungsartTyp = (z: '' | 'bar' | 'unbar') => { journalFilter.zahlungsartTyp = z; _setZahlungsartTyp(z) }
   const [showBuchung, setShowBuchung] = useState(false)
   const [showAbschluss, setShowAbschluss] = useState(false)
   const [aktiverEintragId, setAktiverEintragId] = useState<number | null>(null)
