@@ -243,6 +243,12 @@ Voraussetzung: Rust + Cargo installiert (`rustup.rs`), Tauri-Abhängigkeiten je 
 
 ---
 
+## ⚖️ Lizenz-Hinweis für Beiträge
+
+By submitting a pull request you agree that your contribution may be used under both the AGPL-3.0 license and a future commercial license by the project maintainer.
+
+---
+
 ## 🔀 Pull Requests
 
 ### Checkliste vor dem PR
