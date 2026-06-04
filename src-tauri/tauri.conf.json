@@ -43,6 +43,9 @@
     "externalBin": [
       "binaries/backend"
     ],
+    "resources": {
+      "../THIRD_PARTY_LICENSES.txt": "THIRD_PARTY_LICENSES.txt"
+    },
     "windows": {
       "nsis": {
         "languages": ["German"],
