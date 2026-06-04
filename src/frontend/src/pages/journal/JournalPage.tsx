@@ -249,6 +249,21 @@ export function JournalPage() {
             ✕
           </button>
         )}
+
+        {/* Summen */}
+        {!!eintraege?.length && (
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            <span className="text-green-600 dark:text-green-400 font-medium">
+              ↑ {formatEuro(sumEinnahmen)}
+            </span>
+            <span className="text-red-600 dark:text-red-400 font-medium">
+              ↓ {formatEuro(sumAusgaben)}
+            </span>
+            <span className={`font-semibold border-l border-slate-200 dark:border-slate-600 pl-3 ${saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              = {formatEuro(saldo)}
+            </span>
+          </div>
+        )}
       </div>
       </div>{/* Ende Kopf+Filter */}
 
@@ -350,29 +365,6 @@ export function JournalPage() {
                 )
               })}
             </tbody>
-            {!!eintraege?.length && (
-              <tfoot>
-                <tr className="border-t-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900">
-                  <td colSpan={4} className="px-4 py-3 text-xs text-slate-400 dark:text-slate-500">
-                    {eintraege.length} Buchung{eintraege.length !== 1 ? 'en' : ''}
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-green-600 dark:text-green-400">
-                    {formatEuro(sumEinnahmen)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm font-semibold text-red-600 dark:text-red-400">
-                    {formatEuro(sumAusgaben)}
-                  </td>
-                </tr>
-                <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                  <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">
-                    Saldo
-                  </td>
-                  <td colSpan={2} className={`px-4 py-2 text-right text-sm font-bold ${saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {formatEuro(saldo)}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
           </table>
         )}
       </div>
