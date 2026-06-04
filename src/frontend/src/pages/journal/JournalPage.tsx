@@ -108,6 +108,12 @@ export function JournalPage() {
     setAktiverEintragId((prev) => (prev === id ? null : id))
   }
 
+  const sumEinnahmen = (eintraege ?? []).reduce(
+    (s, e) => e.art === 'Einnahme' ? s + parseFloat(e.brutto_betrag) : s, 0)
+  const sumAusgaben = (eintraege ?? []).reduce(
+    (s, e) => e.art === 'Ausgabe' ? s + parseFloat(e.brutto_betrag) : s, 0)
+  const saldo = sumEinnahmen - sumAusgaben
+
   return (
     <div className="h-full flex flex-col">
       {/* Kopf + Filter – bleibt stehen */}
@@ -344,6 +350,29 @@ export function JournalPage() {
                 )
               })}
             </tbody>
+            {!!eintraege?.length && (
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900">
+                  <td colSpan={4} className="px-4 py-3 text-xs text-slate-400 dark:text-slate-500">
+                    {eintraege.length} Buchung{eintraege.length !== 1 ? 'en' : ''}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-green-600 dark:text-green-400">
+                    {formatEuro(sumEinnahmen)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-red-600 dark:text-red-400">
+                    {formatEuro(sumAusgaben)}
+                  </td>
+                </tr>
+                <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                  <td colSpan={4} className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">
+                    Saldo
+                  </td>
+                  <td colSpan={2} className={`px-4 py-2 text-right text-sm font-bold ${saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {formatEuro(saldo)}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         )}
       </div>
