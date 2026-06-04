@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.2.20',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'GoBD-Export: Belegdateien jetzt im ZIP enthalten – belege.csv (SHA256-Manifest) + belege/-Ordner mit den tatsächlichen Dateien (PDF/A bevorzugt, sonst Original)' },
+      { typ: 'neu', text: 'PDF/A-3-Archivierung: Belege werden nach dem Upload automatisch im Hintergrund zu PDF/A-3 konvertiert (erfordert Ghostscript); ZUGFeRD/XRechnung sofort als PDF/A-3 markiert (sind es per Norm)' },
+      { typ: 'neu', text: 'Beleg-Detailansicht: „✓ PDF/A-3 (GoBD-Archiv)"-Link erscheint sobald die Archivversion bereit ist' },
+    ],
+  },
+  {
     version: 'v0.2.19',
     datum: 'Juni 2026',
     eintraege: [

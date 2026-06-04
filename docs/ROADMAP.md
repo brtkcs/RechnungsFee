@@ -103,9 +103,12 @@ Eingangsrechnungen mit Beleg belegen, ZUGFeRD/XRechnung automatisch einlesen.
 - [x] Lieferant-Matching: Backend-Vorschlag direkt übernommen, Fuzzy-Match mit Rechtsformbereinigung
 - [x] ZUGFeRD/XRechnung: PDF zur Kontrolle automatisch geöffnet
 
-**Stufe 5 – GoBD-Export-Erweiterung** *(offen)*
-- [ ] `belege.csv` (Manifest mit SHA256) im GoBD-ZIP
-- [ ] `belege/`-Ordner mit Original-Dateien im ZIP
+**Stufe 5 – GoBD-Export-Erweiterung + PDF/A-Archivierung** ✅ *v0.2.20*
+- [x] `belege.csv` (Manifest mit SHA256) im GoBD-ZIP
+- [x] `belege/`-Ordner mit Belegdateien im ZIP (PDF/A bevorzugt, sonst Original)
+- [x] PDF/A-3-Konvertierung nach Upload (Hintergrundthread, graceful ohne Ghostscript)
+- [x] ZUGFeRD/XRechnung sofort als PDF/A-3 markiert (sind es per Norm)
+- [x] „✓ PDF/A-3 (GoBD-Archiv)"-Link in der Beleg-Detailansicht
 
 ---
 
@@ -270,3 +273,4 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2.17 – Tesseract-Assistent** (Juni 2026): TesseractAssistentModal mit State-Machine (Ein-Klick-Install via winget/pkexec/apt/dnf/pacman ohne Terminal); NSIS-Installer fragt per Dialog statt still zu installieren; Tesseract-Pfaderkennung auch wenn PATH noch nicht aktualisiert (Issue #115)
 - [x] **v0.2.18 – OCR-Parser-Fixes Tankquittung** (Juni 2026): Produktname + Menge (Super 95 / 32,69 l) aus Tankquittungen extrahiert (Einzeiler + Mehrzeiler); Sternchen-Bereinigung; „SUMME EUR 30,85" als Rechnungsbetrag erkannt
 - [x] **v0.2.19 – OCR-Parser-Fixes Kassenbons** (Juni 2026): Tesseract-Artefakt „25, 95" (Leerzeichen nach Komma) vor Auswertung bereinigt; USt-Aufschlüsselungs-Tabellenzeilen mit Dezimalrate (z.B. „fz 19,0% 4,12 6,78 4,90") werden nicht mehr als Positionen importiert
+- [x] **v0.2.20 – GoBD-Belege + PDF/A-Archivierung** (Juni 2026): GoBD-ZIP enthält jetzt belege.csv + belege/-Ordner; PDF/A-3-Konvertierung via ocrmypdf (Hintergrundthread, graceful ohne Ghostscript); ZUGFeRD/XRechnung sofort als PDF/A-3 markiert; PDF/A-Link in Beleg-Detailansicht; install-linux.sh Ghostscript-Check
