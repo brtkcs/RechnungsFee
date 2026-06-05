@@ -15,6 +15,7 @@ import { InfoTooltip } from '../../components/InfoTooltip'
 import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
 import { LieferantErstellenModal } from '../../components/LieferantErstellenModal'
 import { KundeErstellenModal } from '../../components/KundeErstellenModal'
+import { ArtikelFormModal } from '../artikel/ArtikelPage'
 import { guardedDateChange } from '../../utils/dateInput'
 
 // ---------------------------------------------------------------------------
@@ -1886,6 +1887,7 @@ function RechnungForm({
   const [showNeuKategorieForm, setShowNeuKategorieForm] = useState(false)
   const [showNeuLieferant, setShowNeuLieferant] = useState(false)
   const [showNeuKunde, setShowNeuKunde] = useState(false)
+  const [showNeuArtikel, setShowNeuArtikel] = useState(false)
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
   const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
@@ -2422,6 +2424,15 @@ function RechnungForm({
                 {eingabeModus === 'netto' ? 'Brutto eingeben' : 'Netto eingeben'}
               </button>
             )}
+            {!schnellmodus && typ === 'ausgang' && (
+              <button
+                type="button"
+                onClick={() => setShowNeuArtikel(true)}
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
+              >
+                + Neuer Artikel
+              </button>
+            )}
             {!schnellmodus && (
               <button
                 type="button"
@@ -2663,6 +2674,28 @@ function RechnungForm({
         </div>
         )}
       </div>
+
+      {showNeuArtikel && (
+        <ArtikelFormModal
+          onClose={() => setShowNeuArtikel(false)}
+          onSuccess={() => setShowNeuArtikel(false)}
+          onSaveArtikel={(neu) => {
+            setShowNeuArtikel(false)
+            const istDiff = neu.differenzbesteuerung
+            const ust_satz = (istKleinunternehmer || istDiff) ? '0' : String(parseInt(neu.steuersatz))
+            const preis = istDiff ? neu.vk_brutto : (eingabeModus === 'netto' ? neu.vk_netto : neu.vk_brutto)
+            setPositionen(prev => {
+              const letzteIdx = prev.length - 1
+              if (letzteIdx >= 0 && !prev[letzteIdx].beschreibung) {
+                return prev.map((p, idx) => idx === letzteIdx
+                  ? { ...p, beschreibung: neu.bezeichnung, einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff }
+                  : p)
+              }
+              return [...prev, { beschreibung: neu.bezeichnung, menge: '1', einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff }]
+            })
+          }}
+        />
+      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>

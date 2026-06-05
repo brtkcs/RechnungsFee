@@ -281,12 +281,13 @@ function formatEuro(v: string | null | undefined) {
 // Formular
 // ---------------------------------------------------------------------------
 
-function ArtikelFormModal({
-  initial, onClose, onSuccess, inline = false,
+export function ArtikelFormModal({
+  initial, onClose, onSuccess, onSaveArtikel, inline = false,
 }: {
   initial?: Artikel
   onClose: () => void
   onSuccess: () => void
+  onSaveArtikel?: (a: Artikel) => void
   inline?: boolean
 }) {
   const qc = useQueryClient()
@@ -401,14 +402,15 @@ function ArtikelFormModal({
       }
       return initial ? updateArtikel(initial.id, payload) : createArtikel(payload)
     },
-    onSuccess: () => {
+    onSuccess: (gespeichert) => {
       qc.invalidateQueries({ queryKey: ['artikel'] })
+      if (onSaveArtikel && !initial) onSaveArtikel(gespeichert)
       onSuccess()
     },
   })
 
   const formContent = (
-    <form onSubmit={handleSubmit(v => mutation.mutate(v))} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation() }} className="space-y-4">
           {/* Typ */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Typ</label>
@@ -650,7 +652,12 @@ function ArtikelFormModal({
             <button type="button" onClick={onClose} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">
               Abbrechen
             </button>
-            <button type="submit" disabled={mutation.isPending} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+            <button
+              type="button"
+              disabled={mutation.isPending}
+              onClick={() => handleSubmit(v => mutation.mutate(v))()}
+              className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
               {mutation.isPending ? 'Speichert…' : initial ? 'Speichern' : 'Anlegen'}
             </button>
           </div>
