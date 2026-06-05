@@ -405,16 +405,18 @@ def export_integritaet_csv(db: Session, jahr: int) -> tuple[bytes, dict]:
 
 def export_belege_csv(db: Session, jahr: int) -> tuple[bytes, list[dict]]:
     """
-    Belege-Index als CSV (alle Belege zu immutablen Journal-Einträgen des Jahres).
+    Belege-Index als CSV für alle immutablen Journal-Einträge des Jahres.
+
+    Belege werden auf zwei Wegen gefunden:
+      1. journal.beleg_id  – Beleg direkt am Journaleintrag
+      2. journal.rechnung_id → rechnung.beleg_id  – Beleg an der Rechnung,
+         die diesem Journaleintrag zugrunde liegt (Normalfall bei Eingangsrechnungen)
+
     Gibt (bytes, liste_von_beleg_infos) zurück.
-    Jedes beleg_info-Dict: {"beleg": Beleg, "journal_belegnr": str}
     """
     eintraege = (
         db.query(Journaleintrag)
-        .filter(
-            Journaleintrag.immutable == True,
-            Journaleintrag.beleg_id.isnot(None),
-        )
+        .filter(Journaleintrag.immutable == True)
         .all()
     )
     eintraege = [e for e in eintraege if e.datum.year == jahr]
@@ -428,11 +430,20 @@ def export_belege_csv(db: Session, jahr: int) -> tuple[bytes, list[dict]]:
     seen: set[int] = set()
 
     for e in eintraege:
-        if e.beleg_id in seen:
-            continue
-        seen.add(e.beleg_id)
+        # Weg 1: Beleg direkt am Journaleintrag
+        beleg_id = e.beleg_id
 
-        beleg = db.query(Beleg).filter(Beleg.id == e.beleg_id).first()
+        # Weg 2: Beleg an der verknüpften Rechnung
+        if not beleg_id and e.rechnung_id:
+            rechnung_obj = db.query(Rechnung).filter(Rechnung.id == e.rechnung_id).first()
+            if rechnung_obj and rechnung_obj.beleg_id:
+                beleg_id = rechnung_obj.beleg_id
+
+        if not beleg_id or beleg_id in seen:
+            continue
+        seen.add(beleg_id)
+
+        beleg = db.query(Beleg).filter(Beleg.id == beleg_id).first()
         if not beleg:
             continue
 
