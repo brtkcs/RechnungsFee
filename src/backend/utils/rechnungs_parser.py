@@ -1133,7 +1133,10 @@ class BelegParser:
         lines = [l.strip() for l in text.split("\n") if l.strip()]
         for line in lines[:25]:
             if re.search(r"\b(GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.)\b", line, re.IGNORECASE):
-                felder["lieferant_name"] = line
+                # Adressteil nach dem ersten Komma entfernen
+                # "Vodafone GmbH, Postfach 10 10 52, 40839 Ratingen" → "Vodafone GmbH"
+                name = line.split(",")[0].strip() if "," in line else line
+                felder["lieferant_name"] = name
                 break
         if not felder.get("lieferant_name") and lines:
             m_str = re.match(
