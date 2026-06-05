@@ -987,14 +987,16 @@ class BelegParser:
         def _belegnr_filter(k: str) -> bool:
             return bool(re.search(r"\d", k)) and not re.match(r"^\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}$", k)
 
-        for m in re.finditer(_belegnr_label + r"[\s:]*([A-Z0-9][A-Z0-9/\-_.]{1,29})", text, re.IGNORECASE):
-            if _belegnr_filter(m.group(1)):
-                felder["externe_belegnr"] = m.group(1).strip()
+        for m in re.finditer(_belegnr_label + r"[\s:]*([A-Z0-9][A-Z0-9/\-_. ]{1,39})", text, re.IGNORECASE):
+            val = re.sub(r"\s+", " ", m.group(1)).strip()
+            if _belegnr_filter(val):
+                felder["externe_belegnr"] = val
                 break
         if not felder.get("externe_belegnr"):
-            for m2 in re.finditer(_belegnr_label + r"[^\n]*\n\s*([A-Z0-9][A-Z0-9/\-_.]{1,29})", text, re.IGNORECASE):
-                if _belegnr_filter(m2.group(1)):
-                    felder["externe_belegnr"] = m2.group(1).strip()
+            for m2 in re.finditer(_belegnr_label + r"[^\n]*\n\s*([A-Z0-9][A-Z0-9/\-_. ]{1,39})", text, re.IGNORECASE):
+                val = re.sub(r"\s+", " ", m2.group(1)).strip()
+                if _belegnr_filter(val):
+                    felder["externe_belegnr"] = val
                     break
         if not felder.get("externe_belegnr"):
             m_pos = re.search(r"Beleg\s+Nr\..*?Datum\s*\n(\d{1,15})\b", text, re.IGNORECASE | re.DOTALL)
@@ -1055,6 +1057,22 @@ class BelegParser:
             m = re.search(r"(?:MwSt|USt|VAT)\s*[-/ ]*(?:Satz|Rate)\s*[:/\s]+(\d{1,2})\s*%", text, re.IGNORECASE)
             if m:
                 felder["ust_satz"] = m.group(1)
+
+        # Telekom/Vodafone-Format: "19% USt. auf 59,95 €   11,39 €"
+        # Liefert USt-Satz, Netto-Basis und USt-Betrag in einem Schritt
+        if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
+            m_tele = re.search(
+                r"(\d{1,2})[,.]?\d*\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s+auf\s+([\d.,]+)\s*(?:€|EUR)?\s+([\d.,]+)",
+                text, re.IGNORECASE,
+            )
+            if m_tele:
+                felder["ust_satz"] = felder.get("ust_satz") or m_tele.group(1)
+                netto_basis = _betrag_de(m_tele.group(2))
+                ust_betrag  = _betrag_de(m_tele.group(3))
+                if netto_basis and not felder.get("gesamt_netto"):
+                    felder["gesamt_netto"] = netto_basis
+                if ust_betrag and not felder.get("gesamt_ust"):
+                    felder["gesamt_ust"] = ust_betrag
 
         # USt-Satz + Betrag "19 % MwSt: 7,17"
         if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
