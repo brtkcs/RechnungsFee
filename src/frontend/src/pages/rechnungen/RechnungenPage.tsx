@@ -3177,6 +3177,9 @@ export function RechnungenPage() {
       const next = listeSortiert[nextIdx]
       if (!next) return
       setSelectedId(next.id)
+      // Fokus auf den Listen-Container (outline-none) damit kein Browser-Fokus-Ring
+      // auf dem Detail-Panel oder zuletzt geklickten Element sichtbar bleibt
+      listContainerRef.current?.focus({ preventScroll: true })
       requestAnimationFrame(() => {
         const row = listContainerRef.current?.querySelector(`[data-rechnung-id="${next.id}"]`)
         row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -3359,7 +3362,7 @@ export function RechnungenPage() {
         )}
 
         {/* Tabelle */}
-        <div ref={listContainerRef} className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
+        <div ref={listContainerRef} tabIndex={-1} className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 focus:outline-none">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {isLoading ? (
               <p className="p-5 text-slate-400 dark:text-slate-500 text-sm">Lade Rechnungen…</p>
