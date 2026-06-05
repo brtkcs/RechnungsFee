@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { InfoTooltip } from '../../components/InfoTooltip'
+import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -78,6 +79,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
   const [eingabeModus, setEingabeModus] = useState<'brutto' | 'netto'>('brutto')
   const [keineGeldbewegung, setKeineGeldbewegung] = useState(false)
   const [kmAnzahl, setKmAnzahl] = useState<string>('')
+  const [showNeuKategorie, setShowNeuKategorie] = useState(false)
 
   const { data: kategorien } = useQuery({ queryKey: ['kategorien', 'aktiv'], queryFn: () => getKategorien(true) })
   const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
@@ -507,13 +509,23 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
             {/* Kategorie */}
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Kategorie</label>
-              <select
-                {...register('kategorie_id')}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-              >
-                <option value="">— keine —</option>
-                {renderKategorieOptgroups(art)}
-              </select>
+              <div className="flex gap-1">
+                <select
+                  {...register('kategorie_id')}
+                  className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+                >
+                  <option value="">— keine —</option>
+                  {renderKategorieOptgroups(art)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowNeuKategorie(true)}
+                  title="Neue Kategorie anlegen"
+                  className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+                >
+                  +
+                </button>
+              </div>
               {gewaehlteKat?.beschreibung && (
                 <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 pl-1">
                   💬 {gewaehlteKat.beschreibung}
@@ -1042,5 +1054,15 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
         )}
       </div>
     </div>
+
+    {showNeuKategorie && (
+      <KategorieErstellenModal
+        onClose={() => setShowNeuKategorie(false)}
+        onSave={(neu) => {
+          setShowNeuKategorie(false)
+          setValue('kategorie_id', String(neu.id))
+        }}
+      />
+    )}
   )
 }

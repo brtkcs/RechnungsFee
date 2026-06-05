@@ -12,6 +12,7 @@ import {
   type ArtikelSuche, type AnalyseErgebnis, type LieferantVorschlag, type ZahlungSplitPosition,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
+import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
 import { guardedDateChange } from '../../utils/dateInput'
 
 // ---------------------------------------------------------------------------
@@ -407,6 +408,7 @@ function ZahlungsDialog({
   // Eingangsrechnung: Kategorie bei Zahlung (Schritt 6+7)
   // rechnung.kategorie_id ist nach erster Teilzahlung gesetzt → Vorausfüllung (Schritt 7)
   const [kategorieId, setKategorieId] = useState<string>(String(rechnung.kategorie_id ?? ''))
+  const [showNeuKategorie, setShowNeuKategorie] = useState(false)
   const [splitModus, setSplitModus] = useState(false)
   const [splitZeilen, setSplitZeilen] = useState<SplitZeile[]>(() =>
     rechnung.positionen.map((pos) => ({
@@ -700,21 +702,37 @@ function ZahlungsDialog({
                   </table>
                 </div>
               ) : (
-                <select
-                  value={kategorieId}
-                  onChange={(e) => setKategorieId(e.target.value)}
-                  className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-                >
-                  <option value="">— Kategorie wählen —</option>
-                  <optgroup label="Betriebsausgaben">
-                    {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
-                  </optgroup>
-                  {anlageKat.length > 0 && (
-                    <optgroup label="Investitionen">
-                      {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                <div className="flex gap-1">
+                  <select
+                    value={kategorieId}
+                    onChange={(e) => setKategorieId(e.target.value)}
+                    className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+                  >
+                    <option value="">— Kategorie wählen —</option>
+                    <optgroup label="Betriebsausgaben">
+                      {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
                     </optgroup>
-                  )}
-                </select>
+                    {anlageKat.length > 0 && (
+                      <optgroup label="Investitionen">
+                        {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                      </optgroup>
+                    )}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNeuKategorie(true)}
+                    title="Neue Kategorie anlegen"
+                    className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+              {showNeuKategorie && (
+                <KategorieErstellenModal
+                  onClose={() => setShowNeuKategorie(false)}
+                  onSave={(neu) => { setShowNeuKategorie(false); setKategorieId(String(neu.id)) }}
+                />
               )}
             </div>
           )}
@@ -1862,6 +1880,7 @@ function RechnungForm({
     pf?.lieferant_name ?? initial?.partner_freitext ?? ''
   )
   const [kategorieId, setKategorieId] = useState<string>(String(initial?.kategorie_id ?? ''))
+  const [showNeuKategorieForm, setShowNeuKategorieForm] = useState(false)
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
   const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
@@ -2428,21 +2447,37 @@ function RechnungForm({
             {/* Kategorie */}
             <div>
               <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Kategorie</label>
-              <select
-                value={positionen[0]?.kategorie_id ?? ''}
-                onChange={(e) => updatePosition(0, 'kategorie_id', e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-              >
-                <option value="">— keine Kategorie —</option>
-                <optgroup label="Betriebsausgaben">
-                  {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
-                </optgroup>
-                {anlageKat.length > 0 && (
-                  <optgroup label="Investitionen">
-                    {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+              <div className="flex gap-1">
+                <select
+                  value={positionen[0]?.kategorie_id ?? ''}
+                  onChange={(e) => updatePosition(0, 'kategorie_id', e.target.value)}
+                  className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+                >
+                  <option value="">— keine Kategorie —</option>
+                  <optgroup label="Betriebsausgaben">
+                    {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
                   </optgroup>
-                )}
-              </select>
+                  {anlageKat.length > 0 && (
+                    <optgroup label="Investitionen">
+                      {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                    </optgroup>
+                  )}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowNeuKategorieForm(true)}
+                  title="Neue Kategorie anlegen"
+                  className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+                >
+                  +
+                </button>
+              </div>
+              {showNeuKategorieForm && (
+                <KategorieErstellenModal
+                  onClose={() => setShowNeuKategorieForm(false)}
+                  onSave={(neu) => { setShowNeuKategorieForm(false); updatePosition(0, 'kategorie_id', String(neu.id)) }}
+                />
+              )}
             </div>
 
             {/* Summenanzeige */}
