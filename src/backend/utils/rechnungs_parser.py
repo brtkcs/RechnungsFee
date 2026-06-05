@@ -1074,7 +1074,7 @@ class BelegParser:
                 if ust_betrag and not felder.get("gesamt_ust"):
                     felder["gesamt_ust"] = ust_betrag
 
-        # USt-Satz + Betrag "19 % MwSt: 7,17"
+        # USt-Satz + Betrag "19 % MwSt: 7,17"  oder  "19% MwSt: 7,17"
         if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
             m = re.search(r"(\d{1,2})\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s*[:\s]+([\d.,]+)", text, re.IGNORECASE)
             if m:
@@ -1083,18 +1083,23 @@ class BelegParser:
                 if v:
                     felder["gesamt_ust"] = v
             else:
+                # Vodafone-Format: "MwSt. 19% 9,20"  (Label, dann Satz%, dann Betrag)
                 m = re.search(
-                    r"^(?:MwSt\.?|USt\.?|Umsatzsteuer)(?:\s*/[^\n0-9]{0,20})?\s*(?:\d+\s*%\s*)?:?\s*([\d.,]+)\s*(?:€|EUR)?",
+                    r"^(?:MwSt\.?|USt\.?|Umsatzsteuer)(?:\s*/[^\n0-9]{0,20})?\s*(?:(\d{1,2})\s*%\s*)?:?\s*([\d.,]+)\s*(?:€|EUR)?",
                     text, re.IGNORECASE | re.MULTILINE,
                 )
                 if m:
-                    v = _betrag_de(m.group(1))
+                    if m.group(1) and not felder.get("ust_satz"):
+                        felder["ust_satz"] = m.group(1)
+                    v = _betrag_de(m.group(2))
                     if v:
                         felder["gesamt_ust"] = v
 
         # Brutto-Gesamtbetrag
+        # "Rechnungsbetrag in EUR 57,60" – Vodafone schreibt "in EUR" nach dem Label
         m = re.search(
             r"(?:Gesamtbetrag|Rechnungsbetrag|Zu\s+zahlen(?:der\s+Betrag)?|Brutto(?:summe|betrag)?)"
+            r"(?:\s+in\s+(?:€|EUR|CHF))?"
             r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s]*(?:€|EUR|CHF)?\s*([\d.,]+)\s*(?:€|EUR|CHF)?",
             text, re.IGNORECASE,
         )
