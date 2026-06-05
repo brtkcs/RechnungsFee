@@ -730,6 +730,7 @@ function ZahlungsDialog({
               )}
               {showNeuKategorie && (
                 <KategorieErstellenModal
+                  kontenPflicht
                   onClose={() => setShowNeuKategorie(false)}
                   onSave={(neu) => { setShowNeuKategorie(false); setKategorieId(String(neu.id)) }}
                 />
@@ -2474,6 +2475,7 @@ function RechnungForm({
               </div>
               {showNeuKategorieForm && (
                 <KategorieErstellenModal
+                  kontenPflicht
                   onClose={() => setShowNeuKategorieForm(false)}
                   onSave={(neu) => { setShowNeuKategorieForm(false); updatePosition(0, 'kategorie_id', String(neu.id)) }}
                 />

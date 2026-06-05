@@ -14,9 +14,16 @@ const LEER: KategorieCreate = {
 interface Props {
   onSave: (neuKategorie: Kategorie) => void
   onClose: () => void
+  /** Wenn true: SKR03 + SKR04 sind Pflichtfelder (z.B. im Rechnungseingang-Kontext) */
+  kontenPflicht?: boolean
 }
 
-export function KategorieErstellenModal({ onSave, onClose }: Props) {
+function pflichtCls(wert: string, aktiv: boolean) {
+  if (!aktiv) return 'border-slate-300 dark:border-slate-600'
+  return wert.trim() ? 'border-slate-300 dark:border-slate-600' : 'border-red-400 dark:border-red-500'
+}
+
+export function KategorieErstellenModal({ onSave, onClose, kontenPflicht = false }: Props) {
   const [form, setForm] = useState<KategorieCreate>(LEER)
   const [err, setErr] = useState('')
   const qc = useQueryClient()
@@ -36,6 +43,18 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
   const set = (k: keyof KategorieCreate, v: string | number | undefined) =>
     setForm(f => ({ ...f, [k]: v }))
 
+  const kannSpeichern =
+    !!form.name &&
+    (!kontenPflicht || (!!form.konto_skr03?.trim() && !!form.konto_skr04?.trim())) &&
+    (!hatEks || !!form.eks_kategorie?.trim())
+
+  const inputCls = 'mt-1 w-full rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100'
+  const label = (text: string, pflicht: boolean) => (
+    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+      {text} {pflicht && <span className="text-red-500">*</span>}
+    </label>
+  )
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
@@ -46,10 +65,10 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Bezeichnung *</label>
+            {label('Bezeichnung', true)}
             <input
               autoFocus
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              className={`${inputCls} border ${pflichtCls(form.name, true)}`}
               value={form.name}
               onChange={e => set('name', e.target.value)}
               placeholder="z.B. Fachzeitschriften"
@@ -57,9 +76,9 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Kontenart *</label>
+            {label('Kontenart', true)}
             <select
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              className={`${inputCls} border border-slate-300 dark:border-slate-600`}
               value={form.kontenart}
               onChange={e => set('kontenart', e.target.value)}
             >
@@ -71,9 +90,9 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">USt-Satz Standard</label>
+            {label('USt-Satz Standard', false)}
             <select
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              className={`${inputCls} border border-slate-300 dark:border-slate-600`}
               value={form.ust_satz_standard}
               onChange={e => set('ust_satz_standard', Number(e.target.value))}
             >
@@ -84,9 +103,9 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">SKR03-Konto</label>
+            {label('SKR03-Konto', kontenPflicht)}
             <input
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+              className={`${inputCls} border font-mono ${pflichtCls(form.konto_skr03 ?? '', kontenPflicht)}`}
               value={form.konto_skr03 ?? ''}
               onChange={e => set('konto_skr03', e.target.value)}
               placeholder="z.B. 4945"
@@ -95,9 +114,9 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">SKR04-Konto</label>
+            {label('SKR04-Konto', kontenPflicht)}
             <input
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+              className={`${inputCls} border font-mono ${pflichtCls(form.konto_skr04 ?? '', kontenPflicht)}`}
               value={form.konto_skr04 ?? ''}
               onChange={e => set('konto_skr04', e.target.value)}
               placeholder="z.B. 6821"
@@ -106,10 +125,10 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">EÜR-Zeile</label>
+            {label('EÜR-Zeile', false)}
             <input
               type="number"
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              className={`${inputCls} border border-slate-300 dark:border-slate-600`}
               value={form.euer_zeile ?? ''}
               onChange={e => set('euer_zeile', e.target.value ? Number(e.target.value) : undefined)}
               placeholder="optional"
@@ -118,32 +137,32 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
 
           {hatEks && (
             <div>
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">EKS-Feld</label>
+              {label('EKS-Feld', true)}
               <input
-                className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm font-mono"
+                className={`${inputCls} border font-mono ${pflichtCls(form.eks_kategorie ?? '', true)}`}
                 value={form.eks_kategorie ?? ''}
                 onChange={e => set('eks_kategorie', e.target.value)}
-                placeholder="z.B. B13 (optional)"
+                placeholder="z.B. B13"
               />
             </div>
           )}
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Vorsteuer %</label>
+            {label('Vorsteuer %', false)}
             <input
               type="number"
               min={0} max={100}
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+              className={`${inputCls} border border-slate-300 dark:border-slate-600`}
               value={form.vorsteuer_prozent ?? 100}
               onChange={e => set('vorsteuer_prozent', Number(e.target.value))}
             />
           </div>
 
           <div className="col-span-2">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Verwendungsbeispiele (optional)</label>
+            {label('Verwendungsbeispiele', false)}
             <textarea
               rows={2}
-              className="mt-1 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 text-sm resize-none"
+              className={`${inputCls} border border-slate-300 dark:border-slate-600 resize-none`}
               value={form.beschreibung ?? ''}
               onChange={e => set('beschreibung', e.target.value)}
               placeholder="z. B. was gehört in diese Kategorie, was nicht …"
@@ -163,7 +182,7 @@ export function KategorieErstellenModal({ onSave, onClose }: Props) {
           </button>
           <button
             type="button"
-            disabled={!form.name || mut.isPending}
+            disabled={!kannSpeichern || mut.isPending}
             onClick={() => mut.mutate(form)}
             className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
