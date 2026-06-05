@@ -86,7 +86,7 @@ class RechnungPDF(RechnungPDFBase):
         if zahlungsstatus in ("bezahlt", "teilweise") and zahlungen:
             art_labels = {
                 "Bar": "Barzahlung", "Karte": "Kartenzahlung",
-                "PayPal": "PayPal", "Bank": "Überweisung",
+                "PayPal": "PayPal", "Bank": "Bank",
             }
             ist_gutschrift = getattr(r, "dokument_typ", "Rechnung") == "Gutschrift"
             for z in zahlungen:

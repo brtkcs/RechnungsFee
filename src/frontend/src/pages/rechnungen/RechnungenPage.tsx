@@ -724,7 +724,7 @@ function ZahlungsDialog({
             <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-sm">
               <p className="text-blue-700 dark:text-blue-300 font-medium">Journalbuchung wird erstellt:</p>
               <p className="text-blue-600 dark:text-blue-400 mt-0.5">
-                {artLabel} {formatEuro(betragDecimal)} via {zahlungsart === 'Bank' ? 'Überweisung' : zahlungsart}
+                {artLabel} {formatEuro(betragDecimal)} via {zahlungsart}
               </p>
             </div>
           )}

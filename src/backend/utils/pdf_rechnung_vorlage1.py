@@ -183,7 +183,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
         else:
             sk_betrag = sk_frist = sk_netto = None
 
-        kopf_titel = "Zahlung erhalten" if zahlungsstatus in ("bezahlt", "teilweise") and zahlungen else "Überweisung"
+        kopf_titel = "Zahlung erhalten" if zahlungsstatus in ("bezahlt", "teilweise") and zahlungen else "Bank"
         kopf_w = box_w + qr_col_w if qr_aktiv else box_w
         self.set_font("DejaVu", "B", 8)
         self.set_fill_color(*GRUEN_HELL)
@@ -208,7 +208,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
         if zahlungsstatus in ("bezahlt", "teilweise") and zahlungen:
             art_labels = {
                 "Bar": "Barzahlung", "Karte": "Kartenzahlung",
-                "PayPal": "PayPal", "Bank": "Überweisung",
+                "PayPal": "PayPal", "Bank": "Bank",
             }
             ist_gutschrift = getattr(r, "dokument_typ", "Rechnung") == "Gutschrift"
             for z in zahlungen:
