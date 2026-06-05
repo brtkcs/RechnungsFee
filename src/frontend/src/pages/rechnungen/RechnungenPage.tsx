@@ -3075,6 +3075,7 @@ export function RechnungenPage() {
   const [formModus, setFormModus] = useState<'neu' | 'bearbeiten' | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [sortFaellig, setSortFaellig] = useState<'asc' | 'desc' | null>(null)
+  const listContainerRef = useRef<HTMLDivElement>(null)
   const [zeigImport, setZeigImport] = useState(false)
   const [importPrefill, setImportPrefill] = useState<AnalyseErgebnis | null>(null)
   const [importDatei, setImportDatei] = useState<File | null>(null)
@@ -3157,6 +3158,24 @@ export function RechnungenPage() {
         return sortFaellig === 'asc' ? fa.localeCompare(fb) : fb.localeCompare(fa)
       })
     : liste
+
+  function handleListeKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    if (!listeSortiert.length) return
+    e.preventDefault()
+    const idx = selectedId != null ? listeSortiert.findIndex(r => r.id === selectedId) : -1
+    const nextIdx = e.key === 'ArrowDown'
+      ? Math.min(idx + 1, listeSortiert.length - 1)
+      : Math.max(idx - 1, 0)
+    const next = listeSortiert[nextIdx]
+    if (!next) return
+    setSelectedId(next.id)
+    setFormModus(null)
+    requestAnimationFrame(() => {
+      const row = listContainerRef.current?.querySelector(`[data-rechnung-id="${next.id}"]`)
+      row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+  }
 
   // Summen (Entwürfe + Stornierte werden aus dem offenen Saldo ausgeschlossen)
   const gesamt = liste.reduce(
@@ -3331,7 +3350,12 @@ export function RechnungenPage() {
         )}
 
         {/* Tabelle */}
-        <div className="flex-1 overflow-y-auto min-h-0 px-6 pb-6">
+        <div
+          ref={listContainerRef}
+          className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 outline-none"
+          tabIndex={0}
+          onKeyDown={handleListeKeyDown}
+        >
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {isLoading ? (
               <p className="p-5 text-slate-400 dark:text-slate-500 text-sm">Lade Rechnungen…</p>
@@ -3358,7 +3382,8 @@ export function RechnungenPage() {
                   {listeSortiert.map((r) => (
                     <tr
                       key={r.id}
-                      onClick={() => { setSelectedId(r.id); setFormModus(null) }}
+                      data-rechnung-id={r.id}
+                      onClick={() => { setSelectedId(r.id); setFormModus(null); listContainerRef.current?.focus() }}
                       className={`border-b border-slate-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors ${
                         selectedId === r.id ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''
                       } ${r.storniert ? 'opacity-50' : ''}`}
