@@ -726,6 +726,40 @@ def _extrahiere_positionen_pos_kassenbeleg(text: str) -> list["AnalysePosition"]
     return positionen
 
 
+def _extrahiere_positionen_telecom(text: str) -> list["AnalysePosition"]:
+    """
+    Telekommunikationsrechnungen (Vodafone, Telekom): pdfplumber liefert Zeilen
+    im Format  "1 Beschreibung - Detail (Datum) Betrag MwSt%"
+    Beispiel:  "1 DSLAnschluss - Monatspreis (03.01.25-02.02.25) 0,0000 19"
+    """
+    positionen: list[AnalysePosition] = []
+    # Muster: Anzahl  Beschreibung  Betrag(xx,xxxx)  MwSt(1-2 Ziffern)
+    _pat = re.compile(
+        r"^(\d+)\s+(.+?)\s+(\d+[,\.]\d+)\s+(\d{1,2})\s*$"
+    )
+    for line in text.splitlines():
+        m = _pat.match(line.strip())
+        if not m:
+            continue
+        menge   = m.group(1)
+        beschr  = m.group(2).strip()
+        betrag  = _betrag_de(m.group(3))
+        ust_satz = m.group(4)
+        if not betrag:
+            continue
+        # Abschnittsüberschriften (kein "-" im Beschreibungsteil → überspringen)
+        if not re.search(r"-", beschr):
+            continue
+        positionen.append(AnalysePosition(
+            beschreibung=beschr,
+            menge=menge,
+            einheit="",
+            netto=betrag,
+            ust_satz=ust_satz,
+        ))
+    return positionen
+
+
 def _finde_tesseract_binary() -> str | None:
     """
     Gibt den Pfad zur tesseract-Binärdatei zurück oder None.
@@ -943,6 +977,10 @@ class BelegParser:
             pos3 = _extrahiere_positionen_pos_kassenbeleg(text)
             if pos3:
                 positionen = pos3
+        if not positionen or all(_nur_betraege.match(p.beschreibung.strip()) for p in positionen):
+            pos4 = _extrahiere_positionen_telecom(text)
+            if pos4:
+                positionen = pos4
         return positionen
 
     def _extrahiere_felder(self, text: str) -> dict:
@@ -1130,12 +1168,22 @@ class BelegParser:
             felder["lieferant_ust_id"] = m.group(1).strip()
 
         # Lieferantenname
+        # \b entfernt: pdfplumber liefert oft "VodafoneGmbH" ohne Leerzeichen
+        # → \bGmbH\b würde nicht matchen (kein Word-Boundary zwischen "e" und "G")
         lines = [l.strip() for l in text.split("\n") if l.strip()]
+        _rechtsform_re = re.compile(
+            r"GmbH|GmbH\s*&\s*Co|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.",
+            re.IGNORECASE,
+        )
         for line in lines[:25]:
-            if re.search(r"\b(GmbH|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.)\b", line, re.IGNORECASE):
+            if _rechtsform_re.search(line):
                 # Adressteil nach dem ersten Komma entfernen
+                # "VodafoneGmbH,Postfach101052,40839Ratingen" → "VodafoneGmbH"
                 # "Vodafone GmbH, Postfach 10 10 52, 40839 Ratingen" → "Vodafone GmbH"
                 name = line.split(",")[0].strip() if "," in line else line
+                # Bankverbindung-Zeilen überspringen (z.B. "Vodafone GmbH Bankverbindung:")
+                if re.search(r"Bankverbindung|IBAN|BIC|HRB|USt-Nr|Sitz\s+der", name, re.IGNORECASE):
+                    continue
                 felder["lieferant_name"] = name
                 break
         if not felder.get("lieferant_name") and lines:
