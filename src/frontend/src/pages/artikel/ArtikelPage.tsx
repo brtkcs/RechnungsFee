@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { LieferantErstellenModal } from '../../components/LieferantErstellenModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -290,6 +291,7 @@ function ArtikelFormModal({
 }) {
   const qc = useQueryClient()
   const { data: lieferanten } = useQuery({ queryKey: ['lieferanten'], queryFn: getLieferanten })
+  const [showNeuLieferant, setShowNeuLieferant] = useState(false)
   const { data: ustSaetze = [] } = useQuery({ queryKey: ['ust-saetze'], queryFn: getUstSaetze, staleTime: 1000 * 60 * 10 })
   const aktiveSaetze = ustSaetze.filter((s) => s.ist_aktiv)
   const defaultSatz = ustSaetze.find((s) => s.ist_default)?.satz
@@ -574,12 +576,28 @@ function ArtikelFormModal({
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
                   Lieferant{typ === 'fremdleistung' ? ' *' : ''}
                 </label>
-                <select {...register('lieferant_id')} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100">
-                  <option value="">– kein –</option>
-                  {lieferanten?.map(l => (
-                    <option key={l.id} value={l.id}>{l.firmenname}</option>
-                  ))}
-                </select>
+                <div className="flex gap-1">
+                  <select {...register('lieferant_id')} className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100">
+                    <option value="">– kein –</option>
+                    {lieferanten?.map(l => (
+                      <option key={l.id} value={l.id}>{l.firmenname}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNeuLieferant(true)}
+                    title="Neuen Lieferanten anlegen"
+                    className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+                  >
+                    +
+                  </button>
+                </div>
+                {showNeuLieferant && (
+                  <LieferantErstellenModal
+                    onClose={() => setShowNeuLieferant(false)}
+                    onSave={(neu) => { setShowNeuLieferant(false); setValue('lieferant_id', String(neu.id ?? '')) }}
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Lieferanten-ArtNr</label>

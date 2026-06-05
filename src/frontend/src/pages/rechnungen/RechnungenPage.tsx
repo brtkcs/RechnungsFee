@@ -13,6 +13,7 @@ import {
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
+import { LieferantErstellenModal } from '../../components/LieferantErstellenModal'
 import { guardedDateChange } from '../../utils/dateInput'
 
 // ---------------------------------------------------------------------------
@@ -1882,6 +1883,7 @@ function RechnungForm({
   )
   const [kategorieId, setKategorieId] = useState<string>(String(initial?.kategorie_id ?? ''))
   const [showNeuKategorieForm, setShowNeuKategorieForm] = useState(false)
+  const [showNeuLieferant, setShowNeuLieferant] = useState(false)
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
   const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
@@ -2319,25 +2321,47 @@ function RechnungForm({
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
           {typ === 'ausgang' ? 'Kunde' : 'Lieferant'}
         </label>
-        <div className={pfRing('lieferant_name')}>
-        <StammdatenCombobox
-          items={partnerListe.map((p: any) => ({
-            id: p.id as number,
-            label: p.firmenname ?? [p.vorname, p.nachname].filter(Boolean).join(' '),
-          }))}
-          selectedId={partnerId ? parseInt(partnerId) : null}
-          freitext={partnerFreitext}
-          onChange={(id, text) => {
-            setPartnerId(id != null ? String(id) : '')
-            setPartnerFreitext(text)
-          }}
-          placeholder={
-            typ === 'ausgang'
-              ? 'Kunde suchen oder frei eingeben…'
-              : 'Lieferant suchen oder frei eingeben…'
-          }
-        />
+        <div className="flex gap-1">
+          <div className={`flex-1 ${pfRing('lieferant_name')}`}>
+            <StammdatenCombobox
+              items={partnerListe.map((p: any) => ({
+                id: p.id as number,
+                label: p.firmenname ?? [p.vorname, p.nachname].filter(Boolean).join(' '),
+              }))}
+              selectedId={partnerId ? parseInt(partnerId) : null}
+              freitext={partnerFreitext}
+              onChange={(id, text) => {
+                setPartnerId(id != null ? String(id) : '')
+                setPartnerFreitext(text)
+              }}
+              placeholder={
+                typ === 'ausgang'
+                  ? 'Kunde suchen oder frei eingeben…'
+                  : 'Lieferant suchen oder frei eingeben…'
+              }
+            />
+          </div>
+          {typ === 'eingang' && (
+            <button
+              type="button"
+              onClick={() => setShowNeuLieferant(true)}
+              title="Neuen Lieferanten anlegen"
+              className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+            >
+              +
+            </button>
+          )}
         </div>
+        {showNeuLieferant && (
+          <LieferantErstellenModal
+            onClose={() => setShowNeuLieferant(false)}
+            onSave={(neu) => {
+              setShowNeuLieferant(false)
+              setPartnerId(String(neu.id ?? ''))
+              setPartnerFreitext(neu.firmenname)
+            }}
+          />
+        )}
       </div>
 
       {/* §19-Hinweis */}
