@@ -64,7 +64,7 @@ export function LieferantErstellenModal({ onSave, onClose }: Props) {
       >
         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Neuer Lieferant</h3>
 
-        <form onSubmit={handleSubmit(v => mut.mutate(v))} className="space-y-3">
+        <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation() }} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Firmenname *</label>
@@ -135,8 +135,9 @@ export function LieferantErstellenModal({ onSave, onClose }: Props) {
               Abbrechen
             </button>
             <button
-              type="submit"
+              type="button"
               disabled={mut.isPending}
+              onClick={() => handleSubmit(v => mut.mutate(v))()}
               className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {mut.isPending ? 'Wird angelegt…' : 'Anlegen'}

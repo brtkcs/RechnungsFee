@@ -183,7 +183,7 @@ export function KategorieErstellenModal({ onSave, onClose, kontenPflicht = false
           <button
             type="button"
             disabled={!kannSpeichern || mut.isPending}
-            onClick={() => mut.mutate(form)}
+            onClick={(e) => { e.stopPropagation(); mut.mutate(form) }}
             className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {mut.isPending ? 'Wird angelegt…' : 'Anlegen'}
