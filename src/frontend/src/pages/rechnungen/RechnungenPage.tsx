@@ -14,6 +14,7 @@ import {
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
 import { LieferantErstellenModal } from '../../components/LieferantErstellenModal'
+import { KundeErstellenModal } from '../../components/KundeErstellenModal'
 import { guardedDateChange } from '../../utils/dateInput'
 
 // ---------------------------------------------------------------------------
@@ -1884,6 +1885,7 @@ function RechnungForm({
   const [kategorieId, setKategorieId] = useState<string>(String(initial?.kategorie_id ?? ''))
   const [showNeuKategorieForm, setShowNeuKategorieForm] = useState(false)
   const [showNeuLieferant, setShowNeuLieferant] = useState(false)
+  const [showNeuKunde, setShowNeuKunde] = useState(false)
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
   const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
@@ -2351,6 +2353,16 @@ function RechnungForm({
               +
             </button>
           )}
+          {typ === 'ausgang' && (
+            <button
+              type="button"
+              onClick={() => setShowNeuKunde(true)}
+              title="Neuen Kunden anlegen"
+              className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+            >
+              +
+            </button>
+          )}
         </div>
         {showNeuLieferant && (
           <LieferantErstellenModal
@@ -2359,6 +2371,16 @@ function RechnungForm({
               setShowNeuLieferant(false)
               setPartnerId(String(neu.id ?? ''))
               setPartnerFreitext(neu.firmenname)
+            }}
+          />
+        )}
+        {showNeuKunde && (
+          <KundeErstellenModal
+            onClose={() => setShowNeuKunde(false)}
+            onSave={(neu) => {
+              setShowNeuKunde(false)
+              setPartnerId(String(neu.id ?? ''))
+              setPartnerFreitext(neu.firmenname ?? [neu.vorname, neu.nachname].filter(Boolean).join(' '))
             }}
           />
         )}
