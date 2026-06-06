@@ -1170,5 +1170,7 @@ export const speichereUStVA = (data: Omit<UStVAErgebnis, 'zeitraum_typ' | 'von' 
 export const getUStVAHistorie = () =>
   request<UStVAHistorieEintrag[]>('/ustva/historie')
 
-export const getUStVAPdfUrl = (zeitraum: string): string =>
-  `${getApiBase()}/api/ustva/pdf?zeitraum=${encodeURIComponent(zeitraum)}`
+export const getUStVAPdfUrl = async (zeitraum: string): Promise<string> => {
+  const base = await getBaseUrl()
+  return `${base}/api/ustva/pdf?zeitraum=${encodeURIComponent(zeitraum)}`
+}

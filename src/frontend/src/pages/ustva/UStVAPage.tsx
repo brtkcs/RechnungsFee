@@ -113,7 +113,7 @@ export function UStVAPage() {
     setPdfFehler(null)
     setPdfExportiert(false)
     try {
-      await openUrl(getUStVAPdfUrl(zeitraum))
+      await openUrl(await getUStVAPdfUrl(zeitraum))
       setPdfExportiert(true)
     } catch (e: any) {
       setPdfFehler(e?.message ?? 'PDF-Export fehlgeschlagen')
