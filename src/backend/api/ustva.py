@@ -165,20 +165,20 @@ def _generate_pdf(zeitraum: str, kz: dict, unt: Unternehmen) -> bytes:
     pdf.set_font("DejaVu", "B", 11)
     pdf.set_text_color(255, 255, 255)
     pdf.set_xy(20, 5)
-    pdf.cell(0, 8, "Umsatzsteuer-Voranmeldung 2026 – Anzeigehilfe", ln=True)
+    pdf.cell(0, 8, "Umsatzsteuer-Voranmeldung 2026 – Anzeigehilfe", ln=True, align="L")
     pdf.set_text_color(*DUNKEL)
 
     pdf.set_xy(20, 24)
     pdf.set_font("DejaVu", "B", 14)
-    pdf.cell(0, 8, _zeitraum_label(zeitraum), ln=True)
+    pdf.cell(0, 8, _zeitraum_label(zeitraum), ln=True, align="L")
 
     # Unternehmensdaten
     pdf.set_font("DejaVu", "", 9)
     pdf.set_text_color(*MITTEL)
     name = unt.firmenname or f"{unt.vorname or ''} {unt.nachname or ''}".strip()
-    pdf.cell(0, 5, f"{name}  ·  Steuernummer: {unt.steuernummer or '—'}  ·  Finanzamt: {unt.finanzamt or '—'}", ln=True)
+    pdf.cell(0, 5, f"{name}  ·  Steuernummer: {unt.steuernummer or '—'}  ·  Finanzamt: {unt.finanzamt or '—'}", ln=True, align="L")
     if unt.w_idnr:
-        pdf.cell(0, 5, f"Wirtschafts-IdNr. (Zeile 1): {unt.w_idnr}", ln=True)
+        pdf.cell(0, 5, f"Wirtschafts-IdNr. (Zeile 1): {unt.w_idnr}", ln=True, align="L")
     pdf.ln(4)
 
     def euro(v: Decimal) -> str:
@@ -206,7 +206,7 @@ def _generate_pdf(zeitraum: str, kz: dict, unt: Unternehmen) -> bytes:
         pdf.set_font("DejaVu", "B" if bold else "", 9)
         pdf.set_text_color(*DUNKEL)
         pdf.set_xy(20 + indent + chip_w + 2, y)
-        pdf.cell(120 - indent, h, bezeichnung, border=0)
+        pdf.cell(120 - indent, h, bezeichnung, border=0, align="L")
 
         # Betrag
         color = (220, 38, 38) if wert < 0 else DUNKEL
@@ -221,7 +221,7 @@ def _generate_pdf(zeitraum: str, kz: dict, unt: Unternehmen) -> bytes:
         pdf.set_font("DejaVu", "B", 9)
         pdf.set_text_color(*DUNKEL)
         pdf.set_x(20)
-        pdf.cell(170, 6, f"  {titel}", fill=True, ln=True)
+        pdf.cell(170, 6, f"  {titel}", fill=True, ln=True, align="L")
         pdf.ln(1)
 
     # A – Ausgangsumsätze
@@ -255,7 +255,7 @@ def _generate_pdf(zeitraum: str, kz: dict, unt: Unternehmen) -> bytes:
         "Bitte übertrage die Kennziffern in ELSTER (www.elster.de) oder übergib sie "
         "deinem Steuerberater. Grundlage: Journalbuchungen nach Ist-Versteuerung "
         "(Zahlungsdatum). Bei Soll-Versteuerung ggf. abweichend.",
-        fill=True
+        fill=True, align="L"
     )
 
     # Fußzeile
