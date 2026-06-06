@@ -1015,9 +1015,19 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
         elif rechnung.positionen:
             gruppen_brutto: dict[int, Decimal] = {}
             for pos in rechnung.positionen:
-                if pos.differenzbesteuerung and pos.ust_satz_25a:
-                    # §25a: nominalen Satz verwenden (pos.ust_satz = 0 auf der Rechnung)
-                    s = int(pos.ust_satz_25a)
+                if pos.differenzbesteuerung:
+                    if pos.ust_satz_25a:
+                        s = int(pos.ust_satz_25a)
+                    else:
+                        # Fallback für Positionen ohne ust_satz_25a: aus Artikel ableiten
+                        s = 19
+                        if pos.artikel_id:
+                            from database.models import Artikel as _ArtG
+                            _ag = db.query(_ArtG).filter(_ArtG.id == pos.artikel_id).first()
+                            if _ag and _ag.vk_netto and _ag.vk_netto > 0 and _ag.vk_brutto:
+                                _ratio = _ag.vk_brutto / _ag.vk_netto
+                                if abs(_ratio - Decimal("1.07")) < Decimal("0.015"):
+                                    s = 7
                 else:
                     s = int(pos.ust_satz)
                 gruppen_brutto[s] = gruppen_brutto.get(s, Decimal("0")) + pos.brutto
