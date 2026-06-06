@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva
 
-SCHEMA_VERSION = 49
+SCHEMA_VERSION = 50
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1128,6 +1128,14 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 49"))
             conn.commit()
             print("[Migration] Schema auf Version 49 (§25a: rechnungspositionen.ek_netto_25a, journal.marge_25a_brutto)")
+
+        if version < 50:
+            cols_rp = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungspositionen)")).fetchall()}
+            if "ust_satz_25a" not in cols_rp:
+                conn.execute(text("ALTER TABLE rechnungspositionen ADD COLUMN ust_satz_25a NUMERIC(5,2)"))
+            conn.execute(text("PRAGMA user_version = 50"))
+            conn.commit()
+            print("[Migration] Schema auf Version 50 (rechnungspositionen.ust_satz_25a: nominaler USt-Satz für §25a-Margensteuer)")
 
 
 def _migrate_kategorien() -> None:

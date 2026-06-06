@@ -494,8 +494,9 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
             ust_betrag = Decimal("0.00")
             brutto = netto
 
-        # §25a: EK des Artikels zum Buchungszeitpunkt speichern (für Margenberechnung bei Zahlung)
+        # §25a: EK + nominalen USt-Satz zum Buchungszeitpunkt speichern
         ek_netto_25a = None
+        ust_satz_25a = pos_data.ust_satz if ist_diff else None  # Original-Satz vor §25a-Override
         if ist_diff:
             a_id = getattr(pos_data, "artikel_id", None)
             if a_id:
@@ -518,6 +519,7 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
             brutto=brutto,
             differenzbesteuerung=ist_diff,
             ek_netto_25a=ek_netto_25a,
+            ust_satz_25a=ust_satz_25a,
         )
         db.add(pos)
         netto_sum += netto * pos_data.menge
@@ -1013,7 +1015,11 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
         elif rechnung.positionen:
             gruppen_brutto: dict[int, Decimal] = {}
             for pos in rechnung.positionen:
-                s = int(pos.ust_satz)
+                if pos.differenzbesteuerung and pos.ust_satz_25a:
+                    # §25a: nominalen Satz verwenden (pos.ust_satz = 0 auf der Rechnung)
+                    s = int(pos.ust_satz_25a)
+                else:
+                    s = int(pos.ust_satz)
                 gruppen_brutto[s] = gruppen_brutto.get(s, Decimal("0")) + pos.brutto
             dom_satz = max(gruppen_brutto, key=lambda s: gruppen_brutto[s])
             ust_satz = Decimal(str(dom_satz))
@@ -1035,8 +1041,15 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
     # §25a Marge vorberechnen (Brutto-Marge = VK_brutto − EK_netto_gesamt für §25a-Positionen)
     _marge_25a_gesamt = Decimal("0")
     for _pos in rechnung.positionen:
-        if _pos.differenzbesteuerung and _pos.ek_netto_25a is not None:
-            _marge_25a_gesamt += (_pos.brutto - _pos.ek_netto_25a) * _pos.menge
+        if _pos.differenzbesteuerung:
+            _ek = _pos.ek_netto_25a
+            if _ek is None and _pos.artikel_id:
+                # Fallback für Positionen vor Schema 50: EK direkt aus Artikel lesen
+                from database.models import Artikel as _Artikel
+                _art = db.query(_Artikel).filter(_Artikel.id == _pos.artikel_id).first()
+                _ek = _art.ek_netto if _art else None
+            if _ek is not None:
+                _marge_25a_gesamt += (_pos.brutto - _ek) * _pos.menge
     _marge_25a_gesamt = _marge_25a_gesamt.quantize(Decimal("0.01"), ROUND_HALF_UP)
 
     def _erstelle_eintrag(

@@ -161,7 +161,9 @@ def _berechne_kz(von: date, bis: date, db: Session) -> dict[str, Decimal]:
         if e.art == "Einnahme" and e.ust_betrag and e.ust_betrag != 0:
             mapping = _KONTO_EINNAHME.get(ust_konto)
             if mapping:
-                kz[mapping[0]] += e.netto_betrag
+                # §25a: Bemessungsgrundlage = Brutto-Marge, nicht Netto-VK
+                marge = getattr(e, "marge_25a_brutto", None)
+                kz[mapping[0]] += marge if marge else e.netto_betrag
                 kz[mapping[1]] += e.ust_betrag
 
         # KZ 41 – ig. Lieferungen: 0% USt, Erkennung via konto_skr03 8125/3125

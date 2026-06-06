@@ -479,6 +479,7 @@ class Rechnungsposition(Base):
     brutto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     differenzbesteuerung: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ek_netto_25a: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))  # EK-Preis zum Zeitpunkt der Rechnung
+    ust_satz_25a: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))   # nominaler USt-Satz (19/7) für Margensteuer
 
     kategorie_id: Mapped[int | None] = mapped_column(ForeignKey("kategorien.id"))
 

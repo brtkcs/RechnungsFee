@@ -32,7 +32,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 49` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 50` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -115,6 +115,7 @@ def _run_migrations():
 | 47 | journal.ist_ig_erwerb BOOLEAN DEFAULT 0 – innergemeinschaftlicher Erwerb §1a UStG; USt → KZ 89/93, Vorsteuer → KZ 61 (nicht KZ 66) |
 | 48 | journal.ust_sonderfall VARCHAR(20) – ig_erwerb|13b_abs1|13b_abs2|NULL; ersetzt ist_ig_erwerb als primäres Feld; USt additiv (Rechnungsbetrag=Netto); Vorsteuer auto; neue Kategorien EU-DL §13b + Bauleistungen §13b |
 | 49 | rechnungspositionen.ek_netto_25a NUMERIC(12,2) – EK-Preis zum Buchungszeitpunkt (§25a); journal.marge_25a_brutto NUMERIC(12,2) – Brutto-Marge (VK_brutto − EK_netto × Menge) für UStVA KZ 81/83; USt-Berechnung auf Marge statt vollem Brutto |
+| 50 | rechnungspositionen.ust_satz_25a NUMERIC(5,2) – nominaler USt-Satz (19/7) für §25a-Positionen; pos.ust_satz ist 0 (kein Ausweis auf Rechnung), ust_satz_25a enthält den echten Satz für die Margensteuerberechnung bei Zahlung |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
