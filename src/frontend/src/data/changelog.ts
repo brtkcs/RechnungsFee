@@ -23,6 +23,18 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'UStVA-Anzeigehilfe: Alle Voranmeldungs-Kennziffern (KZ 81/83/86/88/41/89/93/61/35/36) werden automatisch aus dem Journal berechnet und als PDF-Übersicht für die manuelle Eingabe in ELSTER aufbereitet' },
+      { typ: 'neu', text: '§25a Differenzbesteuerung – Journalbuchung: USt wird korrekt nur auf die Brutto-Marge (VK − EK) berechnet, nicht auf den vollen Verkaufspreis; Marge wird als eigenes Feld gespeichert und fließt direkt in KZ 81/83 der UStVA ein' },
+      { typ: 'neu', text: 'Innergemeinschaftlicher Erwerb (§1a UStG): KZ 89/93 (USt) und KZ 61 (Vorsteuer) werden vollautomatisch aus dem Journal befüllt – kein manueller Eintrag nötig' },
+      { typ: 'neu', text: 'Reverse Charge §13b (EU-Dienstleistungen und Bauleistungen): KZ 35/36 automatisch aus Journal-Sonderfall befüllt' },
+      { typ: 'neu', text: 'Voranmeldungsrhythmus (monatlich / quartalsweise) in den Stammdaten konfigurierbar' },
+      { typ: 'verbesserung', text: 'UStVA-PDF: KZ-Tabelle übersichtlicher – Sub-Zeilen (USt-Betrag) visuell eingerückt, Farbe und Schriftgröße differenzieren Haupt- und Steuerzeile' },
+    ],
+  },
+  {
     version: 'v0.2.21',
     datum: 'Juni 2026',
     eintraege: [

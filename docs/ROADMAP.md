@@ -136,7 +136,7 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 ---
 
-## v0.3 – Buchhalterische Vollständigkeit *(Ziel: Juni 2026)*
+## v0.3 – Buchhalterische Vollständigkeit ✅ *v0.3 – Juni 2026*
 
 ### Phase 1 – Korrekturbuchungen ✅ *v0.2.15*
 
@@ -156,7 +156,7 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 ---
 
-## v0.3.x – Automatische USt-Zuordnung *(teilweise erledigt)*
+## v0.3.x – Automatische USt-Zuordnung ✅ *v0.3*
 
 Jeder Journal-Eintrag speichert `ust_betrag` und `konto_ust_skr03/04` (USt-Gegenkonto).
 Die Aufteilung in Netto + USt passiert vollautomatisch beim Buchen.
@@ -166,11 +166,18 @@ Die Aufteilung in Netto + USt passiert vollautomatisch beim Buchen.
 - [x] USt-Gegenkonto wird automatisch gesetzt (SKR03: 1776/1771/1575/1570; SKR04: 3806/3801/1406/1401)
 - [x] Gilt für Rechnungszahlungen und manuelle Buchungen
 
-**Noch offen:**
+**UStVA-Anzeigehilfe** ✅ *v0.3*
+- [x] UStVA-Backend: KZ-Berechnung aus Journal (`ust_betrag`, `ust_sonderfall`, `marge_25a_brutto`)
+- [x] KZ 81/83 (19%), KZ 86/88 (7%), KZ 41 (ig. Lieferungen), KZ 89/93/61 (ig. Erwerb)
+- [x] KZ 35/36 (§13b Bauleistungen / EU-Dienstleistungen)
+- [x] §25a Differenzbesteuerung: `marge_25a_brutto` im Journal; USt auf Brutto-Marge, nicht auf VK-Preis
+- [x] UStVA-PDF: Anzeigehilfe zum manuellen Eintragen in ELSTER
+- [x] Voranmeldungsrhythmus (monatlich / quartalsweise) in Stammdaten
 - [x] EKS: A5_1 / A5_2 automatisch aus `ust_betrag` der A1/A2-Einträge ableiten
+
+**Noch offen:**
 - [ ] GoBD-Export CSV: USt-Spalte korrekt je Einnahmen-/Ausgaben-Typ befüllen
 - [ ] EÜR: USt-Beträge in die richtigen Zeilen der Anlage EÜR einordnen
-- [ ] UStVA (v0.4): Voranmeldungs-Kennziffern direkt aus `ust_betrag` + Kategorie befüllen
 
 **Kategorien `USt auf Eigenverbrauch` und `Umsatzsteuer (vereinnahmt)`** bleiben für
 manuelle Korrekturbuchungen erhalten, sind im Normalfall aber nicht mehr nötig.

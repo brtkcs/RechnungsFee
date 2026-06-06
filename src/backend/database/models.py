@@ -217,6 +217,8 @@ class Journaleintrag(Base):
     ist_ig_erwerb: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Reverse-Charge-Typ: ig_erwerb | 13b_abs1 | 13b_abs2 | NULL (normal)
     ust_sonderfall: Mapped[str | None] = mapped_column(String(20))
+    # §25a Differenzbesteuerung: Brutto-Marge (VK − EK) für UStVA KZ 81/83
+    marge_25a_brutto: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     # GoBD
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     signatur: Mapped[str | None] = mapped_column(String(64))
@@ -476,6 +478,7 @@ class Rechnungsposition(Base):
     ust_betrag: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     brutto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     differenzbesteuerung: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ek_netto_25a: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))  # EK-Preis zum Zeitpunkt der Rechnung
 
     kategorie_id: Mapped[int | None] = mapped_column(ForeignKey("kategorien.id"))
 

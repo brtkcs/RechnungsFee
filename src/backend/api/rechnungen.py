@@ -494,6 +494,16 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
             ust_betrag = Decimal("0.00")
             brutto = netto
 
+        # §25a: EK des Artikels zum Buchungszeitpunkt speichern (für Margenberechnung bei Zahlung)
+        ek_netto_25a = None
+        if ist_diff:
+            a_id = getattr(pos_data, "artikel_id", None)
+            if a_id:
+                from database.models import Artikel
+                art_obj = db.query(Artikel).filter(Artikel.id == a_id).first()
+                if art_obj:
+                    ek_netto_25a = art_obj.ek_netto
+
         pos = Rechnungsposition(
             rechnung_id=rechnung.id,
             artikel_id=getattr(pos_data, "artikel_id", None),
@@ -507,6 +517,7 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
             ust_betrag=ust_betrag,
             brutto=brutto,
             differenzbesteuerung=ist_diff,
+            ek_netto_25a=ek_netto_25a,
         )
         db.add(pos)
         netto_sum += netto * pos_data.menge
@@ -1021,18 +1032,31 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
             ust_gruppen = [(Decimal("0"), betrag, None, None)]
         konto_ust_skr03, konto_ust_skr04 = _ust_konto(art, ust_satz) if ust_satz > 0 else (None, None)
 
+    # §25a Marge vorberechnen (Brutto-Marge = VK_brutto − EK_netto_gesamt für §25a-Positionen)
+    _marge_25a_gesamt = Decimal("0")
+    for _pos in rechnung.positionen:
+        if _pos.differenzbesteuerung and _pos.ek_netto_25a is not None:
+            _marge_25a_gesamt += (_pos.brutto - _pos.ek_netto_25a) * _pos.menge
+    _marge_25a_gesamt = _marge_25a_gesamt.quantize(Decimal("0.01"), ROUND_HALF_UP)
+
     def _erstelle_eintrag(
         kat_id: int | None, kat: "Kategorie | None", brutto: Decimal, beschr: str,
         g_satz: Decimal | None = None,
         g_ust_skr03: str | None = None,
         g_ust_skr04: str | None = None,
+        marge_25a: Decimal | None = None,
     ) -> Journaleintrag:
         satz = g_satz if g_satz is not None else ust_satz
         ust03 = g_ust_skr03 if g_satz is not None else konto_ust_skr03
         ust04 = g_ust_skr04 if g_satz is not None else konto_ust_skr04
         if satz > 0:
-            n = (brutto * 100 / (100 + satz)).quantize(Decimal("0.01"), ROUND_HALF_UP)
-            u = (brutto - n).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            if marge_25a is not None:
+                # §25a: USt nur auf Brutto-Marge, nicht auf vollen VK-Preis
+                u = (marge_25a * satz / (100 + satz)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+                n = (brutto - u).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            else:
+                n = (brutto * 100 / (100 + satz)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+                u = (brutto - n).quantize(Decimal("0.01"), ROUND_HALF_UP)
         else:
             n, u = brutto, Decimal("0.00")
         vst_abzug = (art == "Ausgabe" and satz > 0)
@@ -1052,6 +1076,7 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
             ust_betrag=u,
             vorsteuer_betrag=_berechne_vorsteuer(u, vst_abzug, kat),
             brutto_betrag=brutto,
+            marge_25a_brutto=marge_25a,
             vorsteuerabzug=vst_abzug,
             steuerbefreiung_grund=steuerbefreiung_grund,
             rechnung_id=rechnung_id,
@@ -1158,8 +1183,10 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
             kat_obj = rechnung.kategorie
 
     erster_eintrag = None
+    marge_25a_arg = _marge_25a_gesamt if _marge_25a_gesamt > 0 else None
     for i, (g_satz, g_betrag, g_ust_skr03, g_ust_skr04) in enumerate(ust_gruppen):
-        e = _erstelle_eintrag(kategorie_id, kat_obj, g_betrag, beschreibung, g_satz, g_ust_skr03, g_ust_skr04)
+        e = _erstelle_eintrag(kategorie_id, kat_obj, g_betrag, beschreibung, g_satz, g_ust_skr03, g_ust_skr04,
+                              marge_25a=marge_25a_arg)
         db.add(e)
         if i == 0:
             erster_eintrag = e

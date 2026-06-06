@@ -1370,6 +1370,61 @@ def validate_datev_export(zeitraum):
 
 ---
 
+### **6.2.2 Differenzbesteuerung §25a UStG** ✅ *v0.3*
+
+**Was ist Differenzbesteuerung?**
+
+Händler von Gebrauchtwaren (Antiquitäten, Fahrzeuge, Kunst, Elektronik) zahlen USt **nur auf die Handelsmarge**, nicht auf den vollen Verkaufspreis.
+
+Voraussetzung: Der Ankauf erfolgte ohne Vorsteuer (Privatperson, Kleinunternehmer, oder ebenfalls §25a-besteuert).
+
+**Berechnungsschema:**
+
+```
+Beispiel: Ankauf Gebrauchtgerät für 50 € (netto, kein Vorsteuerabzug)
+          Verkauf für 119 € (brutto)
+
+Brutto-Marge = VK_brutto − EK_netto = 119 € − 50 € = 69 €
+USt auf Marge = 69 € × 19/119 = 11,03 €
+Netto-Erlös  = 119 € − 11,03 € = 107,97 €
+
+→ In UStVA KZ 81: 69,00 € (Brutto-Marge als Bemessungsgrundlage)
+→ Nicht: (119 − 119/1,19) = 19,00 € wie bei Regelbesteuerung
+```
+
+**Wichtig:** Der Gesamtbetrag auf der Rechnung (119 €) bleibt unverändert. Der Unterschied liegt nur in der internen Steueraufteilung.
+
+#### **Umsetzung in RechnungsFee**
+
+**Rechnungsposition (§25a-Artikel):**
+- Feld `differenzbesteuerung = true` in `artikel` und `rechnungspositionen`
+- Feld `ek_netto_25a` – EK-Preis zum Zeitpunkt der Rechnung (gespeichert als Snapshot)
+- Live-Vorschau im Artikelformular: Marge, USt auf Marge, effektiver Ertrag
+
+**Journal-Eintrag bei Zahlung:**
+- `brutto_betrag` = voller VK-Preis (was der Kunde zahlt)
+- `ust_betrag` = USt auf Brutto-Marge (nicht auf vollen VK)
+- `netto_betrag` = brutto − ust
+- `marge_25a_brutto` = Brutto-Marge (VK_brutto − EK_netto) × Menge – Basis für UStVA KZ 81/83
+
+**UStVA-Kennziffern:**
+
+| Kz. | Beschreibung | Quelle |
+|-----|--------------|--------|
+| **81** | Umsätze 19% – bei §25a: Brutto-Marge | `journal.marge_25a_brutto` (wo vorhanden), sonst `netto_betrag` |
+| **83** | Umsatzsteuer 19% | Auto-berechnet aus KZ 81 |
+| **86** | Umsätze 7% – analog bei §25a mit 7% | `marge_25a_brutto` × 100/107 |
+
+**Gemischte Rechnungen** (§25a + Regelbesteuerung in einer Rechnung):
+- Positions-Flag `differenzbesteuerung` bestimmt je Position die Berechnungsart
+- Im Journal wird `marge_25a_brutto` nur für den §25a-Anteil gesetzt
+
+**PDF-Pflichthinweis:**
+- Auf Rechnungen mit §25a-Positionen erscheint automatisch: „Sonderregelung für Gebrauchtgegenstände (§ 25a UStG). USt wird nicht gesondert ausgewiesen."
+- Kein separater USt-Ausweis auf der Rechnung (gesetzliche Pflicht)
+
+---
+
 ### **6.3 Implementierung (MVP)**
 
 **Datenquellen:**
