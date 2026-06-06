@@ -11,6 +11,7 @@ const hauptNav = [
   { to: '/rechnungen', label: 'Rechnungen', icon: '🧾' },
   { to: '/tagesabschluesse', label: 'Tagesabschlüsse', icon: '📋' },
   { to: '/exporte', label: 'Exporte', icon: '📦' },
+  { to: '/ustva', label: 'UStVA', icon: '🧮' },
   { to: '/backup', label: 'Backup', icon: '💾' },
   { to: '/info', label: 'Info & Updates', icon: 'ℹ️' },
 ]
