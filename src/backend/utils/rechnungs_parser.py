@@ -316,7 +316,7 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
     # Kassenbon-Format: "Produkt 1,99 B"  oder  "Produkt 1,99 fz"
     # group(3): nachgestelltes Steuerklassen-Kürzel (1-3 Buchstaben, z.B. "B", "fz", "sz")
     _BETRAG_END = re.compile(
-        r"\s+(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})"   # group(1): Betrag
+        r"\s+(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2}|-?\d+\.\d{2})"   # group(1): Betrag (auch negativ für Rabatte)
         r"\s*(?:€|EUR|CHF)?"                                         # optionale Währung
         r"\s*(?:[A-C]\s*(?=\d))?"                                    # Steuerkürzel VOR %-Zahl (nur wenn Zahl folgt)
         r"(?:(\d+)[,.]?\d*\s*%)?"                                   # group(2): opt. USt-Satz
@@ -429,8 +429,8 @@ def _extrahiere_positionen(text: str, ust_satz_default: Optional[str]) -> list["
         if not betrag:
             continue
         try:
-            if Decimal(betrag) < Decimal("0.01"):
-                continue
+            if Decimal(betrag) == 0:
+                continue  # Null-Beträge überspringen; negative Beträge (Rabatte) erlaubt
         except InvalidOperation:
             continue
 
@@ -1245,18 +1245,7 @@ class BelegParser:
         positionen   = self.extrahiere_positionen(text, ust_default)
         positionen_modus, netto_total, pos_summe = self.bestimme_modus(felder, positionen)
 
-        # Positionen verwerfen wenn Summe um >2 % vom Rechnungstotal abweicht –
-        # typisch bei unerkannten Rabatt-/Kredit-Zeilen (negative Beträge).
-        # Frontend fällt dann auf gesamt_brutto/netto aus felder zurück.
-        if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
-            try:
-                ref = Decimal(felder.get("gesamt_netto") if positionen_modus == "netto"
-                              else felder.get("gesamt_brutto") or "0")
-                if ref > 0 and abs(pos_summe - ref) / ref > Decimal("0.02"):
-                    positionen = []
-                    positionen_modus = "brutto"
-            except (InvalidOperation, ZeroDivisionError):
-                pass
+        # Kein Verwerfen von Positionen – Import ist ein Abbild der Rechnung, keine Neuberechnung.
 
         # Netto-Positionen: gesamt_netto aus Positions-Summe ableiten wenn es fehlt,
         # dann ust_satz aus pos_summe vs. gesamt_brutto berechnen
