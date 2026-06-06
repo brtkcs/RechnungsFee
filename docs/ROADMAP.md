@@ -208,6 +208,35 @@ Steuerliche Auswertungen für Finanzamt und Steuerberater.
 
 ---
 
+## v0.x – Erweiterbare Kontenpläne *(Ziel: offen)*
+
+Optionale DATEV-Kontenpläne und nutzereigene Pläne per CSV.
+
+**Konzept:**
+- Die bestehenden ~65 Standardkategorien (SKR03/04) bleiben die Basis – immer aktiv, nicht ersetzbar
+- Zusätzliche Kontenpläne kommen optional obendrauf, ohne Duplikate
+
+**Zwei Quellen für erweiterte Pläne:**
+
+1. **Built-in-Pakete** – von RechnungsFee bereitgestellt, aus den Einstellungen heraus installierbar (ein Klick, kein Datei-Upload):
+   - z.B. „SKR03 vollständig (800+ Konten)" oder branchenspezifische Pakete
+   - Werden als Seed-Datei im App-Bundle mitgeliefert
+   - Aktivierung speichert die neuen Kategorien in der lokalen DB
+
+2. **CSV-Import durch den User** – eigene Kontenpläne hochladen und aktivieren:
+   - Format: `name, kontenart, konto_skr03, konto_skr04, ust_satz_standard, vorsteuer_prozent, euer_zeile, eks_kategorie`
+   - Vorschau vor dem Import (Duplikat-Erkennung anhand Name + Kontonummer)
+   - Aktivieren / Deaktivieren einzelner importierter Kategorien
+   - Export der aktuellen Kategorien als CSV (Backup / Weitergabe)
+
+**Technische Umsetzung (Idee):**
+- `kategorien.quelle VARCHAR(20)` – `system` | `built-in-paket` | `user-csv`
+- `kategorien.paket_name VARCHAR(100)` – z.B. „SKR03-vollständig"
+- Pakete können vollständig deinstalliert werden (nur `quelle ≠ system`-Einträge ohne Buchungen)
+- Konflikt-Strategie: gleicher Name → überspringen; gleiches Konto, anderer Name → beide behalten
+
+---
+
 ## v0.6 – Erweiterte Digitalisierung *(Ziel: offen)*
 
 Opt-in LLM-gestützte Felderkennung und Sonderfälle.
