@@ -1163,11 +1163,13 @@ class BelegParser:
             if v:
                 felder["gesamt_brutto"] = v
 
-        # Netto-Betrag
+        # Netto-Betrag – optional: Steuer-Kürzel in Klammern "(19,0 %)" nach dem Label
         m = re.search(
             r"(?:Netto(?:betrag|summe)?|Zwischensumme(?:\s+netto)?|"
             r"Gesamt\s+ohne\s+(?:MwSt\.?|USt\.?|Steuer|Umsatzsteuer)|net\s+amount)"
-            r"(?:\s*/[^\n0-9]{0,25})?\s*[:\s.·*\-]*([\d.,]+)\s*(?:€|EUR)?",
+            r"(?:\s*/[^\n0-9]{0,25})?"
+            r"(?:\s*\([^)]{1,20}\))?"   # opt. "(19,0 %)" o.ä. nach dem Label
+            r"\s*[:\s.·*\-]*([\d.,]+)\s*(?:€|EUR)?",
             text, re.IGNORECASE,
         )
         if m:
@@ -1185,7 +1187,9 @@ class BelegParser:
         # → \bGmbH\b würde nicht matchen (kein Word-Boundary zwischen "e" und "G")
         lines = [l.strip() for l in text.split("\n") if l.strip()]
         _rechtsform_re = re.compile(
-            r"GmbH|GmbH\s*&\s*Co|UG|AG|e\.?K\.?|KG|OHG|GbR|e\.?V\.?|Ltd|Inc|Co\.",
+            # Wortgrenzen für kurze Kürzel (AG, KG etc.) – sonst Match in "Vertrag", "Betrag" usw.
+            r"GmbH(?:\s*&\s*Co)?|\bUG\b|\bAG\b|e\.?K\.?|\bKG\b|\bOHG\b|\bGbR\b"
+            r"|e\.?V\.?|\bSE\b|\bLtd\b|\bInc\b|Co\.",
             re.IGNORECASE,
         )
         for line in lines[:25]:
@@ -1240,6 +1244,19 @@ class BelegParser:
         ust_default  = self.ust_satz_default(felder)
         positionen   = self.extrahiere_positionen(text, ust_default)
         positionen_modus, netto_total, pos_summe = self.bestimme_modus(felder, positionen)
+
+        # Positionen verwerfen wenn Summe um >2 % vom Rechnungstotal abweicht –
+        # typisch bei unerkannten Rabatt-/Kredit-Zeilen (negative Beträge).
+        # Frontend fällt dann auf gesamt_brutto/netto aus felder zurück.
+        if positionen and (felder.get("gesamt_netto") or felder.get("gesamt_brutto")):
+            try:
+                ref = Decimal(felder.get("gesamt_netto") if positionen_modus == "netto"
+                              else felder.get("gesamt_brutto") or "0")
+                if ref > 0 and abs(pos_summe - ref) / ref > Decimal("0.02"):
+                    positionen = []
+                    positionen_modus = "brutto"
+            except (InvalidOperation, ZeroDivisionError):
+                pass
 
         # Netto-Positionen: gesamt_netto aus Positions-Summe ableiten wenn es fehlt,
         # dann ust_satz aus pos_summe vs. gesamt_brutto berechnen
