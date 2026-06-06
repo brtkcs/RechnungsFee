@@ -31,6 +31,7 @@ const singleSchema = z.object({
   kategorie_id: z.string().optional(),
   kunde_id: z.string().optional(),
   vorsteuerabzug: z.boolean().optional(),
+  ist_ig_erwerb: z.boolean().optional(),
   externe_belegnr: z.string().optional(),
 })
 
@@ -197,9 +198,16 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
   const istPrivatKategorie = gewaehlteKat?.kontenart === 'Privat'
   const istFahrtkostenKat = gewaehlteKat?.eks_kategorie === 'B6_5'
   const istIgLieferung = gewaehlteKat?.konto_skr03 === '8125' || gewaehlteKat?.konto_skr04 === '3125'
+  const istIgErwerbKat = gewaehlteKat?.konto_skr03 === '3400' || gewaehlteKat?.konto_skr04 === '5400'
   const kunde_id = watch('kunde_id')
   const gewaehlterKunde = (kunden ?? []).find((k) => String(k.id) === kunde_id)
   const igLieferungOhneUstIdNr = istIgLieferung && gewaehlterKunde && !gewaehlterKunde.ust_idnr
+  const ist_ig_erwerb = watch('ist_ig_erwerb')
+
+  // ig. Erwerb: auto-setzen wenn Wareneinkauf EU-Kategorie gewählt
+  useEffect(() => {
+    if (istIgErwerbKat) setValue('ist_ig_erwerb', true)
+  }, [istIgErwerbKat, setValue])
 
   // km-Eingabe: brutto_betrag auto-berechnen (EÜR: 0,30 €/km)
   useEffect(() => {
@@ -345,6 +353,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
       kategorie_id: values.kategorie_id ? Number(values.kategorie_id) : undefined,
       kunde_id: values.kunde_id ? Number(values.kunde_id) : undefined,
       vorsteuerabzug: values.vorsteuerabzug,
+      ist_ig_erwerb: values.ist_ig_erwerb ?? false,
       externe_belegnr: values.externe_belegnr || undefined,
       km_anzahl: istFahrtkostenKat && kmAnzahl ? parseFloat(kmAnzahl) || null : null,
     })
@@ -692,6 +701,22 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
                   <InfoTooltip text="Du kannst die gezahlte Umsatzsteuer vom Finanzamt zurückholen (Vorsteuer). Gilt nur bei umsatzsteuerpflichtigen Betrieben – nicht bei Kleinunternehmern §19. Typisch: Büromaterial, Software, Telefon, Berufsausstattung. Nicht möglich: Versicherungen, private Ausgaben, steuerfreie Leistungen." />
                 </span>
               </label>
+            )}
+
+            {/* ig. Erwerb */}
+            {art === 'Ausgabe' && !istKleinunternehmer && !istPrivatKategorie && (
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                <input type="checkbox" {...register('ist_ig_erwerb')} className="rounded" />
+                <span className="flex items-center gap-1">
+                  Innergemeinschaftlicher Erwerb (§1a UStG)
+                  <InfoTooltip text="Kauf von Waren oder Dienstleistungen von einem Unternehmen in einem anderen EU-Mitgliedstaat. Die Erwerbsteuer (19 % oder 7 %) wird in der UStVA in KZ 89/93 angegeben; gleichzeitig ist sie als Vorsteuer (KZ 61) abzugsfähig. Wird automatisch gesetzt bei Kategorie „Wareneinkauf EU"." />
+                </span>
+              </label>
+            )}
+            {ist_ig_erwerb && art === 'Ausgabe' && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded px-2 py-1.5">
+                ℹ️ Erwerbsteuer wird in UStVA KZ 89/93 deklariert; Vorsteuer KZ 61 (nicht KZ 66).
+              </p>
             )}
 
             {kassenstandUeberschrittenSingle && (

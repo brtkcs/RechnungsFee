@@ -138,6 +138,14 @@ def _berechne_kz(von: date, bis: date, db: Session) -> dict[str, Decimal]:
     for e in eintraege:
         ust_konto = e.konto_ust_skr03 or e.konto_ust_skr04 or ""
 
+        # ig. Erwerb (§1a UStG): KZ 89/93 (Erwerbsteuer) + KZ 61 (Vorsteuer ig. Erwerb)
+        if getattr(e, "ist_ig_erwerb", False):
+            kz["kz_89"] += e.netto_betrag
+            kz["kz_93"] += e.ust_betrag
+            if e.vorsteuer_betrag:
+                kz["kz_61"] += e.vorsteuer_betrag
+            continue  # nicht in reguläre USt/VSt-Erkennung
+
         if e.art == "Einnahme" and e.ust_betrag and e.ust_betrag != 0:
             mapping = _KONTO_EINNAHME.get(ust_konto)
             if mapping:

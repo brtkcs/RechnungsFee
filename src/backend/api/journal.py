@@ -258,7 +258,15 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
     belegnr = _naechste_belegnr(db, data.datum)
 
     kat = db.query(Kategorie).filter(Kategorie.id == data.kategorie_id).first() if data.kategorie_id else None
-    konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz) if ust_satz > 0 else (None, None)
+    ist_ig_erwerb = data.ist_ig_erwerb
+    if ust_satz > 0:
+        konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz)
+        if ist_ig_erwerb:
+            # ig. Erwerb: USt-Konto 1780/3802 statt 1575/1406
+            konto_ust_skr03 = {19: "1780", 7: "1781"}.get(int(ust_satz), konto_ust_skr03)
+            konto_ust_skr04 = {19: "3802", 7: "3803"}.get(int(ust_satz), konto_ust_skr04)
+    else:
+        konto_ust_skr03, konto_ust_skr04 = None, None
     journaleintrag = Journaleintrag(
         datum=data.datum,
         belegnr=belegnr,
@@ -280,6 +288,7 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
         steuerbefreiung_grund=steuerbefreiung_grund,
         externe_belegnr=data.externe_belegnr,
         km_anzahl=data.km_anzahl,
+        ist_ig_erwerb=ist_ig_erwerb,
         immutable=True,
     )
     journaleintrag.signatur = signatur_journaleintrag(journaleintrag)
@@ -323,7 +332,14 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
         netto, ust_betrag = _berechne_ust(pos.brutto_betrag, ust_satz)
         belegnr = _naechste_belegnr(db, data.datum)
         split_kat = db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first() if pos.kategorie_id else None
-        konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz) if ust_satz > 0 else (None, None)
+        pos_ig = pos.ist_ig_erwerb
+        if ust_satz > 0:
+            konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz)
+            if pos_ig:
+                konto_ust_skr03 = {19: "1780", 7: "1781"}.get(int(ust_satz), konto_ust_skr03)
+                konto_ust_skr04 = {19: "3802", 7: "3803"}.get(int(ust_satz), konto_ust_skr04)
+        else:
+            konto_ust_skr03, konto_ust_skr04 = None, None
         journaleintrag = Journaleintrag(
             datum=data.datum,
             belegnr=belegnr,
@@ -344,6 +360,7 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
             brutto_betrag=pos.brutto_betrag,
             vorsteuerabzug=vorsteuerabzug,
             steuerbefreiung_grund=steuerbefreiung_grund,
+            ist_ig_erwerb=pos_ig,
             immutable=True,
         )
         journaleintrag.signatur = signatur_journaleintrag(journaleintrag)

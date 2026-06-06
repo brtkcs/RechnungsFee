@@ -309,6 +309,7 @@ export type JournalEintrag = {
   immutable: boolean
   erstellt_am: string
   km_anzahl?: number | null
+  ist_ig_erwerb?: boolean
 }
 
 export type JournalEintragCreate = {
@@ -323,6 +324,7 @@ export type JournalEintragCreate = {
   vorsteuerabzug?: boolean
   externe_belegnr?: string
   km_anzahl?: number | null
+  ist_ig_erwerb?: boolean
 }
 
 export type MonatsUebersicht = {
