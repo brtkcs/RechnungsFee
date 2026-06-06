@@ -357,13 +357,15 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
             if kat and kat.konto_skr03 in ("8125", "3125") and not steuerbefreiung_grund:
                 steuerbefreiung_grund = "§4 Nr. 1b UStG"
         pos_sf = pos.ust_sonderfall or ("ig_erwerb" if pos.ist_ig_erwerb else None)
-        if not pos_sf and split_kat := (db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first() if pos.kategorie_id else None):
-            if split_kat.konto_skr03 in ("3400", "5400"):
-                pos_sf = "ig_erwerb"
-            elif split_kat.konto_skr03 in ("3300", "5300"):
-                pos_sf = "13b_abs1"
-            elif split_kat.konto_skr03 in ("3610", "5600"):
-                pos_sf = "13b_abs2"
+        if not pos_sf and pos.kategorie_id:
+            _sf_kat = db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first()
+            if _sf_kat:
+                if _sf_kat.konto_skr03 in ("3400", "5400"):
+                    pos_sf = "ig_erwerb"
+                elif _sf_kat.konto_skr03 in ("3300", "5300"):
+                    pos_sf = "13b_abs1"
+                elif _sf_kat.konto_skr03 in ("3610", "5600"):
+                    pos_sf = "13b_abs2"
         split_kat = db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first() if pos.kategorie_id else None
         if pos_sf and ust_satz > 0:
             netto = pos.brutto_betrag
