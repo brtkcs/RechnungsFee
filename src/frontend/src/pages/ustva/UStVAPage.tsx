@@ -29,9 +29,6 @@ const KZ_META: KZMeta[] = [
   ['', '67', 'Vorsteuer aus §13b-Leistungen (§15 Abs. 1 Satz 1 Nr. 4 UStG)', false, true],
 ]
 
-// KZs die manuell eingegeben werden müssen (nicht aus Journal ableitbar)
-const KZ_MANUELL = new Set(['41', '87'])
-
 const MONATE = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
   'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
 
@@ -168,7 +165,7 @@ export function UStVAPage() {
       const wert = parseFloat(kzWert(nr) || '0')
       if (wert === 0) continue
 
-      const effAbschnitt = abschnitt || aktGruppe?.abschnitt || ''
+      const effAbschnitt: string = abschnitt || aktGruppe?.abschnitt || ''
       if (!aktGruppe || (abschnitt && abschnitt !== aktGruppe.abschnitt)) {
         aktGruppe = { abschnitt: effAbschnitt, zeilen: [] }
         gruppen.push(aktGruppe)
@@ -180,8 +177,6 @@ export function UStVAPage() {
 
   const zahllast = ergebnis ? berechneZahllast() : null
   const gruppen = ergebnis && !ergebnis.ist_kleinunternehmer ? renderKZTabelle() : []
-  const hatManuellFelder = KZ_META.some(([,nr,,, auto]) => !auto)
-
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">UStVA – Anzeigehilfe</h1>

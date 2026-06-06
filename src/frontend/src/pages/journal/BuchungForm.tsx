@@ -552,7 +552,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
               )}
               {igLieferungOhneUstIdNr && (
                 <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5">
-                  ⚠️ <strong>{gewaehlterKunde?.name}</strong> hat keine USt-IdNr. hinterlegt – für ig. Lieferungen (§4 Nr. 1b UStG) ist eine gültige USt-IdNr. des Käufers Pflicht.
+                  ⚠️ <strong>{gewaehlterKunde ? [gewaehlterKunde.firmenname, gewaehlterKunde.vorname, gewaehlterKunde.nachname].filter(Boolean).join(' ') : ''}</strong> hat keine USt-IdNr. hinterlegt – für ig. Lieferungen (§4 Nr. 1b UStG) ist eine gültige USt-IdNr. des Käufers Pflicht.
                 </p>
               )}
             </div>
