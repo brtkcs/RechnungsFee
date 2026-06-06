@@ -1133,3 +1133,42 @@ export const installiereTesseract = () =>
   request<{ erfolg: boolean; fehler?: string }>('/system/tesseract/installieren', {
     method: 'POST',
   })
+
+// ---------------------------------------------------------------------------
+// UStVA
+// ---------------------------------------------------------------------------
+
+export type UStVAErgebnis = {
+  zeitraum: string
+  zeitraum_typ: string
+  von: string
+  bis: string
+  kz_81: string
+  kz_83: string
+  kz_86: string
+  kz_88: string
+  kz_66: string
+  kz_41: string
+  zahllast: string
+  ist_kleinunternehmer: boolean
+  hinweis?: string | null
+}
+
+export type UStVAHistorieEintrag = {
+  zeitraum: string
+  zeitraum_typ: string
+  zahllast: number
+  erstellt_am: string
+}
+
+export const berechneUStVA = (zeitraum: string) =>
+  request<UStVAErgebnis>(`/ustva/berechnen?zeitraum=${encodeURIComponent(zeitraum)}`)
+
+export const speichereUStVA = (data: Omit<UStVAErgebnis, 'zeitraum_typ' | 'von' | 'bis' | 'ist_kleinunternehmer' | 'hinweis'>) =>
+  request<{ ok: boolean; zeitraum: string }>('/ustva/speichern', { method: 'POST', body: JSON.stringify(data) })
+
+export const getUStVAHistorie = () =>
+  request<UStVAHistorieEintrag[]>('/ustva/historie')
+
+export const getUStVAPdfUrl = (zeitraum: string): string =>
+  `${getApiBase()}/api/ustva/pdf?zeitraum=${encodeURIComponent(zeitraum)}`
