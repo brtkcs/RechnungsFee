@@ -310,6 +310,7 @@ export type JournalEintrag = {
   erstellt_am: string
   km_anzahl?: number | null
   ist_ig_erwerb?: boolean
+  ust_sonderfall?: string | null
 }
 
 export type JournalEintragCreate = {
@@ -325,6 +326,7 @@ export type JournalEintragCreate = {
   externe_belegnr?: string
   km_anzahl?: number | null
   ist_ig_erwerb?: boolean
+  ust_sonderfall?: string | null
 }
 
 export type MonatsUebersicht = {

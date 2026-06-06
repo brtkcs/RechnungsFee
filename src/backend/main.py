@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva
 
-SCHEMA_VERSION = 47
+SCHEMA_VERSION = 48
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -867,6 +867,8 @@ def _run_migrations() -> None:
                 "Wareneinkauf (7%)":              "z. B. Waren für den Wiederverkauf mit 7 % USt",
                 "Wareneinkauf EU":                "z. B. Waren von EU-Lieferanten (innergemeinschaftlicher Erwerb); Käufer muss gültige USt-IdNr haben",
                 "Innergemeinschaftliche Lieferungen": "Lieferung an Unternehmen mit USt-IdNr in einem anderen EU-Mitgliedstaat (§4 Nr. 1b UStG); 0 % USt; UStVA KZ 41; Zusammenfassende Meldung erforderlich",
+                "EU-Dienstleistungen (§13b Abs. 1)":  "Bezug von Dienstleistungen eines im EU-Ausland ansässigen Unternehmers (z.B. Google Ads, AWS, Beratung). Reverse Charge: Du schuldest die USt (KZ 46/47) und kannst sie als Vorsteuer (KZ 67) abziehen. Rechnungsbetrag = Nettobetrag.",
+                "Bauleistungen / §13b Abs. 2":         "Bauleistungen, Gebäudereinigung, Sicherheitsdienstleistungen, Metallieferungen – auch von inländischen Unternehmen. Reverse Charge: Leistungsempfänger schuldet die USt (KZ 84/85), Vorsteuer KZ 67. Rechnungsbetrag = Nettobetrag.",
                 "Wareneinkauf Nicht-EU":          "z. B. Importe aus Drittländern (Einfuhrumsatzsteuer beachten)",
                 "Löhne & Gehälter":              "z. B. Bruttogehalt Vollzeitkräfte inkl. Sozialversicherungsabgaben",
                 "Löhne & Gehälter Teilzeit":     "z. B. Bruttogehalt Teilzeitkräfte inkl. Sozialversicherungsabgaben",
@@ -1103,6 +1105,19 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 47 (journal.ist_ig_erwerb – innergemeinschaftlicher Erwerb)")
 
+        if version < 48:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(journal)")).fetchall()}
+            if "ust_sonderfall" not in cols:
+                conn.execute(text("ALTER TABLE journal ADD COLUMN ust_sonderfall VARCHAR(20)"))
+            # ist_ig_erwerb=1 → ust_sonderfall='ig_erwerb'
+            conn.execute(text(
+                "UPDATE journal SET ust_sonderfall = 'ig_erwerb' "
+                "WHERE ist_ig_erwerb = 1 AND (ust_sonderfall IS NULL OR ust_sonderfall = '')"
+            ))
+            conn.execute(text("PRAGMA user_version = 48"))
+            conn.commit()
+            print("[Migration] Schema auf Version 48 (journal.ust_sonderfall: ig_erwerb|13b_abs1|13b_abs2)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -1255,6 +1270,12 @@ def _migrate_kategorien() -> None:
             # EU-Handel – innergemeinschaftliche Lieferungen (§4 Nr. 1b UStG)
             # Käufer muss gültige USt-IdNr haben; UStVA KZ 41; Zusammenfassende Meldung (ZM) nötig
             {"name": "Innergemeinschaftliche Lieferungen",   "kontenart": "Erlös",   "konto_skr03": "8125", "konto_skr04": "3125", "eks_kategorie": "A1",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            # §13b Abs. 1 – EU-Dienstleistungen (Google, AWS, Beratung aus EU etc.)
+            # Reverse Charge: Empfänger schuldet USt (KZ 46/47); Vorsteuer KZ 67; Rechnungsbetrag = Netto
+            {"name": "EU-Dienstleistungen (§13b Abs. 1)",    "kontenart": "Aufwand", "konto_skr03": "3300", "konto_skr04": "5300", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            # §13b Abs. 2 – Bauleistungen, Gebäudereinigung, Sicherheit, Metallieferungen aus Inland/EU
+            # Reverse Charge: Empfänger schuldet USt (KZ 84/85); Vorsteuer KZ 67; Rechnungsbetrag = Netto
+            {"name": "Bauleistungen / §13b Abs. 2",          "kontenart": "Aufwand", "konto_skr03": "3610", "konto_skr04": "5600", "eks_kategorie": "B14_1", "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
         ]
         for data in neue:
             if not db.query(Kategorie).filter(Kategorie.name == data["name"]).first():

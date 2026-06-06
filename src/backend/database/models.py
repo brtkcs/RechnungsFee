@@ -215,6 +215,8 @@ class Journaleintrag(Base):
     km_anzahl: Mapped[Decimal | None] = mapped_column(Numeric(10, 1))
     # Innergemeinschaftlicher Erwerb §1a UStG: USt (KZ 89/93) + Vorsteuer (KZ 61) getrennt von KZ 66
     ist_ig_erwerb: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Reverse-Charge-Typ: ig_erwerb | 13b_abs1 | 13b_abs2 | NULL (normal)
+    ust_sonderfall: Mapped[str | None] = mapped_column(String(20))
     # GoBD
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     signatur: Mapped[str | None] = mapped_column(String(64))

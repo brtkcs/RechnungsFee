@@ -254,7 +254,8 @@ class JournalEintragCreate(BaseModel):
     vorsteuerabzug: bool = False
     externe_belegnr: Optional[str] = None
     km_anzahl: Optional[Decimal] = None  # Fahrtkosten Privat-PKW: EÜR=km×0,30 gespeichert, EKS rechnet km×0,10
-    ist_ig_erwerb: bool = False  # §1a UStG: Erwerbsteuer (KZ 89/93) + Vorsteuer (KZ 61)
+    ist_ig_erwerb: bool = False  # veraltet – wird zu ust_sonderfall='ig_erwerb' migriert
+    ust_sonderfall: Optional[str] = None  # ig_erwerb | 13b_abs1 | 13b_abs2 | None
 
     @field_validator("zahlungsart")
     @classmethod
@@ -307,6 +308,7 @@ class JournalEintragResponse(BaseModel):
     erstellt_am: datetime
     km_anzahl: Optional[Decimal] = None
     ist_ig_erwerb: bool = False
+    ust_sonderfall: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -335,6 +337,7 @@ class SplitPosition(BaseModel):
     ust_satz: Decimal = Decimal("0")
     vorsteuerabzug: bool = False
     ist_ig_erwerb: bool = False
+    ust_sonderfall: Optional[str] = None
 
     @field_validator("brutto_betrag")
     @classmethod

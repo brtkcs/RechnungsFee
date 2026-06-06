@@ -32,7 +32,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 47` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 48` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -113,6 +113,7 @@ def _run_migrations():
 | 45 | belege.beleg_pdfa_pfad VARCHAR(500) – rel. Pfad zur PDF/A-3-Version (GoBD-Langzeitarchivierung, Stufe 5) |
 | 46 | unternehmen: w_idnr VARCHAR(20) (Wirtschafts-IdNr., seit Nov 2024 vom BZSt zugeteilt), voranmeldungsrhythmus VARCHAR(12) DEFAULT 'quartal' (monat|quartal – für UStVA) |
 | 47 | journal.ist_ig_erwerb BOOLEAN DEFAULT 0 – innergemeinschaftlicher Erwerb §1a UStG; USt → KZ 89/93, Vorsteuer → KZ 61 (nicht KZ 66) |
+| 48 | journal.ust_sonderfall VARCHAR(20) – ig_erwerb|13b_abs1|13b_abs2|NULL; ersetzt ist_ig_erwerb als primäres Feld; USt additiv (Rechnungsbetrag=Netto); Vorsteuer auto; neue Kategorien EU-DL §13b + Bauleistungen §13b |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

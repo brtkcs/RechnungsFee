@@ -138,12 +138,24 @@ def _berechne_kz(von: date, bis: date, db: Session) -> dict[str, Decimal]:
     for e in eintraege:
         ust_konto = e.konto_ust_skr03 or e.konto_ust_skr04 or ""
 
-        # ig. Erwerb (§1a UStG): KZ 89/93 (Erwerbsteuer) + KZ 61 (Vorsteuer ig. Erwerb)
-        if getattr(e, "ist_ig_erwerb", False):
-            kz["kz_89"] += e.netto_betrag
-            kz["kz_93"] += e.ust_betrag
-            if e.vorsteuer_betrag:
-                kz["kz_61"] += e.vorsteuer_betrag
+        # Reverse-Charge-Sonderfälle: separat behandeln, nicht in reguläre KZs
+        sf = getattr(e, "ust_sonderfall", None) or ("ig_erwerb" if getattr(e, "ist_ig_erwerb", False) else None)
+        if sf:
+            if sf == "ig_erwerb":
+                kz["kz_89"] += e.netto_betrag
+                kz["kz_93"] += e.ust_betrag
+                if e.vorsteuer_betrag:
+                    kz["kz_61"] += e.vorsteuer_betrag
+            elif sf == "13b_abs1":
+                kz["kz_46"] += e.netto_betrag
+                kz["kz_47"] += e.ust_betrag
+                if e.vorsteuer_betrag:
+                    kz["kz_67"] += e.vorsteuer_betrag
+            elif sf == "13b_abs2":
+                kz["kz_84"] += e.netto_betrag
+                kz["kz_85"] += e.ust_betrag
+                if e.vorsteuer_betrag:
+                    kz["kz_67"] += e.vorsteuer_betrag
             continue  # nicht in reguläre USt/VSt-Erkennung
 
         if e.art == "Einnahme" and e.ust_betrag and e.ust_betrag != 0:

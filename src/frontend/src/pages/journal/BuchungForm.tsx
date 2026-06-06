@@ -31,7 +31,7 @@ const singleSchema = z.object({
   kategorie_id: z.string().optional(),
   kunde_id: z.string().optional(),
   vorsteuerabzug: z.boolean().optional(),
-  ist_ig_erwerb: z.boolean().optional(),
+  ust_sonderfall: z.string().optional(),
   externe_belegnr: z.string().optional(),
 })
 
@@ -198,16 +198,21 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
   const istPrivatKategorie = gewaehlteKat?.kontenart === 'Privat'
   const istFahrtkostenKat = gewaehlteKat?.eks_kategorie === 'B6_5'
   const istIgLieferung = gewaehlteKat?.konto_skr03 === '8125' || gewaehlteKat?.konto_skr04 === '3125'
-  const istIgErwerbKat = gewaehlteKat?.konto_skr03 === '3400' || gewaehlteKat?.konto_skr04 === '5400'
   const kunde_id = watch('kunde_id')
   const gewaehlterKunde = (kunden ?? []).find((k) => String(k.id) === kunde_id)
   const igLieferungOhneUstIdNr = istIgLieferung && gewaehlterKunde && !gewaehlterKunde.ust_idnr
-  const ist_ig_erwerb = watch('ist_ig_erwerb')
+  const ust_sonderfall = watch('ust_sonderfall')
 
-  // ig. Erwerb: auto-setzen wenn Wareneinkauf EU-Kategorie gewählt
+  // ust_sonderfall auto-setzen basierend auf Kategorie
+  const katSonderfall =
+    gewaehlteKat?.konto_skr03 === '3400' || gewaehlteKat?.konto_skr04 === '5400' ? 'ig_erwerb' :
+    gewaehlteKat?.konto_skr03 === '3300' || gewaehlteKat?.konto_skr04 === '5300' ? '13b_abs1' :
+    gewaehlteKat?.konto_skr03 === '3610' || gewaehlteKat?.konto_skr04 === '5600' ? '13b_abs2' : null
+
+  // ust_sonderfall: auto-setzen wenn Kategorie einen Sonderfall impliziert
   useEffect(() => {
-    if (istIgErwerbKat) setValue('ist_ig_erwerb', true)
-  }, [istIgErwerbKat, setValue])
+    if (katSonderfall) setValue('ust_sonderfall', katSonderfall)
+  }, [katSonderfall, setValue])
 
   // km-Eingabe: brutto_betrag auto-berechnen (EÜR: 0,30 €/km)
   useEffect(() => {
@@ -353,7 +358,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
       kategorie_id: values.kategorie_id ? Number(values.kategorie_id) : undefined,
       kunde_id: values.kunde_id ? Number(values.kunde_id) : undefined,
       vorsteuerabzug: values.vorsteuerabzug,
-      ist_ig_erwerb: values.ist_ig_erwerb ?? false,
+      ust_sonderfall: values.ust_sonderfall || null,
       externe_belegnr: values.externe_belegnr || undefined,
       km_anzahl: istFahrtkostenKat && kmAnzahl ? parseFloat(kmAnzahl) || null : null,
     })
@@ -703,20 +708,28 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
               </label>
             )}
 
-            {/* ig. Erwerb */}
+            {/* Reverse Charge / Sonderfall */}
             {art === 'Ausgabe' && !istKleinunternehmer && !istPrivatKategorie && (
-              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
-                <input type="checkbox" {...register('ist_ig_erwerb')} className="rounded" />
-                <span className="flex items-center gap-1">
-                  Innergemeinschaftlicher Erwerb (§1a UStG)
-                  <InfoTooltip text={'Kauf von Waren von einem Unternehmen in einem anderen EU-Mitgliedstaat. Die Erwerbsteuer (19 % oder 7 %) wird in der UStVA in KZ 89/93 angegeben; gleichzeitig ist sie als Vorsteuer (KZ 61) abzugsfähig. Wird automatisch gesetzt bei Kategorie "Wareneinkauf EU".'} />
-                </span>
-              </label>
-            )}
-            {ist_ig_erwerb && art === 'Ausgabe' && (
-              <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded px-2 py-1.5">
-                ℹ️ Erwerbsteuer wird in UStVA KZ 89/93 deklariert; Vorsteuer KZ 61 (nicht KZ 66).
-              </p>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  Steuerlicher Sonderfall (Reverse Charge)
+                  <InfoTooltip text="Bei ig. Erwerb und §13b schuldest du die USt selbst (Reverse Charge). Der Rechnungsbetrag ist der Nettobetrag – die USt wird additiv berechnet und in der UStVA deklariert. Vorsteuer wird automatisch geltend gemacht." />
+                </label>
+                <select
+                  {...register('ust_sonderfall')}
+                  className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+                >
+                  <option value="">— keiner —</option>
+                  <option value="ig_erwerb">Innergemeinschaftlicher Erwerb §1a UStG → KZ 89/93/61</option>
+                  <option value="13b_abs1">§13b Abs. 1 – EU-Dienstleistungen → KZ 46/47/67</option>
+                  <option value="13b_abs2">§13b Abs. 2 – Bauleistungen/Reinigung etc. → KZ 84/85/67</option>
+                </select>
+                {ust_sonderfall && (
+                  <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                    ℹ️ Rechnungsbetrag = Nettobetrag. USt ({ustSatzStr} %) wird additiv berechnet und separat in der UStVA deklariert. Vorsteuer wird automatisch geltend gemacht.
+                  </p>
+                )}
+              </div>
             )}
 
             {kassenstandUeberschrittenSingle && (

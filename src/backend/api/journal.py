@@ -244,6 +244,14 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
                 steuerbefreiung_grund = "Privatbuchung"
         if kat and kat.konto_skr03 in ("8125", "3125") and not steuerbefreiung_grund:
             steuerbefreiung_grund = "§4 Nr. 1b UStG"
+        # ust_sonderfall aus Kategorie ableiten wenn nicht explizit gesetzt
+        if kat and not data.ust_sonderfall and not data.ist_ig_erwerb:
+            if kat.konto_skr03 in ("3400", "5400"):
+                data = data.model_copy(update={"ust_sonderfall": "ig_erwerb"})
+            elif kat.konto_skr03 in ("3300", "5300"):
+                data = data.model_copy(update={"ust_sonderfall": "13b_abs1"})
+            elif kat.konto_skr03 in ("3610", "5600"):
+                data = data.model_copy(update={"ust_sonderfall": "13b_abs2"})
 
     # Barkassen-Prüfung: Bar-Ausgabe darf den Kassenstand nicht übersteigen
     if data.art == "Ausgabe" and data.zahlungsart == "Bar":
@@ -254,19 +262,37 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
                 detail=f"Kassenstand nicht ausreichend. Aktueller Kassenstand: {kassenstand:.2f} €, Ausgabe: {data.brutto_betrag:.2f} €.",
             )
 
-    netto, ust_betrag = _berechne_ust(data.brutto_betrag, ust_satz)
-    belegnr = _naechste_belegnr(db, data.datum)
+    # ust_sonderfall: bevorzuge expliziten Wert; Fallback auf ist_ig_erwerb (veraltet)
+    ust_sonderfall = data.ust_sonderfall
+    if not ust_sonderfall and data.ist_ig_erwerb:
+        ust_sonderfall = "ig_erwerb"
 
+    # Reverse-Charge-Buchungen: Rechnungsbetrag = Netto; USt wird additiv berechnet
+    if ust_sonderfall and ust_satz > 0:
+        netto = data.brutto_betrag
+        ust_betrag = (netto * ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        brutto_stored = netto  # zahlt nur den Rechnungsbetrag
+        vorsteuerabzug = True  # Vorsteuer wird immer geltend gemacht
+    else:
+        netto, ust_betrag = _berechne_ust(data.brutto_betrag, ust_satz)
+        brutto_stored = data.brutto_betrag
+
+    belegnr = _naechste_belegnr(db, data.datum)
     kat = db.query(Kategorie).filter(Kategorie.id == data.kategorie_id).first() if data.kategorie_id else None
-    ist_ig_erwerb = data.ist_ig_erwerb
+
+    # USt-Konto basierend auf ust_sonderfall
     if ust_satz > 0:
         konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz)
-        if ist_ig_erwerb:
-            # ig. Erwerb: USt-Konto 1780/3802 statt 1575/1406
-            konto_ust_skr03 = {19: "1780", 7: "1781"}.get(int(ust_satz), konto_ust_skr03)
-            konto_ust_skr04 = {19: "3802", 7: "3803"}.get(int(ust_satz), konto_ust_skr04)
+        satz_i = int(ust_satz)
+        if ust_sonderfall == "ig_erwerb":
+            konto_ust_skr03 = {19: "1780", 7: "1781"}.get(satz_i, konto_ust_skr03)
+            konto_ust_skr04 = {19: "3802", 7: "3803"}.get(satz_i, konto_ust_skr04)
+        elif ust_sonderfall in ("13b_abs1", "13b_abs2"):
+            konto_ust_skr03 = {19: "1787", 7: "1787"}.get(satz_i, konto_ust_skr03)
+            konto_ust_skr04 = {19: "3803", 7: "3803"}.get(satz_i, konto_ust_skr04)
     else:
         konto_ust_skr03, konto_ust_skr04 = None, None
+
     journaleintrag = Journaleintrag(
         datum=data.datum,
         belegnr=belegnr,
@@ -283,12 +309,13 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
         ust_satz=ust_satz,
         ust_betrag=ust_betrag,
         vorsteuer_betrag=_berechne_vorsteuer(ust_betrag, vorsteuerabzug, kat),
-        brutto_betrag=data.brutto_betrag,
+        brutto_betrag=brutto_stored,
         vorsteuerabzug=vorsteuerabzug,
         steuerbefreiung_grund=steuerbefreiung_grund,
         externe_belegnr=data.externe_belegnr,
         km_anzahl=data.km_anzahl,
-        ist_ig_erwerb=ist_ig_erwerb,
+        ist_ig_erwerb=(ust_sonderfall == "ig_erwerb"),
+        ust_sonderfall=ust_sonderfall,
         immutable=True,
     )
     journaleintrag.signatur = signatur_journaleintrag(journaleintrag)
@@ -329,15 +356,33 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
                     steuerbefreiung_grund = "Privatbuchung"
             if kat and kat.konto_skr03 in ("8125", "3125") and not steuerbefreiung_grund:
                 steuerbefreiung_grund = "§4 Nr. 1b UStG"
-        netto, ust_betrag = _berechne_ust(pos.brutto_betrag, ust_satz)
-        belegnr = _naechste_belegnr(db, data.datum)
+        pos_sf = pos.ust_sonderfall or ("ig_erwerb" if pos.ist_ig_erwerb else None)
+        if not pos_sf and split_kat := (db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first() if pos.kategorie_id else None):
+            if split_kat.konto_skr03 in ("3400", "5400"):
+                pos_sf = "ig_erwerb"
+            elif split_kat.konto_skr03 in ("3300", "5300"):
+                pos_sf = "13b_abs1"
+            elif split_kat.konto_skr03 in ("3610", "5600"):
+                pos_sf = "13b_abs2"
         split_kat = db.query(Kategorie).filter(Kategorie.id == pos.kategorie_id).first() if pos.kategorie_id else None
-        pos_ig = pos.ist_ig_erwerb
+        if pos_sf and ust_satz > 0:
+            netto = pos.brutto_betrag
+            ust_betrag = (netto * ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            brutto_stored = netto
+            vorsteuerabzug = True
+        else:
+            netto, ust_betrag = _berechne_ust(pos.brutto_betrag, ust_satz)
+            brutto_stored = pos.brutto_betrag
+        belegnr = _naechste_belegnr(db, data.datum)
         if ust_satz > 0:
             konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz)
-            if pos_ig:
-                konto_ust_skr03 = {19: "1780", 7: "1781"}.get(int(ust_satz), konto_ust_skr03)
-                konto_ust_skr04 = {19: "3802", 7: "3803"}.get(int(ust_satz), konto_ust_skr04)
+            satz_i = int(ust_satz)
+            if pos_sf == "ig_erwerb":
+                konto_ust_skr03 = {19: "1780", 7: "1781"}.get(satz_i, konto_ust_skr03)
+                konto_ust_skr04 = {19: "3802", 7: "3803"}.get(satz_i, konto_ust_skr04)
+            elif pos_sf in ("13b_abs1", "13b_abs2"):
+                konto_ust_skr03 = {19: "1787", 7: "1787"}.get(satz_i, konto_ust_skr03)
+                konto_ust_skr04 = {19: "3803", 7: "3803"}.get(satz_i, konto_ust_skr04)
         else:
             konto_ust_skr03, konto_ust_skr04 = None, None
         journaleintrag = Journaleintrag(
@@ -357,10 +402,11 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
             ust_satz=ust_satz,
             ust_betrag=ust_betrag,
             vorsteuer_betrag=_berechne_vorsteuer(ust_betrag, vorsteuerabzug, split_kat),
-            brutto_betrag=pos.brutto_betrag,
+            brutto_betrag=brutto_stored,
             vorsteuerabzug=vorsteuerabzug,
             steuerbefreiung_grund=steuerbefreiung_grund,
-            ist_ig_erwerb=pos_ig,
+            ist_ig_erwerb=(pos_sf == "ig_erwerb"),
+            ust_sonderfall=pos_sf,
             immutable=True,
         )
         journaleintrag.signatur = signatur_journaleintrag(journaleintrag)
