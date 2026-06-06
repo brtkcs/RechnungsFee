@@ -1113,7 +1113,7 @@ class BelegParser:
         # Liefert USt-Satz, Netto-Basis und USt-Betrag in einem Schritt
         if not felder.get("ust_satz") or not felder.get("gesamt_ust"):
             m_tele = re.search(
-                r"(\d{1,2})[,.]?\d*\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s+auf\s+([\d.,]+)\s*(?:€|EUR)?\s+([\d.,]+)",
+                r"[+]?\s*(\d{1,2})[,.]?\d*\s*%\s*(?:MwSt\.?|USt\.?|Umsatzsteuer)\s+auf\s*([\d.,]+)\s*(?:€|EUR)?\s+([\d.,]+)",
                 text, re.IGNORECASE,
             )
             if m_tele:
@@ -1240,6 +1240,29 @@ class BelegParser:
         ust_default  = self.ust_satz_default(felder)
         positionen   = self.extrahiere_positionen(text, ust_default)
         positionen_modus, netto_total, pos_summe = self.bestimme_modus(felder, positionen)
+
+        # Netto-Positionen: gesamt_netto aus Positions-Summe ableiten wenn es fehlt,
+        # dann ust_satz aus pos_summe vs. gesamt_brutto berechnen
+        if positionen_modus == "netto" and pos_summe > Decimal("0.01"):
+            if not felder.get("gesamt_netto"):
+                felder["gesamt_netto"] = str(pos_summe.quantize(Decimal("0.01")))
+                _berechne_fehlende_summen(felder)  # ergänzt ust_satz wenn möglich
+            if not felder.get("ust_satz"):
+                brutto_total = Decimal(felder.get("gesamt_brutto") or "0")
+                if brutto_total > pos_summe:
+                    try:
+                        ratio = (brutto_total / pos_summe - 1) * 100
+                        for satz_str in ("19", "7", "5", "20", "10"):
+                            if abs(ratio - Decimal(satz_str)) < Decimal("0.6"):
+                                felder["ust_satz"] = satz_str
+                                break
+                    except (InvalidOperation, ZeroDivisionError):
+                        pass
+            # abgeleiteten ust_satz auf Positionen ohne Satz übertragen
+            if felder.get("ust_satz"):
+                for pos in positionen:
+                    if pos.ust_satz in ("0", "0.00", None):
+                        pos.ust_satz = felder["ust_satz"]
 
         # USt-Satz aus Brutto/Netto-Verhältnis ableiten (alle Typen)
         if positionen_modus == "brutto" and netto_total > Decimal("0.01") and pos_summe > Decimal("0.01"):
