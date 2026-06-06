@@ -709,7 +709,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
                 <input type="checkbox" {...register('ist_ig_erwerb')} className="rounded" />
                 <span className="flex items-center gap-1">
                   Innergemeinschaftlicher Erwerb (§1a UStG)
-                  <InfoTooltip text="Kauf von Waren oder Dienstleistungen von einem Unternehmen in einem anderen EU-Mitgliedstaat. Die Erwerbsteuer (19 % oder 7 %) wird in der UStVA in KZ 89/93 angegeben; gleichzeitig ist sie als Vorsteuer (KZ 61) abzugsfähig. Wird automatisch gesetzt bei Kategorie „Wareneinkauf EU"." />
+                  <InfoTooltip text={'Kauf von Waren von einem Unternehmen in einem anderen EU-Mitgliedstaat. Die Erwerbsteuer (19 % oder 7 %) wird in der UStVA in KZ 89/93 angegeben; gleichzeitig ist sie als Vorsteuer (KZ 61) abzugsfähig. Wird automatisch gesetzt bei Kategorie "Wareneinkauf EU".'} />
                 </span>
               </label>
             )}
