@@ -64,6 +64,28 @@ export function ExportPage() {
         </button>
       )}
 
+      {/* UStVA – nur für Regelbesteuerte */}
+      {!unternehmen?.ist_kleinunternehmer && (
+        <button
+          onClick={() => navigate('/ustva')}
+          className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
+        >
+          <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-white font-bold text-lg">UStVA – Umsatzsteuer-Voranmeldung</h2>
+              <p className="text-blue-100 text-sm mt-0.5">
+                Kennziffern aus Journalbuchungen berechnen und als Anzeigehilfe für ELSTER ausgeben
+              </p>
+            </div>
+            <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+          <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
+            <span>🧮 KZ 81/86 Umsätze · KZ 66 Vorsteuer · Zahllast</span>
+            <span>📄 PDF-Anzeigehilfe für ELSTER</span>
+          </div>
+        </button>
+      )}
+
       {/* GoBD-Export-Card */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-blue-600 px-6 py-4">
