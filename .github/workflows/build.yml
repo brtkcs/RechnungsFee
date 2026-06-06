@@ -95,18 +95,8 @@ jobs:
 
       # ── App-Version aus Git-Tag ─────────────────────────────────────────────
       - name: App-Version aus Git-Tag setzen
-        run: python -c "
-import json
-f = 'src-tauri/tauri.conf.json'
-d = json.load(open(f))
-v = '${{ github.ref_name }}'.lstrip('v')
-parts = v.split('.')
-while len(parts) < 3:
-    parts.append('0')
-d['version'] = '.'.join(parts)
-open(f, 'w').write(json.dumps(d, indent=2))
-print('Version gesetzt:', d['version'])
-"
+        run: |
+          python -c "import json; f='src-tauri/tauri.conf.json'; d=json.load(open(f)); v='${{ github.ref_name }}'.lstrip('v'); parts=v.split('.'); parts+=['0']*(3-len(parts)); d['version']='.'.join(parts[:3]); open(f,'w').write(json.dumps(d,indent=2))"
 
       # ── Tauri-Build & Release ───────────────────────────────────────────────
       - name: Tauri CLI installieren
