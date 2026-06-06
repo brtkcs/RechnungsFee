@@ -170,3 +170,5 @@ exports/
 
 # Aber: Beispiel-Dateien behalten
 !examples/
+*.Zone.Identifier
+.claude/settings.json
