@@ -3732,8 +3732,8 @@ export function RechnungenPage() {
 
       {/* Sammelrechnung-Dialog – fixed, daher position innerhalb des flex-Containers kein Problem */}
       {zeigSammelrechnung && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setZeigSammelrechnung(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-slate-800 dark:text-slate-100">Sammelrechnung erstellen</h3>
               <button onClick={() => setZeigSammelrechnung(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xl">×</button>
