@@ -1337,9 +1337,11 @@ function RechnungDetail({
                 <thead className="bg-slate-50 dark:bg-slate-900">
                   <tr>
                     <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
-                    <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Netto</th>
-                    <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
-                    <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Brutto</th>
+                    {rechnung.dokument_typ !== 'Lieferschein' && <>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Netto</th>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Brutto</th>
+                    </>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1351,30 +1353,34 @@ function RechnungDetail({
                           <span className="text-slate-400 dark:text-slate-500"> × {formatMenge(pos.menge)} {pos.einheit}</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right dark:text-slate-200">{formatEuro(pos.netto)}</td>
-                      <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500">
-                        {pos.differenzbesteuerung
-                          ? <span className="text-xs font-medium text-amber-600 dark:text-amber-400">§25a</span>
-                          : `${pos.ust_satz}%`
-                        }
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium dark:text-slate-200">{formatEuro(pos.brutto)}</td>
+                      {rechnung.dokument_typ !== 'Lieferschein' && <>
+                        <td className="px-3 py-2 text-right dark:text-slate-200">{formatEuro(pos.netto)}</td>
+                        <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500">
+                          {pos.differenzbesteuerung
+                            ? <span className="text-xs font-medium text-amber-600 dark:text-amber-400">§25a</span>
+                            : `${pos.ust_satz}%`
+                          }
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium dark:text-slate-200">{formatEuro(pos.brutto)}</td>
+                      </>}
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-                  <tr>
-                    <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</td>
-                    <td className="px-3 py-2 text-right font-bold text-slate-800 dark:text-slate-100">{formatEuro(rechnung.brutto_gesamt)}</td>
-                  </tr>
-                </tfoot>
+                {rechnung.dokument_typ !== 'Lieferschein' && (
+                  <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</td>
+                      <td className="px-3 py-2 text-right font-bold text-slate-800 dark:text-slate-100">{formatEuro(rechnung.brutto_gesamt)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
         )}
 
         {/* Zahlungsstatus */}
-        <div>
+        {rechnung.dokument_typ !== 'Lieferschein' && <div>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 flex items-center gap-1">
             Zahlung
             <InfoTooltip text="Offen: noch keine Zahlung eingegangen. Teilweise: mindestens eine Teilzahlung verbucht. Bezahlt: Rechnungsbetrag vollständig beglichen. Zahlungen werden automatisch als Journaleinträge gespeichert." />
@@ -1401,7 +1407,7 @@ function RechnungDetail({
               <span>{formatEuro(rechnung.brutto_gesamt)}</span>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Verknüpfte Zahlungen */}
         {rechnung.zahlungen.length > 0 && (
