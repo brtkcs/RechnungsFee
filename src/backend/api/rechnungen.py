@@ -903,6 +903,10 @@ def delete_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
     if not rechnung.ist_entwurf:
         raise HTTPException(status_code=409, detail="Nur Entwürfe können gelöscht werden.")
+    # FK-Rückverweis auf Lieferscheine zurücksetzen, damit der DELETE nicht scheitert
+    db.query(Rechnung).filter(Rechnung.lieferschein_zu_rechnung_id == rechnung_id).update(
+        {"lieferschein_zu_rechnung_id": None}
+    )
     db.delete(rechnung)
     db.commit()
 
@@ -1323,6 +1327,10 @@ def storno_rechnung(rechnung_id: int, data: StornoRequest, db: Session = Depends
     rechnung.storniert = True
     rechnung.storno_grund = data.grund.strip()
     rechnung.immutable = True
+    # Verknüpfte Lieferscheine wieder auf "Nicht abgerechnet" setzen
+    db.query(Rechnung).filter(Rechnung.lieferschein_zu_rechnung_id == rechnung_id).update(
+        {"lieferschein_zu_rechnung_id": None}
+    )
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)
