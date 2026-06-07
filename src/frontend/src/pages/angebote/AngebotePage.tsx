@@ -201,6 +201,13 @@ function AngebotFormular({
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [paketId, setPaketId] = useState(initial?.dokumentenpaket_id?.toString() ?? '')
   const [eingabeModus, setEingabeModus] = useState<EingabeModus>('brutto')
+
+  // Automatisch auf Netto wechseln wenn eine Firma (B2B) gewählt wird
+  useEffect(() => {
+    if (!kundeId || !kunden) return
+    const k = kunden.find(k => String(k.id) === kundeId)
+    if (k) setEingabeModus(k.firmenname?.trim() ? 'netto' : 'brutto')
+  }, [kundeId, kunden])
   const ustSaetzeListe = ustSaetze?.filter(u => u.ist_aktiv) ?? []
   const defaultSatz = ustSaetze?.find(u => u.ist_default)?.satz
     ?? ustSaetze?.find(u => parseFloat(u.satz) === 19)?.satz
