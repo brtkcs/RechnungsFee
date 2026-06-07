@@ -1826,6 +1826,13 @@ def lieferschein_aus_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
     ).first()
     if not r:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
+    bereits = db.query(Rechnung).filter(
+        Rechnung.lieferschein_zu_rechnung_id == rechnung_id,
+        Rechnung.dokument_typ == "Lieferschein",
+        Rechnung.storniert == False,
+    ).first()
+    if bereits:
+        raise HTTPException(status_code=409, detail="Zu dieser Rechnung existiert bereits ein Lieferschein.")
 
     ls_nr = _naechste_lieferscheinnummer(date.today(), db)
     ls = Rechnung(

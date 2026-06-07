@@ -842,6 +842,7 @@ export type Rechnung = {
   lieferschein_zu_rechnung_id: number | null
   lieferschein_rechnung_ist_entwurf: boolean | null
   lieferschein_zu_rechnung_nr: string | null
+  hat_lieferschein: boolean
   lieferadresse_id: number | null
   lieferadresse_text: string | null
   erstellt_am: string

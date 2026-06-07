@@ -1091,8 +1091,14 @@ function RechnungDetail({
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && rechnung.dokument_typ !== 'Lieferschein' && !zeigStornoEingabe && onLieferscheinAusRechnung && (
             <button
-              onClick={() => onLieferscheinAusRechnung(rechnung.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-teal-200 dark:border-teal-800 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-400"
+              onClick={() => !rechnung.hat_lieferschein && onLieferscheinAusRechnung(rechnung.id)}
+              disabled={rechnung.hat_lieferschein}
+              title={rechnung.hat_lieferschein ? 'Lieferschein bereits vorhanden' : undefined}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg ${
+                rechnung.hat_lieferschein
+                  ? 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  : 'border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-400'
+              }`}
             >
               → Lieferschein erstellen
             </button>
