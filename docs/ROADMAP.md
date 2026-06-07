@@ -136,7 +136,18 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 ---
 
-## v0.3 – Buchhalterische Vollständigkeit ✅ *v0.3 – Juni 2026*
+## v0.3.1 – Fixes & ZM ✅ *v0.3.1 – Juni 2026*
+
+- [x] §25a Differenzbesteuerung: Margensteuer korrekt im Journal (USt nur auf Brutto-Marge, Schema 50)
+- [x] §25a: Kategorie „Wareneinkauf §25a (privat)" – 0% USt, kein Vorsteuerabzug
+- [x] ZM – Zusammenfassende Meldung §18a UStG: Dashboard-Hinweis, Exporte-Kachel bei Fälligkeit, ZM-Seite mit ig. Lieferungen (L) + §13b Abs.1 (D) gruppiert nach USt-IdNr.
+- [x] Unterschrift (#129): Upload-Tab (JPG/PNG/WebP) + Download als PNG (Backup Neuinstallation)
+- [x] Steuersätze (#128): 0%/7%/19% jetzt als Seed (Neuinstallation), Umbenennung MwSt-Sätze → Steuersätze
+- [x] Rechnungsliste (#125): Tastaturfokus – ausgewählte Zeile bg-blue-100/slate-600 + blauer Balken links
+
+---
+
+## v0.3 – Buchhalterische Vollständigkeit ✅ *v0.3.0 – Juni 2026*
 
 ### Phase 1 – Korrekturbuchungen ✅ *v0.2.15*
 

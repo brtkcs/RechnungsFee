@@ -23,6 +23,19 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.1',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Zusammenfassende Meldung (ZM) §18a UStG: Dashboard-Hinweis wenn eine Meldung fällig ist, ZM-Seite mit Berechnung nach USt-IdNr./Land, Kennzeichen L (Lieferung) und D (§13b Dienstleistung) – für §19 Kleinunternehmer ausgeblendet' },
+      { typ: 'neu', text: 'Unterschrift (#129): Datei-Upload als Alternative zum Zeichnen (JPG, PNG, WebP) – für eingescannte Unterschriften und Tablet-Nutzer; Zeichenfläche größer (220px)' },
+      { typ: 'neu', text: 'Unterschrift (#129): „⬇ Speichern"-Button lädt die hinterlegte Unterschrift als PNG herunter – Backup für Neuinstallation auf anderem Rechner' },
+      { typ: 'fix', text: '§25a Differenzbesteuerung: Margensteuer wird jetzt korrekt nur auf die Brutto-Marge (VK − EK) berechnet und in KZ 81/83 der UStVA ausgewiesen – Journalbuchungen vor v0.3.1 müssen einmalig neu gebucht werden' },
+      { typ: 'neu', text: '§25a: Neue Kategorie „Wareneinkauf §25a (privat)" – 0% USt, kein Vorsteuerabzug (Ankauf von Privatpersonen für Differenzbesteuerungshandel)' },
+      { typ: 'fix', text: 'Steuersätze (#128): 0%, 7% und 19% werden bei Neuinstallation jetzt automatisch angelegt; Bezeichnung „MwSt-Sätze" in Navigation und Seite zu „Steuersätze" umbenannt' },
+      { typ: 'fix', text: 'Rechnungsliste (#125): Tastaturfokus (Pfeiltasten) jetzt deutlich sichtbar – ausgewählte Zeile mit blauem Hintergrund und blauem Balken links' },
+    ],
+  },
+  {
     version: 'v0.3',
     datum: 'Juni 2026',
     eintraege: [
