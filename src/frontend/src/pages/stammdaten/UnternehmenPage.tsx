@@ -733,25 +733,29 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
   onSpeichern: (bild: string) => void
   onAbbrechen: () => void
 }) {
+  const [modus, setModus] = useState<'zeichnen' | 'hochladen'>('zeichnen')
+
+  // ── Zeichnen ──
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const letzterPunkt = useRef<{ x: number; y: number } | null>(null)
   const [zeichnen, setZeichnen] = useState(false)
   const [hatInhalt, setHatInhalt] = useState(false)
 
-  // HiDPI: Canvas-Interne Auflösung = CSS-Größe × devicePixelRatio
   useEffect(() => {
-    const canvas = canvasRef.current!
+    if (modus !== 'zeichnen') return
+    const canvas = canvasRef.current
+    if (!canvas) return
     const dpr = window.devicePixelRatio || 1
     const size = canvas.offsetWidth
     canvas.width = size * dpr
-    canvas.height = size * dpr
+    canvas.height = Math.round(size * 0.4 * dpr)
     const ctx = canvas.getContext('2d')!
     ctx.scale(dpr, dpr)
-    ctx.lineWidth = 4
+    ctx.lineWidth = 3
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.strokeStyle = '#1e293b'
-  }, [])
+  }, [modus])
 
   function getPos(e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!
@@ -778,7 +782,6 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
     const ctx = canvasRef.current!.getContext('2d')!
     const curr = getPos(e)
     const prev = letzterPunkt.current
-    // Glatte Kurve durch Mittelpunkt zwischen letztem und aktuellem Punkt
     const mid = { x: (prev.x + curr.x) / 2, y: (prev.y + curr.y) / 2 }
     ctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y)
     ctx.stroke()
@@ -788,10 +791,7 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
     setHatInhalt(true)
   }
 
-  function stopZeichnen() {
-    setZeichnen(false)
-    letzterPunkt.current = null
-  }
+  function stopZeichnen() { setZeichnen(false); letzterPunkt.current = null }
 
   function leeren() {
     const canvas = canvasRef.current!
@@ -800,49 +800,109 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
     setHatInhalt(false)
   }
 
+  function uebernehmenZeichnen() {
+    const canvas = canvasRef.current!
+    const out = document.createElement('canvas')
+    out.width = canvas.width; out.height = canvas.height
+    const ctx = out.getContext('2d')!
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, out.width, out.height)
+    ctx.drawImage(canvas, 0, 0)
+    onSpeichern(out.toDataURL('image/png'))
+  }
+
+  // ── Hochladen ──
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploadVorschau, setUploadVorschau] = useState<string | null>(null)
+  const [uploadFehler, setUploadFehler] = useState<string | null>(null)
+
+  function handleDatei(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+      setUploadFehler('Nur JPG, PNG oder WebP erlaubt.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (ev) => { setUploadVorschau(ev.target?.result as string); setUploadFehler(null) }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const tabCls = (aktiv: boolean) =>
+    `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${aktiv
+      ? 'bg-blue-600 text-white'
+      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl space-y-4 p-6">
-        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Unterschrift zeichnen</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Zeichne deine Unterschrift im weißen Feld.</p>
-        <canvas
-          ref={canvasRef}
-          className="w-full aspect-square border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white cursor-crosshair touch-none"
-          onMouseDown={startZeichnen}
-          onMouseMove={weiterZeichnen}
-          onMouseUp={stopZeichnen}
-          onMouseLeave={stopZeichnen}
-          onTouchStart={startZeichnen}
-          onTouchMove={weiterZeichnen}
-          onTouchEnd={stopZeichnen}
-        />
-        <div className="flex gap-2 justify-between">
-          <button type="button" onClick={leeren}
-            className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-            Leeren
-          </button>
-          <div className="flex gap-2">
-            <button type="button" onClick={onAbbrechen}
-              className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-              Abbrechen
-            </button>
-            <button type="button" disabled={!hatInhalt}
-              onClick={() => {
-                const canvas = canvasRef.current!
-                const out = document.createElement('canvas')
-                out.width = canvas.width
-                out.height = canvas.height
-                const ctx = out.getContext('2d')!
-                ctx.fillStyle = '#ffffff'
-                ctx.fillRect(0, 0, out.width, out.height)
-                ctx.drawImage(canvas, 0, 0)
-                onSpeichern(out.toDataURL('image/png'))
-              }}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
-              Übernehmen
-            </button>
-          </div>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg space-y-4 p-6">
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Digitale Unterschrift</h2>
+
+        {/* Tabs */}
+        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-700 rounded-lg w-fit">
+          <button type="button" className={tabCls(modus === 'zeichnen')} onClick={() => setModus('zeichnen')}>✏️ Zeichnen</button>
+          <button type="button" className={tabCls(modus === 'hochladen')} onClick={() => setModus('hochladen')}>📁 Datei hochladen</button>
         </div>
+
+        {modus === 'zeichnen' ? (
+          <>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Unterschrift im Feld unten einzeichnen (Maus oder Touchscreen).</p>
+            <canvas
+              ref={canvasRef}
+              style={{ height: '160px' }}
+              className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white cursor-crosshair touch-none"
+              onMouseDown={startZeichnen}
+              onMouseMove={weiterZeichnen}
+              onMouseUp={stopZeichnen}
+              onMouseLeave={stopZeichnen}
+              onTouchStart={startZeichnen}
+              onTouchMove={weiterZeichnen}
+              onTouchEnd={stopZeichnen}
+            />
+            <div className="flex gap-2 justify-between">
+              <button type="button" onClick={leeren}
+                className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                Leeren
+              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={onAbbrechen}
+                  className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                  Abbrechen
+                </button>
+                <button type="button" disabled={!hatInhalt} onClick={uebernehmenZeichnen}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
+                  Übernehmen
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-slate-500 dark:text-slate-400">JPG oder PNG hochladen (z.B. eingescannte Unterschrift).</p>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleDatei} />
+            <div
+              onClick={() => fileRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl h-40 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              {uploadVorschau
+                ? <img src={uploadVorschau} alt="Vorschau" className="max-h-36 max-w-full object-contain rounded" />
+                : <><span className="text-3xl">📁</span><span className="text-sm text-slate-500 dark:text-slate-400">Klicken zum Auswählen</span></>
+              }
+            </div>
+            {uploadFehler && <p className="text-sm text-red-600 dark:text-red-400">{uploadFehler}</p>}
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={onAbbrechen}
+                className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                Abbrechen
+              </button>
+              <button type="button" disabled={!uploadVorschau} onClick={() => uploadVorschau && onSpeichern(uploadVorschau)}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
+                Übernehmen
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
