@@ -2535,7 +2535,7 @@ function RechnungForm({
                 {schnellmodus ? 'Positionen aufschlüsseln →' : '← Einfache Eingabe'}
               </button>
             )}
-            {(!schnellmodus || typ === 'ausgang') && !istKleinunternehmer && (
+            {(!schnellmodus || typ === 'ausgang') && !istKleinunternehmer && dokumentTyp !== 'Lieferschein' && (
               <button
                 type="button"
                 onClick={toggleEingabeModus}
@@ -2677,13 +2677,15 @@ function RechnungForm({
                 <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
                 <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">Menge</th>
                 <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium w-20">Einheit</th>
-                <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-24">
-                  {eingabeModus === 'netto' ? 'Netto (€)' : 'Brutto (€)'}
-                </th>
-                <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">USt %</th>
-                {typ === 'eingang' && (
-                  <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium w-28">Konto</th>
-                )}
+                {dokumentTyp !== 'Lieferschein' && <>
+                  <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-24">
+                    {eingabeModus === 'netto' ? 'Netto (€)' : 'Brutto (€)'}
+                  </th>
+                  <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">USt %</th>
+                  {typ === 'eingang' && (
+                    <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium w-28">Konto</th>
+                  )}
+                </>}
                 <th className="px-3 py-2 w-8"></th>
               </tr>
             </thead>
@@ -2711,53 +2713,55 @@ function RechnungForm({
                       onChange={(v) => updatePosition(i, 'einheit', v)}
                     />
                   </td>
-                  <td className="px-2 py-1.5">
-                    <input
-                      required
-                      type="text"
-                      value={pos.netto}
-                      onChange={(e) => updatePosition(i, 'netto', e.target.value)}
-                      className="w-full border-0 outline-none bg-transparent text-right text-slate-700 dark:text-slate-200"
-                      placeholder="0,00"
-                    />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    {pos.differenzbesteuerung ? (
-                      <div className="text-right text-xs font-medium text-amber-600 dark:text-amber-400 px-1">§25a</div>
-                    ) : (
-                      <select
-                        value={pos.ust_satz}
-                        onChange={(e) => updatePosition(i, 'ust_satz', e.target.value)}
-                        disabled={istKleinunternehmer}
-                        className="w-full border-0 outline-none bg-transparent text-right text-slate-700 dark:text-slate-200 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
-                      >
-                        {istKleinunternehmer ? (
-                          <option value="0">0 (§19)</option>
-                        ) : (
-                          aktiveSaetze.map((s) => {
-                            const val = String(parseFloat(s.satz))
-                            return (
-                              <option key={s.id} value={val}>{val} %</option>
-                            )
-                          })
-                        )}
-                      </select>
-                    )}
-                  </td>
-                  {typ === 'eingang' && (
+                  {dokumentTyp !== 'Lieferschein' && <>
                     <td className="px-2 py-1.5">
-                      <select
-                        value={pos.kategorie_id ?? ''}
-                        onChange={(e) => updatePosition(i, 'kategorie_id', e.target.value)}
-                        className="w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs"
-                      >
-                        <option value="">— Hauptkategorie —</option>
-                        {(kategorien ?? []).filter((k) => k.kontenart === 'Aufwand' || k.kontenart === 'Anlage').map((k) => (
-                          <option key={k.id} value={String(k.id)}>{k.name}</option>
-                        ))}
-                      </select>
+                      <input
+                        required
+                        type="text"
+                        value={pos.netto}
+                        onChange={(e) => updatePosition(i, 'netto', e.target.value)}
+                        className="w-full border-0 outline-none bg-transparent text-right text-slate-700 dark:text-slate-200"
+                        placeholder="0,00"
+                      />
                     </td>
-                  )}
+                    <td className="px-2 py-1.5">
+                      {pos.differenzbesteuerung ? (
+                        <div className="text-right text-xs font-medium text-amber-600 dark:text-amber-400 px-1">§25a</div>
+                      ) : (
+                        <select
+                          value={pos.ust_satz}
+                          onChange={(e) => updatePosition(i, 'ust_satz', e.target.value)}
+                          disabled={istKleinunternehmer}
+                          className="w-full border-0 outline-none bg-transparent text-right text-slate-700 dark:text-slate-200 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
+                        >
+                          {istKleinunternehmer ? (
+                            <option value="0">0 (§19)</option>
+                          ) : (
+                            aktiveSaetze.map((s) => {
+                              const val = String(parseFloat(s.satz))
+                              return (
+                                <option key={s.id} value={val}>{val} %</option>
+                              )
+                            })
+                          )}
+                        </select>
+                      )}
+                    </td>
+                    {typ === 'eingang' && (
+                      <td className="px-2 py-1.5">
+                        <select
+                          value={pos.kategorie_id ?? ''}
+                          onChange={(e) => updatePosition(i, 'kategorie_id', e.target.value)}
+                          className="w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs"
+                        >
+                          <option value="">— Hauptkategorie —</option>
+                          {(kategorien ?? []).filter((k) => k.kontenart === 'Aufwand' || k.kontenart === 'Anlage').map((k) => (
+                            <option key={k.id} value={String(k.id)}>{k.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
+                  </>}
                   <td className="px-2 py-1.5 text-center">
                     {positionen.length > 1 && (
                       <button
@@ -2772,6 +2776,7 @@ function RechnungForm({
                 </tr>
               ))}
             </tbody>
+            {dokumentTyp !== 'Lieferschein' && (
             <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
               <tr>
                 <td colSpan={typ === 'eingang' ? 5 : 4} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">
@@ -2790,6 +2795,7 @@ function RechnungForm({
                 <td colSpan={2} className="px-3 py-2 text-right font-bold text-slate-800 dark:text-slate-100">{formatEuro(anzeigeSummen.brutto)}</td>
               </tr>
             </tfoot>
+            )}
           </table>
         </div>
         )}
