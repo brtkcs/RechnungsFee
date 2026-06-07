@@ -6,7 +6,8 @@ import { z } from 'zod'
 import {
   getKunden, createKunde, updateKunde, deleteKunde,
   anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen,
-  type Kunde, type AnonymisierungResult, type Rechnung,
+  getLieferadressen, createLieferadresse, updateLieferadresse, deleteLieferadresse,
+  type Kunde, type AnonymisierungResult, type Rechnung, type KundeLieferadresse,
 } from '../../api/client'
 
 function formatEuro(val: string | number): string {
@@ -21,6 +22,119 @@ function formatDatum(iso: string): string {
 
 function kundeName(k: Kunde): string {
   return k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' ') || '—'
+}
+
+// ---------------------------------------------------------------------------
+// Lieferadressen-Sektion im Kundenformular
+// ---------------------------------------------------------------------------
+
+function KundeLieferadressen({ kundeId }: { kundeId: number }) {
+  const qc = useQueryClient()
+  const [editId, setEditId] = useState<number | 'neu' | null>(null)
+  const [form, setForm] = useState<Omit<KundeLieferadresse, 'id' | 'kunde_id'>>({
+    bezeichnung: '', z_hd: '', strasse: '', hausnummer: '', plz: '', ort: '', land: 'DE', ist_standard: false,
+  })
+
+  const { data: adressen = [] } = useQuery({
+    queryKey: ['lieferadressen', kundeId],
+    queryFn: () => getLieferadressen(kundeId),
+  })
+
+  const saveMut = useMutation({
+    mutationFn: () => editId === 'neu'
+      ? createLieferadresse(kundeId, form)
+      : updateLieferadresse(kundeId, editId as number, form),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lieferadressen', kundeId] }); setEditId(null) },
+  })
+
+  const delMut = useMutation({
+    mutationFn: (id: number) => deleteLieferadresse(kundeId, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['lieferadressen', kundeId] }),
+  })
+
+  function startEdit(la: KundeLieferadresse) {
+    setEditId(la.id!)
+    setForm({ bezeichnung: la.bezeichnung ?? '', z_hd: la.z_hd ?? '', strasse: la.strasse ?? '',
+      hausnummer: la.hausnummer ?? '', plz: la.plz ?? '', ort: la.ort ?? '', land: la.land, ist_standard: la.ist_standard })
+  }
+
+  const inp = 'w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100'
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Lieferadressen</span>
+        <button type="button" onClick={() => { setEditId('neu'); setForm({ bezeichnung: '', z_hd: '', strasse: '', hausnummer: '', plz: '', ort: '', land: 'DE', ist_standard: false }) }}
+          className="text-xs text-blue-600 hover:text-blue-700 font-medium">+ Hinzufügen</button>
+      </div>
+
+      {adressen.map(la => (
+        <div key={la.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm">
+          {editId === la.id ? (
+            <div className="space-y-2">
+              <input placeholder="Bezeichnung (z.B. Lager Nord)" value={form.bezeichnung ?? ''} onChange={e => setForm(f => ({ ...f, bezeichnung: e.target.value }))} className={inp} />
+              <input placeholder="z.Hd." value={form.z_hd ?? ''} onChange={e => setForm(f => ({ ...f, z_hd: e.target.value }))} className={inp} />
+              <div className="flex gap-2">
+                <input placeholder="Straße" value={form.strasse ?? ''} onChange={e => setForm(f => ({ ...f, strasse: e.target.value }))} className={`${inp} flex-1`} />
+                <input placeholder="Nr." value={form.hausnummer ?? ''} onChange={e => setForm(f => ({ ...f, hausnummer: e.target.value }))} className={`${inp} w-16`} />
+              </div>
+              <div className="flex gap-2">
+                <input placeholder="PLZ" value={form.plz ?? ''} onChange={e => setForm(f => ({ ...f, plz: e.target.value }))} className={`${inp} w-24`} />
+                <input placeholder="Ort" value={form.ort ?? ''} onChange={e => setForm(f => ({ ...f, ort: e.target.value }))} className={`${inp} flex-1`} />
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                <input type="checkbox" checked={form.ist_standard} onChange={e => setForm(f => ({ ...f, ist_standard: e.target.checked }))} />
+                Standard-Lieferadresse
+              </label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}
+                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50">Speichern</button>
+                <button type="button" onClick={() => setEditId(null)} className="px-3 py-1 border border-slate-300 dark:border-slate-600 text-xs rounded text-slate-600 dark:text-slate-300">Abbrechen</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                {la.ist_standard && <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded px-1 mr-1">Standard</span>}
+                <span className="font-medium text-slate-800 dark:text-slate-100">{la.bezeichnung || 'Lieferadresse'}</span>
+                {la.z_hd && <div className="text-slate-500 dark:text-slate-400 text-xs">z.Hd. {la.z_hd}</div>}
+                <div className="text-slate-600 dark:text-slate-300 text-xs">{[la.strasse, la.hausnummer].filter(Boolean).join(' ')}</div>
+                <div className="text-slate-600 dark:text-slate-300 text-xs">{[la.plz, la.ort].filter(Boolean).join(' ')}</div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button type="button" onClick={() => startEdit(la)} className="text-xs text-blue-600 hover:text-blue-700">Bearb.</button>
+                <button type="button" onClick={() => delMut.mutate(la.id!)} className="text-xs text-red-500 hover:text-red-600">Löschen</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {editId === 'neu' && (
+        <div className="border border-blue-300 dark:border-blue-700 rounded-lg p-3 space-y-2">
+          <input placeholder="Bezeichnung (z.B. Lager Nord)" value={form.bezeichnung ?? ''} onChange={e => setForm(f => ({ ...f, bezeichnung: e.target.value }))} className={inp} />
+          <input placeholder="z.Hd." value={form.z_hd ?? ''} onChange={e => setForm(f => ({ ...f, z_hd: e.target.value }))} className={inp} />
+          <div className="flex gap-2">
+            <input placeholder="Straße" value={form.strasse ?? ''} onChange={e => setForm(f => ({ ...f, strasse: e.target.value }))} className={`${inp} flex-1`} />
+            <input placeholder="Nr." value={form.hausnummer ?? ''} onChange={e => setForm(f => ({ ...f, hausnummer: e.target.value }))} className={`${inp} w-16`} />
+          </div>
+          <div className="flex gap-2">
+            <input placeholder="PLZ" value={form.plz ?? ''} onChange={e => setForm(f => ({ ...f, plz: e.target.value }))} className={`${inp} w-24`} />
+            <input placeholder="Ort" value={form.ort ?? ''} onChange={e => setForm(f => ({ ...f, ort: e.target.value }))} className={`${inp} flex-1`} />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+            <input type="checkbox" checked={form.ist_standard} onChange={e => setForm(f => ({ ...f, ist_standard: e.target.checked }))} />
+            Standard-Lieferadresse
+          </label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => saveMut.mutate()} disabled={saveMut.isPending}
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50">Speichern</button>
+            <button type="button" onClick={() => setEditId(null)} className="px-3 py-1 border border-slate-300 dark:border-slate-600 text-xs rounded text-slate-600 dark:text-slate-300">Abbrechen</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -517,6 +631,13 @@ export function KundenPage() {
               </div>
 
               {mutationError && <p className="text-red-600 text-sm">{(mutationError as Error).message}</p>}
+
+              {/* Lieferadressen – nur bei bestehendem Kunden */}
+              {editKunde?.id && (
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
+                  <KundeLieferadressen kundeId={editKunde.id} />
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeForm} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Abbrechen</button>

@@ -293,6 +293,28 @@ class Kunde(Base):
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     rechnungen: Mapped[list["Rechnung"]] = relationship(back_populates="kunde")
+    lieferadressen: Mapped[list["KundeLieferadresse"]] = relationship(
+        back_populates="kunde", cascade="all, delete-orphan", order_by="KundeLieferadresse.id"
+    )
+
+
+class KundeLieferadresse(Base):
+    """Separate Lieferadressen eines Kunden (abweichend von Rechnungsadresse)."""
+    __tablename__ = "kunden_lieferadressen"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kunde_id: Mapped[int] = mapped_column(ForeignKey("kunden.id"), nullable=False)
+    bezeichnung: Mapped[str | None] = mapped_column(String(100))   # z.B. „Lager Nord", „Filiale Berlin"
+    z_hd: Mapped[str | None] = mapped_column(String(200))
+    strasse: Mapped[str | None] = mapped_column(String(200))
+    hausnummer: Mapped[str | None] = mapped_column(String(20))
+    plz: Mapped[str | None] = mapped_column(String(10))
+    ort: Mapped[str | None] = mapped_column(String(100))
+    land: Mapped[str] = mapped_column(String(2), default="DE", nullable=False)
+    ist_standard: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    kunde: Mapped["Kunde"] = relationship(back_populates="lieferadressen")
 
 
 class Lieferant(Base):

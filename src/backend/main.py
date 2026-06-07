@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer
 
-SCHEMA_VERSION = 50
+SCHEMA_VERSION = 51
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1138,6 +1138,27 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 50"))
             conn.commit()
             print("[Migration] Schema auf Version 50 (rechnungspositionen.ust_satz_25a: nominaler USt-Satz für §25a-Margensteuer)")
+
+        if version < 51:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS kunden_lieferadressen (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    kunde_id INTEGER NOT NULL REFERENCES kunden(id) ON DELETE CASCADE,
+                    bezeichnung VARCHAR(100),
+                    z_hd VARCHAR(200),
+                    strasse VARCHAR(200),
+                    hausnummer VARCHAR(20),
+                    plz VARCHAR(10),
+                    ort VARCHAR(100),
+                    land VARCHAR(2) NOT NULL DEFAULT 'DE',
+                    ist_standard BOOLEAN NOT NULL DEFAULT 0,
+                    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_kunden_lieferadressen_kunde_id ON kunden_lieferadressen(kunde_id)"))
+            conn.execute(text("PRAGMA user_version = 51"))
+            conn.commit()
+            print("[Migration] Schema auf Version 51 (kunden_lieferadressen: separate Lieferadressen pro Kunde)")
 
 
 def _migrate_kategorien() -> None:

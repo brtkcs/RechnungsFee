@@ -5,13 +5,15 @@ API-Endpunkte für Kundenverwaltung.
 import json as _json
 from datetime import date as _date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import BaseModel
+from typing import Optional
 from fastapi.responses import Response as _Response, StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Kunde, Journaleintrag, Rechnung, Nummernkreis
+from database.models import Kunde, KundeLieferadresse, Journaleintrag, Rechnung, Nummernkreis
 from .journal import _belegnr_aus_format
 from .schemas import KundeCreate, KundeUpdate, KundeResponse
 from utils.pdf_dsgvo import generate_dsgvo_pdf
@@ -249,6 +251,83 @@ def anonymisiere_kunde(kunde_id: int, db: Session = Depends(get_db)):
         r.kunde_id = None
 
     db.delete(kunde)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Lieferadressen
+# ---------------------------------------------------------------------------
+
+class LieferadresseCreate(BaseModel):
+    bezeichnung: Optional[str] = None
+    z_hd: Optional[str] = None
+    strasse: Optional[str] = None
+    hausnummer: Optional[str] = None
+    plz: Optional[str] = None
+    ort: Optional[str] = None
+    land: str = "DE"
+    ist_standard: bool = False
+
+class LieferadresseResponse(BaseModel):
+    id: int
+    kunde_id: int
+    bezeichnung: Optional[str] = None
+    z_hd: Optional[str] = None
+    strasse: Optional[str] = None
+    hausnummer: Optional[str] = None
+    plz: Optional[str] = None
+    ort: Optional[str] = None
+    land: str
+    ist_standard: bool
+    model_config = {"from_attributes": True}
+
+
+@router.get("/{kunde_id}/lieferadressen", response_model=list[LieferadresseResponse])
+def list_lieferadressen(kunde_id: int, db: Session = Depends(get_db)):
+    if not db.query(Kunde).filter(Kunde.id == kunde_id).first():
+        raise HTTPException(404, "Kunde nicht gefunden.")
+    return db.query(KundeLieferadresse).filter(KundeLieferadresse.kunde_id == kunde_id).all()
+
+
+@router.post("/{kunde_id}/lieferadressen", response_model=LieferadresseResponse, status_code=201)
+def create_lieferadresse(kunde_id: int, data: LieferadresseCreate, db: Session = Depends(get_db)):
+    if not db.query(Kunde).filter(Kunde.id == kunde_id).first():
+        raise HTTPException(404, "Kunde nicht gefunden.")
+    if data.ist_standard:
+        db.query(KundeLieferadresse).filter(KundeLieferadresse.kunde_id == kunde_id).update({"ist_standard": False})
+    la = KundeLieferadresse(kunde_id=kunde_id, **data.model_dump())
+    db.add(la)
+    db.commit()
+    db.refresh(la)
+    return la
+
+
+@router.put("/{kunde_id}/lieferadressen/{la_id}", response_model=LieferadresseResponse)
+def update_lieferadresse(kunde_id: int, la_id: int, data: LieferadresseCreate, db: Session = Depends(get_db)):
+    la = db.query(KundeLieferadresse).filter(
+        KundeLieferadresse.id == la_id, KundeLieferadresse.kunde_id == kunde_id
+    ).first()
+    if not la:
+        raise HTTPException(404, "Lieferadresse nicht gefunden.")
+    if data.ist_standard:
+        db.query(KundeLieferadresse).filter(
+            KundeLieferadresse.kunde_id == kunde_id, KundeLieferadresse.id != la_id
+        ).update({"ist_standard": False})
+    for k, v in data.model_dump().items():
+        setattr(la, k, v)
+    db.commit()
+    db.refresh(la)
+    return la
+
+
+@router.delete("/{kunde_id}/lieferadressen/{la_id}", status_code=204)
+def delete_lieferadresse(kunde_id: int, la_id: int, db: Session = Depends(get_db)):
+    la = db.query(KundeLieferadresse).filter(
+        KundeLieferadresse.id == la_id, KundeLieferadresse.kunde_id == kunde_id
+    ).first()
+    if not la:
+        raise HTTPException(404, "Lieferadresse nicht gefunden.")
+    db.delete(la)
     db.commit()
 
     return {

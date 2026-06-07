@@ -498,6 +498,28 @@ export type AnonymisierungResult = {
 }
 export const anonymisiereKunde = (id: number) =>
   request<AnonymisierungResult>(`/kunden/${id}/anonymisieren`, { method: 'POST' })
+
+export type KundeLieferadresse = {
+  id?: number
+  kunde_id?: number
+  bezeichnung?: string
+  z_hd?: string
+  strasse?: string
+  hausnummer?: string
+  plz?: string
+  ort?: string
+  land: string
+  ist_standard: boolean
+}
+export const getLieferadressen = (kundeId: number) =>
+  request<KundeLieferadresse[]>(`/kunden/${kundeId}/lieferadressen`)
+export const createLieferadresse = (kundeId: number, data: Omit<KundeLieferadresse, 'id' | 'kunde_id'>) =>
+  request<KundeLieferadresse>(`/kunden/${kundeId}/lieferadressen`, { method: 'POST', body: JSON.stringify(data) })
+export const updateLieferadresse = (kundeId: number, laId: number, data: Omit<KundeLieferadresse, 'id' | 'kunde_id'>) =>
+  request<KundeLieferadresse>(`/kunden/${kundeId}/lieferadressen/${laId}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteLieferadresse = (kundeId: number, laId: number) =>
+  request<void>(`/kunden/${kundeId}/lieferadressen/${laId}`, { method: 'DELETE' })
+
 export async function dsgvoExportKunde(id: number) {
   const base = await getBaseUrl()
   await openUrl(`${base}/kunden/${id}/dsgvo-export`)
