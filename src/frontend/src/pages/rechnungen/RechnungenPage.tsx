@@ -1278,10 +1278,12 @@ function RechnungDetail({
                 : (rechnung.lieferant_name ?? rechnung.partner_freitext ?? '—')}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500 dark:text-slate-400">Rechnungsdatum</span>
-            <span className="dark:text-slate-200">{formatDatum(rechnung.datum)}</span>
-          </div>
+          {rechnung.dokument_typ !== 'Lieferschein' && (
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Rechnungsdatum</span>
+              <span className="dark:text-slate-200">{formatDatum(rechnung.datum)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-slate-500 dark:text-slate-400">
               {rechnung.leistung_bis ? 'Leistungszeitraum' : 'Leistungsdatum'}
