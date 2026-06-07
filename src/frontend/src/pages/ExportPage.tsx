@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { downloadGobdExport, getUnternehmen } from '../api/client'
+import { downloadGobdExport, getUnternehmen, pruefZM } from '../api/client'
 
 const AKTUELLES_JAHR = new Date().getFullYear()
 const JAHRE = Array.from({ length: 5 }, (_, i) => AKTUELLES_JAHR - i)
@@ -17,6 +17,13 @@ export function ExportPage() {
     queryKey: ['unternehmen'],
     queryFn: getUnternehmen,
     staleTime: 1000 * 60 * 10,
+  })
+
+  const { data: zmPruefung } = useQuery({
+    queryKey: ['zm-pruefen'],
+    queryFn: pruefZM,
+    staleTime: 1000 * 60 * 60,
+    enabled: !unternehmen?.ist_kleinunternehmer,
   })
 
   async function handleExport() {
@@ -86,8 +93,8 @@ export function ExportPage() {
         </button>
       )}
 
-      {/* ZM – nur für Regelbesteuerte */}
-      {!unternehmen?.ist_kleinunternehmer && (
+      {/* ZM – nur wenn fällig */}
+      {zmPruefung?.faellig && (
         <button
           onClick={() => navigate('/zm')}
           className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
