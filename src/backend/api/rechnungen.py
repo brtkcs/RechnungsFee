@@ -1891,6 +1891,58 @@ def lieferschein_aus_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
+# Angebot → Lieferschein
+# ---------------------------------------------------------------------------
+
+@router.post("/{angebot_id}/lieferschein-aus-angebot", response_model=RechnungResponse, status_code=201)
+def lieferschein_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
+    """Erstellt einen Lieferschein aus einem Angebot (Positionen ohne Preise übernommen)."""
+    angebot = db.query(Rechnung).filter(
+        Rechnung.id == angebot_id, Rechnung.dokument_typ == "Angebot"
+    ).first()
+    if not angebot:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden.")
+
+    ls_nr = _naechste_lieferscheinnummer(date.today(), db)
+    ls = Rechnung(
+        typ="ausgang",
+        rechnungsnummer=ls_nr,
+        datum=date.today(),
+        kunde_id=angebot.kunde_id,
+        partner_freitext=angebot.partner_freitext,
+        notizen=f"Zu Angebot {angebot.rechnungsnummer}" if angebot.rechnungsnummer else None,
+        dokument_typ="Lieferschein",
+        ist_entwurf=False,
+        bezahlt=False,
+        bezahlt_betrag=Decimal("0.00"),
+        zahlungsstatus="offen",
+        netto_gesamt=Decimal("0.00"),
+        ust_gesamt=Decimal("0.00"),
+        brutto_gesamt=Decimal("0.00"),
+    )
+    db.add(ls)
+    db.flush()
+
+    for nr, pos in enumerate(angebot.positionen, start=1):
+        db.add(Rechnungsposition(
+            rechnung_id=ls.id,
+            artikel_id=pos.artikel_id,
+            position_nr=nr,
+            beschreibung=pos.beschreibung,
+            menge=pos.menge,
+            einheit=pos.einheit,
+            netto=Decimal("0.00"),
+            ust_satz=Decimal("0.00"),
+            ust_betrag=Decimal("0.00"),
+            brutto=Decimal("0.00"),
+        ))
+
+    db.commit()
+    db.refresh(ls)
+    return RechnungResponse.from_orm_extended(ls)
+
+
+# ---------------------------------------------------------------------------
 # Angebot → Rechnung
 # ---------------------------------------------------------------------------
 

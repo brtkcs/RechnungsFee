@@ -935,6 +935,9 @@ export const getAngebote = () =>
 export const rechnungAusAngebot = (angebotId: number) =>
   request<Rechnung>(`/rechnungen/${angebotId}/rechnung-aus-angebot`, { method: 'POST' })
 
+export const lieferscheinAusAngebot = (angebotId: number) =>
+  request<Rechnung>(`/rechnungen/${angebotId}/lieferschein-aus-angebot`, { method: 'POST' })
+
 export const angebotStatusSetzen = (angebotId: number, status: string) =>
   request<Rechnung>(`/rechnungen/${angebotId}/angebot-status`, {
     method: 'PATCH',

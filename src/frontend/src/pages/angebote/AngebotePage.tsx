@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   getAngebote, getKunden, getUstSaetze, getDokumentenPakete, getUnternehmen,
   createRechnung, updateRechnung, deleteRechnung,
-  rechnungAusAngebot, angebotStatusSetzen,
+  rechnungAusAngebot, lieferscheinAusAngebot, angebotStatusSetzen,
   getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow,
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
@@ -397,6 +397,7 @@ function AngebotDetail({
   const navigate = useNavigate()
   const [statusLaedt, setStatusLaedt] = useState(false)
   const [konvLaedt, setKonvLaedt] = useState(false)
+  const [lsLaedt, setLsLaedt] = useState(false)
   const [pdfLaedt, setPdfLaedt] = useState(false)
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
   const [mailAdresse, setMailAdresse] = useState('')
@@ -492,6 +493,17 @@ function AngebotDetail({
     finally { setKonvLaedt(false) }
   }
 
+  async function handleLieferscheinErstellen() {
+    if (!confirm('Lieferschein aus diesem Angebot erstellen?')) return
+    setLsLaedt(true)
+    try {
+      const ls = await lieferscheinAusAngebot(angebot.id)
+      qc.invalidateQueries({ queryKey: ['angebote'] })
+      navigate(`/lieferscheine?id=${ls.id}`)
+    } catch (e: any) { setFehler(e?.message) }
+    finally { setLsLaedt(false) }
+  }
+
   const brutto = parseFloat(angebot.brutto_gesamt as any) || 0
 
   const btnBase = 'flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors'
@@ -529,13 +541,20 @@ function AngebotDetail({
           </button>
           {!angebot.rechnung_zu_angebot_id ? (
             <button onClick={handleRechnungErstellen} disabled={konvLaedt} className={btnGreen}>
-              {konvLaedt ? '⏳ Erstelle…' : '→ In Rechnung umwandeln'}
+              {konvLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
             </button>
           ) : (
             <button onClick={() => navigate(`/rechnungen?id=${angebot.rechnung_zu_angebot_id}`)} className={btnGreen}>
               → {angebot.rechnung_zu_angebot_nr ?? `RE #${angebot.rechnung_zu_angebot_id}`}
             </button>
           )}
+          <button onClick={handleLieferscheinErstellen} disabled={lsLaedt} className={btnGreen}>
+            {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
+          </button>
+          <button disabled title="Aufträge – kommt in Stufe 3"
+            className={`${btnBase} border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 cursor-not-allowed`}>
+            → Auftrag <span className="text-[10px] ml-1 opacity-60">bald</span>
+          </button>
           <button onClick={onDelete} className={btnRed}>
             🗑 Löschen
           </button>
