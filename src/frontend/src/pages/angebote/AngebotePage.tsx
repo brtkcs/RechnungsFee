@@ -548,9 +548,11 @@ function AngebotDetail({
               → {angebot.rechnung_zu_angebot_nr ?? `RE #${angebot.rechnung_zu_angebot_id}`}
             </button>
           )}
-          <button onClick={handleLieferscheinErstellen} disabled={lsLaedt} className={btnGreen}>
-            {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
-          </button>
+          {unternehmen?.lieferschein_aktiv && (
+            <button onClick={handleLieferscheinErstellen} disabled={lsLaedt} className={btnGreen}>
+              {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
+            </button>
+          )}
           <button disabled title="Aufträge – kommt in Stufe 3"
             className={`${btnBase} border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 cursor-not-allowed`}>
             → Auftrag <span className="text-[10px] ml-1 opacity-60">bald</span>
