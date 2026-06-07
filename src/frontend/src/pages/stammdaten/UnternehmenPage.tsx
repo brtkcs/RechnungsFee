@@ -748,7 +748,7 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
     const dpr = window.devicePixelRatio || 1
     const size = canvas.offsetWidth
     canvas.width = size * dpr
-    canvas.height = Math.round(size * 0.4 * dpr)
+    canvas.height = Math.round(size * 0.55 * dpr)
     const ctx = canvas.getContext('2d')!
     ctx.scale(dpr, dpr)
     ctx.lineWidth = 3
@@ -850,7 +850,7 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
             <p className="text-sm text-slate-500 dark:text-slate-400">Unterschrift im Feld unten einzeichnen (Maus oder Touchscreen).</p>
             <canvas
               ref={canvasRef}
-              style={{ height: '160px' }}
+              style={{ height: '220px' }}
               className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white cursor-crosshair touch-none"
               onMouseDown={startZeichnen}
               onMouseMove={weiterZeichnen}
