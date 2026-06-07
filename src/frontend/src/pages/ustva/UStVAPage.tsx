@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   berechneUStVA, speichereUStVA, getUStVAHistorie, getUStVAPdfUrl,
@@ -105,14 +105,11 @@ export function UStVAPage() {
   const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
   const { data: historie } = useQuery({ queryKey: ['ustva-historie'], queryFn: getUStVAHistorie })
 
-  const { data: ergebnis, isLoading, error, refetch } = useQuery({
+  const { data: ergebnis, isLoading, error } = useQuery({
     queryKey: ['ustva-berechnen', zeitraum],
     queryFn: () => berechneUStVA(zeitraum),
-    enabled: false,
+    enabled: !unt?.ist_kleinunternehmer,
   })
-
-  // Beim ersten Laden automatisch berechnen
-  useEffect(() => { refetch() }, [])
 
   const speichernMut = useMutation({
     mutationFn: speichereUStVA,
@@ -229,10 +226,9 @@ export function UStVAPage() {
               </select>
             </div>
           )}
-          <button onClick={() => { setManuell({}); refetch() }} disabled={isLoading}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            {isLoading ? 'Berechne…' : ergebnis ? 'Neu berechnen' : 'Berechnen'}
-          </button>
+          {isLoading && (
+            <span className="px-4 py-1.5 text-sm text-slate-500 dark:text-slate-400">Berechne…</span>
+          )}
         </div>
         {rhythmus !== modus && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
