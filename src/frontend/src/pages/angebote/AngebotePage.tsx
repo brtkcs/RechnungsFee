@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   getAngebote, getKunden, getUstSaetze, getDokumentenPakete,
   createRechnung, updateRechnung, deleteRechnung,
@@ -178,10 +178,12 @@ function PositionenTabelle({
 
 function AngebotFormular({
   initial,
+  vorKundeId,
   onSpeichern,
   onAbbrechen,
 }: {
   initial?: Rechnung
+  vorKundeId?: string
   onSpeichern: (id: number) => void
   onAbbrechen: () => void
 }) {
@@ -193,7 +195,7 @@ function AngebotFormular({
   const { data: ustSaetze } = useQuery({ queryKey: ['ust-saetze'], queryFn: getUstSaetze })
   const { data: pakete } = useQuery({ queryKey: ['dokumentenpakete'], queryFn: getDokumentenPakete })
 
-  const [kundeId, setKundeId] = useState(initial?.kunde_id?.toString() ?? '')
+  const [kundeId, setKundeId] = useState(initial?.kunde_id?.toString() ?? vorKundeId ?? '')
   const [datum, setDatum] = useState(initial?.datum ?? heuteIso())
   const [gueltigBis, setGueltigBis] = useState(initial?.gueltig_bis ?? inXTagen(30))
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
@@ -548,8 +550,21 @@ function AngebotDetail({
 
 export function AngebotePage() {
   const qc = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [formModus, setFormModus] = useState<'neu' | 'bearbeiten' | null>(null)
+  const [vorKundeId, setVorKundeId] = useState<string | null>(null)
+
+  // ?kunde_id=X aus KundenPage → Formular direkt öffnen
+  useEffect(() => {
+    const kid = searchParams.get('kunde_id')
+    if (kid) {
+      setVorKundeId(kid)
+      setFormModus('neu')
+      setSearchParams({}, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { data: angebote, isLoading } = useQuery({
     queryKey: ['angebote'],
@@ -589,8 +604,9 @@ export function AngebotePage() {
           <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-y-auto max-h-[60vh]">
             <AngebotFormular
               initial={formModus === 'bearbeiten' && selected ? selected : undefined}
-              onSpeichern={(id) => { setFormModus(null); setSelectedId(id) }}
-              onAbbrechen={() => setFormModus(null)}
+              vorKundeId={formModus === 'neu' ? (vorKundeId ?? undefined) : undefined}
+              onSpeichern={(id) => { setFormModus(null); setSelectedId(id); setVorKundeId(null) }}
+              onAbbrechen={() => { setFormModus(null); setVorKundeId(null) }}
             />
           </div>
         )}

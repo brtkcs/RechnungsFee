@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useNavigate } from 'react-router-dom'
 import {
   getKunden, createKunde, updateKunde, deleteKunde,
-  anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen,
+  anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen, getAngebote, getUnternehmen,
   getLieferadressen, createLieferadresse, updateLieferadresse, deleteLieferadresse,
   type Kunde, type AnonymisierungResult, type Rechnung, type KundeLieferadresse,
 } from '../../api/client'
@@ -142,27 +143,70 @@ function KundeLieferadressen({ kundeId }: { kundeId: number }) {
 // ---------------------------------------------------------------------------
 
 function KundeRechnungen({ kunde }: { kunde: Kunde }) {
+  const navigate = useNavigate()
   const [offeneRechnung, setOffeneRechnung] = useState<number | null>(null)
+  const [tab, setTab] = useState<'rechnungen' | 'angebote'>('rechnungen')
 
-  const { data: rechnungen, isLoading } = useQuery({
+  const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
+  const angeboteAktiv = !!unternehmen?.angebote_aktiv
+
+  const { data: rechnungen, isLoading: laegtRechnungen } = useQuery({
     queryKey: ['kunden-rechnungen', kunde.id],
     queryFn: () => getRechnungen({ typ: 'ausgang', kunde_id: kunde.id }),
     staleTime: 1000 * 60,
   })
 
+  const { data: angebote, isLoading: laegtAngebote } = useQuery({
+    queryKey: ['kunden-angebote', kunde.id],
+    queryFn: () => getAngebote(),
+    select: (data: Rechnung[]) => data.filter(a => a.kunde_id === kunde.id),
+    enabled: angeboteAktiv,
+    staleTime: 1000 * 60,
+  })
+
+  const isLoading = tab === 'rechnungen' ? laegtRechnungen : laegtAngebote
+  const liste = tab === 'rechnungen' ? (rechnungen ?? []) : (angebote ?? [])
+
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-          Rechnungen ({rechnungen?.length ?? '…'})
-        </p>
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 shrink-0 space-y-2">
+        {/* Tabs */}
+        <div className="flex gap-1">
+          <button onClick={() => setTab('rechnungen')}
+            className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'rechnungen' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+            Rechnungen ({rechnungen?.length ?? '…'})
+          </button>
+          {angeboteAktiv && (
+            <button onClick={() => setTab('angebote')}
+              className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'angebote' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+              Angebote ({angebote?.length ?? '…'})
+            </button>
+          )}
+        </div>
+        {/* Aktions-Buttons */}
+        <div className="flex gap-1">
+          <button
+            onClick={() => navigate(`/rechnungen?neue_aus_kunde=${kunde.id}`)}
+            className="flex-1 text-[11px] py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+            + Neue Rechnung
+          </button>
+          {angeboteAktiv && (
+            <button
+              onClick={() => navigate(`/angebote?kunde_id=${kunde.id}`)}
+              className="flex-1 text-[11px] py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+              + Neues Angebot
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5">
         {isLoading && <p className="text-xs text-slate-400 dark:text-slate-500 p-1">Lade…</p>}
-        {!isLoading && !rechnungen?.length && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 p-1">Noch keine Ausgangsrechnungen.</p>
+        {!isLoading && !liste.length && (
+          <p className="text-xs text-slate-400 dark:text-slate-500 p-1">
+            {tab === 'rechnungen' ? 'Noch keine Ausgangsrechnungen.' : 'Noch keine Angebote.'}
+          </p>
         )}
-        {rechnungen?.map((r: Rechnung) => (
+        {liste.map((r: Rechnung) => (
           <div key={r.id} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
             <button
               type="button"
@@ -177,13 +221,24 @@ function KundeRechnungen({ kunde }: { kunde: Kunde }) {
                 <div className="text-slate-400 dark:text-slate-500">{formatDatum(r.datum)}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <span className={`px-1.5 py-0.5 rounded-full border text-[10px] ${
-                  r.zahlungsstatus === 'bezahlt' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
-                  : r.zahlungsstatus === 'teilweise' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
-                  : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
-                }`}>
-                  {r.zahlungsstatus === 'bezahlt' ? 'Bezahlt' : r.zahlungsstatus === 'teilweise' ? 'Teil' : 'Offen'}
-                </span>
+                {tab === 'angebote' ? (
+                  <span className={`px-1.5 py-0.5 rounded-full border text-[10px] ${
+                    r.angebot_status === 'akzeptiert' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
+                    : r.angebot_status === 'abgelehnt' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                    : r.angebot_status === 'abgelaufen' ? 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+                    : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800'
+                  }`}>
+                    {r.angebot_status === 'akzeptiert' ? 'Akzeptiert' : r.angebot_status === 'abgelehnt' ? 'Abgelehnt' : r.angebot_status === 'abgelaufen' ? 'Abgelaufen' : 'Offen'}
+                  </span>
+                ) : (
+                  <span className={`px-1.5 py-0.5 rounded-full border text-[10px] ${
+                    r.zahlungsstatus === 'bezahlt' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800'
+                    : r.zahlungsstatus === 'teilweise' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                    : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800'
+                  }`}>
+                    {r.zahlungsstatus === 'bezahlt' ? 'Bezahlt' : r.zahlungsstatus === 'teilweise' ? 'Teil' : 'Offen'}
+                  </span>
+                )}
                 <span className="text-slate-400 dark:text-slate-500">{offeneRechnung === r.id ? '▲' : '▼'}</span>
               </div>
             </button>
