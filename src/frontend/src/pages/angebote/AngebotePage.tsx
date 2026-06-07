@@ -426,25 +426,77 @@ function AngebotDetail({
 
   const brutto = parseFloat(angebot.brutto_gesamt as any) || 0
 
+  const btnBase = 'flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors'
+  const btnNeutral = `${btnBase} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300`
+  const btnGreen   = `${btnBase} border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-950 text-green-700 dark:text-green-400 font-medium`
+  const btnRed     = `${btnBase} border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400`
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-2 shrink-0">
+      {/* Header – wie RechnungenPage */}
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
         <div>
-          <p className="font-mono text-xs text-slate-400 dark:text-slate-500">{angebot.rechnungsnummer}</p>
-          <p className="font-semibold text-slate-800 dark:text-slate-100 mt-0.5">
-            {angebot.kunde_name ?? angebot.partner_freitext ?? '—'}
-          </p>
-          <div className="mt-1">
-            <StatusBadge status={angebot.angebot_status} />
-          </div>
+          <p className="font-semibold text-slate-800 dark:text-slate-100">{angebot.rechnungsnummer ?? '(keine Nummer)'}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">Angebot</p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl leading-none p-1">×</button>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
       </div>
 
       {/* Inhalt */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+      <div className="p-5 space-y-5 flex-1 overflow-y-auto">
+
+        {/* Aktionsleiste – direkt oben wie bei Rechnungen */}
+        <div className="flex flex-wrap gap-2">
+          <button onClick={handlePdf} className={btnNeutral}>
+            📄 PDF öffnen
+          </button>
+          <button onClick={onEdit} className={btnNeutral}>
+            ✏️ Bearbeiten
+          </button>
+          {!angebot.rechnung_zu_angebot_id ? (
+            <button onClick={handleRechnungErstellen} disabled={konvLaedt} className={btnGreen}>
+              {konvLaedt ? '⏳ Erstelle…' : '→ In Rechnung umwandeln'}
+            </button>
+          ) : (
+            <button onClick={() => navigate(`/rechnungen?id=${angebot.rechnung_zu_angebot_id}`)} className={btnGreen}>
+              → {angebot.rechnung_zu_angebot_nr ?? `RE #${angebot.rechnung_zu_angebot_id}`}
+            </button>
+          )}
+          <button onClick={onDelete} className={btnRed}>
+            🗑 Löschen
+          </button>
+        </div>
+
+        {/* Status-Umschalter */}
+        {!angebot.rechnung_zu_angebot_id && (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">Status</p>
+            <div className="flex gap-1 flex-wrap">
+              {(['offen', 'akzeptiert', 'abgelehnt', 'abgelaufen'] as const).map(s => (
+                <button key={s} disabled={angebot.angebot_status === s || statusLaedt}
+                  onClick={() => handleStatusChange(s)}
+                  className={`px-2.5 py-1 text-xs rounded-lg border transition-colors disabled:opacity-50 ${
+                    angebot.angebot_status === s
+                      ? `${STATUS_LABEL[s].cls} font-medium`
+                      : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}>
+                  {STATUS_LABEL[s].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Metadaten */}
         <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Kunde</p>
+            <p className="font-medium text-slate-700 dark:text-slate-200">{angebot.kunde_name ?? angebot.partner_freitext ?? '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Betrag (Brutto)</p>
+            <p className="font-bold text-slate-800 dark:text-slate-100">{brutto.toFixed(2).replace('.', ',')} €</p>
+          </div>
           <div>
             <p className="text-xs text-slate-400 dark:text-slate-500">Datum</p>
             <p className="text-slate-700 dark:text-slate-200">{formatDatum(angebot.datum)}</p>
@@ -455,10 +507,6 @@ function AngebotDetail({
               {formatDatum(angebot.gueltig_bis)}
             </p>
           </div>
-          <div className="col-span-2">
-            <p className="text-xs text-slate-400 dark:text-slate-500">Betrag</p>
-            <p className="text-lg font-bold text-slate-800 dark:text-slate-100">{brutto.toFixed(2).replace('.', ',')} €</p>
-          </div>
         </div>
 
         {/* Positionen */}
@@ -466,7 +514,7 @@ function AngebotDetail({
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Positionen</p>
           <div className="space-y-1">
             {angebot.positionen?.map((pos, i) => (
-              <div key={i} className="flex justify-between text-sm">
+              <div key={i} className="flex justify-between text-sm border-b border-slate-50 dark:border-slate-700 last:border-0 py-1">
                 <span className="text-slate-700 dark:text-slate-200 truncate flex-1 mr-2">
                   {pos.menge}× {pos.beschreibung}
                 </span>
@@ -485,67 +533,7 @@ function AngebotDetail({
           </div>
         )}
 
-        {/* Verknüpfte Rechnung */}
-        {angebot.rechnung_zu_angebot_id && (
-          <div className="rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 px-3 py-2 text-sm">
-            <span className="text-green-700 dark:text-green-300 font-medium">Rechnung erstellt: </span>
-            <button
-              onClick={() => navigate(`/rechnungen?id=${angebot.rechnung_zu_angebot_id}`)}
-              className="text-green-700 dark:text-green-300 underline"
-            >
-              {angebot.rechnung_zu_angebot_nr ?? `#${angebot.rechnung_zu_angebot_id}`}
-            </button>
-          </div>
-        )}
-
         {fehler && <p className="text-sm text-red-600">{fehler}</p>}
-      </div>
-
-      {/* Aktionen */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2 shrink-0">
-        <button onClick={handlePdf}
-          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-left">
-          PDF anzeigen
-        </button>
-
-        {/* Status ändern */}
-        {!angebot.rechnung_zu_angebot_id && (
-          <div className="flex gap-1 flex-wrap">
-            {(['offen', 'akzeptiert', 'abgelehnt', 'abgelaufen'] as const).map(s => (
-              <button key={s} disabled={angebot.angebot_status === s || statusLaedt}
-                onClick={() => handleStatusChange(s)}
-                className={`flex-1 px-2 py-1.5 text-xs rounded border transition-colors disabled:opacity-40 ${
-                  angebot.angebot_status === s
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                }`}>
-                {STATUS_LABEL[s].label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* In Rechnung umwandeln */}
-        <button
-          onClick={handleRechnungErstellen}
-          disabled={!!angebot.rechnung_zu_angebot_id || konvLaedt}
-          className="w-full px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed font-medium"
-        >
-          {konvLaedt ? 'Erstelle Rechnung…' : angebot.rechnung_zu_angebot_id ? 'Rechnung bereits erstellt' : '→ In Rechnung umwandeln'}
-        </button>
-
-        <div className="flex gap-2">
-          <button onClick={onEdit}
-            disabled={!!angebot.rechnung_zu_angebot_id}
-            className="flex-1 px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-40">
-            Bearbeiten
-          </button>
-          <button onClick={onDelete}
-            disabled={!!angebot.rechnung_zu_angebot_id}
-            className="flex-1 px-3 py-1.5 text-xs border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400 disabled:opacity-40">
-            Löschen
-          </button>
-        </div>
       </div>
     </div>
   )
