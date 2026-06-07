@@ -1337,7 +1337,10 @@ function RechnungDetail({
                 <thead className="bg-slate-50 dark:bg-slate-900">
                   <tr>
                     <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
-                    {rechnung.dokument_typ !== 'Lieferschein' && <>
+                    {rechnung.dokument_typ === 'Lieferschein' ? <>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Menge</th>
+                      <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Einheit</th>
+                    </> : <>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Netto</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Brutto</th>
@@ -1347,13 +1350,11 @@ function RechnungDetail({
                 <tbody>
                   {rechnung.positionen.map((pos) => (
                     <tr key={pos.id} className="border-t border-slate-100 dark:border-slate-700">
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
-                        {pos.beschreibung}
-                        {parseFloat(pos.menge) !== 1 && (
-                          <span className="text-slate-400 dark:text-slate-500"> × {formatMenge(pos.menge)} {pos.einheit}</span>
-                        )}
-                      </td>
-                      {rechnung.dokument_typ !== 'Lieferschein' && <>
+                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{pos.beschreibung}</td>
+                      {rechnung.dokument_typ === 'Lieferschein' ? <>
+                        <td className="px-3 py-2 text-right dark:text-slate-200">{formatMenge(pos.menge)}</td>
+                        <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{pos.einheit}</td>
+                      </> : <>
                         <td className="px-3 py-2 text-right dark:text-slate-200">{formatEuro(pos.netto)}</td>
                         <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500">
                           {pos.differenzbesteuerung
