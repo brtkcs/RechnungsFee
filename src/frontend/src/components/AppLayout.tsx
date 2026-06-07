@@ -9,11 +9,11 @@ import { useUpdateCheck } from '../hooks/useUpdateCheck'
 // Navigationsstruktur
 // ---------------------------------------------------------------------------
 
-const fakturierungAktiv = [
-  { to: '/angebote',      label: 'Angebote',      icon: '📝', bald: true },
-  { to: '/auftraege',     label: 'Aufträge',       icon: '📋', bald: true },
-  { to: '/lieferscheine', label: 'Lieferscheine',  icon: '🚚', bald: false },
-  { to: '/rechnungen',    label: 'Rechnungen',     icon: '🧾', bald: false },
+const fakturierungAlleItems = [
+  { to: '/angebote',      label: 'Angebote',     icon: '📝', bald: true,  zeigen: (_u: Unternehmen | undefined) => true },
+  { to: '/auftraege',     label: 'Aufträge',      icon: '📋', bald: true,  zeigen: (_u: Unternehmen | undefined) => true },
+  { to: '/lieferscheine', label: 'Lieferscheine', icon: '🚚', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.lieferschein_aktiv },
+  { to: '/rechnungen',    label: 'Rechnungen',    icon: '🧾', bald: false, zeigen: (_u: Unternehmen | undefined) => true },
 ]
 
 const buchhaltungNav = [
@@ -157,6 +157,7 @@ export function AppLayout() {
 
   const navKontext: NavKontext = { unt, zm: zmPruefung }
   const auswertungNav = auswertungNavAlle.filter(n => n.zeigen(navKontext))
+  const fakturierungNav = fakturierungAlleItems.filter(n => n.zeigen(unt))
 
   const zeigeBanner = fehltGestern?.fehlt === true && !bannerDismissed
 
@@ -193,7 +194,7 @@ export function AppLayout() {
 
           {/* Fakturierung – immer sichtbar */}
           <SectionLabel label="Fakturierung" />
-          {fakturierungAktiv.map(({ to, label, icon, bald }) =>
+          {fakturierungNav.map(({ to, label, icon, bald }) =>
             bald ? (
               <div key={to} className="flex items-center gap-3 px-4 py-2 text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed select-none">
                 <span className="opacity-40">{icon}</span>
