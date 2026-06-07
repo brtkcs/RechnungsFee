@@ -22,10 +22,11 @@ const buchhaltungNav = [
 ]
 
 const auswertungNavAlle = [
-  { to: '/euer',  label: 'EÜR',   icon: '📊', zeigen: (_ust: boolean, _eks: boolean) => true },
-  { to: '/ustva', label: 'UStVA', icon: '🏛️', zeigen: (ust: boolean, _eks: boolean) => !ust },
-  { to: '/zm',    label: 'ZM',    icon: '🌍', zeigen: (ust: boolean, _eks: boolean) => !ust },
-  { to: '/eks',   label: 'EKS',   icon: '📋', zeigen: (_ust: boolean, eks: boolean) => eks },
+  { to: '/euer',    label: 'EÜR',          icon: '📊', zeigen: (_ust: boolean, _eks: boolean) => true },
+  { to: '/ustva',   label: 'UStVA',         icon: '🏛️', zeigen: (ust: boolean, _eks: boolean) => !ust },
+  { to: '/zm',      label: 'ZM',            icon: '🌍', zeigen: (ust: boolean, _eks: boolean) => !ust },
+  { to: '/eks',     label: 'EKS',           icon: '📋', zeigen: (_ust: boolean, eks: boolean) => eks },
+  { to: '/exporte', label: 'GoBD-Export',   icon: '📦', zeigen: (_ust: boolean, _eks: boolean) => true },
 ]
 
 const stammdatenNav = [
@@ -229,9 +230,6 @@ export function AppLayout() {
           {/* Trennlinie */}
           <div className="border-t border-slate-100 dark:border-slate-800 mt-3 mb-1" />
 
-          <NavLink to="/exporte" className={navLinkClass}>
-            <span>📦</span><span>Exporte</span>
-          </NavLink>
           <NavLink to="/backup" className={navLinkClass}>
             <span>💾</span><span>Backup</span>
           </NavLink>
