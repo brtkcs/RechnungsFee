@@ -20,6 +20,7 @@ import { ExportPage } from './pages/ExportPage'
 import { EksPage } from './pages/eks/EksPage'
 import { UStVAPage } from './pages/ustva/UStVAPage'
 import { ZMPage } from './pages/zm/ZMPage'
+import { EUERPage } from './pages/euer/EUERPage'
 import { RechnungenPage } from './pages/rechnungen/RechnungenPage'
 import { BackupPage } from './pages/backup/BackupPage'
 import { InfoPage } from './pages/info/InfoPage'
@@ -97,6 +98,7 @@ function AppRoutes() {
           <Route path="/eks" element={<EksPage />} />
           <Route path="/ustva" element={<UStVAPage />} />
           <Route path="/zm" element={<ZMPage />} />
+          <Route path="/euer" element={<EUERPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/info" element={<InfoPage />} />
         </Route>

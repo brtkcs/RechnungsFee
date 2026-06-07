@@ -1,0 +1,167 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { berechneEUER, getEUERPdfUrl, getUnternehmen, openUrl, type EUERErgebnis } from '../../api/client'
+
+const ABSCHNITT_LABEL: Record<string, string> = {
+  A: 'A – Betriebseinnahmen',
+  B: 'B – Betriebsausgaben',
+  H: 'Entnahmen / Einlagen (nachrichtlich)',
+}
+
+function euroFmt(v: string | number): string {
+  const n = typeof v === 'string' ? parseFloat(v) : v
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
+}
+
+function SummenZeile({ label, betrag, hervorgehoben = false }: {
+  label: string; betrag: string; hervorgehoben?: boolean
+}) {
+  const n = parseFloat(betrag)
+  return (
+    <div className={`flex items-center justify-between px-4 py-2.5 ${
+      hervorgehoben
+        ? 'bg-slate-800 dark:bg-slate-900 text-white font-bold text-base'
+        : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-sm'
+    }`}>
+      <span>{label}</span>
+      <span className={`tabular-nums ${n < 0 ? 'text-red-400' : hervorgehoben ? 'text-white' : ''}`}>
+        {euroFmt(betrag)}
+      </span>
+    </div>
+  )
+}
+
+export function EUERPage() {
+  const now = new Date()
+  const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
+  const [pdfLaedt, setPdfLaedt] = useState(false)
+  const [pdfFehler, setPdfFehler] = useState<string | null>(null)
+  const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
+
+  const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
+
+  const { data: ergebnis, isLoading, error } = useQuery<EUERErgebnis>({
+    queryKey: ['euer-berechnen', jahr],
+    queryFn: () => berechneEUER(jahr),
+  })
+
+  async function handlePdf() {
+    setPdfLaedt(true); setPdfFehler(null)
+    try { await openUrl(await getEUERPdfUrl(jahr)) }
+    catch (e: any) { setPdfFehler(e?.message ?? 'PDF-Export fehlgeschlagen') }
+    finally { setPdfLaedt(false) }
+  }
+
+  // Zeilen nach Abschnitt gruppieren
+  const abschnitte = ergebnis
+    ? Object.entries(
+        ergebnis.zeilen.reduce<Record<string, typeof ergebnis.zeilen>>((acc, z) => {
+          ;(acc[z.abschnitt] ??= []).push(z)
+          return acc
+        }, {})
+      ).sort(([a], [b]) => a.localeCompare(b))
+    : []
+
+  return (
+    <div className="max-w-2xl mx-auto px-6 py-8">
+      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+        EÜR – Einnahmen-Überschuss-Rechnung
+      </h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        Berechnet aus Journalbuchungen nach Ist-Versteuerung (Zuflussprinzip). Anzeigehilfe für ELSTER oder Steuerberater.
+      </p>
+
+      {/* Jahresauswahl + PDF */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex items-center gap-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Wirtschaftsjahr</label>
+          <select value={jahr} onChange={e => setJahr(Number(e.target.value))}
+            className="border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+            {jahre.map(j => <option key={j} value={j}>{j}</option>)}
+          </select>
+        </div>
+        {isLoading && <span className="text-sm text-slate-500 dark:text-slate-400">Berechne…</span>}
+        {ergebnis && (
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={handlePdf} disabled={pdfLaedt}
+              className="px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
+              {pdfLaedt ? '…' : '📄 PDF'}
+            </button>
+            {pdfFehler && <span className="text-xs text-red-600 dark:text-red-400">{pdfFehler}</span>}
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-sm text-red-700 dark:text-red-300">
+          {(error as Error).message}
+        </div>
+      )}
+
+      {ergebnis && (
+        <div className="space-y-4">
+          {ergebnis.ist_kleinunternehmer && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200">
+              Kleinunternehmer §19 UStG – Umsatzsteuer-Zeilen (15, 48) sind 0.
+            </div>
+          )}
+
+          {abschnitte.map(([abschnitt, zeilen]) => (
+            <div key={abschnitt} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-slate-100 dark:bg-slate-700 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                {ABSCHNITT_LABEL[abschnitt] ?? abschnitt}
+              </div>
+              <div className="divide-y divide-slate-50 dark:divide-slate-700">
+                {zeilen.map(z => (
+                  <div key={z.zeile} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-blue-600 dark:bg-blue-700">
+                      Z. {z.zeile}
+                    </span>
+                    <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{z.bezeichnung}</span>
+                    <span className={`tabular-nums text-sm font-medium ${parseFloat(z.betrag) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                      {euroFmt(z.betrag)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {abschnitt === 'A' && (
+                <SummenZeile label="Summe Betriebseinnahmen (Z. 22)" betrag={ergebnis.summe_einnahmen} />
+              )}
+              {abschnitt === 'B' && (
+                <SummenZeile label="Summe Betriebsausgaben (Z. 74)" betrag={ergebnis.summe_ausgaben} />
+              )}
+            </div>
+          ))}
+
+          {/* Gewinn / Verlust */}
+          <div className="rounded-xl overflow-hidden">
+            <SummenZeile
+              label={parseFloat(ergebnis.gewinn_verlust) >= 0 ? 'Gewinn (Zeile 75)' : 'Verlust (Zeile 75)'}
+              betrag={ergebnis.gewinn_verlust}
+              hervorgehoben
+            />
+          </div>
+
+          {/* Anlage AVEUR Hinweis */}
+          {parseFloat(ergebnis.anlage_zugaenge) > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-200">
+              <strong>Anlagezugänge {ergebnis.jahr}:</strong> {euroFmt(ergebnis.anlage_zugaenge)} (KFZ, EDV, Maschinen o.ä.) sind nicht enthalten –
+              bitte <strong>Anlage AVEUR</strong> (Abschreibungsplan) separat ausfüllen.
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Grundlage: Journalbuchungen {ergebnis.jahr} · Ist-Versteuerung (Zahlungsdatum).
+            Zeile 15 = vereinnahmte USt · Zeile 48 = abziehbare Vorsteuer.
+          </p>
+        </div>
+      )}
+
+      {ergebnis && ergebnis.zeilen.length === 0 && (
+        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-sm text-slate-500 dark:text-slate-400 text-center">
+          Keine Buchungen für {jahr} gefunden.
+        </div>
+      )}
+    </div>
+  )
+}

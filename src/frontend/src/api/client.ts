@@ -1219,3 +1219,30 @@ export const pruefZM = () =>
 export const berechneZM = (zeitraum: string) =>
   request<ZMErgebnis>(`/zm/berechnen?zeitraum=${encodeURIComponent(zeitraum)}`)
 
+// --- EÜR ---
+
+export type EUERZeile = {
+  zeile: number
+  bezeichnung: string
+  abschnitt: string
+  betrag: string
+}
+
+export type EUERErgebnis = {
+  jahr: number
+  zeilen: EUERZeile[]
+  summe_einnahmen: string
+  summe_ausgaben: string
+  gewinn_verlust: string
+  anlage_zugaenge: string
+  ist_kleinunternehmer: boolean
+}
+
+export const berechneEUER = (jahr: number) =>
+  request<EUERErgebnis>(`/euer/berechnen?jahr=${jahr}`)
+
+export const getEUERPdfUrl = async (jahr: number): Promise<string> => {
+  const base = await getBaseUrl()
+  return `${base}/euer/pdf?jahr=${jahr}`
+}
+

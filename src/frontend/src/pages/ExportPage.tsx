@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { downloadGobdExport, getUnternehmen, pruefZM } from '../api/client'
+import { downloadGobdExport, getUnternehmen, pruefZM, berechneEUER } from '../api/client'
 
 const AKTUELLES_JAHR = new Date().getFullYear()
 const JAHRE = Array.from({ length: 5 }, (_, i) => AKTUELLES_JAHR - i)
@@ -70,6 +70,26 @@ export function ExportPage() {
           </div>
         </button>
       )}
+
+      {/* EÜR – immer sichtbar */}
+      <button
+        onClick={() => navigate('/euer')}
+        className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
+      >
+        <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-white font-bold text-lg">EÜR – Einnahmen-Überschuss-Rechnung</h2>
+            <p className="text-blue-100 text-sm mt-0.5">
+              Gewinn/Verlust nach Anlage EÜR 2025 aus Journalbuchungen berechnen
+            </p>
+          </div>
+          <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
+        </div>
+        <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
+          <span>📊 Zeilen nach Anlage EÜR 2025 · Ist-Versteuerung</span>
+          <span>📄 PDF-Anzeigehilfe für ELSTER / Steuerberater</span>
+        </div>
+      </button>
 
       {/* UStVA – nur für Regelbesteuerte */}
       {!unternehmen?.ist_kleinunternehmer && (
