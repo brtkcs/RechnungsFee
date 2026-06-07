@@ -229,6 +229,7 @@ class RechnungResponse(BaseModel):
     gutschrift_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     lieferschein_zu_rechnung_id: Optional[int] = None
     lieferschein_rechnung_ist_entwurf: Optional[bool] = None  # wird in from_orm_extended befüllt
+    lieferschein_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     lieferadresse_id: Optional[int] = None
     lieferadresse_text: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
@@ -278,7 +279,9 @@ class RechnungResponse(BaseModel):
                 session = _sa_inspect(obj).session
                 if session:
                     linked = session.get(obj.__class__, obj.lieferschein_zu_rechnung_id)
-                    data.lieferschein_rechnung_ist_entwurf = linked.ist_entwurf if linked else None
+                    if linked:
+                        data.lieferschein_rechnung_ist_entwurf = linked.ist_entwurf
+                        data.lieferschein_zu_rechnung_nr = linked.rechnungsnummer
             except Exception:
                 pass
         return data

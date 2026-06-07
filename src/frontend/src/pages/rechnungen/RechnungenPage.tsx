@@ -810,6 +810,7 @@ function RechnungDetail({
   onDelete,
   onGutschriftCreated,
   onRechnungAusLs,
+  onSelectId,
 }: {
   rechnung: Rechnung
   onClose: () => void
@@ -817,6 +818,7 @@ function RechnungDetail({
   onDelete: () => void
   onGutschriftCreated?: (gs: Rechnung) => void
   onRechnungAusLs?: (id: number) => void
+  onSelectId?: (id: number) => void
 }) {
   const [zahlungsDialog, setZahlungsDialog] = useState(false)
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
@@ -1072,11 +1074,18 @@ function RechnungDetail({
               → Rechnung erstellen
             </button>
           )}
-          {rechnung.dokument_typ === 'Lieferschein' && rechnung.lieferschein_zu_rechnung_id && rechnung.lieferschein_rechnung_ist_entwurf && (
-            <span className="self-center text-xs text-amber-600 dark:text-amber-400 italic">Rechnungsentwurf vorhanden</span>
-          )}
-          {rechnung.dokument_typ === 'Lieferschein' && rechnung.lieferschein_zu_rechnung_id && !rechnung.lieferschein_rechnung_ist_entwurf && (
-            <span className="self-center text-xs text-slate-400 dark:text-slate-500 italic">Bereits abgerechnet</span>
+          {rechnung.dokument_typ === 'Lieferschein' && rechnung.lieferschein_zu_rechnung_id && (
+            <button
+              onClick={() => onSelectId?.(rechnung.lieferschein_zu_rechnung_id!)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg font-mono ${
+                rechnung.lieferschein_rechnung_ist_entwurf
+                  ? 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950'
+                  : 'border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950'
+              }`}
+            >
+              → {rechnung.lieferschein_zu_rechnung_nr ?? `Rechnung #${rechnung.lieferschein_zu_rechnung_id}`}
+              {rechnung.lieferschein_rechnung_ist_entwurf && <span className="font-sans text-xs opacity-70">(Entwurf)</span>}
+            </button>
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && rechnung.dokument_typ !== 'Lieferschein' && !zeigStornoEingabe && (
             <button
@@ -3723,6 +3732,7 @@ export function RechnungenPage() {
               }}
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
+              onSelectId={(id) => { setLieferscheinModus(false); setTyp('ausgang'); setSelectedId(id) }}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-sm">
