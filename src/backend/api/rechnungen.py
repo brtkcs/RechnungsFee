@@ -1767,6 +1767,19 @@ def _lieferschein_zu_rechnung_konvertieren(
     return rechnung
 
 
+def _naechste_lieferscheinnummer(datum: date, db: Session) -> str:
+    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "lieferschein").first()
+    if nk:
+        if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != datum.year:
+            nk.naechste_nr = 1
+        nk.letztes_jahr = datum.year
+        nr = nk.naechste_nr
+        nk.naechste_nr += 1
+        return _belegnr_aus_format(nk.format, datum, nr)
+    count = db.query(Rechnung).filter(Rechnung.dokument_typ == "Lieferschein").count()
+    return f"LS-{str(datum.year)[-2:]}{count + 1:04d}"
+
+
 def _naechste_rechnungsnummer(datum: date, db: Session) -> str:
     nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "rechnung_ausgang").first()
     if nk:
@@ -1800,6 +1813,58 @@ def rechnung_aus_lieferschein(ls_id: int, db: Session = Depends(get_db)):
         db=db,
     )
     return RechnungResponse.from_orm_extended(rechnung)
+
+
+@router.post("/{rechnung_id}/lieferschein-erstellen", response_model=RechnungResponse, status_code=201)
+def lieferschein_aus_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
+    """Erstellt einen Lieferschein aus einer bestehenden Ausgangsrechnung (Vorkasse-Workflow)."""
+    r = db.query(Rechnung).filter(
+        Rechnung.id == rechnung_id,
+        Rechnung.typ == "ausgang",
+        Rechnung.dokument_typ == "Rechnung",
+        Rechnung.storniert == False,
+    ).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
+
+    ls_nr = _naechste_lieferscheinnummer(date.today(), db)
+    ls = Rechnung(
+        typ="ausgang",
+        rechnungsnummer=ls_nr,
+        datum=date.today(),
+        kunde_id=r.kunde_id,
+        partner_freitext=r.partner_freitext,
+        notizen=f"Zu Rechnung {r.rechnungsnummer}" if r.rechnungsnummer else None,
+        dokument_typ="Lieferschein",
+        lieferschein_zu_rechnung_id=rechnung_id,
+        ist_entwurf=False,
+        bezahlt=False,
+        bezahlt_betrag=Decimal("0.00"),
+        zahlungsstatus="offen",
+        netto_gesamt=Decimal("0.00"),
+        ust_gesamt=Decimal("0.00"),
+        brutto_gesamt=Decimal("0.00"),
+    )
+    db.add(ls)
+    db.flush()
+
+    for nr, pos in enumerate(r.positionen, start=1):
+        db.add(Rechnungsposition(
+            rechnung_id=ls.id,
+            artikel_id=pos.artikel_id,
+            position_nr=nr,
+            beschreibung=pos.beschreibung,
+            menge=pos.menge,
+            einheit=pos.einheit,
+            netto=Decimal("0.00"),
+            ust_satz=Decimal("0.00"),
+            ust_betrag=Decimal("0.00"),
+            brutto=Decimal("0.00"),
+        ))
+
+    db.commit()
+    db.refresh(ls)
+    return RechnungResponse.from_orm_extended(ls)
 
 
 @router.post("/sammelrechnung", response_model=RechnungResponse, status_code=201)

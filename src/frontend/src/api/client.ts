@@ -925,6 +925,9 @@ export const rechnungAusLieferschein = (lsId: number) =>
 export const sammelrechnungErstellen = (data: SammelrechnungCreate) =>
   request<Rechnung>('/rechnungen/sammelrechnung', { method: 'POST', body: JSON.stringify(data) })
 
+export const lieferscheinAusRechnung = (rechnungId: number) =>
+  request<Rechnung>(`/rechnungen/${rechnungId}/lieferschein-erstellen`, { method: 'POST' })
+
 export const getOffeneRechnungen = () => request<Rechnung[]>('/rechnungen/offene')
 export const getFaelligeRechnungen = (tage = 7) => request<Rechnung[]>(`/rechnungen/faellig?tage=${tage}`)
 

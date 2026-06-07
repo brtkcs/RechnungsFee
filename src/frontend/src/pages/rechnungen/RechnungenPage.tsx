@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRechnungen, getRechnung, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
-  getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen,
+  getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen, lieferscheinAusRechnung,
   getLieferadressen,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow,
   sucheArtikel, getUstSaetze, getKassenstand,
@@ -811,6 +811,7 @@ function RechnungDetail({
   onGutschriftCreated,
   onRechnungAusLs,
   onSelectId,
+  onLieferscheinAusRechnung,
 }: {
   rechnung: Rechnung
   onClose: () => void
@@ -819,6 +820,7 @@ function RechnungDetail({
   onGutschriftCreated?: (gs: Rechnung) => void
   onRechnungAusLs?: (id: number) => void
   onSelectId?: (id: number) => void
+  onLieferscheinAusRechnung?: (id: number) => void
 }) {
   const [zahlungsDialog, setZahlungsDialog] = useState(false)
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
@@ -1085,6 +1087,14 @@ function RechnungDetail({
             >
               → {rechnung.lieferschein_zu_rechnung_nr ?? `Rechnung #${rechnung.lieferschein_zu_rechnung_id}`}
               {rechnung.lieferschein_rechnung_ist_entwurf && <span className="font-sans text-xs opacity-70">(Entwurf)</span>}
+            </button>
+          )}
+          {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && rechnung.dokument_typ !== 'Lieferschein' && !zeigStornoEingabe && onLieferscheinAusRechnung && (
+            <button
+              onClick={() => onLieferscheinAusRechnung(rechnung.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-teal-200 dark:border-teal-800 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-400"
+            >
+              → Lieferschein erstellen
             </button>
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && rechnung.dokument_typ !== 'Lieferschein' && !zeigStornoEingabe && (
@@ -3279,6 +3289,16 @@ export function RechnungenPage() {
     onError: (e: Error) => setFehler(e.message),
   })
 
+  const lieferscheinAusRechnungMutation = useMutation({
+    mutationFn: lieferscheinAusRechnung,
+    onSuccess: (ls) => {
+      qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      setLieferscheinModus(true)
+      setSelectedId(ls.id)
+    },
+    onError: (e: Error) => alert((e as Error).message),
+  })
+
   const rechnungAusLsMutation = useMutation({
     mutationFn: rechnungAusLieferschein,
     onSuccess: (r) => {
@@ -3742,6 +3762,7 @@ export function RechnungenPage() {
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
               onSelectId={(id) => { setLieferscheinModus(false); setTyp('ausgang'); setSelectedId(id) }}
+              onLieferscheinAusRechnung={lieferscheinAktiv ? (id) => lieferscheinAusRechnungMutation.mutate(id) : undefined}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-sm">
