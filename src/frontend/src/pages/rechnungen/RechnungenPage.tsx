@@ -2257,7 +2257,7 @@ function RechnungForm({
         </div>
       )}
 
-      {typ === 'ausgang' && lieferscheinAktivForm && !initial?.gutschrift_zu_rechnung_id && (
+      {typ === 'ausgang' && lieferscheinAktivForm && !initial?.gutschrift_zu_rechnung_id && !initialDokumentTyp && (
         <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-sm w-fit">
           {(['Rechnung', 'Lieferschein'] as const).map((dt) => (
             <button key={dt} type="button"
@@ -3633,10 +3633,14 @@ export function RechnungenPage() {
           <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
             <h3 className="font-semibold text-slate-800 dark:text-slate-100">
               {formModus === 'neu'
-                ? `Neue ${typ === 'ausgang' ? 'Ausgangsrechnung' : 'Eingangsrechnung'}`
+                ? lieferscheinModus
+                  ? 'Neuer Lieferschein'
+                  : `Neue ${typ === 'ausgang' ? 'Ausgangsrechnung' : 'Eingangsrechnung'}`
                 : selectedRechnung?.dokument_typ === 'Gutschrift'
                   ? 'Gutschrift bearbeiten'
-                  : 'Rechnung bearbeiten'}
+                  : selectedRechnung?.dokument_typ === 'Lieferschein'
+                    ? 'Lieferschein bearbeiten'
+                    : 'Rechnung bearbeiten'}
             </h3>
             <button onClick={() => setFormModus(null)} className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
           </div>
