@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { listen } from '@tauri-apps/api/event'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -3190,11 +3190,13 @@ function ImportDialog({
 
 type FilterModus = 'monat' | 'datum' | 'zeitraum' | 'jahr' | 'alle'
 
-export function RechnungenPage({ initialLieferscheinModus = false }: { initialLieferscheinModus?: boolean } = {}) {
+export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' | 'lieferscheine' } = {}) {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [typ, setTyp] = useState<'eingang' | 'ausgang'>('ausgang')
-  const [lieferscheinModus, setLieferscheinModus] = useState(initialLieferscheinModus)
+  const istLieferscheinSeite = modus === 'lieferscheine'
+  const [lieferscheinModus, setLieferscheinModus] = useState(istLieferscheinSeite)
   const [zahlungsstatus, setZahlungsstatus] = useState('')
   const [suche, setSuche] = useState('')
   const [filterModus, setFilterModus] = useState<FilterModus>('monat')
@@ -3205,23 +3207,34 @@ export function RechnungenPage({ initialLieferscheinModus = false }: { initialLi
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [pendingEditRechnung, setPendingEditRechnung] = useState<Rechnung | null>(null)
 
-  // ?open=ID: direkt zur Rechnung springen (z.B. aus dem Journal-Link)
+  // ?open=ID oder ?id=ID: direkt zu einem Dokument springen
   useEffect(() => {
-    const openId = searchParams.get('open')
-    if (!openId) return
-    const id = parseInt(openId, 10)
-    if (isNaN(id)) return
-    getRechnung(id)
-      .then((r) => {
-        setTyp(r.typ)
-        setFilterModus('alle')
-        setSelectedId(r.id)
-        setPendingEditRechnung(r)
+    const openId = searchParams.get('open') ?? searchParams.get('id')
+    if (openId) {
+      const id = parseInt(openId, 10)
+      if (!isNaN(id)) {
+        getRechnung(id)
+          .then((r) => {
+            setTyp(r.typ)
+            setFilterModus('alle')
+            setSelectedId(r.id)
+            setPendingEditRechnung(r)
+            setSearchParams({}, { replace: true })
+          })
+          .catch(() => setSearchParams({}, { replace: true }))
+        return
+      }
+    }
+    // ?filterRechnungId=ID: Lieferscheine einer bestimmten Rechnung anzeigen
+    const filterRId = searchParams.get('filterRechnungId')
+    if (filterRId) {
+      const id = parseInt(filterRId, 10)
+      if (!isNaN(id)) {
+        setLsFilterRechnungId(id)
+        setLsFilterLabel(`Rechnung #${id}`)
         setSearchParams({}, { replace: true })
-      })
-      .catch(() => {
-        setSearchParams({}, { replace: true })
-      })
+      }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [formModus, setFormModus] = useState<'neu' | 'bearbeiten' | null>(null)
@@ -3306,8 +3319,8 @@ export function RechnungenPage({ initialLieferscheinModus = false }: { initialLi
     mutationFn: lieferscheinAusRechnung,
     onSuccess: (ls) => {
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
-      setLieferscheinModus(true)
-      setSelectedId(ls.id)
+      // Auf Lieferscheine-Seite navigieren statt Modus intern wechseln
+      navigate(`/lieferscheine?id=${ls.id}`)
     },
     onError: (e: Error) => alert((e as Error).message),
   })
@@ -3318,10 +3331,9 @@ export function RechnungenPage({ initialLieferscheinModus = false }: { initialLi
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
       setSelectedLsIds(new Set())
       setZeigSammelrechnung(false)
-      setLieferscheinModus(false)
-      setTyp('ausgang')
-      setSelectedId(r.id)
       setFehler(null)
+      // Auf Rechnungen-Seite navigieren statt Modus intern wechseln
+      navigate(`/rechnungen?id=${r.id}`)
     },
     onError: (e: Error) => setFehler(e.message),
   })
@@ -3332,9 +3344,8 @@ export function RechnungenPage({ initialLieferscheinModus = false }: { initialLi
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
       setZeigSammelrechnung(false)
       setSelectedLsIds(new Set())
-      setLieferscheinModus(false)
-      setTyp('ausgang')
-      setSelectedId(r.id)
+      // Auf Rechnungen-Seite navigieren
+      navigate(`/rechnungen?id=${r.id}`)
       setFehler(null)
     },
     onError: (e: Error) => setFehler(e.message),
@@ -3448,30 +3459,22 @@ export function RechnungenPage({ initialLieferscheinModus = false }: { initialLi
 
           {/* Tabs + Filter */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Eingang/Ausgang/Lieferschein */}
-            <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-sm">
-              {(['ausgang', 'eingang'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => { setTyp(t); setLieferscheinModus(false); setSelectedId(null); setSelectedLsIds(new Set()); setLsFilterRechnungId(null) }}
-                  className={`px-4 py-1.5 transition-colors ${
-                    !lieferscheinModus && typ === t ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {t === 'ausgang' ? 'Ausgang' : 'Eingang'}
-                </button>
-              ))}
-              {lieferscheinAktiv && (
-                <button
-                  onClick={() => { setLieferscheinModus(true); setSelectedId(null); setSelectedLsIds(new Set()); setLsFilterRechnungId(null) }}
-                  className={`px-4 py-1.5 transition-colors ${
-                    lieferscheinModus ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  Lieferscheine
-                </button>
-              )}
-            </div>
+            {/* Eingang/Ausgang – nur auf Rechnungen-Seite */}
+            {!istLieferscheinSeite && (
+              <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-sm">
+                {(['ausgang', 'eingang'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => { setTyp(t); setSelectedId(null); setSelectedLsIds(new Set()); setLsFilterRechnungId(null) }}
+                    className={`px-4 py-1.5 transition-colors ${
+                      typ === t ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {t === 'ausgang' ? 'Ausgang' : 'Eingang'}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Zeitraum-Modus */}
             <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-sm">
@@ -3807,7 +3810,17 @@ export function RechnungenPage({ initialLieferscheinModus = false }: { initialLi
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
               onSelectId={(id, isLieferschein, filterRechnungId) => {
-                setLieferscheinModus(!!isLieferschein)
+                // Seitenwechsel wenn Ziel auf anderer Seite liegt
+                if (isLieferschein && !istLieferscheinSeite) {
+                  navigate(filterRechnungId !== undefined
+                    ? `/lieferscheine?filterRechnungId=${filterRechnungId}`
+                    : `/lieferscheine?id=${id}`)
+                  return
+                }
+                if (!isLieferschein && istLieferscheinSeite) {
+                  navigate(`/rechnungen?id=${id}`)
+                  return
+                }
                 setTyp('ausgang')
                 if (filterRechnungId !== undefined) {
                   setLsFilterRechnungId(filterRechnungId)
