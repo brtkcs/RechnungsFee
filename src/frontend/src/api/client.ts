@@ -173,6 +173,7 @@ export type Unternehmen = {
   standard_skonto_prozent?: number | null
   standard_skonto_tage?: number | null
   lieferschein_aktiv?: boolean
+  angebote_aktiv?: boolean
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -848,6 +849,11 @@ export type Rechnung = {
   linked_lieferschein_nr: string | null
   lieferadresse_id: number | null
   lieferadresse_text: string | null
+  angebot_status: string | null
+  gueltig_bis: string | null
+  dokumentenpaket_id: number | null
+  rechnung_zu_angebot_id: number | null
+  rechnung_zu_angebot_nr: string | null
   erstellt_am: string
   aktualisiert_am: string
 }
@@ -922,6 +928,18 @@ export const getRechnungen = (filter?: {
 
 export const getLieferscheine = (filter?: { kunde_id?: number }) =>
   request<Rechnung[]>(`/rechnungen${toQuery({ dokument_typ: 'Lieferschein', ...filter })}`)
+
+export const getAngebote = () =>
+  request<Rechnung[]>('/rechnungen' + toQuery({ dokument_typ: 'Angebot' }))
+
+export const rechnungAusAngebot = (angebotId: number) =>
+  request<Rechnung>(`/rechnungen/${angebotId}/rechnung-aus-angebot`, { method: 'POST' })
+
+export const angebotStatusSetzen = (angebotId: number, status: string) =>
+  request<Rechnung>(`/rechnungen/${angebotId}/angebot-status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
 
 export const rechnungAusLieferschein = (lsId: number) =>
   request<Rechnung>(`/rechnungen/${lsId}/rechnung-erstellen`, { method: 'POST' })

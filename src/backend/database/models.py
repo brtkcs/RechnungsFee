@@ -61,8 +61,9 @@ class Unternehmen(Base):
     geburtsdatum: Mapped[date | None] = mapped_column(Date)
     bg_nummer: Mapped[str | None] = mapped_column(String(50))       # Bedarfsgemeinschaftsnummer
     jobcenter_name: Mapped[str | None] = mapped_column(String(200)) # z.B. "Jobcenter Berlin-Mitte"
-    # Lieferschein
+    # Lieferschein / Angebote
     lieferschein_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
+    angebote_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     # Buchführung
     versteuerungsart: Mapped[str] = mapped_column(String(4), default="ist", nullable=False)  # ist|soll
     kontenrahmen: Mapped[str] = mapped_column(String(10), default="SKR03", nullable=False)  # SKR03|SKR04|SKR49
@@ -510,6 +511,11 @@ class Rechnung(Base):
     gutschrift_zu_rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)
     lieferschein_zu_rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)
     lieferadresse_id: Mapped[int | None] = mapped_column(ForeignKey("kunden_lieferadressen.id"), nullable=True)
+    # Angebote
+    angebot_status: Mapped[str | None] = mapped_column(String(20), default="offen")   # offen|akzeptiert|abgelehnt|abgelaufen
+    gueltig_bis: Mapped[date | None] = mapped_column(Date)
+    dokumentenpaket_id: Mapped[int | None] = mapped_column(ForeignKey("dokumentenpakete.id"), nullable=True)
+    rechnung_zu_angebot_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 

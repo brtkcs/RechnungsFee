@@ -372,7 +372,12 @@ class RechnungPDFBase(FPDF):
             _meta("Leistungszeitraum", f"{_iso_zu_de(str(r.leistung_von))} – {_iso_zu_de(str(r.leistung_bis))}")
         elif r.leistung_von and str(r.leistung_von) != str(r.datum):
             _meta("Leistungsdatum", _iso_zu_de(str(r.leistung_von)))
-        if r.faellig_am:
+        dokument_typ_meta = getattr(r, "dokument_typ", "Rechnung") or "Rechnung"
+        if dokument_typ_meta == "Angebot":
+            gueltig_bis = getattr(r, "gueltig_bis", None)
+            if gueltig_bis:
+                _meta("Gültig bis", _iso_zu_de(str(gueltig_bis)))
+        elif r.faellig_am:
             _meta(self._faellig_label, _iso_zu_de(str(r.faellig_am)))
         la = getattr(r, "_lieferadresse", None)
         if la:
@@ -391,6 +396,8 @@ class RechnungPDFBase(FPDF):
             titel = f"Gutschrift {r.rechnungsnummer or ''}".strip()
         elif dokument_typ == "Lieferschein":
             titel = f"Lieferschein {r.rechnungsnummer or ''}".strip()
+        elif dokument_typ == "Angebot":
+            titel = f"Angebot {r.rechnungsnummer or ''}".strip()
         elif r.typ == "ausgang":
             titel = f"Rechnung {r.rechnungsnummer or ''}".strip()
         else:
@@ -509,15 +516,17 @@ class RechnungPDFBase(FPDF):
         self._render_positionen()
         self.ln(self._ln_nach_positionen)
         ist_lieferschein = getattr(self._r, "dokument_typ", "Rechnung") == "Lieferschein"
+        ist_angebot      = getattr(self._r, "dokument_typ", "Rechnung") == "Angebot"
         if not ist_lieferschein:
             self._render_summenblock()
             self.ln(self._ln_nach_summen)
             self._render_19_hinweis()
-            self._render_zahlungsblock()
+            if not ist_angebot:
+                self._render_zahlungsblock()
         self._render_notizen()
         if ist_lieferschein:
             self._render_empfangsbestaetigung()
-        else:
+        elif not ist_angebot:
             embed_unterschrift(self, self._unt, L_MARGIN)
         self.set_text_color(0, 0, 0)
         return bytes(self.output())

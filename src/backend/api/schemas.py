@@ -61,6 +61,7 @@ class UnternehmenBase(BaseModel):
     standard_skonto_prozent: Optional[Decimal] = None
     standard_skonto_tage: Optional[int] = None
     lieferschein_aktiv: bool = False
+    angebote_aktiv: bool = False
 
     @field_validator("versteuerungsart")
     @classmethod

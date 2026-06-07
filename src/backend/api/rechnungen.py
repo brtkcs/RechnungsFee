@@ -396,8 +396,9 @@ def list_rechnungen(
     if dokument_typ:
         q = q.filter(Rechnung.dokument_typ == dokument_typ)
     else:
-        # Lieferscheine nur auf explizite Anfrage – nicht im normalen Rechnungs-Feed
+        # Lieferscheine und Angebote nur auf explizite Anfrage
         q = q.filter(Rechnung.dokument_typ != "Lieferschein")
+        q = q.filter(Rechnung.dokument_typ != "Angebot")
     if typ:
         if typ not in ("eingang", "ausgang"):
             raise HTTPException(status_code=422, detail="typ muss 'eingang' oder 'ausgang' sein")
@@ -460,6 +461,18 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
             else:
                 count = db.query(Rechnung).filter(Rechnung.dokument_typ == "Lieferschein").count()
                 rechnungsnummer = f"LS-{str(data.datum.year)[-2:]}{count + 1:04d}"
+        elif data.dokument_typ == "Angebot":
+            nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "angebot").first()
+            if nk:
+                if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != data.datum.year:
+                    nk.naechste_nr = 1
+                nk.letztes_jahr = data.datum.year
+                nr = nk.naechste_nr
+                nk.naechste_nr += 1
+                rechnungsnummer = _belegnr_aus_format(nk.format, data.datum, nr)
+            else:
+                count = db.query(Rechnung).filter(Rechnung.dokument_typ == "Angebot").count()
+                rechnungsnummer = f"ANG-{str(data.datum.year)[-2:]}{count + 1:04d}"
         else:
             nk_typ = "rechnung_ausgang" if data.typ == "ausgang" else "rechnung_eingang"
             nk = db.query(Nummernkreis).filter(Nummernkreis.typ == nk_typ).first()
@@ -493,6 +506,9 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
         skonto_tage=data.skonto_tage,
         dokument_typ=data.dokument_typ,
         lieferadresse_id=data.lieferadresse_id if data.dokument_typ == "Lieferschein" else None,
+        gueltig_bis=data.gueltig_bis if data.dokument_typ == "Angebot" else None,
+        dokumentenpaket_id=data.dokumentenpaket_id if data.dokument_typ == "Angebot" else None,
+        angebot_status="offen" if data.dokument_typ == "Angebot" else None,
         bezahlt=False,
         bezahlt_betrag=Decimal("0.00"),
         zahlungsstatus="offen",
@@ -1872,6 +1888,95 @@ def lieferschein_aus_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(ls)
     return RechnungResponse.from_orm_extended(ls)
+
+
+# ---------------------------------------------------------------------------
+# Angebot → Rechnung
+# ---------------------------------------------------------------------------
+
+class AngebotStatusUpdate(BaseModel):
+    status: str  # offen | akzeptiert | abgelehnt | abgelaufen
+
+
+@router.post("/{angebot_id}/rechnung-aus-angebot", response_model=RechnungResponse, status_code=201)
+def rechnung_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
+    """Konvertiert ein Angebot in eine Ausgangsrechnung (Positionen werden übernommen)."""
+    angebot = db.query(Rechnung).filter(
+        Rechnung.id == angebot_id, Rechnung.dokument_typ == "Angebot"
+    ).first()
+    if not angebot:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden.")
+    if angebot.rechnung_zu_angebot_id:
+        raise HTTPException(status_code=409, detail="Aus diesem Angebot wurde bereits eine Rechnung erstellt.")
+
+    heute = date.today()
+    rechnungsnummer = _naechste_rechnungsnummer(heute, db)
+    unternehmen = db.query(Unternehmen).first()
+    zahlungsziel = getattr(unternehmen, "standard_zahlungsziel", 14) or 14
+    from datetime import timedelta
+    faellig_am = heute + timedelta(days=int(zahlungsziel))
+
+    rechnung = Rechnung(
+        typ="ausgang",
+        rechnungsnummer=rechnungsnummer,
+        datum=heute,
+        faellig_am=faellig_am,
+        leistung_von=angebot.leistung_von,
+        leistung_bis=angebot.leistung_bis,
+        kunde_id=angebot.kunde_id,
+        partner_freitext=angebot.partner_freitext,
+        notizen=angebot.notizen,
+        ist_entwurf=True,
+        dokument_typ="Rechnung",
+        bezahlt=False,
+        bezahlt_betrag=Decimal("0.00"),
+        zahlungsstatus="offen",
+        netto_gesamt=angebot.netto_gesamt,
+        ust_gesamt=angebot.ust_gesamt,
+        brutto_gesamt=angebot.brutto_gesamt,
+    )
+    db.add(rechnung)
+    db.flush()
+
+    for pos in angebot.positionen:
+        neue_pos = Rechnungsposition(
+            rechnung_id=rechnung.id,
+            beschreibung=pos.beschreibung,
+            menge=pos.menge,
+            einheit=pos.einheit,
+            einzelpreis=pos.einzelpreis,
+            ust_satz=pos.ust_satz,
+            netto_gesamt=pos.netto_gesamt,
+            ust_betrag=pos.ust_betrag,
+            brutto_gesamt=pos.brutto_gesamt,
+            position=pos.position,
+            artikel_id=pos.artikel_id,
+            kategorie_id=pos.kategorie_id,
+        )
+        db.add(neue_pos)
+
+    angebot.rechnung_zu_angebot_id = rechnung.id
+    angebot.angebot_status = "akzeptiert"
+    db.commit()
+    db.refresh(rechnung)
+    return RechnungResponse.from_orm_extended(rechnung)
+
+
+@router.patch("/{angebot_id}/angebot-status", response_model=RechnungResponse)
+def angebot_status_setzen(angebot_id: int, data: AngebotStatusUpdate, db: Session = Depends(get_db)):
+    """Ändert den Status eines Angebots."""
+    erlaubt = {"offen", "akzeptiert", "abgelehnt", "abgelaufen"}
+    if data.status not in erlaubt:
+        raise HTTPException(status_code=422, detail=f"Status muss einer von {erlaubt} sein.")
+    angebot = db.query(Rechnung).filter(
+        Rechnung.id == angebot_id, Rechnung.dokument_typ == "Angebot"
+    ).first()
+    if not angebot:
+        raise HTTPException(status_code=404, detail="Angebot nicht gefunden.")
+    angebot.angebot_status = data.status
+    db.commit()
+    db.refresh(angebot)
+    return RechnungResponse.from_orm_extended(angebot)
 
 
 @router.post("/sammelrechnung", response_model=RechnungResponse, status_code=201)

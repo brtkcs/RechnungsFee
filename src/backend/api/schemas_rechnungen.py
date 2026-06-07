@@ -108,13 +108,15 @@ class RechnungCreate(BaseModel):
     skonto_tage: Optional[int] = None
     dokument_typ: str = "Rechnung"
     lieferadresse_id: Optional[int] = None
+    gueltig_bis: Optional[date] = None
+    dokumentenpaket_id: Optional[int] = None
     positionen: List[RechnungspositionCreate]
 
     @field_validator("dokument_typ")
     @classmethod
     def check_dokument_typ(cls, v: str) -> str:
-        if v not in ("Rechnung", "Gutschrift", "Lieferschein"):
-            raise ValueError("dokument_typ muss 'Rechnung', 'Gutschrift' oder 'Lieferschein' sein")
+        if v not in ("Rechnung", "Gutschrift", "Lieferschein", "Angebot"):
+            raise ValueError("dokument_typ muss 'Rechnung', 'Gutschrift', 'Lieferschein' oder 'Angebot' sein")
         return v
 
     @model_validator(mode="after")
@@ -125,7 +127,7 @@ class RechnungCreate(BaseModel):
 
     @model_validator(mode="after")
     def check_netto_positionen(self) -> "RechnungCreate":
-        if self.dokument_typ != "Lieferschein":
+        if self.dokument_typ not in ("Lieferschein", "Angebot"):
             for pos in self.positionen:
                 if pos.netto == 0:
                     raise ValueError("Position netto darf nicht 0 sein")
@@ -236,6 +238,12 @@ class RechnungResponse(BaseModel):
     linked_lieferschein_nr: Optional[str] = None   # nur bei genau 1 Lieferschein
     lieferadresse_id: Optional[int] = None
     lieferadresse_text: Optional[str] = None  # wird in from_orm_extended befüllt
+    # Angebote
+    angebot_status: Optional[str] = None
+    gueltig_bis: Optional[date] = None
+    dokumentenpaket_id: Optional[int] = None
+    rechnung_zu_angebot_id: Optional[int] = None
+    rechnung_zu_angebot_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
     aktualisiert_am: datetime
 
@@ -305,6 +313,17 @@ class RechnungResponse(BaseModel):
                         data.linked_lieferschein_nr = ls_list[0].rechnungsnummer
         except Exception:
             pass
+        # Rechnungsnummer der aus dem Angebot erstellten Rechnung
+        if obj.rechnung_zu_angebot_id:
+            try:
+                from sqlalchemy import inspect as _sa_inspect
+                session = _sa_inspect(obj).session
+                if session:
+                    linked_re = session.get(obj.__class__, obj.rechnung_zu_angebot_id)
+                    if linked_re:
+                        data.rechnung_zu_angebot_nr = linked_re.rechnungsnummer
+            except Exception:
+                pass
         return data
 
 

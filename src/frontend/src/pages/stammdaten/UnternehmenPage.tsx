@@ -581,6 +581,23 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
               </p>
             </div>
           </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.angebote_aktiv}
+              onChange={ev => set('angebote_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Angebote aktivieren
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Angebote mit Gültigkeitsdatum erstellen und direkt in Rechnungen umwandeln.
+              </p>
+            </div>
+          </label>
         </div>
       </div>
 
