@@ -53,13 +53,6 @@ class RechnungspositionCreate(BaseModel):
     kategorie_id: Optional[int] = None
     differenzbesteuerung: bool = False
 
-    @field_validator("netto")
-    @classmethod
-    def check_netto(cls, v: Decimal) -> Decimal:
-        if v == 0:
-            raise ValueError("netto darf nicht 0 sein")
-        return v
-
     @field_validator("ust_satz")
     @classmethod
     def check_ust_satz(cls, v: Decimal) -> Decimal:
@@ -129,6 +122,15 @@ class RechnungCreate(BaseModel):
         if self.leistung_bis and self.leistung_von and self.leistung_bis < self.leistung_von:
             raise ValueError("leistung_bis darf nicht vor leistung_von liegen")
         return self
+
+    @model_validator(mode="after")
+    def check_netto_positionen(self) -> "RechnungCreate":
+        if self.dokument_typ != "Lieferschein":
+            for pos in self.positionen:
+                if pos.netto == 0:
+                    raise ValueError("Position netto darf nicht 0 sein")
+        return self
+
     # Direkt-Übernahme aus XML-Import – überschreibt die berechneten Gesamtbeträge
     netto_gesamt_override: Optional[Decimal] = None
     ust_gesamt_override: Optional[Decimal] = None
