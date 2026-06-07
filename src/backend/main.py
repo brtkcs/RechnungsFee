@@ -1162,24 +1162,37 @@ def _run_migrations() -> None:
             print("[Migration] Schema auf Version 51 (kunden_lieferadressen: separate Lieferadressen pro Kunde)")
 
         if version < 52:
-            conn.execute(text("ALTER TABLE unternehmen ADD COLUMN lieferschein_aktiv BOOLEAN NOT NULL DEFAULT 0"))
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferschein_zu_rechnung_id INTEGER REFERENCES rechnungen(id)"))
+            unt52 = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            re52  = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "lieferschein_aktiv" not in unt52:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN lieferschein_aktiv BOOLEAN NOT NULL DEFAULT 0"))
+            if "lieferschein_zu_rechnung_id" not in re52:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferschein_zu_rechnung_id INTEGER REFERENCES rechnungen(id)"))
             conn.execute(text("PRAGMA user_version = 52"))
             conn.commit()
             print("[Migration] Schema auf Version 52 (Lieferschein: lieferschein_aktiv + lieferschein_zu_rechnung_id)")
 
         if version < 53:
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferadresse_id INTEGER REFERENCES kunden_lieferadressen(id)"))
+            re53 = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "lieferadresse_id" not in re53:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferadresse_id INTEGER REFERENCES kunden_lieferadressen(id)"))
             conn.execute(text("PRAGMA user_version = 53"))
             conn.commit()
             print("[Migration] Schema auf Version 53 (rechnungen.lieferadresse_id: Lieferadresse auf Lieferschein)")
 
         if version < 55:
-            conn.execute(text("ALTER TABLE unternehmen ADD COLUMN angebote_aktiv BOOLEAN NOT NULL DEFAULT 0"))
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN angebot_status VARCHAR(20) DEFAULT 'offen'"))
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN gueltig_bis DATE"))
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN dokumentenpaket_id INTEGER REFERENCES dokumentenpakete(id)"))
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN rechnung_zu_angebot_id INTEGER REFERENCES rechnungen(id)"))
+            unt55 = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            re55  = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "angebote_aktiv" not in unt55:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN angebote_aktiv BOOLEAN NOT NULL DEFAULT 0"))
+            for col, ddl in [
+                ("angebot_status",        "VARCHAR(20) DEFAULT 'offen'"),
+                ("gueltig_bis",           "DATE"),
+                ("dokumentenpaket_id",    "INTEGER REFERENCES dokumentenpakete(id)"),
+                ("rechnung_zu_angebot_id","INTEGER REFERENCES rechnungen(id)"),
+            ]:
+                if col not in re55:
+                    conn.execute(text(f"ALTER TABLE rechnungen ADD COLUMN {col} {ddl}"))
             conn.execute(text("""
                 INSERT OR IGNORE INTO nummernkreise (typ, bezeichnung, format, naechste_nr, reset_jaehrlich, letztes_jahr)
                 VALUES ('angebot', 'Angebote', 'ANG-JJNNNN', 1, 1, NULL)
@@ -1214,10 +1227,13 @@ def _run_migrations() -> None:
 
         if version < 56:
             conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferschein_zu_angebot_id INTEGER REFERENCES rechnungen(id)"))
-            # Bestehende Links aus Notizen "Zu Angebot XXX" rekonstruieren
-            ls_rows = conn.execute(text(
-                "SELECT id, notizen FROM rechnungen WHERE dokument_typ='Lieferschein' AND notizen LIKE 'Zu Angebot %'"
-            )).fetchall()
+            # Bestehende Links aus Notizen "Zu Angebot XXX" rekonstruieren (nur wenn notizen-Spalte existiert)
+            rechnungen_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            ls_rows = []
+            if "notizen" in rechnungen_cols and "dokument_typ" in rechnungen_cols:
+                ls_rows = conn.execute(text(
+                    "SELECT id, notizen FROM rechnungen WHERE dokument_typ='Lieferschein' AND notizen LIKE 'Zu Angebot %'"
+                )).fetchall()
             for ls_id, notiz in ls_rows:
                 ang_nr = notiz.replace("Zu Angebot ", "").strip()
                 ang = conn.execute(text(

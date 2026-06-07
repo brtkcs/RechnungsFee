@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { berechneEUER, getEUERPdfUrl, getUnternehmen, openUrl, type EUERErgebnis } from '../../api/client'
+import { berechneEUER, getEUERPdfUrl, openUrl, type EUERErgebnis } from '../../api/client'
 
 const ABSCHNITT_LABEL: Record<string, string> = {
   A: 'A – Betriebseinnahmen',
@@ -37,8 +37,6 @@ export function EUERPage() {
   const [pdfLaedt, setPdfLaedt] = useState(false)
   const [pdfFehler, setPdfFehler] = useState<string | null>(null)
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
-
-  const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
 
   const { data: ergebnis, isLoading, error } = useQuery<EUERErgebnis>({
     queryKey: ['euer-berechnen', jahr],

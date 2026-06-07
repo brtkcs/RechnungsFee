@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -219,7 +219,7 @@ function AngebotFormular({
         beschreibung: p.beschreibung,
         menge: String(p.menge),
         einheit: p.einheit,
-        einzelpreis: String(p.einzelpreis),
+        einzelpreis: String(p.netto),
         ust_satz: String(p.ust_satz),
       }))
     }
@@ -262,15 +262,14 @@ function AngebotFormular({
     setLaedt(true)
     setFehler(null)
     try {
-      const posPayload = positionen.map((p, i) => {
+      const posPayload = positionen.map((p) => {
         const nettoEinzel = nettoProStueck(p, eingabeModus)
         return {
           beschreibung: p.beschreibung.trim(),
-          menge: parseFloat(p.menge) || 1,
+          menge: String(parseFloat(p.menge) || 1),
           einheit: p.einheit || 'Stk.',
-          netto: nettoEinzel,           // Netto pro Einheit – Backend berechnet Gesamt
-          ust_satz: parseFloat(p.ust_satz) || 0,
-          position: i + 1,
+          netto: String(nettoEinzel),
+          ust_satz: String(parseFloat(p.ust_satz) || 0),
           artikel_id: p.artikel_id,
         }
       })
@@ -281,7 +280,7 @@ function AngebotFormular({
         gueltig_bis: gueltigBis,
         kunde_id: parseInt(kundeId),
         notizen: notizen || undefined,
-        dokument_typ: 'Angebot',
+        dokument_typ: 'Angebot' as const,
         dokumentenpaket_id: paketId ? parseInt(paketId) : undefined,
         ist_entwurf: false,
         positionen: posPayload,
@@ -404,10 +403,6 @@ function AngebotDetail({
   const [fehler, setFehler] = useState<string | null>(null)
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
-
-  const partnerEmail = angebot.kunde_name
-    ? undefined  // wird aus Kundenstamm-Daten geladen – hier Fallback auf mailAdresse
-    : undefined
 
   async function fetchPdfBlob(): Promise<string> {
     const blob = await getRechnungPdf(angebot.id)
@@ -647,7 +642,7 @@ function AngebotDetail({
                   {pos.menge}× {pos.beschreibung}
                 </span>
                 <span className="text-slate-500 dark:text-slate-400 shrink-0">
-                  {(parseFloat(pos.brutto_gesamt as any) || 0).toFixed(2).replace('.', ',')} €
+                  {(parseFloat(pos.brutto as any) || 0).toFixed(2).replace('.', ',')} €
                 </span>
               </div>
             ))}

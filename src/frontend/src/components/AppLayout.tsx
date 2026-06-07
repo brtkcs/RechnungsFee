@@ -155,9 +155,10 @@ export function AppLayout() {
     enabled: !unt?.ist_kleinunternehmer,
   })
 
-  const navKontext: NavKontext = { unt, zm: zmPruefung }
+  const untDef = unt ?? undefined
+  const navKontext: NavKontext = { unt: untDef, zm: zmPruefung }
   const auswertungNav = auswertungNavAlle.filter(n => n.zeigen(navKontext))
-  const fakturierungNav = fakturierungAlleItems.filter(n => n.zeigen(unt))
+  const fakturierungNav = fakturierungAlleItems.filter(n => n.zeigen(untDef))
 
   const zeigeBanner = fehltGestern?.fehlt === true && !bannerDismissed
 

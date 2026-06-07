@@ -1997,9 +1997,8 @@ function RechnungForm({
         ? 'netto'
         : pf?.gesamt_netto && !pf?.gesamt_brutto ? 'netto' : 'brutto'
   )
-  const [dokumentTyp, setDokumentTyp] = useState<'Rechnung' | 'Lieferschein'>(
+  const dokumentTyp: 'Rechnung' | 'Lieferschein' =
     (initial?.dokument_typ === 'Lieferschein' ? 'Lieferschein' : initialDokumentTyp) ?? 'Rechnung'
-  )
   const [lieferadresseId, setLieferadresseId] = useState<string>(
     initial?.lieferadresse_id ? String(initial.lieferadresse_id) : ''
   )
@@ -3196,7 +3195,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
   const [searchParams, setSearchParams] = useSearchParams()
   const [typ, setTyp] = useState<'eingang' | 'ausgang'>('ausgang')
   const istLieferscheinSeite = modus === 'lieferscheine'
-  const [lieferscheinModus, setLieferscheinModus] = useState(istLieferscheinSeite)
+  const lieferscheinModus = istLieferscheinSeite
   const [zahlungsstatus, setZahlungsstatus] = useState('')
   const [suche, setSuche] = useState('')
   const [filterModus, setFilterModus] = useState<FilterModus>('monat')

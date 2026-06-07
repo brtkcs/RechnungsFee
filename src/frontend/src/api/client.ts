@@ -876,7 +876,9 @@ export type RechnungCreate = {
   ist_entwurf?: boolean
   skonto_prozent?: number | null
   skonto_tage?: number | null
-  dokument_typ?: 'Rechnung' | 'Gutschrift' | 'Lieferschein'
+  dokument_typ?: 'Rechnung' | 'Gutschrift' | 'Lieferschein' | 'Angebot'
+  gueltig_bis?: string
+  dokumentenpaket_id?: number
   lieferadresse_id?: number | null
   positionen: RechnungspositionCreate[]
   netto_gesamt_override?: string
