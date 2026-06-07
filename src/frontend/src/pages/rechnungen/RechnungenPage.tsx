@@ -3348,7 +3348,8 @@ export function RechnungenPage() {
           (r.rechnungsnummer ?? '').toLowerCase().includes(q) ||
           (r.kunde_name ?? '').toLowerCase().includes(q) ||
           (r.lieferant_name ?? '').toLowerCase().includes(q) ||
-          (r.externe_belegnr ?? '').toLowerCase().includes(q)
+          (r.externe_belegnr ?? '').toLowerCase().includes(q) ||
+          (r.lieferschein_zu_rechnung_nr ?? '').toLowerCase().includes(q)
         )
       })
     : alleRechnungen
@@ -3528,7 +3529,7 @@ export function RechnungenPage() {
             {/* Suche */}
             <input
               type="search"
-              placeholder="Nummer oder Partner suchen…"
+              placeholder={lieferscheinModus ? 'Nummer, Partner oder Rechnung suchen…' : 'Nummer oder Partner suchen…'}
               value={suche}
               onChange={(e) => setSuche(e.target.value)}
               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 w-56"
@@ -3637,13 +3638,19 @@ export function RechnungenPage() {
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Datum</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Nummer</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Partner</th>
-                    <th
-                      className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200"
-                      onClick={() => setSortFaellig(s => s === 'asc' ? 'desc' : s === 'desc' ? null : 'asc')}
-                    >
-                      Fällig am {sortFaellig === 'asc' ? '↑' : sortFaellig === 'desc' ? '↓' : ''}
-                    </th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Brutto</th>
+                    {lieferscheinModus ? (
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Rechnung</th>
+                    ) : (
+                      <>
+                        <th
+                          className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200"
+                          onClick={() => setSortFaellig(s => s === 'asc' ? 'desc' : s === 'desc' ? null : 'asc')}
+                        >
+                          Fällig am {sortFaellig === 'asc' ? '↑' : sortFaellig === 'desc' ? '↓' : ''}
+                        </th>
+                        <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Brutto</th>
+                      </>
+                    )}
                     <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
                     {typ !== 'ausgang' && (
                       <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide w-8" title="Beleg angehängt">
@@ -3692,23 +3699,33 @@ export function RechnungenPage() {
                           ? (r.kunde_name ?? r.partner_freitext ?? '—')
                           : (r.lieferant_name ?? r.partner_freitext ?? '—')}
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        {r.faellig_am ? (
-                          <span className={`text-sm font-medium ${
-                            r.zahlungsstatus !== 'bezahlt' && !r.storniert && r.faellig_am < heuteIso()
-                              ? 'text-red-600 dark:text-red-400'
-                              : 'text-slate-500 dark:text-slate-400'
-                          }`}>
-                            {formatDatum(r.faellig_am)}
-                            {r.zahlungsstatus !== 'bezahlt' && !r.storniert && r.faellig_am < heuteIso() && (
-                              <span className="ml-1.5 text-[10px] bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded px-1">Überfällig</span>
-                            )}
-                          </span>
-                        ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
-                      </td>
-                      <td className="px-5 py-3 text-right font-medium text-slate-800 dark:text-slate-100">
-                        {formatEuro(r.brutto_gesamt)}
-                      </td>
+                      {lieferscheinModus ? (
+                        <td className="px-5 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
+                          {r.lieferschein_zu_rechnung_nr
+                            ? <span className={r.lieferschein_rechnung_ist_entwurf ? 'text-amber-600 dark:text-amber-400' : 'text-teal-700 dark:text-teal-400'}>{r.lieferschein_zu_rechnung_nr}</span>
+                            : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                        </td>
+                      ) : (
+                        <>
+                          <td className="px-5 py-3 whitespace-nowrap">
+                            {r.faellig_am ? (
+                              <span className={`text-sm font-medium ${
+                                r.zahlungsstatus !== 'bezahlt' && !r.storniert && r.faellig_am < heuteIso()
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : 'text-slate-500 dark:text-slate-400'
+                              }`}>
+                                {formatDatum(r.faellig_am)}
+                                {r.zahlungsstatus !== 'bezahlt' && !r.storniert && r.faellig_am < heuteIso() && (
+                                  <span className="ml-1.5 text-[10px] bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded px-1">Überfällig</span>
+                                )}
+                              </span>
+                            ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
+                          </td>
+                          <td className="px-5 py-3 text-right font-medium text-slate-800 dark:text-slate-100">
+                            {formatEuro(r.brutto_gesamt)}
+                          </td>
+                        </>
+                      )}
                       <td className="px-5 py-3 text-center">
                         {r.storniert
                           ? <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600">Storniert</span>

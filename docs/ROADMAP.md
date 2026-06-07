@@ -136,6 +136,21 @@ Monatliche Fixkosten (Miete, Leasing, Abonnements) einmalig als Vorlage anlegen.
 
 ---
 
+## v0.3.3 – Lieferadressen & Lieferscheine ✅ *v0.3.3 – Juni 2026*
+
+- [x] Lieferadressen im Kundenstamm (Schema 51): eigene Tabelle `kunden_lieferadressen`; Tab im Kunden-Detail; Standard-Adresse-Flag; Dropdown beim Lieferschein
+- [x] Lieferscheine aktivieren/deaktivieren (Einstellungen → Unternehmen) – Schema 52
+- [x] Lieferschein-PDF: Positionen mit Menge/Einheit, kein Preis; Lieferadresse im Kopf; Empfangsbestätigung-Block (Datum/Ort + Unterschrift Warenempfänger)
+- [x] Nummernkreis `LS-YY####` (Seed); im Nummernkreise-Tab versteckt wenn Funktion inaktiv
+- [x] Lieferschein → Einzelrechnung (Entwurf mit allen Positionen, Preise ergänzen)
+- [x] Sammelrechnung: mehrere Lieferscheine eines Kunden zusammenfassen; Leistungszeitraum-Vorausfüllung; Dialog schließt nach Erstellen automatisch
+- [x] Lieferschein aus Rechnung (Vorkasse): finalisierte RE → Lieferschein; Positionen ohne Preis; max. 1 LS pro RE (409 + ausgegrauter Button)
+- [x] Schema 53: `rechnungen.lieferadresse_id` FK
+- [x] Bidirektionale Navigation: LS-Detail → RE-Button; RE-Detail → LS-Button mit Filter in Lieferschein-Übersicht
+- [x] Lieferschein-Übersicht: „Fällig am" + „Brutto" entfernt; neue Spalte „Rechnung"; Suche um Rechnungsnummer erweitert
+
+---
+
 ## v0.3.1 – Fixes & ZM ✅ *v0.3.1 – Juni 2026*
 
 - [x] §25a Differenzbesteuerung: Margensteuer korrekt im Journal (USt nur auf Brutto-Marge, Schema 50)
@@ -335,3 +350,4 @@ Lose Ideen ohne festen Versionsplan.
 - [x] **v0.2.18 – OCR-Parser-Fixes Tankquittung** (Juni 2026): Produktname + Menge (Super 95 / 32,69 l) aus Tankquittungen extrahiert (Einzeiler + Mehrzeiler); Sternchen-Bereinigung; „SUMME EUR 30,85" als Rechnungsbetrag erkannt
 - [x] **v0.2.19 – OCR-Parser-Fixes Kassenbons** (Juni 2026): Tesseract-Artefakt „25, 95" (Leerzeichen nach Komma) vor Auswertung bereinigt; USt-Aufschlüsselungs-Tabellenzeilen mit Dezimalrate (z.B. „fz 19,0% 4,12 6,78 4,90") werden nicht mehr als Positionen importiert
 - [x] **v0.2.20 – GoBD-Belege + PDF/A-Archivierung** (Juni 2026): GoBD-ZIP enthält jetzt belege.csv + belege/-Ordner; PDF/A-3-Konvertierung via ocrmypdf (Hintergrundthread, graceful ohne Ghostscript); ZUGFeRD/XRechnung sofort als PDF/A-3 markiert; PDF/A-Link in Beleg-Detailansicht; install-linux.sh Ghostscript-Check
+- [x] **v0.3.3 – Lieferadressen & Lieferscheine** (Juni 2026, Issue #25): Lieferadressen im Kundenstamm (Schema 51); Lieferschein-PDF ohne Preise + Lieferadresse + Empfangsbestätigung (Schema 52); LS→Rechnung, LS→Sammelrechnung, RE→Lieferschein (Vorkasse); bidirektionale Navigation + Filter; Lieferschein-Übersicht Rechnungsnummer-Spalte + Suche; Nummernkreis-Tab ausgeblendet wenn inaktiv; Schema 53

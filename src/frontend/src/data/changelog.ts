@@ -23,6 +23,20 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.3',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Lieferadressen (#25): Kunden können beliebig viele Lieferadressen verwalten (Bezeichnung, z. Hd., Anschrift); Standard-Adresse wird beim Lieferschein automatisch vorgeschlagen' },
+      { typ: 'neu', text: 'Lieferscheine (#25): neuer Dokument-Typ; PDF ohne Preisangaben, mit gewählter Lieferadresse und Felder für Empfangsbestätigung (Datum/Ort + Unterschrift Warenempfänger)' },
+      { typ: 'neu', text: 'Lieferschein → Rechnung: Ein-Klick aus dem Lieferschein-Detail erstellt eine Ausgangsrechnung mit allen Positionen (Preise werden im Entwurf ergänzt)' },
+      { typ: 'neu', text: 'Sammelrechnung: mehrere Lieferscheine desselben Kunden per Checkbox markieren und zu einer einzigen Rechnung zusammenfassen; Leistungszeitraum wird aus frühestem/spätestem Lieferschein-Datum vorbelegt' },
+      { typ: 'neu', text: 'Lieferschein aus Rechnung (Vorkasse-Workflow): finalisierte Ausgangsrechnung → „→ Lieferschein erstellen" legt Lieferschein mit allen Positionen an; max. ein Lieferschein pro Rechnung' },
+      { typ: 'neu', text: 'Bidirektionale Navigation: Lieferschein-Detail zeigt verknüpfte Rechnung; Rechnungs-Detail zeigt Lieferschein(e) – Klick öffnet Lieferschein-Übersicht mit Filter auf genau diese Lieferscheine' },
+      { typ: 'verbesserung', text: 'Lieferschein-Übersicht: Spalten „Fällig am" und „Brutto" entfernt; neue Spalte „Rechnung" zeigt verknüpfte Rechnungsnummer; Suche findet jetzt auch nach Rechnungsnummer' },
+      { typ: 'verbesserung', text: 'Nummernkreise: Lieferschein-Eintrag wird ausgeblendet wenn Lieferschein-Funktion nicht aktiviert ist' },
+    ],
+  },
+  {
     version: 'v0.3.2',
     datum: 'Juni 2026',
     eintraege: [
