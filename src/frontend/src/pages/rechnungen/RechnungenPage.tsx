@@ -270,7 +270,7 @@ function TesseractAssistentModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
 
-    {/* Sammelrechnung-Dialog */}
+    {/* Sammelrechnung-Dialog (außerhalb des Flex-Containers, vor Fragment-Ende) */}
     {zeigSammelrechnung && (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4">
@@ -379,6 +379,7 @@ function TesseractAnleitung({
         Nach der Installation RechnungsFee neu starten.
       </p>
     </div>
+    </>
   )
 }
 
@@ -3405,6 +3406,7 @@ export function RechnungenPage() {
   )
 
   return (
+    <>
     <div className="flex h-full">
       {zeigImport && (
         <ImportDialog
