@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTagesabschlussFehltGestern } from '../api/client'
+import { getTagesabschlussFehltGestern, getUnternehmen } from '../api/client'
 import { TagesabschlussDialog } from '../pages/journal/TagesabschlussDialog'
 import { useUpdateCheck } from '../hooks/useUpdateCheck'
 
@@ -21,11 +21,11 @@ const buchhaltungNav = [
   { to: '/tagesabschluesse', label: 'Tagesabschlüsse',  icon: '📋' },
 ]
 
-const auswertungNav = [
-  { to: '/euer',  label: 'EÜR',                icon: '📊' },
-  { to: '/ustva', label: 'UStVA',               icon: '🏛️' },
-  { to: '/zm',    label: 'ZM',                 icon: '🌍' },
-  { to: '/eks',   label: 'EKS',                icon: '📋' },
+const auswertungNavAlle = [
+  { to: '/euer',  label: 'EÜR',   icon: '📊', zeigen: (_ust: boolean, _eks: boolean) => true },
+  { to: '/ustva', label: 'UStVA', icon: '🏛️', zeigen: (ust: boolean, _eks: boolean) => !ust },
+  { to: '/zm',    label: 'ZM',    icon: '🌍', zeigen: (ust: boolean, _eks: boolean) => !ust },
+  { to: '/eks',   label: 'EKS',   icon: '📋', zeigen: (_ust: boolean, eks: boolean) => eks },
 ]
 
 const stammdatenNav = [
@@ -44,9 +44,9 @@ const einstellungenNav = [
   { to: '/unternehmen',      label: 'Unternehmen',       icon: '🏢' },
 ]
 
-const buchhaltungPfade  = buchhaltungNav.map(n => n.to)
-const auswertungPfade   = auswertungNav.map(n => n.to)
-const stammdatenPfade   = stammdatenNav.map(n => n.to)
+const buchhaltungPfade   = buchhaltungNav.map(n => n.to)
+const auswertungAllePfade = auswertungNavAlle.map(n => n.to)
+const stammdatenPfade    = stammdatenNav.map(n => n.to)
 const einstellungenPfade = einstellungenNav.map(n => n.to)
 
 function formatDatum(iso: string): string {
@@ -136,6 +136,15 @@ export function AppLayout() {
     refetchOnWindowFocus: false,
   })
 
+  const { data: unt } = useQuery({
+    queryKey: ['unternehmen'],
+    queryFn: getUnternehmen,
+    staleTime: 1000 * 60 * 5,
+  })
+  const istKleinunternehmer = !!unt?.ist_kleinunternehmer
+  const beziehtTransfer     = !!unt?.bezieht_transferleistungen
+  const auswertungNav = auswertungNavAlle.filter(n => n.zeigen(istKleinunternehmer, beziehtTransfer))
+
   const zeigeBanner = fehltGestern?.fehlt === true && !bannerDismissed
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -146,7 +155,7 @@ export function AppLayout() {
     }`
 
   const buchhaltungAktiv  = buchhaltungPfade.some(p => location.pathname.startsWith(p))
-  const auswertungAktiv   = auswertungPfade.some(p => location.pathname.startsWith(p))
+  const auswertungAktiv   = auswertungAllePfade.some(p => location.pathname.startsWith(p))
   const stammdatenAktiv   = stammdatenPfade.some(p => location.pathname.startsWith(p))
   const einstellungenAktiv = einstellungenPfade.some(p => location.pathname.startsWith(p))
 
