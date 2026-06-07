@@ -2073,6 +2073,27 @@ function RechnungForm({
     setPositionen((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)))
   }
 
+  function zusammenfassenNachSteuersatz() {
+    const gruppen: Record<string, number> = {}
+    for (const p of positionen) {
+      const satz = String(parseFloat(p.ust_satz) || 0)
+      const betrag = (parseFloat(p.netto.replace(',', '.')) || 0) * (parseFloat(p.menge) || 1)
+      gruppen[satz] = (gruppen[satz] ?? 0) + betrag
+    }
+    const labels: Record<string, string> = { '0': 'Waren (0%)', '7': 'Waren (7%)', '19': 'Waren (19%)' }
+    setPositionen(
+      Object.entries(gruppen)
+        .sort(([a], [b]) => parseFloat(a) - parseFloat(b))
+        .map(([satz, summe]) => ({
+          ...leerPosition(satz),
+          beschreibung: labels[satz] ?? `Waren (${satz}%)`,
+          netto: summe.toFixed(2).replace('.', ','),
+          menge: '1',
+        }))
+    )
+    setEingabeModus('netto')
+  }
+
   function addPosition() {
     const letztePos = positionen[positionen.length - 1]
     const defaultUst = istKleinunternehmer
@@ -2406,6 +2427,16 @@ function RechnungForm({
             {typ === 'eingang' && schnellmodus ? 'Rechnungsbetrag *' : 'Positionen *'}
           </label>
           <div className="flex items-center gap-3">
+            {!schnellmodus && typ === 'eingang' && positionen.length > 1 && (
+              <button
+                type="button"
+                onClick={zusammenfassenNachSteuersatz}
+                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 underline"
+                title="Alle Positionen nach Steuersatz summieren (z.B. alle 7%-Positionen → eine Zeile)"
+              >
+                ∑ Nach Steuersatz zusammenfassen
+              </button>
+            )}
             {typ === 'eingang' && (
               <button
                 type="button"
