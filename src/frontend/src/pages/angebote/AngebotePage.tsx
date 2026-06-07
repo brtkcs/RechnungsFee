@@ -67,23 +67,32 @@ function leerePos(): Pos {
   return { beschreibung: '', menge: '1', einheit: 'Stk.', einzelpreis: '', ust_satz: '19' }
 }
 
-function berechnePos(pos: Pos) {
+type EingabeModus = 'brutto' | 'netto'
+
+function nettoProStueck(pos: Pos, modus: EingabeModus): number {
+  const ep  = parseFloat(pos.einzelpreis.replace(',', '.')) || 0
+  const ust = parseFloat(pos.ust_satz) || 0
+  return modus === 'brutto' ? ep / (1 + ust / 100) : ep
+}
+
+function berechnePos(pos: Pos, modus: EingabeModus) {
   const menge = parseFloat(pos.menge) || 0
-  const ep    = parseFloat(pos.einzelpreis.replace(',', '.')) || 0
   const ust   = parseFloat(pos.ust_satz) || 0
-  const netto = menge * ep
+  const netto = nettoProStueck(pos, modus) * menge
   const ustBet = (netto * ust) / 100
   return { netto, ustBet, brutto: netto + ustBet }
 }
 
 function PositionenTabelle({
-  positionen, onChange, ustSaetze, defaultSatz, onArtikelWahl,
+  positionen, onChange, ustSaetze, defaultSatz, onArtikelWahl, eingabeModus, onModusWechsel,
 }: {
   positionen: Pos[]
   onChange: (p: Pos[]) => void
   ustSaetze: { satz: string }[]
   defaultSatz: string
   onArtikelWahl: (i: number, a: ArtikelSuche) => void
+  eingabeModus: EingabeModus
+  onModusWechsel: (m: EingabeModus) => void
 }) {
   function update(i: number, field: keyof Pos, val: string) {
     const neu = positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p)
@@ -91,14 +100,30 @@ function PositionenTabelle({
   }
 
   const gesamt = positionen.reduce((acc, p) => {
-    const { netto, ustBet, brutto } = berechnePos(p)
+    const { netto, ustBet, brutto } = berechnePos(p, eingabeModus)
     return { netto: acc.netto + netto, ust: acc.ust + ustBet, brutto: acc.brutto + brutto }
   }, { netto: 0, ust: 0, brutto: 0 })
 
   return (
     <div className="space-y-2">
+      {/* Brutto/Netto-Toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500 dark:text-slate-400">Preiseingabe:</span>
+        <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-xs">
+          {(['brutto', 'netto'] as EingabeModus[]).map(m => (
+            <button key={m} type="button"
+              onClick={() => onModusWechsel(m)}
+              className={`px-3 py-1 transition-colors ${eingabeModus === m ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+              {m === 'brutto' ? 'Brutto (inkl. USt)' : 'Netto (zzgl. USt)'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="hidden sm:grid grid-cols-[1fr_80px_80px_110px_80px_32px] gap-2 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-        <span>Beschreibung</span><span>Menge</span><span>Einheit</span><span>Einzelpreis</span><span>USt %</span><span />
+        <span>Beschreibung</span><span>Menge</span><span>Einheit</span>
+        <span>{eingabeModus === 'brutto' ? 'Bruttopreis' : 'Nettopreis'}</span>
+        <span>USt %</span><span />
       </div>
 
       {positionen.map((pos, i) => (
@@ -173,6 +198,7 @@ function AngebotFormular({
   const [gueltigBis, setGueltigBis] = useState(initial?.gueltig_bis ?? inXTagen(30))
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [paketId, setPaketId] = useState(initial?.dokumentenpaket_id?.toString() ?? '')
+  const [eingabeModus, setEingabeModus] = useState<EingabeModus>('brutto')
   const ustSaetzeListe = ustSaetze?.filter(u => u.ist_aktiv) ?? []
   const defaultSatz = ustSaetze?.find(u => u.ist_default)?.satz
     ?? ustSaetze?.find(u => parseFloat(u.satz) === 19)?.satz
@@ -203,12 +229,15 @@ function AngebotFormular({
   function fillPositionFromArtikel(i: number, a: ArtikelSuche) {
     const ust_satz = a.differenzbesteuerung ? '0'
       : (ustSaetze?.find(u => parseFloat(u.satz) === parseFloat(a.steuersatz))?.satz ?? a.steuersatz)
+    const preis = eingabeModus === 'netto'
+      ? parseFloat(a.vk_netto).toFixed(2)
+      : parseFloat(a.vk_brutto).toFixed(2)
     setPositionen(prev => prev.map((p, idx) =>
       idx !== i ? p : {
         ...p,
         beschreibung: a.bezeichnung,
         einheit: a.einheit,
-        einzelpreis: parseFloat(a.vk_brutto).toFixed(2),
+        einzelpreis: preis,
         ust_satz,
         artikel_id: a.id,
       }
@@ -225,16 +254,13 @@ function AngebotFormular({
     setFehler(null)
     try {
       const posPayload = positionen.map((p, i) => {
-        const { netto, ustBet, brutto } = berechnePos(p)
+        const nettoEinzel = nettoProStueck(p, eingabeModus)
         return {
           beschreibung: p.beschreibung.trim(),
           menge: parseFloat(p.menge) || 1,
           einheit: p.einheit || 'Stk.',
-          einzelpreis: parseFloat(p.einzelpreis.replace(',', '.')) || 0,
+          netto: nettoEinzel,           // Netto pro Einheit – Backend berechnet Gesamt
           ust_satz: parseFloat(p.ust_satz) || 0,
-          netto,
-          ust_betrag: ustBet,
-          brutto,
           position: i + 1,
           artikel_id: p.artikel_id,
         }
@@ -315,6 +341,8 @@ function AngebotFormular({
           ustSaetze={ustSaetzeListe}
           defaultSatz={defaultSatz}
           onArtikelWahl={fillPositionFromArtikel}
+          eingabeModus={eingabeModus}
+          onModusWechsel={setEingabeModus}
         />
       </div>
 
