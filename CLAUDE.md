@@ -32,7 +32,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 55` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 56` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -119,6 +119,9 @@ def _run_migrations():
 | 51 | kunden_lieferadressen-Tabelle: separate Lieferadressen pro Kunde (bezeichnung, z_hd, Anschrift, land, ist_standard); Voraussetzung für Lieferschein-Feature |
 | 52 | unternehmen.lieferschein_aktiv BOOLEAN; rechnungen.lieferschein_zu_rechnung_id FK; Nummernkreis-Seed LS-YY####; dokument_typ = "Lieferschein" (PDF ohne Preise, direkt→Rechnung, Sammelrechnung) |
 | 53 | rechnungen.lieferadresse_id FK → kunden_lieferadressen – Lieferadresse auf Lieferschein |
+| 54 | dokumentenpakete + dokumentenpaket_belege-Tabellen |
+| 55 | unternehmen.angebote_aktiv; rechnungen.angebot_status, gueltig_bis, dokumentenpaket_id, rechnung_zu_angebot_id; Nummernkreis ANG-JJNNNN |
+| 56 | rechnungen.lieferschein_zu_angebot_id – Rückverlinkung: Angebot weiß welcher Lieferschein aus ihm erstellt wurde |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

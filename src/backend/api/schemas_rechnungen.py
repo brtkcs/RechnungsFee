@@ -246,6 +246,8 @@ class RechnungResponse(BaseModel):
     dokumentenpaket_id: Optional[int] = None
     rechnung_zu_angebot_id: Optional[int] = None
     rechnung_zu_angebot_nr: Optional[str] = None  # wird in from_orm_extended befüllt
+    lieferschein_zu_angebot_id: Optional[int] = None
+    lieferschein_zu_angebot_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
     aktualisiert_am: datetime
 
@@ -324,6 +326,16 @@ class RechnungResponse(BaseModel):
                     linked_re = session.get(obj.__class__, obj.rechnung_zu_angebot_id)
                     if linked_re:
                         data.rechnung_zu_angebot_nr = linked_re.rechnungsnummer
+            except Exception:
+                pass
+        if obj.lieferschein_zu_angebot_id:
+            try:
+                from sqlalchemy import inspect as _sa_inspect
+                session = _sa_inspect(obj).session
+                if session:
+                    linked_ls = session.get(obj.__class__, obj.lieferschein_zu_angebot_id)
+                    if linked_ls:
+                        data.lieferschein_zu_angebot_nr = linked_ls.rechnungsnummer
             except Exception:
                 pass
         return data

@@ -3219,6 +3219,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
             setFilterModus('alle')
             setSelectedId(r.id)
             setPendingEditRechnung(r)
+            setSuche(r.rechnungsnummer ?? '')
             setSearchParams({}, { replace: true })
           })
           .catch(() => setSearchParams({}, { replace: true }))

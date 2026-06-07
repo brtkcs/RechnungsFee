@@ -483,7 +483,6 @@ function AngebotDetail({
   }
 
   async function handleRechnungErstellen() {
-    if (!confirm('Rechnung aus diesem Angebot erstellen?')) return
     setKonvLaedt(true)
     try {
       const re = await rechnungAusAngebot(angebot.id)
@@ -494,7 +493,6 @@ function AngebotDetail({
   }
 
   async function handleLieferscheinErstellen() {
-    if (!confirm('Lieferschein aus diesem Angebot erstellen?')) return
     setLsLaedt(true)
     try {
       const ls = await lieferscheinAusAngebot(angebot.id)
@@ -506,7 +504,7 @@ function AngebotDetail({
 
   const brutto = parseFloat(angebot.brutto_gesamt as any) || 0
 
-  const btnBase = 'flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors'
+  const btnBase = 'flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
   const btnNeutral = `${btnBase} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300`
   const btnGreen   = `${btnBase} border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-950 text-green-700 dark:text-green-400 font-medium`
   const btnRed     = `${btnBase} border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400`
@@ -540,7 +538,12 @@ function AngebotDetail({
             ✏️ Bearbeiten
           </button>
           {!angebot.rechnung_zu_angebot_id ? (
-            <button onClick={handleRechnungErstellen} disabled={konvLaedt} className={btnGreen}>
+            <button
+              onClick={handleRechnungErstellen}
+              disabled={konvLaedt || !!angebot.lieferschein_zu_angebot_id || angebot.angebot_status !== 'bestaetigt'}
+              title={angebot.lieferschein_zu_angebot_id ? 'Zuerst Lieferschein → Rechnung umwandeln' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+              className={btnGreen}
+            >
               {konvLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
             </button>
           ) : (
@@ -549,9 +552,20 @@ function AngebotDetail({
             </button>
           )}
           {unternehmen?.lieferschein_aktiv && (
-            <button onClick={handleLieferscheinErstellen} disabled={lsLaedt} className={btnGreen}>
-              {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
-            </button>
+            !angebot.lieferschein_zu_angebot_id ? (
+              <button
+                onClick={handleLieferscheinErstellen}
+                disabled={lsLaedt || angebot.angebot_status !== 'bestaetigt'}
+                title={angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+                className={btnGreen}
+              >
+                {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
+              </button>
+            ) : (
+              <button onClick={() => navigate(`/lieferscheine?id=${angebot.lieferschein_zu_angebot_id}`)} className={btnGreen}>
+                → {angebot.lieferschein_zu_angebot_nr ?? `LS #${angebot.lieferschein_zu_angebot_id}`}
+              </button>
+            )
           )}
           <button onClick={onDelete} className={btnRed}>
             🗑 Löschen

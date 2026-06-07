@@ -516,6 +516,7 @@ class Rechnung(Base):
     gueltig_bis: Mapped[date | None] = mapped_column(Date)
     dokumentenpaket_id: Mapped[int | None] = mapped_column(ForeignKey("dokumentenpakete.id"), nullable=True)
     rechnung_zu_angebot_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)
+    lieferschein_zu_angebot_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 

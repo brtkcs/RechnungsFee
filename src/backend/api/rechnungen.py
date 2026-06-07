@@ -1937,6 +1937,7 @@ def lieferschein_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
             brutto=Decimal("0.00"),
         ))
 
+    angebot.lieferschein_zu_angebot_id = ls.id
     db.commit()
     db.refresh(ls)
     return RechnungResponse.from_orm_extended(ls)

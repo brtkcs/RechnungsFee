@@ -854,6 +854,8 @@ export type Rechnung = {
   dokumentenpaket_id: number | null
   rechnung_zu_angebot_id: number | null
   rechnung_zu_angebot_nr: string | null
+  lieferschein_zu_angebot_id: number | null
+  lieferschein_zu_angebot_nr: string | null
   erstellt_am: string
   aktualisiert_am: string
 }

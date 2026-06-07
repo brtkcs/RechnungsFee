@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete
 
-SCHEMA_VERSION = 55
+SCHEMA_VERSION = 56
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1211,6 +1211,25 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 54"))
             conn.commit()
             print("[Migration] Schema auf Version 54 (dokumentenpakete + dokumentenpaket_belege)")
+
+        if version < 56:
+            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferschein_zu_angebot_id INTEGER REFERENCES rechnungen(id)"))
+            # Bestehende Links aus Notizen "Zu Angebot XXX" rekonstruieren
+            ls_rows = conn.execute(text(
+                "SELECT id, notizen FROM rechnungen WHERE dokument_typ='Lieferschein' AND notizen LIKE 'Zu Angebot %'"
+            )).fetchall()
+            for ls_id, notiz in ls_rows:
+                ang_nr = notiz.replace("Zu Angebot ", "").strip()
+                ang = conn.execute(text(
+                    "SELECT id FROM rechnungen WHERE rechnungsnummer=:nr AND dokument_typ='Angebot'"
+                ), {"nr": ang_nr}).fetchone()
+                if ang:
+                    conn.execute(text(
+                        "UPDATE rechnungen SET lieferschein_zu_angebot_id=:ls_id WHERE id=:ang_id"
+                    ), {"ls_id": ls_id, "ang_id": ang[0]})
+            conn.execute(text("PRAGMA user_version = 56"))
+            conn.commit()
+            print("[Migration] Schema auf Version 56 (rechnungen.lieferschein_zu_angebot_id: Rückverlinkung Angebot→Lieferschein)")
 
 
 def _migrate_kategorien() -> None:
