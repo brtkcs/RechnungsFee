@@ -1288,7 +1288,9 @@ function RechnungDetail({
               ? <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600">Storniert</span>
               : rechnung.ist_entwurf
                 ? <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Entwurf</span>
-                : <StatusBadge status={rechnung.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
+                : rechnung.dokument_typ === 'Lieferschein'
+                  ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${rechnung.lieferschein_zu_rechnung_id ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800' : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>{rechnung.lieferschein_zu_rechnung_id ? 'Abgerechnet' : 'Nicht abgerechnet'}</span>
+                  : <StatusBadge status={rechnung.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
           </div>
           {rechnung.storniert && rechnung.storno_grund && (
             <div className="flex justify-between gap-2">
@@ -3585,7 +3587,9 @@ export function RechnungenPage() {
                           ? <span className="text-xs px-2 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600">Storniert</span>
                           : r.ist_entwurf
                             ? <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Entwurf</span>
-                            : <StatusBadge status={r.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
+                            : r.dokument_typ === 'Lieferschein'
+                              ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${r.lieferschein_zu_rechnung_id ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800' : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>{r.lieferschein_zu_rechnung_id ? 'Abgerechnet' : 'Nicht abgerechnet'}</span>
+                              : <StatusBadge status={r.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
                       </td>
                       {typ !== 'ausgang' && (
                         <td className="px-3 py-3 text-center">
