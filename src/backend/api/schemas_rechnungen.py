@@ -226,6 +226,7 @@ class RechnungResponse(BaseModel):
     gutschrift_zu_rechnung_id: Optional[int] = None
     gutschrift_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     lieferschein_zu_rechnung_id: Optional[int] = None
+    lieferschein_rechnung_ist_entwurf: Optional[bool] = None  # wird in from_orm_extended befüllt
     lieferadresse_id: Optional[int] = None
     lieferadresse_text: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
@@ -269,6 +270,15 @@ class RechnungResponse(BaseModel):
                          " ".join(filter(None, [la.strasse, la.hausnummer])),
                          " ".join(filter(None, [la.plz, la.ort]))]
                 data.lieferadresse_text = "\n".join(t for t in teile if t)
+        if obj.lieferschein_zu_rechnung_id:
+            try:
+                from sqlalchemy import inspect as _sa_inspect
+                session = _sa_inspect(obj).session
+                if session:
+                    linked = session.get(obj.__class__, obj.lieferschein_zu_rechnung_id)
+                    data.lieferschein_rechnung_ist_entwurf = linked.ist_entwurf if linked else None
+            except Exception:
+                pass
         return data
 
 

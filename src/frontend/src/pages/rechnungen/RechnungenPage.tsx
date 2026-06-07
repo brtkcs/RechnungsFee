@@ -358,6 +358,14 @@ function OcrInstallHinweis() {
 // Status-Badge
 // ---------------------------------------------------------------------------
 
+function LieferscheinStatusBadge({ r }: { r: { lieferschein_zu_rechnung_id: number | null; lieferschein_rechnung_ist_entwurf: boolean | null } }) {
+  if (!r.lieferschein_zu_rechnung_id)
+    return <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">Nicht abgerechnet</span>
+  if (r.lieferschein_rechnung_ist_entwurf)
+    return <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Rechnungsentwurf</span>
+  return <span className="text-xs font-medium px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">Abgerechnet</span>
+}
+
 function StatusBadge({ status }: { status: 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich' }) {
   const cfg = {
     offen:           { cls: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800',             label: 'Offen' },
@@ -1064,7 +1072,10 @@ function RechnungDetail({
               → Rechnung erstellen
             </button>
           )}
-          {rechnung.dokument_typ === 'Lieferschein' && rechnung.lieferschein_zu_rechnung_id && (
+          {rechnung.dokument_typ === 'Lieferschein' && rechnung.lieferschein_zu_rechnung_id && rechnung.lieferschein_rechnung_ist_entwurf && (
+            <span className="self-center text-xs text-amber-600 dark:text-amber-400 italic">Rechnungsentwurf vorhanden</span>
+          )}
+          {rechnung.dokument_typ === 'Lieferschein' && rechnung.lieferschein_zu_rechnung_id && !rechnung.lieferschein_rechnung_ist_entwurf && (
             <span className="self-center text-xs text-slate-400 dark:text-slate-500 italic">Bereits abgerechnet</span>
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && rechnung.dokument_typ !== 'Lieferschein' && !zeigStornoEingabe && (
@@ -1289,7 +1300,7 @@ function RechnungDetail({
               : rechnung.ist_entwurf
                 ? <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Entwurf</span>
                 : rechnung.dokument_typ === 'Lieferschein'
-                  ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${rechnung.lieferschein_zu_rechnung_id ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800' : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>{rechnung.lieferschein_zu_rechnung_id ? 'Abgerechnet' : 'Nicht abgerechnet'}</span>
+                  ? <LieferscheinStatusBadge r={rechnung} />
                   : <StatusBadge status={rechnung.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
           </div>
           {rechnung.storniert && rechnung.storno_grund && (
@@ -3556,7 +3567,7 @@ export function RechnungenPage() {
                       <td className="px-5 py-3 font-mono text-xs text-slate-400 dark:text-slate-500">
                         {r.rechnungsnummer ?? '—'}
                         {r.dokument_typ === 'Gutschrift' && <span className="ml-1.5 text-[10px] text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded px-1">Gutschrift</span>}
-                        {r.dokument_typ === 'Lieferschein' && <span className="ml-1.5 text-[10px] text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 rounded px-1">{r.lieferschein_zu_rechnung_id ? '✓ abgerechnet' : 'Lieferschein'}</span>}
+                        {r.dokument_typ === 'Lieferschein' && <span className="ml-1.5 text-[10px] text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 rounded px-1">{!r.lieferschein_zu_rechnung_id ? 'Lieferschein' : r.lieferschein_rechnung_ist_entwurf ? 'Entwurf' : '✓ abgerechnet'}</span>}
                         {r.ist_entwurf && <span className="ml-1.5 text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded px-1">Entwurf</span>}
                         {r.storniert && <span className="ml-1.5 text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-1">Storniert</span>}
                       </td>
@@ -3588,7 +3599,7 @@ export function RechnungenPage() {
                           : r.ist_entwurf
                             ? <span className="text-xs px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Entwurf</span>
                             : r.dokument_typ === 'Lieferschein'
-                              ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${r.lieferschein_zu_rechnung_id ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800' : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600'}`}>{r.lieferschein_zu_rechnung_id ? 'Abgerechnet' : 'Nicht abgerechnet'}</span>
+                              ? <LieferscheinStatusBadge r={r} />
                               : <StatusBadge status={r.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
                       </td>
                       {typ !== 'ausgang' && (
