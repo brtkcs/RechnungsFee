@@ -60,6 +60,7 @@ class UnternehmenBase(BaseModel):
     qr_zahlung_aktiv: bool = False
     standard_skonto_prozent: Optional[Decimal] = None
     standard_skonto_tage: Optional[int] = None
+    lieferschein_aktiv: bool = False
 
     @field_validator("versteuerungsart")
     @classmethod
