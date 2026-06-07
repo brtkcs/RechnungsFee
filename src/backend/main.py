@@ -1226,9 +1226,11 @@ def _run_migrations() -> None:
             print("[Migration] Schema auf Version 54 (dokumentenpakete + dokumentenpaket_belege)")
 
         if version < 56:
-            conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferschein_zu_angebot_id INTEGER REFERENCES rechnungen(id)"))
-            # Bestehende Links aus Notizen "Zu Angebot XXX" rekonstruieren (nur wenn notizen-Spalte existiert)
             rechnungen_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "lieferschein_zu_angebot_id" not in rechnungen_cols:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN lieferschein_zu_angebot_id INTEGER REFERENCES rechnungen(id)"))
+                rechnungen_cols.add("lieferschein_zu_angebot_id")
+            # Bestehende Links aus Notizen "Zu Angebot XXX" rekonstruieren (nur wenn notizen-Spalte existiert)
             ls_rows = []
             if "notizen" in rechnungen_cols and "dokument_typ" in rechnungen_cols:
                 ls_rows = conn.execute(text(
