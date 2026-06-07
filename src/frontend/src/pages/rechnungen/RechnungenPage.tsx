@@ -1959,6 +1959,14 @@ function RechnungForm({
     enabled: dokumentTyp === 'Lieferschein' && !!kundeIdNum,
   })
 
+  // Standard-Lieferadresse vorauswählen, wenn nicht bereits explizit gesetzt
+  useEffect(() => {
+    if (initial?.lieferadresse_id || lieferadresseId) return
+    const standard = lieferadressen.find(la => la.ist_standard)
+    if (standard) setLieferadresseId(String(standard.id))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lieferadressen])
+
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
   // Bei Import (XML/PDF) mit mehreren Positionen immer aufgeschlüsselten Modus zeigen
   const [schnellmodus, setSchnellmodus] = useState(
