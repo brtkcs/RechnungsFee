@@ -819,7 +819,7 @@ function RechnungDetail({
   onDelete: () => void
   onGutschriftCreated?: (gs: Rechnung) => void
   onRechnungAusLs?: (id: number) => void
-  onSelectId?: (id: number, isLieferschein?: boolean) => void
+  onSelectId?: (id: number, isLieferschein?: boolean, filterRechnungId?: number) => void
   onLieferscheinAusRechnung?: (id: number) => void
 }) {
   const [zahlungsDialog, setZahlungsDialog] = useState(false)
@@ -1090,12 +1090,14 @@ function RechnungDetail({
             </button>
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && rechnung.typ === 'ausgang' && rechnung.dokument_typ !== 'Gutschrift' && rechnung.dokument_typ !== 'Lieferschein' && !zeigStornoEingabe && onLieferscheinAusRechnung && (
-            rechnung.hat_lieferschein && rechnung.linked_lieferschein_id ? (
+            rechnung.hat_lieferschein ? (
               <button
-                onClick={() => onSelectId?.(rechnung.linked_lieferschein_id!, true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-teal-200 dark:border-teal-800 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-400 font-mono"
+                onClick={() => onSelectId?.(rechnung.id, true, rechnung.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-teal-200 dark:border-teal-800 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-400"
               >
-                → {rechnung.linked_lieferschein_nr ?? `Lieferschein #${rechnung.linked_lieferschein_id}`}
+                → {rechnung.lieferschein_anzahl === 1 && rechnung.linked_lieferschein_nr
+                  ? rechnung.linked_lieferschein_nr
+                  : `${rechnung.lieferschein_anzahl} Lieferschein${rechnung.lieferschein_anzahl !== 1 ? 'e' : ''}`}
               </button>
             ) : (
               <button
@@ -3235,6 +3237,8 @@ export function RechnungenPage() {
   const [srDatum, setSrDatum] = useState(heuteIso())
   const [srLeistungVon, setSrLeistungVon] = useState('')
   const [srLeistungBis, setSrLeistungBis] = useState('')
+  const [lsFilterRechnungId, setLsFilterRechnungId] = useState<number | null>(null)
+  const [lsFilterLabel, setLsFilterLabel] = useState<string>('')
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams =
@@ -3349,13 +3353,17 @@ export function RechnungenPage() {
       })
     : alleRechnungen
 
+  const listeGefiltert = lsFilterRechnungId != null && lieferscheinModus
+    ? liste.filter(r => r.lieferschein_zu_rechnung_id === lsFilterRechnungId)
+    : liste
+
   const listeSortiert = sortFaellig
-    ? [...liste].sort((a, b) => {
+    ? [...listeGefiltert].sort((a, b) => {
         const fa = a.faellig_am ?? ''
         const fb = b.faellig_am ?? ''
         return sortFaellig === 'asc' ? fa.localeCompare(fb) : fb.localeCompare(fa)
       })
-    : liste
+    : listeGefiltert
 
   // Keyboard-Navigation: globaler Listener damit der Focus-Zustand
   // des Detail-Panels oder anderer Elemente nicht stört.
@@ -3444,7 +3452,7 @@ export function RechnungenPage() {
               {(['ausgang', 'eingang'] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => { setTyp(t); setLieferscheinModus(false); setSelectedId(null); setSelectedLsIds(new Set()) }}
+                  onClick={() => { setTyp(t); setLieferscheinModus(false); setSelectedId(null); setSelectedLsIds(new Set()); setLsFilterRechnungId(null) }}
                   className={`px-4 py-1.5 transition-colors ${
                     !lieferscheinModus && typ === t ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
@@ -3454,7 +3462,7 @@ export function RechnungenPage() {
               ))}
               {lieferscheinAktiv && (
                 <button
-                  onClick={() => { setLieferscheinModus(true); setSelectedId(null); setSelectedLsIds(new Set()) }}
+                  onClick={() => { setLieferscheinModus(true); setSelectedId(null); setSelectedLsIds(new Set()); setLsFilterRechnungId(null) }}
                   className={`px-4 py-1.5 transition-colors ${
                     lieferscheinModus ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
@@ -3571,6 +3579,17 @@ export function RechnungenPage() {
 
         {/* Tabelle */}
         <div ref={listContainerRef} tabIndex={0} className="flex-1 overflow-y-auto min-h-0 px-6 pb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-sm">
+          {lieferscheinModus && lsFilterRechnungId != null && (
+            <div className="mb-3 flex items-center gap-3 bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 rounded-xl px-4 py-2.5">
+              <span className="text-sm text-teal-700 dark:text-teal-300 flex-1">
+                Filter: Lieferscheine zu <span className="font-mono font-semibold">{lsFilterLabel}</span>
+              </span>
+              <button type="button" onClick={() => setLsFilterRechnungId(null)}
+                className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800">
+                Filter aufheben ×
+              </button>
+            </div>
+          )}
           {lieferscheinModus && selectedLsIds.size > 0 && (
             <div className="mb-3 flex items-center gap-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-2.5">
               <span className="text-sm text-blue-700 dark:text-blue-300 font-medium flex-1">
@@ -3770,10 +3789,18 @@ export function RechnungenPage() {
               }}
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
-              onSelectId={(id, isLieferschein) => {
+              onSelectId={(id, isLieferschein, filterRechnungId) => {
                 setLieferscheinModus(!!isLieferschein)
                 setTyp('ausgang')
-                setSelectedId(id)
+                if (filterRechnungId !== undefined) {
+                  setLsFilterRechnungId(filterRechnungId)
+                  const r = (rechnungen ?? []).find(r => r.id === filterRechnungId)
+                  setLsFilterLabel(r?.rechnungsnummer ?? `Rechnung #${filterRechnungId}`)
+                  setSelectedId(null)
+                } else {
+                  setLsFilterRechnungId(null)
+                  setSelectedId(id)
+                }
               }}
               onLieferscheinAusRechnung={lieferscheinAktiv ? (id) => lieferscheinAusRechnungMutation.mutate(id) : undefined}
             />
