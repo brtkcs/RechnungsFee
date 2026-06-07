@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -75,11 +75,12 @@ function berechnePos(pos: Pos) {
 }
 
 function PositionenTabelle({
-  positionen, onChange, ustSaetze,
+  positionen, onChange, ustSaetze, defaultSatz,
 }: {
   positionen: Pos[]
   onChange: (p: Pos[]) => void
   ustSaetze: { satz: string }[]
+  defaultSatz: string
 }) {
   function update(i: number, field: keyof Pos, val: string) {
     const neu = positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p)
@@ -119,7 +120,7 @@ function PositionenTabelle({
         </div>
       ))}
 
-      <button type="button" onClick={() => onChange([...positionen, leerePos()])}
+      <button type="button" onClick={() => onChange([...positionen, { ...leerePos(), ust_satz: defaultSatz }])}
         className="text-sm text-blue-600 hover:underline dark:text-blue-400">
         + Position hinzufügen
       </button>
@@ -165,6 +166,11 @@ function AngebotFormular({
   const [gueltigBis, setGueltigBis] = useState(initial?.gueltig_bis ?? inXTagen(30))
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [paketId, setPaketId] = useState(initial?.dokumentenpaket_id?.toString() ?? '')
+  const ustSaetzeListe = ustSaetze?.filter(u => u.ist_aktiv) ?? []
+  const defaultSatz = ustSaetze?.find(u => u.ist_default)?.satz
+    ?? ustSaetze?.find(u => parseFloat(u.satz) === 19)?.satz
+    ?? '19'
+
   const [positionen, setPositionen] = useState<Pos[]>(() => {
     if (initial?.positionen?.length) {
       return initial.positionen.map(p => ({
@@ -178,7 +184,14 @@ function AngebotFormular({
     return [leerePos()]
   })
 
-  const ustSaetzeListe = ustSaetze?.filter(u => u.ist_aktiv) ?? [{ satz: '19' }, { satz: '7' }, { satz: '0' }]
+  // Sobald UstSätze geladen sind, default-Satz der leeren Positionen korrigieren
+  useEffect(() => {
+    if (!ustSaetze?.length || initial) return
+    setPositionen(prev => prev.map(p =>
+      p.einzelpreis === '' ? { ...p, ust_satz: defaultSatz } : p
+    ))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ustSaetze])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -277,6 +290,7 @@ function AngebotFormular({
           positionen={positionen}
           onChange={setPositionen}
           ustSaetze={ustSaetzeListe}
+          defaultSatz={defaultSatz}
         />
       </div>
 
