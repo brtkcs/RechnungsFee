@@ -24,7 +24,7 @@ const buchhaltungNav = [
 const auswertungNav = [
   { to: '/euer',  label: 'EÜR',                icon: '📊' },
   { to: '/ustva', label: 'UStVA',               icon: '🏛️' },
-  { to: '/zm',    label: 'Zusammenf. Meldung', icon: '🌍' },
+  { to: '/zm',    label: 'ZM',                 icon: '🌍' },
   { to: '/eks',   label: 'EKS',                icon: '📋' },
 ]
 
