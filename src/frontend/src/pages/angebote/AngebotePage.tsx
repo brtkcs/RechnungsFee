@@ -6,8 +6,9 @@ import {
   createRechnung, updateRechnung, deleteRechnung,
   rechnungAusAngebot, angebotStatusSetzen,
   getApiBase, openUrl,
-  type Rechnung,
+  type Rechnung, type ArtikelSuche,
 } from '../../api/client'
+import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -59,6 +60,7 @@ interface Pos {
   einheit: string
   einzelpreis: string
   ust_satz: string
+  artikel_id?: number
 }
 
 function leerePos(): Pos {
@@ -75,12 +77,13 @@ function berechnePos(pos: Pos) {
 }
 
 function PositionenTabelle({
-  positionen, onChange, ustSaetze, defaultSatz,
+  positionen, onChange, ustSaetze, defaultSatz, onArtikelWahl,
 }: {
   positionen: Pos[]
   onChange: (p: Pos[]) => void
   ustSaetze: { satz: string }[]
   defaultSatz: string
+  onArtikelWahl: (i: number, a: ArtikelSuche) => void
 }) {
   function update(i: number, field: keyof Pos, val: string) {
     const neu = positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p)
@@ -100,8 +103,12 @@ function PositionenTabelle({
 
       {positionen.map((pos, i) => (
         <div key={i} className="grid grid-cols-[1fr_80px_80px_110px_80px_32px] gap-2 items-center">
-          <input value={pos.beschreibung} onChange={e => update(i, 'beschreibung', e.target.value)}
-            placeholder="Leistungsbeschreibung" className={inputCls} />
+          <ArtikelAutocomplete
+            value={pos.beschreibung}
+            onChange={v => update(i, 'beschreibung', v)}
+            onArtikelWahl={a => onArtikelWahl(i, a)}
+            placeholder="Beschreibung oder Artikel suchen"
+          />
           <input value={pos.menge} onChange={e => update(i, 'menge', e.target.value)}
             type="number" min="0" step="0.01" className={inputCls} />
           <input value={pos.einheit} onChange={e => update(i, 'einheit', e.target.value)}
@@ -193,6 +200,21 @@ function AngebotFormular({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ustSaetze])
 
+  function fillPositionFromArtikel(i: number, a: ArtikelSuche) {
+    const ust_satz = a.differenzbesteuerung ? '0'
+      : (ustSaetze?.find(u => parseFloat(u.satz) === parseFloat(a.steuersatz))?.satz ?? a.steuersatz)
+    setPositionen(prev => prev.map((p, idx) =>
+      idx !== i ? p : {
+        ...p,
+        beschreibung: a.bezeichnung,
+        einheit: a.einheit,
+        einzelpreis: parseFloat(a.vk_brutto).toFixed(2),
+        ust_satz,
+        artikel_id: a.id,
+      }
+    ))
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!kundeId) { setFehler('Bitte einen Kunden wählen.'); return }
@@ -214,6 +236,7 @@ function AngebotFormular({
           ust_betrag: ustBet,
           brutto,
           position: i + 1,
+          artikel_id: p.artikel_id,
         }
       })
 
@@ -291,6 +314,7 @@ function AngebotFormular({
           onChange={setPositionen}
           ustSaetze={ustSaetzeListe}
           defaultSatz={defaultSatz}
+          onArtikelWahl={fillPositionFromArtikel}
         />
       </div>
 
