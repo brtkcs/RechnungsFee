@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  getAngebote, getKunden, getUstSaetze, getDokumentenPakete,
+  getAngebote, getKunden, getUstSaetze, getDokumentenPakete, getUnternehmen,
   createRechnung, updateRechnung, deleteRechnung,
   rechnungAusAngebot, angebotStatusSetzen,
-  getApiBase, openUrl,
+  getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow,
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
@@ -397,11 +397,79 @@ function AngebotDetail({
   const navigate = useNavigate()
   const [statusLaedt, setStatusLaedt] = useState(false)
   const [konvLaedt, setKonvLaedt] = useState(false)
+  const [pdfLaedt, setPdfLaedt] = useState(false)
+  const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
+  const [mailAdresse, setMailAdresse] = useState('')
   const [fehler, setFehler] = useState<string | null>(null)
 
+  const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
+
+  const partnerEmail = angebot.kunde_name
+    ? undefined  // wird aus Kundenstamm-Daten geladen – hier Fallback auf mailAdresse
+    : undefined
+
+  async function fetchPdfBlob(): Promise<string> {
+    const blob = await getRechnungPdf(angebot.id)
+    return URL.createObjectURL(blob)
+  }
+
   async function handlePdf() {
-    const base = await getApiBase()
-    openUrl(`${base}/rechnungen/${angebot.id}/pdf`)
+    setPdfLaedt(true)
+    try {
+      const blobUrl = await fetchPdfBlob()
+      if (isTauri()) {
+        openInPdfWindow(blobUrl, `Angebot ${angebot.rechnungsnummer ?? ''}`)
+      } else {
+        window.open(blobUrl, '_blank')
+      }
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+    } finally { setPdfLaedt(false) }
+  }
+
+  async function handleDrucken() {
+    setPdfLaedt(true)
+    try {
+      const blobUrl = await fetchPdfBlob()
+      if (isTauri()) {
+        openInPdfWindow(blobUrl, 'Angebot drucken')
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+      } else {
+        const win = window.open(blobUrl, '_blank')
+        if (win) win.addEventListener('load', () => win.print())
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+      }
+    } finally { setPdfLaedt(false) }
+  }
+
+  async function handleMail() {
+    const email = mailAdresse.trim()
+    if (!email) { setZeigMailEingabe(true); return }
+
+    // PDF als Download bereitstellen
+    setPdfLaedt(true)
+    try {
+      const base = await getApiBase()
+      await openUrl(`${base}/rechnungen/${angebot.id}/pdf?download=1`)
+    } finally { setPdfLaedt(false) }
+
+    const datumDe = angebot.datum.split('-').reverse().join('.')
+    const gueltigDe = angebot.gueltig_bis ? angebot.gueltig_bis.split('-').reverse().join('.') : '—'
+    const kundeName = angebot.kunde_name ?? angebot.partner_freitext ?? ''
+    const firmenname = unternehmen?.firmenname ?? [unternehmen?.vorname, unternehmen?.nachname].filter(Boolean).join(' ') ?? 'RechnungsFee'
+    const brutto = (parseFloat(angebot.brutto_gesamt as any) || 0).toFixed(2).replace('.', ',')
+
+    const subject = encodeURIComponent(`Angebot ${angebot.rechnungsnummer ?? ''} – ${firmenname}`)
+    const body = encodeURIComponent(
+      `Guten Tag ${kundeName},\n\nanbei finden Sie unser Angebot ${angebot.rechnungsnummer ?? ''} vom ${datumDe}.\n\nAngebotsbetrag: ${brutto} €\nGültig bis: ${gueltigDe}\n\nBitte fügen Sie die heruntergeladene PDF-Datei als Anhang hinzu.\n\nMit freundlichen Grüßen\n${firmenname}${unternehmen?.mail_signatur ? '\n\n' + unternehmen.mail_signatur : ''}`
+    )
+    const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`
+    if (isTauri()) {
+      await openUrl(mailtoUrl)
+    } else {
+      window.location.href = mailtoUrl
+    }
+    setZeigMailEingabe(false)
+    setMailAdresse('')
   }
 
   async function handleStatusChange(s: string) {
@@ -447,8 +515,14 @@ function AngebotDetail({
 
         {/* Aktionsleiste – direkt oben wie bei Rechnungen */}
         <div className="flex flex-wrap gap-2">
-          <button onClick={handlePdf} className={btnNeutral}>
-            📄 PDF öffnen
+          <button onClick={handleDrucken} disabled={pdfLaedt} className={btnNeutral}>
+            🖨️ Drucken
+          </button>
+          <button onClick={handlePdf} disabled={pdfLaedt} className={btnNeutral}>
+            📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
+          </button>
+          <button onClick={() => handleMail()} disabled={pdfLaedt} className={btnNeutral}>
+            ✉️ Mail senden
           </button>
           <button onClick={onEdit} className={btnNeutral}>
             ✏️ Bearbeiten
@@ -466,6 +540,29 @@ function AngebotDetail({
             🗑 Löschen
           </button>
         </div>
+
+        {/* Mail-Eingabe */}
+        {zeigMailEingabe && (
+          <div className="flex gap-2 items-center">
+            <input
+              type="email"
+              value={mailAdresse}
+              onChange={e => setMailAdresse(e.target.value)}
+              placeholder="E-Mail-Adresse eingeben…"
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-700 dark:text-slate-100"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleMail()}
+            />
+            <button onClick={handleMail} disabled={!mailAdresse.trim()}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              Öffnen
+            </button>
+            <button onClick={() => { setZeigMailEingabe(false); setMailAdresse('') }}
+              className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700">
+              Abbrechen
+            </button>
+          </div>
+        )}
 
         {/* Status-Umschalter */}
         {!angebot.rechnung_zu_angebot_id && (
