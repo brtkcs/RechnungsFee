@@ -492,6 +492,7 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
         skonto_prozent=data.skonto_prozent,
         skonto_tage=data.skonto_tage,
         dokument_typ=data.dokument_typ,
+        lieferadresse_id=data.lieferadresse_id if data.dokument_typ == "Lieferschein" else None,
         bezahlt=False,
         bezahlt_betrag=Decimal("0.00"),
         zahlungsstatus="offen",
@@ -761,6 +762,13 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
     if rechnung.gutschrift_zu_rechnung_id:
         original = db.query(Rechnung).filter(Rechnung.id == rechnung.gutschrift_zu_rechnung_id).first()
         rechnung._gutschrift_original_nr = original.rechnungsnummer if original else None
+
+    # Lieferschein: Lieferadresse am Objekt hinterlegen (für PDF + Response)
+    if rechnung.lieferadresse_id:
+        from database.models import KundeLieferadresse
+        rechnung._lieferadresse = db.query(KundeLieferadresse).filter(
+            KundeLieferadresse.id == rechnung.lieferadresse_id
+        ).first()
 
     ist_entwurf = rechnung.ist_entwurf
     # Entwürfe bekommen kein ausgegeben-Flag und keinen Kopie-Hinweis.

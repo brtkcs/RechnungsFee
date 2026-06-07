@@ -114,6 +114,7 @@ class RechnungCreate(BaseModel):
     skonto_prozent: Optional[Decimal] = None
     skonto_tage: Optional[int] = None
     dokument_typ: str = "Rechnung"
+    lieferadresse_id: Optional[int] = None
     positionen: List[RechnungspositionCreate]
 
     @field_validator("dokument_typ")
@@ -225,6 +226,8 @@ class RechnungResponse(BaseModel):
     gutschrift_zu_rechnung_id: Optional[int] = None
     gutschrift_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     lieferschein_zu_rechnung_id: Optional[int] = None
+    lieferadresse_id: Optional[int] = None
+    lieferadresse_text: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
     aktualisiert_am: datetime
 
@@ -259,6 +262,13 @@ class RechnungResponse(BaseModel):
             data.beleg = BelegResponse.from_beleg(obj.beleg)
         if obj.gutschrift_zu_rechnung_id and hasattr(obj, "_gutschrift_original_nr"):
             data.gutschrift_zu_rechnung_nr = obj._gutschrift_original_nr
+        if obj.lieferadresse_id and hasattr(obj, "_lieferadresse"):
+            la = obj._lieferadresse
+            if la:
+                teile = [la.bezeichnung, la.z_hd,
+                         " ".join(filter(None, [la.strasse, la.hausnummer])),
+                         " ".join(filter(None, [la.plz, la.ort]))]
+                data.lieferadresse_text = "\n".join(t for t in teile if t)
         return data
 
 

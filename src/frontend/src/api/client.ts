@@ -840,6 +840,8 @@ export type Rechnung = {
   gutschrift_zu_rechnung_id: number | null
   gutschrift_zu_rechnung_nr: string | null
   lieferschein_zu_rechnung_id: number | null
+  lieferadresse_id: number | null
+  lieferadresse_text: string | null
   erstellt_am: string
   aktualisiert_am: string
 }
@@ -861,6 +863,7 @@ export type RechnungCreate = {
   skonto_prozent?: number | null
   skonto_tage?: number | null
   dokument_typ?: 'Rechnung' | 'Gutschrift' | 'Lieferschein'
+  lieferadresse_id?: number | null
   positionen: RechnungspositionCreate[]
   netto_gesamt_override?: string
   ust_gesamt_override?: string

@@ -6,6 +6,7 @@ import {
   getRechnungen, getRechnung, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
   getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen,
+  getLieferadressen,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow,
   sucheArtikel, getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
@@ -858,6 +859,7 @@ function RechnungDetail({
 
   const hatZahlungsoption = Math.abs(restbetrag) > 0.004 && !rechnung.storniert && !rechnung.ist_entwurf
     && rechnung.zahlungsstatus !== 'uneinbringlich'
+    && rechnung.dokument_typ !== 'Lieferschein'
 
   const partnerEmail = rechnung.typ === 'ausgang'
     ? rechnung.kunde_email
@@ -1074,7 +1076,8 @@ function RechnungDetail({
               {gutschriftMutation.isPending ? '…' : '↩ Gutschrift'}
             </button>
           )}
-          {!rechnung.ist_entwurf && !rechnung.storniert && !zeigStornoEingabe && !zeigForderungsausfall && (
+          {!rechnung.ist_entwurf && !rechnung.storniert && !zeigStornoEingabe && !zeigForderungsausfall
+            && rechnung.dokument_typ !== 'Lieferschein' && (
             <button
               onClick={() => setZeigStornoEingabe(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400"
@@ -1083,6 +1086,7 @@ function RechnungDetail({
             </button>
           )}
           {!rechnung.ist_entwurf && !rechnung.storniert && !zeigStornoEingabe && !zeigForderungsausfall
+            && rechnung.dokument_typ !== 'Lieferschein'
             && (rechnung.zahlungsstatus === 'offen' || rechnung.zahlungsstatus === 'teilweise') && (
             <button
               onClick={() => setZeigForderungsausfall(true)}
@@ -1091,7 +1095,7 @@ function RechnungDetail({
               ⚠ Uneinbringlich
             </button>
           )}
-          {rechnung.zahlungsstatus === 'uneinbringlich' && (
+          {rechnung.zahlungsstatus === 'uneinbringlich' && rechnung.dokument_typ !== 'Lieferschein' && (
             <span className="self-center text-xs text-slate-400 dark:text-slate-500 italic">Uneinbringlich ausgebucht</span>
           )}
           {rechnung.storniert && (
@@ -1944,7 +1948,16 @@ function RechnungForm({
   const [dokumentTyp, setDokumentTyp] = useState<'Rechnung' | 'Lieferschein'>(
     (initial?.dokument_typ === 'Lieferschein' ? 'Lieferschein' : initialDokumentTyp) ?? 'Rechnung'
   )
+  const [lieferadresseId, setLieferadresseId] = useState<string>(
+    initial?.lieferadresse_id ? String(initial.lieferadresse_id) : ''
+  )
   const lieferscheinAktivForm = !!unternehmen?.lieferschein_aktiv
+  const kundeIdNum = partnerId ? parseInt(partnerId) : null
+  const { data: lieferadressen = [] } = useQuery({
+    queryKey: ['lieferadressen', kundeIdNum],
+    queryFn: () => getLieferadressen(kundeIdNum!),
+    enabled: dokumentTyp === 'Lieferschein' && !!kundeIdNum,
+  })
 
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
   // Bei Import (XML/PDF) mit mehreren Positionen immer aufgeschlüsselten Modus zeigen
@@ -2160,6 +2173,7 @@ function RechnungForm({
       skonto_prozent: dokumentTyp === 'Lieferschein' ? undefined : (skontoProzent ? parseFloat(skontoProzent) : undefined),
       skonto_tage: dokumentTyp === 'Lieferschein' ? undefined : (skontoTage ? parseInt(skontoTage) : undefined),
       dokument_typ: dokumentTyp !== 'Rechnung' ? dokumentTyp : undefined,
+      lieferadresse_id: dokumentTyp === 'Lieferschein' && lieferadresseId ? parseInt(lieferadresseId) : undefined,
       // XML-Import: Gesamtbeträge direkt aus der Rechnung übernehmen
       // Nur wenn alle drei Werte vorliegen (aus XML oder via _berechne_fehlende_summen abgeleitet)
       ...(prefillFromAnalyse?.felder?.gesamt_netto &&
@@ -2443,6 +2457,25 @@ function RechnungForm({
           />
         )}
       </div>
+
+      {/* Lieferadresse – nur bei Lieferschein mit ausgewähltem Kunden */}
+      {dokumentTyp === 'Lieferschein' && kundeIdNum && lieferadressen.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Lieferadresse</label>
+          <select
+            value={lieferadresseId}
+            onChange={e => setLieferadresseId(e.target.value)}
+            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+          >
+            <option value="">Rechnungsadresse (Standard)</option>
+            {lieferadressen.map(la => (
+              <option key={la.id} value={String(la.id)}>
+                {la.bezeichnung || 'Lieferadresse'}{la.ist_standard ? ' ★' : ''} – {[la.strasse, la.hausnummer, la.plz, la.ort].filter(Boolean).join(' ')}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* §19-Hinweis */}
       {istKleinunternehmer && (

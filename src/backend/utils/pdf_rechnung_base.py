@@ -374,6 +374,13 @@ class RechnungPDFBase(FPDF):
             _meta("Leistungsdatum", _iso_zu_de(str(r.leistung_von)))
         if r.faellig_am:
             _meta(self._faellig_label, _iso_zu_de(str(r.faellig_am)))
+        la = getattr(r, "_lieferadresse", None)
+        if la:
+            strasse_nr = " ".join(filter(None, [la.strasse, la.hausnummer]))
+            plz_ort = " ".join(filter(None, [la.plz, la.ort]))
+            la_label = la.bezeichnung or "Lieferadresse"
+            la_zeile = ", ".join(filter(None, [strasse_nr, plz_ort]))
+            _meta(la_label, la_zeile)
 
         return emp_bottom, meta_y
 
@@ -508,6 +515,27 @@ class RechnungPDFBase(FPDF):
             self._render_19_hinweis()
             self._render_zahlungsblock()
         self._render_notizen()
-        embed_unterschrift(self, self._unt, L_MARGIN)
+        if ist_lieferschein:
+            self._render_empfangsbestaetigung()
+        else:
+            embed_unterschrift(self, self._unt, L_MARGIN)
         self.set_text_color(0, 0, 0)
         return bytes(self.output())
+
+    def _render_empfangsbestaetigung(self):
+        self.ln(12)
+        self.set_draw_color(*GRAU_RAND)
+        self.set_font("DejaVu", "", 8)
+        self.set_text_color(*TEXT_GRAU)
+        col = (PAGE_W - L_MARGIN - R_MARGIN) / 2 - 5
+        x1 = L_MARGIN
+        x2 = L_MARGIN + col + 10
+        y = self.get_y()
+        self.set_xy(x1, y)
+        self.cell(col, 5, "Datum, Ort")
+        self.set_xy(x2, y)
+        self.cell(col, 5, "Unterschrift Warenempfänger")
+        self.ln(7)
+        y2 = self.get_y()
+        self.line(x1, y2, x1 + col, y2)
+        self.line(x2, y2, x2 + col, y2)

@@ -32,7 +32,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 52` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 53` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -118,6 +118,7 @@ def _run_migrations():
 | 50 | rechnungspositionen.ust_satz_25a NUMERIC(5,2) – nominaler USt-Satz (19/7) für §25a-Positionen; pos.ust_satz ist 0 (kein Ausweis auf Rechnung), ust_satz_25a enthält den echten Satz für die Margensteuerberechnung bei Zahlung |
 | 51 | kunden_lieferadressen-Tabelle: separate Lieferadressen pro Kunde (bezeichnung, z_hd, Anschrift, land, ist_standard); Voraussetzung für Lieferschein-Feature |
 | 52 | unternehmen.lieferschein_aktiv BOOLEAN; rechnungen.lieferschein_zu_rechnung_id FK; Nummernkreis-Seed LS-YY####; dokument_typ = "Lieferschein" (PDF ohne Preise, direkt→Rechnung, Sammelrechnung) |
+| 53 | rechnungen.lieferadresse_id FK → kunden_lieferadressen – Lieferadresse auf Lieferschein |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
