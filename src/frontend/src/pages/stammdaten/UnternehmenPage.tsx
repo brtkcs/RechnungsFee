@@ -24,6 +24,41 @@ const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm fo
 const selectCls = `${inputCls} bg-white dark:bg-slate-700`
 
 // ---------------------------------------------------------------------------
+// Tab-Navigation
+// ---------------------------------------------------------------------------
+
+type TabId = 'firma' | 'steuer' | 'rechnungen' | 'email' | 'unterschrift'
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'firma',        label: 'Firma' },
+  { id: 'steuer',       label: 'Steuer & Recht' },
+  { id: 'rechnungen',   label: 'Rechnungen' },
+  { id: 'email',        label: 'E-Mail' },
+  { id: 'unterschrift', label: 'Unterschrift' },
+]
+
+function TabNav({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
+  return (
+    <div className="flex gap-0 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+      {TABS.map(t => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onChange(t.id)}
+          className={`px-5 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+            active === t.id
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Logo-Sektion
 // ---------------------------------------------------------------------------
 
@@ -74,7 +109,6 @@ function LogoSektion({
 
   return (
     <div className="flex items-start gap-6">
-      {/* Vorschau */}
       <div className="w-28 h-20 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-900 flex-shrink-0">
         {logoVorhanden ? (
           <img
@@ -88,7 +122,6 @@ function LogoSektion({
         )}
       </div>
 
-      {/* Aktionen */}
       <div className="flex flex-col gap-2">
         <input
           ref={fileRef}
@@ -123,10 +156,10 @@ function LogoSektion({
 }
 
 // ---------------------------------------------------------------------------
-// Firmendaten-Sektion
+// Firmendaten-Sektion (Firma + Steuer + Rechnungen – geteilt via activeTab)
 // ---------------------------------------------------------------------------
 
-function FirmendatenSektion({ data }: { data: Unternehmen }) {
+function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab: TabId }) {
   const qc = useQueryClient()
   const [form, setForm] = useState<Partial<Unternehmen>>(() => {
     const { logo_pfad: _logo, ...rest } = data
@@ -153,10 +186,8 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
   function handleSpeichern(e: React.FormEvent) {
     e.preventDefault()
 
-    // Keine XML-Steuerzeichen (außer Tab, LF, CR) – XRechnung/ZUGFeRD-Anforderung
     const steuerzeichen = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/
 
-    // Name: Firmenname ODER Vor-/Nachname muss gefüllt sein
     const hatFirma = !!(form.firmenname?.trim())
     const hatName  = !!(form.vorname?.trim() || form.nachname?.trim())
     if (!hatFirma && !hatName) { setFehler('Firmenname oder Vor- und Nachname ist erforderlich.'); return }
@@ -191,7 +222,6 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
     if (steuerzeichen.test(form.ort)) { setFehler('Ort enthält ungültige Zeichen.'); return }
     if ((form.ort ?? '').length > 200) { setFehler('Ort: maximal 200 Zeichen.'); return }
 
-    // Steuernummer ODER USt-IdNr. ist Pflicht (§14 UStG / ZUGFeRD BT-31/BT-32)
     const stNr = (form.steuernummer ?? '').trim()
     const ustId = (form.ust_idnr ?? '').trim()
     if (!stNr && !ustId) {
@@ -206,7 +236,6 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
       }
     }
 
-    // IBAN ist Pflicht (Bankverbindung auf Rechnungen / ZUGFeRD BT-84)
     const iban = (form.iban ?? '').replace(/\s/g, '').toUpperCase()
     if (!iban) { setFehler('IBAN ist erforderlich.'); return }
     if (iban.length < 15 || iban.length > 34 || !/^[A-Z]{2}[0-9A-Z]+$/.test(iban)) {
@@ -227,64 +256,95 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
     />
   )
 
+  const isFirmTab       = activeTab === 'firma'
+  const isSteuerTab     = activeTab === 'steuer'
+  const isRechnungTab   = activeTab === 'rechnungen'
+  const isFormTab       = isFirmTab || isSteuerTab || isRechnungTab
+
   return (
     <form onSubmit={handleSpeichern} className="space-y-6">
-      {/* Logo */}
-      <LogoSektion
-        logoVorhanden={!!data.logo_pfad}
-        onUploaded={() => { /* Cache wird im Logo-Comp bereits invalidiert */ }}
-        onDeleted={() => { /* dto */ }}
-      />
 
-      <hr className="border-slate-100" />
+      {/* ── Tab: Firma ────────────────────────────────────────────────── */}
+      <div className={isFirmTab ? 'space-y-6' : 'hidden'}>
 
-      {/* Kontaktdaten */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Firmendaten</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Firmenname <span className="font-medium">oder</span> Vor- und Nachname ist erforderlich.</p>
-        <Field label="Firmen- oder Tätigkeitsname">{inp('firmenname', 'z.B. Maria Muster Webdesign')}</Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Vorname">{inp('vorname', 'Maria')}</Field>
-          <Field label="Nachname">{inp('nachname', 'Muster')}</Field>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2">
-            <Field label="Straße *">{inp('strasse', 'Musterstraße')}</Field>
+        <LogoSektion
+          logoVorhanden={!!data.logo_pfad}
+          onUploaded={() => {}}
+          onDeleted={() => {}}
+        />
+
+        <hr className="border-slate-100 dark:border-slate-700" />
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Firmendaten</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Firmenname <span className="font-medium">oder</span> Vor- und Nachname ist erforderlich.</p>
+          <Field label="Firmen- oder Tätigkeitsname">{inp('firmenname', 'z.B. Maria Muster Webdesign')}</Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Vorname">{inp('vorname', 'Maria')}</Field>
+            <Field label="Nachname">{inp('nachname', 'Muster')}</Field>
           </div>
-          <Field label="Nr. *">{inp('hausnummer', '1a')}</Field>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <Field label="Straße *">{inp('strasse', 'Musterstraße')}</Field>
+            </div>
+            <Field label="Nr. *">{inp('hausnummer', '1a')}</Field>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="PLZ *">{inp('plz', '12345')}</Field>
+            <div className="col-span-2">
+              <Field label="Ort *">{inp('ort', 'Berlin')}</Field>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="E-Mail">
+              <input
+                type="email"
+                value={(form.email as string) ?? ''}
+                onChange={ev => set('email', ev.target.value)}
+                placeholder="maria@beispiel.de"
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Telefon">{inp('telefon', '+49 30 12345678')}</Field>
+          </div>
+          <Field label="Webseite">{inp('webseite', 'https://maria-muster.de')}</Field>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <Field label="PLZ *">{inp('plz', '12345')}</Field>
-          <div className="col-span-2">
-            <Field label="Ort *">{inp('ort', 'Berlin')}</Field>
+
+        <hr className="border-slate-100 dark:border-slate-700" />
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Beruf & Kammermitgliedschaft</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Optional – erscheint auf Rechnungen. Relevant für Anwälte, Steuerberater, Architekten und andere Kammerberufe.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Berufsbezeichnung">{inp('berufsbezeichnung', 'z.B. Rechtsanwältin')}</Field>
+            <Field label="Kammermitgliedschaft">{inp('kammer_mitgliedschaft', 'z.B. Rechtsanwaltskammer Berlin')}</Field>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="E-Mail">
-            <input
-              type="email"
-              value={(form.email as string) ?? ''}
-              onChange={ev => set('email', ev.target.value)}
-              placeholder="maria@beispiel.de"
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Telefon">{inp('telefon', '+49 30 12345678')}</Field>
+
+        <hr className="border-slate-100 dark:border-slate-700" />
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Handelsregister</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500">Wenn dein Unternehmen im Handelsregister eingetragen ist, ergänze Register-Nr. und Registergericht. Nicht eingetragene Einzelunternehmer und Freiberufler lassen diese Felder leer.</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Register-Nr.">{inp('handelsregister_nr', 'z.B. HRA 12345 oder HRB 215517')}</Field>
+            <Field label="Registergericht">{inp('handelsregister_gericht', 'Oldenburg')}</Field>
+          </div>
         </div>
-        <Field label="Webseite">{inp('webseite', 'https://maria-muster.de')}</Field>
       </div>
 
-      <hr className="border-slate-100" />
-
-      {/* Steuer */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Steuer</h3>
+      {/* ── Tab: Steuer & Recht ───────────────────────────────────────── */}
+      <div className={isSteuerTab ? 'space-y-4' : 'hidden'}>
         <div className="grid grid-cols-2 gap-4">
           <Field label={<>Steuernummer * <InfoTooltip text="Deine Steuernummer vom Finanzamt (z.B. 12/345/67890). Mindestens Steuernummer oder USt-IdNr. ist Pflicht (§14 UStG / ZUGFeRD)." /></>}>{inp('steuernummer', '12/345/67890')}</Field>
           <Field label="Finanzamt">{inp('finanzamt', 'Finanzamt Berlin-Mitte')}</Field>
         </div>
-        <Field label={<>USt-IdNr. <InfoTooltip text="Umsatzsteuer-Identifikationsnummer (z.B. DE123456789) – benötigt für EU-Geschäfte (innergemeinschaftliche Lieferungen und Leistungen). Bei rein inländischen Geschäften genügt die Steuernummer." /></>}>{inp('ust_idnr', 'DE123456789')}</Field>
-        <Field label={<>W-IdNr. <InfoTooltip text="Wirtschafts-Identifikationsnummer (z.B. DE123456789) – seit November 2024 vom Bundeszentralamt für Steuern automatisch zugeteilt; Mitteilung per ELSTER-Postfach oder öffentlicher Bekanntmachung. Wird auf der UStVA in Zeile 1 eingetragen. Nicht zu verwechseln mit der USt-IdNr." /></>}>{inp('w_idnr', 'DE123456789')}</Field>
+        <Field label={<>USt-IdNr. <InfoTooltip text="Umsatzsteuer-Identifikationsnummer (z.B. DE123456789) – benötigt für EU-Geschäfte. Bei rein inländischen Geschäften genügt die Steuernummer." /></>}>{inp('ust_idnr', 'DE123456789')}</Field>
+        <Field label={<>W-IdNr. <InfoTooltip text="Wirtschafts-Identifikationsnummer – seit November 2024 vom Bundeszentralamt für Steuern zugeteilt. Nicht zu verwechseln mit der USt-IdNr." /></>}>{inp('w_idnr', 'DE123456789')}</Field>
+
+        <hr className="border-slate-100 dark:border-slate-700" />
 
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -296,7 +356,7 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
           <div>
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex items-center gap-1">
               Kleinunternehmer (§19 UStG)
-              <InfoTooltip text="Als Kleinunternehmer nach §19 UStG weist du keine Umsatzsteuer auf Rechnungen aus und kannst keine Vorsteuer abziehen. Voraussetzungen (ab 2025): Netto-Gesamtumsatz im Vorjahr ≤ 25.000 € und im laufenden Jahr unter 100.000 € netto. Wird die 100.000 €-Grenze unterjährig überschritten, endet die Kleinunternehmerregelung sofort mit diesem Umsatz." side="bottom" />
+              <InfoTooltip text="Als Kleinunternehmer weist du keine Umsatzsteuer auf Rechnungen aus und kannst keine Vorsteuer abziehen. Voraussetzungen (ab 2025): Netto-Gesamtumsatz im Vorjahr ≤ 25.000 € und im laufenden Jahr unter 100.000 € netto." side="bottom" />
             </span>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Keine USt auf Rechnungen, kein Vorsteuerabzug.</p>
           </div>
@@ -312,7 +372,7 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
           <div>
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200 flex items-center gap-1">
               Transferleistungen (ALG II / Bürgergeld)
-              <InfoTooltip text="Aktiviere diese Option wenn du Bürgergeld oder ALG II beziehst. RechnungsFee berücksichtigt dann den Grundfreibetrag nach §11b SGB II und zeigt passende Hinweise im Dashboard an." side="bottom" />
+              <InfoTooltip text="Aktiviere diese Option wenn du Bürgergeld oder ALG II beziehst. RechnungsFee berücksichtigt dann den Grundfreibetrag nach §11b SGB II." side="bottom" />
             </span>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Freibetrag nach §11b SGB II wird berücksichtigt.</p>
           </div>
@@ -342,8 +402,10 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
           </div>
         )}
 
+        <hr className="border-slate-100 dark:border-slate-700" />
+
         <div className="grid grid-cols-2 gap-4">
-          <Field label={<>Versteuerungsart <InfoTooltip text="Ist-Versteuerung: USt wird fällig wenn der Kunde zahlt. Soll-Versteuerung: USt ist bereits bei Rechnungsstellung fällig. Für die meisten Freiberufler und Kleinunternehmer gilt die Ist-Versteuerung – sie muss einmalig beim Finanzamt beantragt werden." /></>}>
+          <Field label={<>Versteuerungsart <InfoTooltip text="Ist-Versteuerung: USt wird fällig wenn der Kunde zahlt. Soll-Versteuerung: USt ist bereits bei Rechnungsstellung fällig." /></>}>
             <select
               value={form.versteuerungsart ?? 'ist'}
               onChange={ev => set('versteuerungsart', ev.target.value)}
@@ -364,8 +426,9 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
             </select>
           </Field>
         </div>
+
         <div className="grid grid-cols-2 gap-4">
-          <Field label={<>Kontenrahmen <InfoTooltip text="SKR03: Standard für Dienstleister und Freiberufler. SKR04: Standard für Handel und produzierende Betriebe. SKR49: Für Vereine und Non-Profits. Beeinflusst Kontenzuordnung im GoBD-Export." /></>}>
+          <Field label={<>Kontenrahmen <InfoTooltip text="SKR03: Standard für Dienstleister und Freiberufler. SKR04: Standard für Handel und produzierende Betriebe. SKR49: Für Vereine und Non-Profits." /></>}>
             <select
               value={form.kontenrahmen ?? 'SKR03'}
               onChange={ev => set('kontenrahmen', ev.target.value)}
@@ -376,9 +439,6 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
               <option value="SKR49">SKR49 – Vereine</option>
             </select>
           </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <Field label="Rechtsform">
             <select
               value={form.rechtsform ?? 'Einzelunternehmer'}
@@ -396,168 +456,150 @@ function FirmendatenSektion({ data }: { data: Unternehmen }) {
               <option>Sonstige</option>
             </select>
           </Field>
-          <Field label="Tätigkeitsart">
-            <select
-              value={form.taetigkeitsart ?? 'freiberuflich'}
-              onChange={ev => set('taetigkeitsart', ev.target.value)}
-              className={selectCls}
+        </div>
+
+        <Field label="Tätigkeitsart">
+          <select
+            value={form.taetigkeitsart ?? 'freiberuflich'}
+            onChange={ev => set('taetigkeitsart', ev.target.value)}
+            className={selectCls}
+          >
+            <option value="freiberuflich">Freiberuflich</option>
+            <option value="gewerbe">Gewerblich</option>
+            <option value="gemischt">Gemischt</option>
+          </select>
+        </Field>
+      </div>
+
+      {/* ── Tab: Rechnungen ───────────────────────────────────────────── */}
+      <div className={isRechnungTab ? 'space-y-6' : 'hidden'}>
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Bankverbindung</h3>
+          <Field label="IBAN *">{inp('iban', 'DE89 3704 0044 0532 0130 00')}</Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="BIC">{inp('bic', 'COBADEFFXXX')}</Field>
+            <Field label="Bank">{inp('bank_name', 'Deutsche Bank')}</Field>
+          </div>
+        </div>
+
+        <hr className="border-slate-100 dark:border-slate-700" />
+
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Rechnungs-PDF</h3>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.zahlungshinweis_aktiv !== false}
+              onChange={ev => set('zahlungshinweis_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Standard-Zahlungshinweis anzeigen</span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Fügt automatisch „Bitte überweisen Sie … auf IBAN …" unter dem Rechnungsbetrag ein.
+                Deaktivieren wenn du einen eigenen Text im Notizfeld der Rechnung hinterlegen möchtest.
+              </p>
+            </div>
+          </label>
+
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">Standard-Zahlungsziel</label>
+            <input
+              type="number"
+              min={0}
+              max={365}
+              value={form.standard_zahlungsziel ?? 14}
+              onChange={ev => set('standard_zahlungsziel', parseInt(ev.target.value) || 0)}
+              className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+            <span className="text-sm text-slate-500 dark:text-slate-400">Tage nach Rechnungsdatum</span>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">Standard-Skonto</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              value={form.standard_skonto_prozent ?? ''}
+              onChange={ev => set('standard_skonto_prozent', ev.target.value === '' ? null : parseFloat(ev.target.value))}
+              placeholder="z. B. 2"
+              className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+            <span className="text-sm text-slate-500 dark:text-slate-400">%</span>
+            <span className="text-sm text-slate-400 dark:text-slate-500">bei Zahlung innerhalb von</span>
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={form.standard_skonto_tage ?? ''}
+              onChange={ev => set('standard_skonto_tage', ev.target.value === '' ? null : parseInt(ev.target.value))}
+              placeholder="z. B. 10"
+              className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+            />
+            <span className="text-sm text-slate-500 dark:text-slate-400">Tagen (leer = kein Skonto)</span>
+          </div>
+
+          <label className={`flex items-start gap-3 ${form.iban?.trim() ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+            <input
+              type="checkbox"
+              checked={!!form.qr_zahlung_aktiv}
+              onChange={ev => set('qr_zahlung_aktiv', ev.target.checked)}
+              disabled={!form.iban?.trim()}
+              className={`mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 disabled:cursor-not-allowed${form.iban?.trim() ? '' : ' opacity-50'}`}
+            />
+            <div className={form.iban?.trim() ? '' : 'opacity-50'}>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                GiroCode (QR) auf Rechnung
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Fügt einen EPC-QR-Code (GiroCode) neben den Zahlungshinweis ein.
+                Kunden können damit per Banking-App direkt überweisen – mit vorausgefüllten Daten.
+              </p>
+            </div>
+            {!form.iban?.trim() && (
+              <InfoTooltip text="Bitte zuerst eine IBAN unter Bankverbindung hinterlegen." align="right" />
+            )}
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.lieferschein_aktiv}
+              onChange={ev => set('lieferschein_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Lieferscheine aktivieren
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Lieferscheine können direkt in Rechnungen oder Sammelrechnungen umgewandelt werden.
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Fehler + Speichern-Button (nur für Firma/Steuer/Rechnungen-Tabs) */}
+      {isFormTab && (
+        <>
+          {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={mut.isPending}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
             >
-              <option value="freiberuflich">Freiberuflich</option>
-              <option value="gewerbe">Gewerblich</option>
-              <option value="gemischt">Gemischt</option>
-            </select>
-          </Field>
-        </div>
-      </div>
-
-      <hr className="border-slate-100" />
-
-      {/* Beruf & Kammer */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Beruf & Kammermitgliedschaft</h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          Optional – erscheint auf Rechnungen. Relevant für Anwälte, Steuerberater, Architekten und andere Kammerberufe.
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Berufsbezeichnung">{inp('berufsbezeichnung', 'z.B. Rechtsanwältin')}</Field>
-          <Field label="Kammermitgliedschaft">{inp('kammer_mitgliedschaft', 'z.B. Rechtsanwaltskammer Berlin')}</Field>
-        </div>
-      </div>
-
-      <hr className="border-slate-100" />
-
-      {/* Handelsregister */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Handelsregister</h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500">Wenn dein Unternehmen im Handelsregister eingetragen ist, ergänze Register-Nr. und Registergericht. Abteilung A (HRA) gilt für Einzelkaufleute und Personengesellschaften, Abteilung B (HRB) für Kapitalgesellschaften (GmbH, UG, AG). Nicht eingetragene Einzelunternehmer und Freiberufler lassen diese Felder leer.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Register-Nr.">{inp('handelsregister_nr', 'z.B. HRA 12345 oder HRB 215517')}</Field>
-          <Field label="Registergericht">{inp('handelsregister_gericht', 'Oldenburg')}</Field>
-        </div>
-      </div>
-
-      <hr className="border-slate-100" />
-
-      {/* Bank */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Bankverbindung</h3>
-        <Field label="IBAN *">{inp('iban', 'DE89 3704 0044 0532 0130 00')}</Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="BIC">{inp('bic', 'COBADEFFXXX')}</Field>
-          <Field label="Bank">{inp('bank_name', 'Deutsche Bank')}</Field>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Rechnungs-PDF</h3>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.zahlungshinweis_aktiv !== false}
-            onChange={ev => set('zahlungshinweis_aktiv', ev.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Standard-Zahlungshinweis anzeigen</span>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Fügt automatisch „Bitte überweisen Sie … auf IBAN …" unter dem Rechnungsbetrag ein.
-              Deaktivieren wenn du einen eigenen Text im Notizfeld der Rechnung hinterlegen möchtest.
-            </p>
+              {mut.isPending ? 'Speichern…' : 'Speichern'}
+            </button>
+            {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
           </div>
-        </label>
-
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">Standard-Zahlungsziel</label>
-          <input
-            type="number"
-            min={0}
-            max={365}
-            value={form.standard_zahlungsziel ?? 14}
-            onChange={ev => set('standard_zahlungsziel', parseInt(ev.target.value) || 0)}
-            className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-          />
-          <span className="text-sm text-slate-500 dark:text-slate-400">Tage nach Rechnungsdatum</span>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">Standard-Skonto</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={0.5}
-            value={form.standard_skonto_prozent ?? ''}
-            onChange={ev => set('standard_skonto_prozent', ev.target.value === '' ? null : parseFloat(ev.target.value))}
-            placeholder="z. B. 2"
-            className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-          />
-          <span className="text-sm text-slate-500 dark:text-slate-400">%</span>
-          <span className="text-sm text-slate-400 dark:text-slate-500">bei Zahlung innerhalb von</span>
-          <input
-            type="number"
-            min={1}
-            max={365}
-            value={form.standard_skonto_tage ?? ''}
-            onChange={ev => set('standard_skonto_tage', ev.target.value === '' ? null : parseInt(ev.target.value))}
-            placeholder="z. B. 10"
-            className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
-          />
-          <span className="text-sm text-slate-500 dark:text-slate-400">Tagen (leer = kein Skonto)</span>
-        </div>
-
-        <label className={`flex items-start gap-3 ${form.iban?.trim() ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
-          <input
-            type="checkbox"
-            checked={!!form.qr_zahlung_aktiv}
-            onChange={ev => set('qr_zahlung_aktiv', ev.target.checked)}
-            disabled={!form.iban?.trim()}
-            className={`mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 disabled:cursor-not-allowed${form.iban?.trim() ? '' : ' opacity-50'}`}
-          />
-          <div className={form.iban?.trim() ? '' : 'opacity-50'}>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              GiroCode (QR) auf Rechnung
-            </span>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Fügt einen EPC-QR-Code (GiroCode) neben den Zahlungshinweis ein.
-              Kunden können damit per Banking-App direkt überweisen – mit vorausgefüllten Daten.
-              Nur auf Ausgangsrechnungen mit hinterlegter IBAN.
-            </p>
-          </div>
-          {!form.iban?.trim() && (
-            <InfoTooltip text="Bitte zuerst eine IBAN unter Bankverbindung hinterlegen – der QR-Code benötigt die Kontonummer für den EPC-Standard." align="right" />
-          )}
-        </label>
-
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={!!form.lieferschein_aktiv}
-            onChange={ev => set('lieferschein_aktiv', ev.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              Lieferscheine aktivieren
-            </span>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Lieferscheine können direkt in Rechnungen oder Sammelrechnungen umgewandelt werden.
-            </p>
-          </div>
-        </label>
-      </div>
-
-      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
-
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="submit"
-          disabled={mut.isPending}
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {mut.isPending ? 'Speichern…' : 'Speichern'}
-        </button>
-        {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
-      </div>
+        </>
+      )}
     </form>
   )
 }
@@ -611,7 +653,6 @@ function MailVorlageSektion({ data }: { data: Unternehmen }) {
 
   return (
     <div className="space-y-5">
-      {/* Platzhalter-Legende */}
       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
         <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Verfügbare Platzhalter</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
@@ -697,7 +738,6 @@ function SignaturSektion({ data }: { data: Unternehmen }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bearbeitung */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-slate-700">Signatur-Text</label>
           <textarea
@@ -709,7 +749,6 @@ function SignaturSektion({ data }: { data: Unternehmen }) {
           />
         </div>
 
-        {/* Vorschau */}
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Vorschau</p>
           <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-4 min-h-32">
@@ -743,6 +782,30 @@ function SignaturSektion({ data }: { data: Unternehmen }) {
 }
 
 // ---------------------------------------------------------------------------
+// E-Mail-Tab (Vorlage + Signatur kombiniert)
+// ---------------------------------------------------------------------------
+
+function EmailSektion({ data }: { data: Unternehmen }) {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Mail-Vorlage</h3>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Wird beim Versand von Rechnungen per E-Mail als Vorlage verwendet.</p>
+      </div>
+      <MailVorlageSektion data={data} />
+
+      <hr className="border-slate-100 dark:border-slate-700" />
+
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Mail-Signatur</h3>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Wird automatisch unter jede ausgehende E-Mail gesetzt.</p>
+      </div>
+      <SignaturSektion data={data} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Digitale Unterschrift
 // ---------------------------------------------------------------------------
 
@@ -752,7 +815,6 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
 }) {
   const [modus, setModus] = useState<'zeichnen' | 'hochladen'>('zeichnen')
 
-  // ── Zeichnen ──
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const letzterPunkt = useRef<{ x: number; y: number } | null>(null)
   const [zeichnen, setZeichnen] = useState(false)
@@ -828,7 +890,6 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
     onSpeichern(out.toDataURL('image/png'))
   }
 
-  // ── Hochladen ──
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploadVorschau, setUploadVorschau] = useState<string | null>(null)
   const [uploadFehler, setUploadFehler] = useState<string | null>(null)
@@ -856,10 +917,9 @@ function UnterschriftModal({ onSpeichern, onAbbrechen }: {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg space-y-4 p-6">
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Digitale Unterschrift</h2>
 
-        {/* Tabs */}
         <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-700 rounded-lg w-fit">
-          <button type="button" className={tabCls(modus === 'zeichnen')} onClick={() => setModus('zeichnen')}>✏️ Zeichnen</button>
-          <button type="button" className={tabCls(modus === 'hochladen')} onClick={() => setModus('hochladen')}>📁 Datei hochladen</button>
+          <button type="button" className={tabCls(modus === 'zeichnen')} onClick={() => setModus('zeichnen')}>Zeichnen</button>
+          <button type="button" className={tabCls(modus === 'hochladen')} onClick={() => setModus('hochladen')}>Datei hochladen</button>
         </div>
 
         {modus === 'zeichnen' ? (
@@ -1001,7 +1061,7 @@ function UnterschriftSektion({ data }: { data: Unternehmen }) {
               download="unterschrift.png"
               className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
             >
-              ⬇ Speichern
+              Speichern
             </a>
             <button type="button" onClick={handleEntfernen}
               className="px-3 py-2 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-600">
@@ -1020,18 +1080,9 @@ function UnterschriftSektion({ data }: { data: Unternehmen }) {
 // Haupt-Seite
 // ---------------------------------------------------------------------------
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-        <h2 className="font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
-      </div>
-      <div className="p-6">{children}</div>
-    </div>
-  )
-}
-
 export function UnternehmenPage() {
+  const [activeTab, setActiveTab] = useState<TabId>('firma')
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['unternehmen'],
     queryFn: getUnternehmen,
@@ -1042,6 +1093,7 @@ export function UnternehmenPage() {
       <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48" />
+          <div className="h-10 bg-slate-100 rounded-xl" />
           <div className="h-64 bg-slate-100 rounded-2xl" />
         </div>
       </div>
@@ -1056,28 +1108,28 @@ export function UnternehmenPage() {
     )
   }
 
+  const isFormTab = activeTab === 'firma' || activeTab === 'steuer' || activeTab === 'rechnungen'
+
   return (
-    <div className="p-6 max-w-4xl space-y-6">
-      <div>
+    <div className="p-6 max-w-4xl space-y-0">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Unternehmen</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Firmendaten, Logo und Mail-Vorlagen verwalten</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Stammdaten, Steuer, Rechnungseinstellungen und Kommunikation</p>
       </div>
 
-      <Card title="Firmendaten & Logo">
-        <FirmendatenSektion data={data} />
-      </Card>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <TabNav active={activeTab} onChange={setActiveTab} />
 
-      <Card title="Mail-Vorlage">
-        <MailVorlageSektion data={data} />
-      </Card>
+        <div className="p-6">
+          {/* Firma / Steuer / Rechnungen teilen sich FirmendatenSektion – immer gemountet damit State erhalten bleibt */}
+          <div className={isFormTab ? '' : 'hidden'}>
+            <FirmendatenSektion data={data} activeTab={activeTab} />
+          </div>
 
-      <Card title="Mail-Signatur">
-        <SignaturSektion data={data} />
-      </Card>
-
-      <Card title="Digitale Unterschrift">
-        <UnterschriftSektion data={data} />
-      </Card>
+          {activeTab === 'email' && <EmailSektion data={data} />}
+          {activeTab === 'unterschrift' && <UnterschriftSektion data={data} />}
+        </div>
+      </div>
     </div>
   )
 }
