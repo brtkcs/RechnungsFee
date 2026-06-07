@@ -172,3 +172,4 @@ exports/
 !examples/
 *.Zone.Identifier
 .claude/settings.json
+*Zone.Identifier
