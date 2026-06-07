@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { downloadGobdExport, getUnternehmen, pruefZM } from '../api/client'
+import { downloadGobdExport } from '../api/client'
 
 const AKTUELLES_JAHR = new Date().getFullYear()
 const JAHRE = Array.from({ length: 5 }, (_, i) => AKTUELLES_JAHR - i)
@@ -11,20 +9,6 @@ export function ExportPage() {
   const [laedt, setLaedt] = useState(false)
   const [erfolg, setErfolg] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
-  const navigate = useNavigate()
-
-  const { data: unternehmen } = useQuery({
-    queryKey: ['unternehmen'],
-    queryFn: getUnternehmen,
-    staleTime: 1000 * 60 * 10,
-  })
-
-  const { data: zmPruefung } = useQuery({
-    queryKey: ['zm-pruefen'],
-    queryFn: pruefZM,
-    staleTime: 1000 * 60 * 60,
-    enabled: !unternehmen?.ist_kleinunternehmer,
-  })
 
   async function handleExport() {
     setLaedt(true)
@@ -43,104 +27,17 @@ export function ExportPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Exporte</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">GoBD-Export</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-          Daten für Steuerberater, Betriebsprüfung und Archivierung exportieren.
+          Vollständiger Datenexport nach GoBD für Betriebsprüfung und Archivierung (Z3-Datenträgerüberlassung).
         </p>
       </div>
 
-      {/* Anlage EKS – nur bei Transferleistungen */}
-      {unternehmen?.bezieht_transferleistungen && (
-        <button
-          onClick={() => navigate('/eks')}
-          className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
-        >
-          <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-white font-bold text-lg">Anlage EKS</h2>
-              <p className="text-blue-100 text-sm mt-0.5">
-                Einkommenserklärung für Selbstständige (Jobcenter / Bürgergeld)
-              </p>
-            </div>
-            <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
-          </div>
-          <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
-            <span>📄 Abschließend – monatlich aus Journaldaten</span>
-            <span>📊 Vorläufig – Prognose aus Vorjahr</span>
-          </div>
-        </button>
-      )}
-
-      {/* EÜR – immer sichtbar */}
-      <button
-        onClick={() => navigate('/euer')}
-        className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
-      >
-        <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-white font-bold text-lg">EÜR – Einnahmen-Überschuss-Rechnung</h2>
-            <p className="text-blue-100 text-sm mt-0.5">
-              Gewinn/Verlust nach Anlage EÜR 2025 aus Journalbuchungen berechnen
-            </p>
-          </div>
-          <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
-        </div>
-        <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
-          <span>📊 Zeilen nach Anlage EÜR 2025 · Ist-Versteuerung</span>
-          <span>📄 PDF-Anzeigehilfe für ELSTER / Steuerberater</span>
-        </div>
-      </button>
-
-      {/* UStVA – nur für Regelbesteuerte */}
-      {!unternehmen?.ist_kleinunternehmer && (
-        <button
-          onClick={() => navigate('/ustva')}
-          className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
-        >
-          <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-white font-bold text-lg">UStVA – Umsatzsteuer-Voranmeldung</h2>
-              <p className="text-blue-100 text-sm mt-0.5">
-                Kennziffern aus Journalbuchungen berechnen und als Anzeigehilfe für ELSTER ausgeben
-              </p>
-            </div>
-            <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
-          </div>
-          <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
-            <span>🧮 KZ 81/86 Umsätze · KZ 66 Vorsteuer · Zahllast</span>
-            <span>📄 PDF-Anzeigehilfe für ELSTER</span>
-          </div>
-        </button>
-      )}
-
-      {/* ZM – nur wenn fällig */}
-      {zmPruefung?.faellig && (
-        <button
-          onClick={() => navigate('/zm')}
-          className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 transition-colors group"
-        >
-          <div className="bg-blue-600 px-6 py-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-white font-bold text-lg">ZM – Zusammenfassende Meldung</h2>
-              <p className="text-blue-100 text-sm mt-0.5">
-                §18a UStG – Meldepflicht für innergemeinschaftliche Lieferungen &amp; Dienstleistungen
-              </p>
-            </div>
-            <span className="text-white text-2xl opacity-70 group-hover:opacity-100 transition-opacity">→</span>
-          </div>
-          <div className="px-6 py-4 flex gap-6 text-sm text-slate-600 dark:text-slate-300">
-            <span>🇪🇺 ig. Lieferungen (L) · §13b Dienstleistungen (D)</span>
-            <span>📋 Quartal / Monat · Frist 25. Folgemonat</span>
-          </div>
-        </button>
-      )}
-
-      {/* GoBD-Export-Card */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-blue-600 px-6 py-4">
-          <h2 className="text-white font-bold text-lg">GoBD-Export (Betriebsprüfung)</h2>
+          <h2 className="text-white font-bold text-lg">Export erstellen</h2>
           <p className="text-blue-100 text-sm mt-0.5">
-            Vollständiger Datenexport nach GoBD für die digitale Betriebsprüfung (Z3-Datenträgerüberlassung)
+            Journaldaten, Tagesabschlüsse und Stammdaten als ZIP-Archiv exportieren
           </p>
         </div>
 
