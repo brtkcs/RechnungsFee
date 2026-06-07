@@ -9,34 +9,34 @@ import { useUpdateCheck } from '../hooks/useUpdateCheck'
 // Navigationsstruktur
 // ---------------------------------------------------------------------------
 
-const verkaufNav = [
-  { to: '/rechnungen',    label: 'Rechnungen',    icon: '🧾' },
-  { to: '/lieferscheine', label: 'Lieferscheine',  icon: '🚚' },
+const fakturierungAktiv = [
+  { to: '/angebote',      label: 'Angebote',      icon: '📝', bald: true },
+  { to: '/auftraege',     label: 'Aufträge',       icon: '📋', bald: true },
+  { to: '/lieferscheine', label: 'Lieferscheine',  icon: '🚚', bald: false },
+  { to: '/rechnungen',    label: 'Rechnungen',     icon: '🧾', bald: false },
 ]
 
-const verkaufDemnachst = [
-  { label: 'Angebote' },
-  { label: 'Aufträge' },
-]
-
-const einkaufNav = [
-  { to: '/journal',         label: 'Journal',         icon: '📒' },
-  { to: '/tagesabschluesse', label: 'Tagesabschlüsse', icon: '📋' },
+const buchhaltungNav = [
+  { to: '/journal',          label: 'Journal',          icon: '📒' },
+  { to: '/tagesabschluesse', label: 'Tagesabschlüsse',  icon: '📋' },
 ]
 
 const auswertungNav = [
-  { to: '/euer',    label: 'EÜR',            icon: '📊' },
-  { to: '/ustva',   label: 'UStVA',           icon: '🏛️' },
-  { to: '/zm',      label: 'Zusammenf. Meldung', icon: '🌍' },
-  { to: '/eks',     label: 'EKS',             icon: '📋' },
-  { to: '/exporte', label: 'Exporte',          icon: '📦' },
+  { to: '/euer',    label: 'EÜR',                   icon: '📊' },
+  { to: '/ustva',   label: 'UStVA',                  icon: '🏛️' },
+  { to: '/zm',      label: 'Zusammenf. Meldung',     icon: '🌍' },
+  { to: '/eks',     label: 'EKS',                    icon: '📋' },
+  { to: '/exporte', label: 'Exporte',                icon: '📦' },
 ]
 
 const stammdatenNav = [
+  { to: '/kunden',      label: 'Kunden',      icon: '👤' },
+  { to: '/lieferanten', label: 'Lieferanten', icon: '🏭' },
+  { to: '/artikel',     label: 'Artikelstamm', icon: '📦' },
+]
+
+const einstellungenNav = [
   { to: '/dokumentenpakete', label: 'Dokumentenpakete', icon: '📎' },
-  { to: '/kunden',           label: 'Kunden',           icon: '👤' },
-  { to: '/lieferanten',      label: 'Lieferanten',      icon: '🏭' },
-  { to: '/artikel',          label: 'Artikelstamm',     icon: '📦' },
   { to: '/konten',           label: 'Konten',            icon: '🏦' },
   { to: '/kategorien',       label: 'Kategorien',        icon: '🏷️' },
   { to: '/nummernkreise',    label: 'Nummernkreise',     icon: '🔢' },
@@ -45,8 +45,10 @@ const stammdatenNav = [
   { to: '/unternehmen',      label: 'Unternehmen',       icon: '🏢' },
 ]
 
-const stammdatenPfade = stammdatenNav.map(n => n.to)
-const auswertungPfade = auswertungNav.map(n => n.to)
+const buchhaltungPfade  = buchhaltungNav.map(n => n.to)
+const auswertungPfade   = auswertungNav.map(n => n.to)
+const stammdatenPfade   = stammdatenNav.map(n => n.to)
+const einstellungenPfade = einstellungenNav.map(n => n.to)
 
 function formatDatum(iso: string): string {
   const [y, m, d] = iso.split('-')
@@ -59,9 +61,59 @@ function formatDatum(iso: string): string {
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <p className="px-4 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 select-none">
+    <p className="px-4 pt-3 pb-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 select-none">
       {label}
     </p>
+  )
+}
+
+function CollapsibleSection({
+  label,
+  icon,
+  aktiv,
+  items,
+}: {
+  label: string
+  icon: string
+  aktiv: boolean
+  items: { to: string; label: string; icon: string }[]
+}) {
+  const [offen, setOffen] = useState(aktiv)
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700'
+        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+    }`
+
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setOffen(o => !o)}
+        className={`w-full flex items-center justify-between px-4 py-2 text-sm font-medium transition-colors ${
+          aktiv
+            ? 'text-blue-700 dark:text-blue-300'
+            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
+        }`}
+      >
+        <span className="flex items-center gap-3">
+          <span>{icon}</span>
+          <span>{label}</span>
+        </span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">{offen ? '▲' : '▼'}</span>
+      </button>
+
+      {offen && (
+        <div className="border-l-2 border-slate-100 dark:border-slate-800 ml-6">
+          {items.map(({ to, label: l, icon: ic }) => (
+            <NavLink key={to} to={to} className={navLinkClass}>
+              <span>{ic}</span><span>{l}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -72,12 +124,6 @@ function SectionLabel({ label }: { label: string }) {
 export function AppLayout() {
   const location = useLocation()
   const qc = useQueryClient()
-
-  const stammdatenAktiv = stammdatenPfade.some(p => location.pathname.startsWith(p))
-  const auswertungAktiv = auswertungPfade.some(p => location.pathname.startsWith(p))
-
-  const [stammdatenOffen, setStammdatenOffen] = useState(stammdatenAktiv)
-  const [auswertungOffen, setAuswertungOffen] = useState(auswertungAktiv)
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [abschlussDialog, setAbschlussDialog] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
@@ -100,12 +146,10 @@ export function AppLayout() {
         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
     }`
 
-  const collapsibleHeaderClass = (aktiv: boolean) =>
-    `w-full flex items-center justify-between px-4 py-2 text-sm font-medium transition-colors ${
-      aktiv
-        ? 'text-blue-700 dark:text-blue-300'
-        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
-    }`
+  const buchhaltungAktiv  = buchhaltungPfade.some(p => location.pathname.startsWith(p))
+  const auswertungAktiv   = auswertungPfade.some(p => location.pathname.startsWith(p))
+  const stammdatenAktiv   = stammdatenPfade.some(p => location.pathname.startsWith(p))
+  const einstellungenAktiv = einstellungenPfade.some(p => location.pathname.startsWith(p))
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
@@ -126,79 +170,57 @@ export function AppLayout() {
             <span>📊</span><span>Dashboard</span>
           </NavLink>
 
-          {/* Verkauf */}
-          <SectionLabel label="Verkauf" />
-          {verkaufNav.map(({ to, label, icon }) => (
-            <NavLink key={to} to={to} className={navLinkClass}>
-              <span>{icon}</span><span>{label}</span>
-            </NavLink>
-          ))}
-          {verkaufDemnachst.map(({ label }) => (
-            <div key={label} className="flex items-center gap-3 px-4 py-2 text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed select-none">
-              <span className="opacity-40">📝</span>
-              <span>{label}</span>
-              <span className="ml-auto text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded px-1.5 py-0.5">bald</span>
-            </div>
-          ))}
-
-          {/* Einkauf */}
-          <SectionLabel label="Einkauf" />
-          {einkaufNav.map(({ to, label, icon }) => (
-            <NavLink key={to} to={to} className={navLinkClass}>
-              <span>{icon}</span><span>{label}</span>
-            </NavLink>
-          ))}
-
-          {/* Auswertung – ausklappbar */}
-          <div className="mt-1">
-            <button
-              onClick={() => setAuswertungOffen(o => !o)}
-              className={collapsibleHeaderClass(auswertungAktiv)}
-            >
-              <span className="flex items-center gap-3">
-                <span>📈</span>
-                <span>Auswertung</span>
-              </span>
-              <span className="text-xs">{auswertungOffen ? '▲' : '▼'}</span>
-            </button>
-            {auswertungOffen && (
-              <div className="border-l-2 border-slate-100 dark:border-slate-800 ml-6">
-                {auswertungNav.map(({ to, label, icon }) => (
-                  <NavLink key={to} to={to} className={navLinkClass}>
-                    <span>{icon}</span><span>{label}</span>
-                  </NavLink>
-                ))}
+          {/* Fakturierung – immer sichtbar */}
+          <SectionLabel label="Fakturierung" />
+          {fakturierungAktiv.map(({ to, label, icon, bald }) =>
+            bald ? (
+              <div key={to} className="flex items-center gap-3 px-4 py-2 text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed select-none">
+                <span className="opacity-40">{icon}</span>
+                <span>{label}</span>
+                <span className="ml-auto text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded px-1.5 py-0.5">bald</span>
               </div>
-            )}
-          </div>
+            ) : (
+              <NavLink key={to} to={to} className={navLinkClass}>
+                <span>{icon}</span><span>{label}</span>
+              </NavLink>
+            )
+          )}
 
-          {/* Stammdaten – ausklappbar */}
-          <div className="mt-1">
-            <button
-              onClick={() => setStammdatenOffen(o => !o)}
-              className={collapsibleHeaderClass(stammdatenAktiv)}
-            >
-              <span className="flex items-center gap-3">
-                <span>🗂️</span>
-                <span>Stammdaten</span>
-              </span>
-              <span className="text-xs">{stammdatenOffen ? '▲' : '▼'}</span>
-            </button>
-            {stammdatenOffen && (
-              <div className="border-l-2 border-slate-100 dark:border-slate-800 ml-6">
-                {stammdatenNav.map(({ to, label, icon }) => (
-                  <NavLink key={to} to={to} className={navLinkClass}>
-                    <span>{icon}</span><span>{label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Buchhaltung */}
+          <CollapsibleSection
+            label="Buchhaltung"
+            icon="📒"
+            aktiv={buchhaltungAktiv}
+            items={buchhaltungNav}
+          />
+
+          {/* Auswertung */}
+          <CollapsibleSection
+            label="Auswertung"
+            icon="📈"
+            aktiv={auswertungAktiv}
+            items={auswertungNav}
+          />
+
+          {/* Stammdaten */}
+          <CollapsibleSection
+            label="Stammdaten"
+            icon="👥"
+            aktiv={stammdatenAktiv}
+            items={stammdatenNav}
+          />
+
+          {/* Einstellungen */}
+          <CollapsibleSection
+            label="Einstellungen"
+            icon="⚙️"
+            aktiv={einstellungenAktiv}
+            items={einstellungenNav}
+          />
 
           {/* Trennlinie */}
           <div className="border-t border-slate-100 dark:border-slate-800 mt-3 mb-1" />
 
-          {/* Backup + Info */}
           <NavLink to="/backup" className={navLinkClass}>
             <span>💾</span><span>Backup</span>
           </NavLink>
