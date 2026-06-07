@@ -1861,7 +1861,7 @@ function RechnungForm({
   typ: 'eingang' | 'ausgang'
   initial?: Rechnung
   prefillFromAnalyse?: AnalyseErgebnis
-  initialDokumentTyp?: 'Rechnung' | 'Lieferschein'
+  initialDokumentTyp?: 'Lieferschein'
   onSave: (data: RechnungCreate) => void
   onCancel: () => void
 }) {
@@ -1964,8 +1964,7 @@ function RechnungForm({
   const [lieferadresseId, setLieferadresseId] = useState<string>(
     initial?.lieferadresse_id ? String(initial.lieferadresse_id) : ''
   )
-  const lieferscheinAktivForm = !!unternehmen?.lieferschein_aktiv
-  const kundeIdNum = partnerId ? parseInt(partnerId) : null
+const kundeIdNum = partnerId ? parseInt(partnerId) : null
   const { data: lieferadressen = [] } = useQuery({
     queryKey: ['lieferadressen', kundeIdNum],
     queryFn: () => getLieferadressen(kundeIdNum!),
@@ -2253,19 +2252,6 @@ function RechnungForm({
           </p>
           {prefillFromAnalyse.warnungen.filter(w => w !== 'TESSERACT_FEHLT').map((w, i) => (
             <p key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠️ {w}</p>
-          ))}
-        </div>
-      )}
-
-      {typ === 'ausgang' && lieferscheinAktivForm && !initial?.gutschrift_zu_rechnung_id && !initialDokumentTyp && (
-        <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-sm w-fit">
-          {(['Rechnung', 'Lieferschein'] as const).map((dt) => (
-            <button key={dt} type="button"
-              onClick={() => setDokumentTyp(dt)}
-              className={`px-4 py-1.5 transition-colors ${dokumentTyp === dt ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
-            >
-              {dt}
-            </button>
           ))}
         </div>
       )}
