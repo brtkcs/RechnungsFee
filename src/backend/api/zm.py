@@ -125,6 +125,7 @@ class ZMErgebnis(BaseModel):
 
 class ZMPruefung(BaseModel):
     faellig: bool
+    hat_ig_eintraege: bool = False   # True wenn irgendwann ig-Buchungen existieren → ZM-Menüpunkt zeigen
     zeitraum: str = ""
     zeitraum_label: str = ""
     deadline: str = ""
@@ -135,28 +136,43 @@ class ZMPruefung(BaseModel):
 # Endpunkte
 # ---------------------------------------------------------------------------
 
+def _hat_ig_eintraege_gesamt(db: Session) -> bool:
+    """True wenn überhaupt je ig-Buchungen existieren (für Sidebar-Sichtbarkeit)."""
+    return db.query(Journaleintrag).filter(
+        Journaleintrag.art == "Einnahme",
+        (
+            (Journaleintrag.konto_skr03.in_(["8125"])) |
+            (Journaleintrag.konto_skr04.in_(["3125"])) |
+            (Journaleintrag.ust_sonderfall == "13b_abs1")
+        )
+    ).limit(1).count() > 0
+
+
 @router.get("/pruefen", response_model=ZMPruefung)
 def zm_pruefen(db: Session = Depends(get_db)):
-    """Prüft ob eine ZM fällig ist – für Dashboard-Hinweis."""
+    """Prüft ob eine ZM fällig ist – für Dashboard-Hinweis und Sidebar-Sichtbarkeit."""
     unt = db.query(Unternehmen).first()
     if not unt or unt.ist_kleinunternehmer:
         return ZMPruefung(faellig=False, grund="kleinunternehmer")
+
+    hat_ig = _hat_ig_eintraege_gesamt(db)
 
     heute = date.today()
     zeitraum = _letztes_quartal(heute)
     deadline = _deadline(zeitraum)
 
     if heute > deadline:
-        return ZMPruefung(faellig=False, grund="abgelaufen",
+        return ZMPruefung(faellig=False, hat_ig_eintraege=hat_ig, grund="abgelaufen",
                           zeitraum=zeitraum, deadline=deadline.isoformat())
 
     von, bis, _ = _zeitraum_grenzen(zeitraum)
     eintraege = _ig_eintraege(von, bis, db)
     if not eintraege:
-        return ZMPruefung(faellig=False, grund="keine_lieferungen", zeitraum=zeitraum)
+        return ZMPruefung(faellig=False, hat_ig_eintraege=hat_ig, grund="keine_lieferungen", zeitraum=zeitraum)
 
     return ZMPruefung(
         faellig=True,
+        hat_ig_eintraege=True,
         grund="faellig",
         zeitraum=zeitraum,
         zeitraum_label=_zeitraum_label(zeitraum),

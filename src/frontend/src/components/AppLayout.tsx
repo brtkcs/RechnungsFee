@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTagesabschlussFehltGestern, getUnternehmen } from '../api/client'
+import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM } from '../api/client'
 import { TagesabschlussDialog } from '../pages/journal/TagesabschlussDialog'
 import { useUpdateCheck } from '../hooks/useUpdateCheck'
 
@@ -21,15 +21,16 @@ const buchhaltungNav = [
   { to: '/tagesabschluesse', label: 'Tagesabschlüsse',  icon: '📋' },
 ]
 
-import type { Unternehmen } from '../api/client'
+import type { Unternehmen, ZMPruefung } from '../api/client'
 
-type ZeigenFn = (u: Unternehmen | undefined) => boolean
+type NavKontext = { unt: Unternehmen | undefined; zm: ZMPruefung | undefined }
+type ZeigenFn = (k: NavKontext) => boolean
 
 const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: ZeigenFn }[] = [
   { to: '/euer',    label: 'EÜR',        icon: '📊', zeigen: () => true },
-  { to: '/ustva',   label: 'UStVA',       icon: '🏛️', zeigen: u => !u?.ist_kleinunternehmer },
-  { to: '/zm',      label: 'ZM',          icon: '🌍', zeigen: u => !u?.ist_kleinunternehmer && !!u?.ust_idnr },
-  { to: '/eks',     label: 'EKS',         icon: '📋', zeigen: u => !!u?.bezieht_transferleistungen },
+  { to: '/ustva',   label: 'UStVA',       icon: '🏛️', zeigen: ({ unt }) => !unt?.ist_kleinunternehmer },
+  { to: '/zm',      label: 'ZM',          icon: '🌍', zeigen: ({ zm }) => !!zm?.hat_ig_eintraege },
+  { to: '/eks',     label: 'EKS',         icon: '📋', zeigen: ({ unt }) => !!unt?.bezieht_transferleistungen },
   { to: '/exporte', label: 'GoBD-Export', icon: '📦', zeigen: () => true },
 ]
 
@@ -146,7 +147,16 @@ export function AppLayout() {
     queryFn: getUnternehmen,
     staleTime: 1000 * 60 * 5,
   })
-  const auswertungNav = auswertungNavAlle.filter(n => n.zeigen(unt))
+
+  const { data: zmPruefung } = useQuery({
+    queryKey: ['zm-pruefen'],
+    queryFn: pruefZM,
+    staleTime: 1000 * 60 * 10,
+    enabled: !unt?.ist_kleinunternehmer,
+  })
+
+  const navKontext: NavKontext = { unt, zm: zmPruefung }
+  const auswertungNav = auswertungNavAlle.filter(n => n.zeigen(navKontext))
 
   const zeigeBanner = fehltGestern?.fehlt === true && !bannerDismissed
 

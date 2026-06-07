@@ -1319,6 +1319,7 @@ export type ZMErgebnis = {
 
 export type ZMPruefung = {
   faellig: boolean
+  hat_ig_eintraege: boolean
   zeitraum: string
   zeitraum_label: string
   deadline: string
