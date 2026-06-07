@@ -231,6 +231,8 @@ class RechnungResponse(BaseModel):
     lieferschein_rechnung_ist_entwurf: Optional[bool] = None  # wird in from_orm_extended befüllt
     lieferschein_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt
     hat_lieferschein: bool = False  # wird in from_orm_extended befüllt
+    linked_lieferschein_id: Optional[int] = None   # wird in from_orm_extended befüllt
+    linked_lieferschein_nr: Optional[str] = None   # wird in from_orm_extended befüllt
     lieferadresse_id: Optional[int] = None
     lieferadresse_text: Optional[str] = None  # wird in from_orm_extended befüllt
     erstellt_am: datetime
@@ -289,12 +291,15 @@ class RechnungResponse(BaseModel):
             from sqlalchemy import inspect as _sa_inspect
             session = _sa_inspect(obj).session
             if session:
-                count = session.query(obj.__class__).filter(
+                ls = session.query(obj.__class__).filter(
                     obj.__class__.lieferschein_zu_rechnung_id == obj.id,
                     obj.__class__.dokument_typ == "Lieferschein",
                     obj.__class__.storniert == False,
-                ).count()
-                data.hat_lieferschein = count > 0
+                ).first()
+                if ls:
+                    data.hat_lieferschein = True
+                    data.linked_lieferschein_id = ls.id
+                    data.linked_lieferschein_nr = ls.rechnungsnummer
         except Exception:
             pass
         return data
