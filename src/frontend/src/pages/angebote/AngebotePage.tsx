@@ -662,43 +662,68 @@ function AngebotDetail({
         )}
 
         {/* Metadaten */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Kunde</p>
-            <p className="font-medium text-slate-700 dark:text-slate-200">{angebot.kunde_name ?? angebot.partner_freitext ?? '—'}</p>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-500 dark:text-slate-400">Kunde</span>
+            <span className="font-medium text-slate-800 dark:text-slate-100 text-right">{angebot.kunde_name ?? angebot.partner_freitext ?? '—'}</span>
           </div>
-          <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Betrag (Brutto)</p>
-            <p className="font-bold text-slate-800 dark:text-slate-100">{brutto.toFixed(2).replace('.', ',')} €</p>
+          <div className="flex justify-between">
+            <span className="text-slate-500 dark:text-slate-400">Datum</span>
+            <span className="text-slate-700 dark:text-slate-200">{formatDatum(angebot.datum)}</span>
           </div>
-          <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Datum</p>
-            <p className="text-slate-700 dark:text-slate-200">{formatDatum(angebot.datum)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Gültig bis</p>
-            <p className={`font-medium ${angebot.gueltig_bis && angebot.gueltig_bis < heuteIso() && angebot.angebot_status === 'offen' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
+          <div className="flex justify-between">
+            <span className="text-slate-500 dark:text-slate-400">Gültig bis</span>
+            <span className={`font-medium ${angebot.gueltig_bis && angebot.gueltig_bis < heuteIso() && angebot.angebot_status === 'offen' ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
               {formatDatum(angebot.gueltig_bis)}
-            </p>
+            </span>
           </div>
         </div>
 
         {/* Positionen */}
-        <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Positionen</p>
-          <div className="space-y-1">
-            {angebot.positionen?.map((pos, i) => (
-              <div key={i} className="flex justify-between text-sm border-b border-slate-50 dark:border-slate-700 last:border-0 py-1">
-                <span className="text-slate-700 dark:text-slate-200 truncate flex-1 mr-2">
-                  {pos.menge}× {pos.beschreibung}
-                </span>
-                <span className="text-slate-500 dark:text-slate-400 shrink-0">
-                  {(parseFloat(pos.brutto as any) || 0).toFixed(2).replace('.', ',')} €
-                </span>
-              </div>
-            ))}
+        {angebot.positionen && angebot.positionen.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Positionen</p>
+            <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 dark:bg-slate-900">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
+                    <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Netto</th>
+                    <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
+                    <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Brutto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {angebot.positionen.map((pos, i) => (
+                    <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
+                        {pos.menge !== '1' && pos.menge !== 1 && <span className="text-slate-400 dark:text-slate-500 mr-1">{pos.menge}×</span>}
+                        {pos.beschreibung}
+                      </td>
+                      <td className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">
+                        {(parseFloat(pos.netto as any) || 0).toFixed(2).replace('.', ',')} €
+                      </td>
+                      <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500">
+                        {pos.ust_satz}%
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-200">
+                        {(parseFloat(pos.brutto as any) || 0).toFixed(2).replace('.', ',')} €
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                  <tr>
+                    <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</td>
+                    <td className="px-3 py-2 text-right font-bold text-slate-800 dark:text-slate-100">
+                      {brutto.toFixed(2).replace('.', ',')} €
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         {angebot.notizen && (
           <div>
