@@ -81,12 +81,14 @@ function ZuflussMonitor({
   ansicht,
   onAnsichtWechsel,
   hatZeitraum,
+  laedt = false,
 }: {
   zufluss: number
   zeitraumLabel: string
   ansicht: ZuflussAnsicht
   onAnsichtWechsel: (a: ZuflussAnsicht) => void
   hatZeitraum: boolean
+  laedt?: boolean
 }) {
   const prozent = Math.min((zufluss / OBERE_GRENZE) * 100, 100)
   const { freibetrag, anrechenbar } = berechneEks(zufluss)
@@ -109,8 +111,9 @@ function ZuflussMonitor({
     <div className={`rounded-xl border ${farben.border} ${farben.bg} p-4 space-y-3`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
             Zufluss-Monitor
+            {laedt && <span className="inline-block w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />}
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Stufenfreibetrag (§ 11b SGB II)</p>
         </div>
@@ -374,11 +377,11 @@ export function Dashboard() {
     staleTime: 1000 * 60 * 5,
   })
 
-  // Abrechnungszeitraum (6 Monate) für Zufluss-Monitor
-  const { data: zeitraumEintraege } = useQuery({
+  // Abrechnungszeitraum (6 Monate) – wird vorgeladen sobald leistungsbescheid_monat gesetzt ist
+  const { data: zeitraumEintraege, isFetching: zeitraumLaedt } = useQuery({
     queryKey: ['journal-zeitraum', zeitraum?.von, zeitraum?.bis],
     queryFn: () => getJournal({ datum_von: zeitraum!.von, datum_bis: zeitraum!.bis }),
-    enabled: unternehmen?.bezieht_transferleistungen === true && !!zeitraum && zuflussAnsicht === 'zeitraum',
+    enabled: unternehmen?.bezieht_transferleistungen === true && !!zeitraum,
     staleTime: 1000 * 60 * 5,
   })
 
@@ -420,13 +423,14 @@ export function Dashboard() {
   }
 
   const hatZeitraum = !!zeitraum
-  const zufluss = zuflussAnsicht === 'zeitraum' && hatZeitraum
+  const zeitraumDatenVorhanden = zuflussAnsicht === 'zeitraum' && hatZeitraum && zeitraumEintraege !== undefined
+  const zufluss = zeitraumDatenVorhanden
     ? calcZufluss(zeitraumEintraege)
     : calcZufluss(aktuelleEintraege)
 
   const jetzt = new Date()
   const monatLabel = `${DE_MONATE[jetzt.getMonth()]} ${jetzt.getFullYear()}`
-  const zuflussLabel = zuflussAnsicht === 'zeitraum' && hatZeitraum
+  const zuflussLabel = zeitraumDatenVorhanden
     ? zeitraum!.label
     : monatLabel
 
@@ -504,6 +508,7 @@ export function Dashboard() {
             ansicht={zuflussAnsicht}
             onAnsichtWechsel={setZuflussAnsicht}
             hatZeitraum={hatZeitraum}
+            laedt={zeitraumLaedt && zuflussAnsicht === 'zeitraum'}
           />
         </div>
       )}
