@@ -302,12 +302,8 @@ function AngebotFormular({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5 p-6">
-      <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-        {initial ? 'Angebot bearbeiten' : 'Neues Angebot'}
-      </h2>
+    <form onSubmit={submit} className="space-y-5">
 
-      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde *</label>
           <select value={kundeId} onChange={e => setKundeId(e.target.value)} className={selectCls} required>
@@ -319,17 +315,17 @@ function AngebotFormular({
             ))}
           </select>
         </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Angebotsdatum</label>
           <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={inputCls} />
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Gültig bis *</label>
           <input type="date" value={gueltigBis} onChange={e => setGueltigBis(e.target.value)} className={inputCls} required />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Dokumentenpaket</label>
           <select value={paketId} onChange={e => setPaketId(e.target.value)} className={selectCls}>
@@ -339,41 +335,40 @@ function AngebotFormular({
             ))}
           </select>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Positionen</label>
-        <PositionenTabelle
-          positionen={positionen}
-          onChange={setPositionen}
-          ustSaetze={ustSaetzeListe}
-          defaultSatz={defaultSatz}
-          onArtikelWahl={fillPositionFromArtikel}
-          eingabeModus={eingabeModus}
-          onModusWechsel={setEingabeModus}
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Positionen</label>
+          <PositionenTabelle
+            positionen={positionen}
+            onChange={setPositionen}
+            ustSaetze={ustSaetzeListe}
+            defaultSatz={defaultSatz}
+            onArtikelWahl={fillPositionFromArtikel}
+            eingabeModus={eingabeModus}
+            onModusWechsel={setEingabeModus}
+          />
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>
-        <textarea value={notizen} onChange={e => setNotizen(e.target.value)}
-          rows={3} className={`${inputCls} resize-none`}
-          placeholder="Interne Notizen oder Text für die Fußzeile" />
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>
+          <textarea value={notizen} onChange={e => setNotizen(e.target.value)}
+            rows={3} className={`${inputCls} resize-none`}
+            placeholder="Interne Notizen oder Text für die Fußzeile" />
+        </div>
 
-      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+        {fehler && <p className="text-sm text-red-600">{fehler}</p>}
 
-      <div className="flex gap-2 pt-1">
-        <button type="submit" disabled={laedt}
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
-          {laedt ? 'Speichern…' : initial ? 'Speichern' : 'Angebot erstellen'}
-        </button>
-        <button type="button" onClick={onAbbrechen}
-          className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
-          Abbrechen
-        </button>
-      </div>
-    </form>
+        <div className="flex gap-2 pt-1 pb-2">
+          <button type="submit" disabled={laedt}
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
+            {laedt ? 'Speichern…' : initial ? 'Speichern' : 'Angebot erstellen'}
+          </button>
+          <button type="button" onClick={onAbbrechen}
+            className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+            Abbrechen
+          </button>
+        </div>
+      </form>
   )
 }
 
@@ -703,9 +698,9 @@ export function AngebotePage() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Liste */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+    <div className="flex h-full">
+      {/* Liste – schrumpft auf 1/3 wenn Formular aktiv */}
+      <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 min-h-0 transition-all`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Angebote</h1>
@@ -717,19 +712,7 @@ export function AngebotePage() {
           </button>
         </div>
 
-        {/* Formular */}
-        {formModus && (
-          <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-y-auto max-h-[60vh]">
-            <AngebotFormular
-              initial={formModus === 'bearbeiten' && selected ? selected : undefined}
-              vorKundeId={formModus === 'neu' ? (vorKundeId ?? undefined) : undefined}
-              onSpeichern={(id) => { setFormModus(null); setSelectedId(id); setVorKundeId(null) }}
-              onAbbrechen={() => { setFormModus(null); setVorKundeId(null) }}
-            />
-          </div>
-        )}
-
-        {/* Tabelle */}
+          {/* Tabelle */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="p-6 animate-pulse space-y-2">
@@ -779,7 +762,26 @@ export function AngebotePage() {
         </div>
       </div>
 
-      {/* Detail-Panel */}
+      {/* Rechter Panel: Formular oder Detail */}
+      {formModus && (
+        <div className="flex-1 border-l border-slate-200 dark:border-slate-700 overflow-auto">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100">
+              {formModus === 'bearbeiten' ? 'Angebot bearbeiten' : 'Neues Angebot'}
+            </h3>
+            <button type="button" onClick={() => { setFormModus(null); setVorKundeId(null) }}
+              className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
+          </div>
+          <div className="p-6">
+            <AngebotFormular
+              initial={formModus === 'bearbeiten' && selected ? selected : undefined}
+              vorKundeId={formModus === 'neu' ? (vorKundeId ?? undefined) : undefined}
+              onSpeichern={(id) => { setFormModus(null); setSelectedId(id); setVorKundeId(null) }}
+              onAbbrechen={() => { setFormModus(null); setVorKundeId(null) }}
+            />
+          </div>
+        </div>
+      )}
       {selected && !formModus && (
         <div className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col">
           <AngebotDetail
