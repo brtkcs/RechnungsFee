@@ -66,7 +66,7 @@ export function UstSaetzePage() {
       <div>
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Steuersätze</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          Aktive Sätze erscheinen im Rechnungsformular und Artikelstamm. Der Standard-Satz wird automatisch vorausgefüllt.
+          Aktive Sätze erscheinen im Rechnungsformular und im Artikelbereich. Der Standard-Satz wird automatisch vorausgefüllt.
         </p>
       </div>
 

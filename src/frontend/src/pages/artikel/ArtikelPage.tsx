@@ -913,7 +913,7 @@ export function ArtikelPage() {
         {/* Header */}
         <div className="p-6 pb-4 shrink-0">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Artikelstamm</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Artikel</h1>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowGruppen(true)}

@@ -60,7 +60,7 @@ Installierte Apps aktualisieren sich automatisch – beim nächsten Start ersche
 - **E-Rechnungs-Import** – ZUGFeRD & XRechnung automatisch erkennen und Formular vorausfüllen
 - Plain PDF: öffnet sich automatisch zum Abschreiben, wird als Beleganhang gespeichert
 
-### 📦 Artikelstamm
+### 📦 Artikel
 - Artikel, Dienstleistungen und Fremdleistungen verwalten
 - VK und EK – Eingabe wahlweise als Netto oder Brutto, automatische Gegenrechnung
 - Verknüpfung mit Lieferanten, Rechnungshistorie je Artikel

@@ -1498,7 +1498,7 @@ class Lieferant:
 
 ---
 
-### **8.9 Artikelstamm**
+### **8.9 Artikel**
 
 **Zweck:**
 - Artikel und Dienstleistungen einmalig anlegen, in Rechnungen wiederverwenden

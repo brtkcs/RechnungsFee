@@ -100,7 +100,7 @@ AUSWERTUNG ▼          ← einklappbar; Einträge bedingt sichtbar
 STAMMDATEN ▼          ← einklappbar
   Kunden
   Lieferanten
-  Artikelstamm
+  Artikel
 
 EINSTELLUNGEN ▼       ← einklappbar
   Dokumentenpakete

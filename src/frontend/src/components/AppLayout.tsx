@@ -37,7 +37,7 @@ const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: Zeig
 const stammdatenNav = [
   { to: '/kunden',      label: 'Kunden',      icon: '👤' },
   { to: '/lieferanten', label: 'Lieferanten', icon: '🏭' },
-  { to: '/artikel',     label: 'Artikelstamm', icon: '📦' },
+  { to: '/artikel',     label: 'Artikel', icon: '📦' },
 ]
 
 const einstellungenNav = [

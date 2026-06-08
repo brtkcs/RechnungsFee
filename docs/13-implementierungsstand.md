@@ -40,7 +40,7 @@ Laufend aktualisiertes Protokoll umgesetzter Features und technischer Entscheidu
   - **Fakturierung** (immer sichtbar): Angebote · Aufträge (Platzhalter „bald") · Lieferscheine · Rechnungen
   - **Buchhaltung** (einklappbar): Journal · Tagesabschlüsse
   - **Auswertung** (einklappbar, bedingt): EÜR immer · UStVA + ZM nur bei Regelbesteuerung · ZM nur wenn ig-Buchungen existieren · EKS nur bei Transferleistungen · GoBD-Export
-  - **Stammdaten** (einklappbar): Kunden · Lieferanten · Artikelstamm
+  - **Stammdaten** (einklappbar): Kunden · Lieferanten · Artikel
   - **Einstellungen** (einklappbar): Dokumentenpakete · Konten · Kategorien · Nummernkreise · Steuersätze · Rechnungsvorlagen · Unternehmen
   - Standalone (unter Trennlinie): Backup · Info & Updates
 - Dashboard: 3 Kacheln + letzte 5 Buchungen + Zeitfilter
