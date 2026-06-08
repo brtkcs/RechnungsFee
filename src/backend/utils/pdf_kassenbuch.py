@@ -9,6 +9,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import base64
+
 from fpdf import FPDF
 
 
@@ -164,11 +166,38 @@ def erstelle_kassenbuch_pdf(
         "kassenstand":  _fmt_euro(kassenstand),
     }, bold=True, fill=True, fill_color=(235, 245, 255))
 
-    # Unterschriftsfeld
+    # Unterschrifts- / Signaturfeld
+    from datetime import date as _date
     pdf.ln(10)
     pdf.set_font("DejaVu", "", 9)
-    pdf.cell(80, 5, "Datum, Ort: ____________________________")
-    pdf.cell(10)
-    pdf.cell(80, 5, "Unterschrift: ____________________________", ln=True)
+    ort = unternehmen.get("ort", "")
+    export_datum = _fmt_datum(str(_date.today()))
+    datum_ort = f"{ort}, {export_datum}" if ort else export_datum
+    unterschrift_name = unternehmen.get("unterschrift_name", "")
+    unterschrift_b64 = unternehmen.get("unterschrift_bild") or ""
+
+    # Zeile: Betriebssitz + Datum
+    pdf.cell(0, 5, f"Betriebssitz, Datum: {datum_ort}", ln=True)
+    pdf.ln(2)
+
+    # Unterschrift: Bild wenn vorhanden, sonst Linie
+    if unterschrift_b64:
+        try:
+            raw = unterschrift_b64.split(",", 1)[-1]
+            img_bytes = base64.b64decode(raw)
+            pdf.image(BytesIO(img_bytes), x=pdf.l_margin, y=pdf.get_y(), w=60, h=15)
+            pdf.ln(16)
+        except Exception:
+            unterschrift_b64 = ""  # Fallback auf Linie
+    if not unterschrift_b64:
+        pdf.ln(10)
+    pdf.set_draw_color(80, 80, 100)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + 90, pdf.get_y())
+    pdf.ln(1)
+    pdf.set_font("DejaVu", "", 7)
+    pdf.set_text_color(120, 120, 130)
+    pdf.cell(0, 4, f"Unterschrift  –  {unterschrift_name}", ln=True)
+    pdf.set_text_color(0, 0, 0)
+
 
     return bytes(pdf.output())

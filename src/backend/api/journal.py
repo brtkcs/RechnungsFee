@@ -508,7 +508,16 @@ def kassenbuch_export(
             headers={"Content-Disposition": f'attachment; filename="Kassenbuch_{datum_von}_{datum_bis}.csv"'},
         )
     unt = db.query(Unternehmen).first()
-    unt_dict = {"firmenname": unt.firmenname if unt else ""} if unt else {}
+    unt_dict: dict = {}
+    if unt:
+        name_teile = [unt.vorname or "", unt.nachname or ""]
+        name = " ".join(t for t in name_teile if t) or unt.firmenname
+        unt_dict = {
+            "firmenname": unt.firmenname,
+            "ort": unt.ort or "",
+            "unterschrift_name": name,
+            "unterschrift_bild": unt.unterschrift_bild or "",
+        }
     from utils.pdf_kassenbuch import erstelle_kassenbuch_pdf
     pdf_bytes = erstelle_kassenbuch_pdf(unt_dict, rows, anfangsbestand, str(datum_von), str(datum_bis))
     return Response(
