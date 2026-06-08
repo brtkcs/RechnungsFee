@@ -303,72 +303,72 @@ function AngebotFormular({
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde *</label>
+        <select value={kundeId} onChange={e => setKundeId(e.target.value)} className={selectCls} required>
+          <option value="">— Kunden wählen —</option>
+          {kunden?.map(k => (
+            <option key={k.id} value={k.id}>
+              {k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' ')}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde *</label>
-          <select value={kundeId} onChange={e => setKundeId(e.target.value)} className={selectCls} required>
-            <option value="">— Kunden wählen —</option>
-            {kunden?.map(k => (
-              <option key={k.id} value={k.id}>
-                {k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' ')}
-              </option>
-            ))}
-          </select>
-        </div>
-
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Angebotsdatum</label>
           <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={inputCls} />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Gültig bis *</label>
           <input type="date" value={gueltigBis} onChange={e => setGueltigBis(e.target.value)} className={inputCls} required />
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Dokumentenpaket</label>
-          <select value={paketId} onChange={e => setPaketId(e.target.value)} className={selectCls}>
-            <option value="">— Kein Paket —</option>
-            {pakete?.filter(p => p.aktiv).map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Dokumentenpaket</label>
+        <select value={paketId} onChange={e => setPaketId(e.target.value)} className={selectCls}>
+          <option value="">— Kein Paket —</option>
+          {pakete?.filter(p => p.aktiv).map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Positionen</label>
-          <PositionenTabelle
-            positionen={positionen}
-            onChange={setPositionen}
-            ustSaetze={ustSaetzeListe}
-            defaultSatz={defaultSatz}
-            onArtikelWahl={fillPositionFromArtikel}
-            eingabeModus={eingabeModus}
-            onModusWechsel={setEingabeModus}
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Positionen</label>
+        <PositionenTabelle
+          positionen={positionen}
+          onChange={setPositionen}
+          ustSaetze={ustSaetzeListe}
+          defaultSatz={defaultSatz}
+          onArtikelWahl={fillPositionFromArtikel}
+          eingabeModus={eingabeModus}
+          onModusWechsel={setEingabeModus}
+        />
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>
-          <textarea value={notizen} onChange={e => setNotizen(e.target.value)}
-            rows={3} className={`${inputCls} resize-none`}
-            placeholder="Interne Notizen oder Text für die Fußzeile" />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>
+        <textarea value={notizen} onChange={e => setNotizen(e.target.value)}
+          rows={3} className={`${inputCls} resize-none`}
+          placeholder="Interne Notizen oder Text für die Fußzeile" />
+      </div>
 
-        {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
 
-        <div className="flex gap-2 pt-1 pb-2">
-          <button type="submit" disabled={laedt}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50">
-            {laedt ? 'Speichern…' : initial ? 'Speichern' : 'Angebot erstellen'}
-          </button>
-          <button type="button" onClick={onAbbrechen}
-            className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
-            Abbrechen
-          </button>
-        </div>
-      </form>
+      <div className="flex gap-2">
+        <button type="button" onClick={onAbbrechen}
+          className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors">
+          Abbrechen
+        </button>
+        <button type="submit" disabled={laedt}
+          className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          {laedt ? 'Speichern…' : initial ? 'Speichern' : '✓ Angebot erstellen'}
+        </button>
+      </div>
+    </form>
   )
 }
 
