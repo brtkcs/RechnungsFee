@@ -399,13 +399,20 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
             <Field label="Jobcenter">
               {inp('jobcenter_name', 'z.B. Jobcenter Berlin-Mitte')}
             </Field>
-            <Field label={<>Abrechnungszeitraum Beginn <InfoTooltip text="Startmonat deines aktuellen 6-Monats-Abrechnungszeitraums (aus dem Leistungsbescheid). RechnungsFee berechnet daraus den Zeitraum automatisch weiter." /></>}>
-              <input
-                type="month"
-                value={form.leistungsbescheid_monat ?? ''}
-                onChange={e => set('leistungsbescheid_monat', e.target.value || null)}
+            <Field label={<>Abrechnungszeitraum Beginn <InfoTooltip text="Startmonat deines 6-Monats-Abrechnungszeitraums aus dem Leistungsbescheid. RechnungsFee berechnet den aktuellen Zeitraum daraus automatisch." /></>}>
+              <select
+                value={form.leistungsbescheid_monat?.match(/^\d{4}-(\d{2})$/) ? form.leistungsbescheid_monat.split('-')[1] : ''}
+                onChange={e => {
+                  const y = new Date().getFullYear()
+                  set('leistungsbescheid_monat', e.target.value ? `${y}-${e.target.value}` : null)
+                }}
                 className={inputCls}
-              />
+              >
+                <option value="">– nicht gesetzt –</option>
+                {['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'].map((m, i) => (
+                  <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                ))}
+              </select>
             </Field>
           </div>
         )}

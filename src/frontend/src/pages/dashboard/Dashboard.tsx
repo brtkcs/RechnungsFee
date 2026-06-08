@@ -49,7 +49,8 @@ function berechneEks(zufluss: number): { freibetrag: number; anrechenbar: number
 
 const DE_MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
-function getAbrechnungszeitraum(startMonat: string): { von: string; bis: string; label: string } {
+function getAbrechnungszeitraum(startMonat: string): { von: string; bis: string; label: string } | null {
+  if (!/^\d{4}-\d{2}$/.test(startMonat)) return null
   const [sy, sm] = startMonat.split('-').map(Number)
   const now = new Date()
   const totalMonths = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm)
@@ -413,13 +414,14 @@ export function Dashboard() {
   const saldo = einnahmen - ausgaben
   const letzteEintraege = alle
 
-  // §11b SGB II: Einnahmen netto (USt = Durchlaufposten), Ausgaben brutto (wie EKS A/B-Codes)
-  // Verlust = 0 (kein negatives Einkommen bei §11b-Berechnung)
+  // §11b SGB II Zuflussprinzip: Einnahmen und Ausgaben brutto (tatsächlich geflossene Beträge)
+  // Stornos heben sich korrekt auf (brutto +X − brutto X = 0)
+  // Verlust = 0 (negatives Einkommen gibt es bei §11b nicht)
   function calcZufluss(entries: typeof aktuelleEintraege) {
     const list = (entries ?? []).filter(
       (e) => e.kategorie_kontenart !== 'Privat' && e.beschreibung !== 'Kassenanfangsbestand'
     )
-    const ein = list.filter((e) => e.art === 'Einnahme').reduce((s, e) => s + parseFloat(e.netto_betrag), 0)
+    const ein = list.filter((e) => e.art === 'Einnahme').reduce((s, e) => s + parseFloat(e.brutto_betrag), 0)
     const aus = list.filter((e) => e.art === 'Ausgabe').reduce((s, e) => s + parseFloat(e.brutto_betrag), 0)
     return Math.max(0, ein - aus)
   }
