@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.6',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Journal: Export als PDF oder CSV – Buttons immer sichtbar; alle aktiven Filter (Zeitraum, Art, Kategorie, Zahlungsart) werden übernommen und im Dokument dokumentiert' },
+      { typ: 'fix', text: 'EÜR: Zeilennummern auf Anlage EÜR 2025 korrigiert – Vereinnahmte USt Zeile 17, FA-erstattete USt Zeile 18, Vorsteuer Zeile 57; Gewährte Skonti Zeile 12; Reparatur/Bauleistungen §13b Zeile 60' },
+      { typ: 'fix', text: 'Zahlungsdialog: Schaltfläche „Überw." heißt jetzt einheitlich „Bank"' },
+    ],
+  },
+  {
     version: 'v0.3.5',
     datum: 'Juni 2026',
     eintraege: [
