@@ -23,6 +23,17 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.5',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Angebote: Entwurf-Modus – „Entwurf speichern" legt ein Angebot ohne Nummer an; Entwürfe sind in der Liste mit einem gelben Badge markiert und können jederzeit bearbeitet werden' },
+      { typ: 'neu', text: 'Angebote: Finalisieren-Button im Entwurf-Banner vergibt die Angebotsnummer und schaltet alle Aktionen (Drucken, PDF, E-Mail, Rechnung, Lieferschein) frei' },
+      { typ: 'neu', text: 'Dashboard – Zufluss-Monitor: Toggle „Monat / Leistungszeitraum" erscheint wenn ein Abrechnungszeitraum hinterlegt ist; zeigt §11b-Berechnung wahlweise für den aktuellen Monat oder den gesamten 6-Monats-Zeitraum' },
+      { typ: 'neu', text: 'Stammdaten → Unternehmen: neues Feld „Abrechnungszeitraum Beginn" im Abschnitt Transferleistungen – Startmonat des 6-Monats-Zeitraums aus dem Leistungsbescheid; RechnungsFee berechnet den aktuell laufenden Zeitraum automatisch weiter' },
+      { typ: 'fix', text: 'Zufluss-Monitor: Berechnung verwendet Brutto-Einnahmen und Brutto-Ausgaben (Zuflussprinzip §3 Alg II-V) – Storni heben sich korrekt auf, Ergebnis stimmt mit dem Journal-Saldo überein' },
+    ],
+  },
+  {
     version: 'v0.3.4',
     datum: 'Juni 2026',
     eintraege: [

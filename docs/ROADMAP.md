@@ -30,6 +30,7 @@
 
 **Angebote**
 - Angebot erstellen, drucken, per E-Mail versenden
+- Entwurf-Modus: Entwurf speichern (ohne Nummer), Finalisieren-Button vergibt Nummer
 - Status: offen / bestätigt / abgelehnt / abgelaufen
 - Rechnung oder Lieferschein aus Angebot (nur bei Status „Bestätigt")
 - Rückverlinkung: Angebot zeigt erstellten Lieferschein / Rechnung als Link
@@ -60,6 +61,10 @@
 - Unterschrift (Zeichnen oder Datei-Upload), Zahlungshinweis, QR-Zahlung
 - PDF-Vorlagen (Briefbogen, Schriftart, Fußzeile)
 - Setup-Wizard (4 Schritte inkl. Kassenbestand)
+- Transferleistungen: Abrechnungszeitraum-Beginn (Monat aus Leistungsbescheid)
+
+**Dashboard**
+- Zufluss-Monitor (§11b SGB II): Stufenfreibetrag, anrechenbar; Toggle Monat / Leistungszeitraum (6 Monate rollierend)
 
 **Infrastruktur**
 - Tauri 2 Desktop-App (Windows, Linux AppImage, macOS DMG)
