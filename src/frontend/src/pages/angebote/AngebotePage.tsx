@@ -95,8 +95,7 @@ function PositionenTabelle({
   onModusWechsel: (m: EingabeModus) => void
 }) {
   function update(i: number, field: keyof Pos, val: string) {
-    const neu = positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p)
-    onChange(neu)
+    onChange(positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p))
   }
 
   const gesamt = positionen.reduce((acc, p) => {
@@ -104,70 +103,88 @@ function PositionenTabelle({
     return { netto: acc.netto + netto, ust: acc.ust + ustBet, brutto: acc.brutto + brutto }
   }, { netto: 0, ust: 0, brutto: 0 })
 
+  const cellInput = "w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs"
+
   return (
-    <div className="space-y-2">
-      {/* Brutto/Netto-Toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500 dark:text-slate-400">Preiseingabe:</span>
-        <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-xs">
-          {(['brutto', 'netto'] as EingabeModus[]).map(m => (
-            <button key={m} type="button"
-              onClick={() => onModusWechsel(m)}
-              className={`px-3 py-1 transition-colors ${eingabeModus === m ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-              {m === 'brutto' ? 'Brutto (inkl. USt)' : 'Netto (zzgl. USt)'}
-            </button>
+    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+      <table className="w-full text-xs">
+        <thead className="bg-slate-50 dark:bg-slate-900">
+          <tr>
+            <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">Menge</th>
+            <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium w-20">Einheit</th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-24">
+              {eingabeModus === 'netto' ? 'Netto (€)' : 'Brutto (€)'}
+            </th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">USt %</th>
+            <th className="px-3 py-2 w-8" />
+          </tr>
+        </thead>
+        <tbody>
+          {positionen.map((pos, i) => (
+            <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+              <td className="px-2 py-1.5">
+                <ArtikelAutocomplete
+                  value={pos.beschreibung}
+                  onChange={v => update(i, 'beschreibung', v)}
+                  onArtikelWahl={a => onArtikelWahl(i, a)}
+                  placeholder="Beschreibung oder Artikel suchen"
+                />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.menge} onChange={e => update(i, 'menge', e.target.value)}
+                  type="text" className={`${cellInput} text-right`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.einheit} onChange={e => update(i, 'einheit', e.target.value)}
+                  placeholder="Stk." className={cellInput} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.einzelpreis} onChange={e => update(i, 'einzelpreis', e.target.value)}
+                  type="text" placeholder="0,00" className={`${cellInput} text-right`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <select value={pos.ust_satz} onChange={e => update(i, 'ust_satz', e.target.value)}
+                  className={`${cellInput} text-right`}>
+                  {ustSaetze.map(u => (
+                    <option key={u.satz} value={u.satz}>{u.satz} %</option>
+                  ))}
+                </select>
+              </td>
+              <td className="px-2 py-1.5 text-center">
+                {positionen.length > 1 && (
+                  <button type="button" onClick={() => onChange(positionen.filter((_, idx) => idx !== i))}
+                    className="text-slate-300 hover:text-red-500 text-base leading-none">×</button>
+                )}
+              </td>
+            </tr>
           ))}
-        </div>
-      </div>
-
-      <div className="hidden sm:grid grid-cols-[1fr_80px_80px_110px_80px_32px] gap-2 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-        <span>Beschreibung</span><span>Menge</span><span>Einheit</span>
-        <span>{eingabeModus === 'brutto' ? 'Bruttopreis' : 'Nettopreis'}</span>
-        <span>USt %</span><span />
-      </div>
-
-      {positionen.map((pos, i) => (
-        <div key={i} className="grid grid-cols-[1fr_80px_80px_110px_80px_32px] gap-2 items-center">
-          <ArtikelAutocomplete
-            value={pos.beschreibung}
-            onChange={v => update(i, 'beschreibung', v)}
-            onArtikelWahl={a => onArtikelWahl(i, a)}
-            placeholder="Beschreibung oder Artikel suchen"
-          />
-          <input value={pos.menge} onChange={e => update(i, 'menge', e.target.value)}
-            type="number" min="0" step="0.01" className={inputCls} />
-          <input value={pos.einheit} onChange={e => update(i, 'einheit', e.target.value)}
-            placeholder="Stk." className={inputCls} />
-          <input value={pos.einzelpreis} onChange={e => update(i, 'einzelpreis', e.target.value)}
-            type="number" step="0.01" min="0" placeholder="0,00" className={inputCls} />
-          <select value={pos.ust_satz} onChange={e => update(i, 'ust_satz', e.target.value)}
-            className={selectCls}>
-            {ustSaetze.map(u => (
-              <option key={u.satz} value={u.satz}>{u.satz} %</option>
-            ))}
-          </select>
-          <button type="button" onClick={() => onChange(positionen.filter((_, idx) => idx !== i))}
-            disabled={positionen.length === 1}
-            className="text-red-400 hover:text-red-600 disabled:opacity-20 text-lg leading-none">×</button>
-        </div>
-      ))}
-
-      <button type="button" onClick={() => onChange([...positionen, { ...leerePos(), ust_satz: defaultSatz }])}
-        className="text-sm text-blue-600 hover:underline dark:text-blue-400">
-        + Position hinzufügen
-      </button>
-
-      <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-sm space-y-1">
-        <div className="flex justify-between text-slate-500 dark:text-slate-400">
-          <span>Netto</span><span>{gesamt.netto.toFixed(2).replace('.', ',')} €</span>
-        </div>
-        <div className="flex justify-between text-slate-500 dark:text-slate-400">
-          <span>USt</span><span>{gesamt.ust.toFixed(2).replace('.', ',')} €</span>
-        </div>
-        <div className="flex justify-between font-semibold text-slate-800 dark:text-slate-100">
-          <span>Brutto</span><span>{gesamt.brutto.toFixed(2).replace('.', ',')} €</span>
-        </div>
-      </div>
+        </tbody>
+        <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+          <tr>
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400">
+              Netto{eingabeModus === 'brutto' && <span className="text-slate-400 dark:text-slate-500"> (berechnet)</span>}
+            </td>
+            <td colSpan={3} className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-200">
+              {gesamt.netto.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+          {gesamt.ust !== 0 && (
+            <tr className="border-t border-slate-100 dark:border-slate-700">
+              <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400">USt</td>
+              <td colSpan={3} className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">
+                {gesamt.ust.toFixed(2).replace('.', ',')} €
+              </td>
+            </tr>
+          )}
+          <tr className="border-t border-slate-100 dark:border-slate-700">
+            <td colSpan={3} className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Brutto</td>
+            <td colSpan={3} className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-100">
+              {gesamt.brutto.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   )
 }
@@ -337,7 +354,20 @@ function AngebotFormular({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Positionen</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Positionen *</label>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setEingabeModus(eingabeModus === 'netto' ? 'brutto' : 'netto')}
+              className="text-xs text-blue-600 hover:text-blue-700 underline">
+              {eingabeModus === 'netto' ? 'Brutto eingeben' : 'Netto eingeben'}
+            </button>
+            <button type="button"
+              onClick={() => setPositionen(prev => [...prev, { ...leerePos(), ust_satz: defaultSatz }])}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              + Position hinzufügen
+            </button>
+          </div>
+        </div>
         <PositionenTabelle
           positionen={positionen}
           onChange={setPositionen}
