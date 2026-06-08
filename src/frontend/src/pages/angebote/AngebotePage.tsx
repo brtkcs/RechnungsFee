@@ -84,15 +84,13 @@ function berechnePos(pos: Pos, modus: EingabeModus) {
 }
 
 function PositionenTabelle({
-  positionen, onChange, ustSaetze, defaultSatz, onArtikelWahl, eingabeModus, onModusWechsel,
+  positionen, onChange, ustSaetze, onArtikelWahl, eingabeModus,
 }: {
   positionen: Pos[]
   onChange: (p: Pos[]) => void
   ustSaetze: { satz: string }[]
-  defaultSatz: string
   onArtikelWahl: (i: number, a: ArtikelSuche) => void
   eingabeModus: EingabeModus
-  onModusWechsel: (m: EingabeModus) => void
 }) {
   function update(i: number, field: keyof Pos, val: string) {
     onChange(positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p))
@@ -371,10 +369,8 @@ function AngebotFormular({
           positionen={positionen}
           onChange={setPositionen}
           ustSaetze={ustSaetzeListe}
-          defaultSatz={defaultSatz}
           onArtikelWahl={fillPositionFromArtikel}
           eingabeModus={eingabeModus}
-          onModusWechsel={setEingabeModus}
         />
       </div>
 
@@ -697,7 +693,7 @@ function AngebotDetail({
                   {angebot.positionen.map((pos, i) => (
                     <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
                       <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
-                        {pos.menge !== '1' && pos.menge !== 1 && <span className="text-slate-400 dark:text-slate-500 mr-1">{pos.menge}×</span>}
+                        {pos.menge !== '1' && <span className="text-slate-400 dark:text-slate-500 mr-1">{pos.menge}×</span>}
                         {pos.beschreibung}
                       </td>
                       <td className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">
