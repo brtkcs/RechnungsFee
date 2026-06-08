@@ -2863,7 +2863,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
           onChange={(e) => setNotizen(e.target.value)}
           rows={2}
           className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
-          placeholder="Optionale Bemerkungen"
+          placeholder="Erscheint als Fußtext auf dem PDF"
         />
       </div>
 
