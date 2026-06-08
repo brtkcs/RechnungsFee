@@ -382,7 +382,7 @@ function AngebotFormular({
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>
         <textarea value={notizen} onChange={e => setNotizen(e.target.value)}
           rows={3} className={`${inputCls} resize-none`}
-          placeholder="Interne Notizen oder Text für die Fußzeile" />
+          placeholder="Erscheint als Fußtext auf dem PDF" />
       </div>
 
       {fehler && <p className="text-sm text-red-600">{fehler}</p>}
