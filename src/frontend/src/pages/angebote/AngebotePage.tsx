@@ -269,7 +269,7 @@ function AngebotFormular({
     ))
   }
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent, istEntwurf: boolean) {
     e.preventDefault()
     if (!kundeId) { setFehler('Bitte einen Kunden wählen.'); return }
     if (!gueltigBis) { setFehler('Gültig-bis-Datum ist erforderlich.'); return }
@@ -298,7 +298,7 @@ function AngebotFormular({
         notizen: notizen || undefined,
         dokument_typ: 'Angebot' as const,
         dokumentenpaket_id: paketId ? parseInt(paketId) : undefined,
-        ist_entwurf: false,
+        ist_entwurf: istEntwurf,
         positionen: posPayload,
       }
 
@@ -318,7 +318,7 @@ function AngebotFormular({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde *</label>
         <select value={kundeId} onChange={e => setKundeId(e.target.value)} className={selectCls} required>
@@ -392,9 +392,13 @@ function AngebotFormular({
           className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors">
           Abbrechen
         </button>
-        <button type="submit" disabled={laedt}
+        <button type="button" disabled={laedt} onClick={(e) => submit(e, true)}
+          className="flex-1 px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
+          📝 Entwurf speichern
+        </button>
+        <button type="button" disabled={laedt} onClick={(e) => submit(e, false)}
           className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-          {laedt ? 'Speichern…' : initial ? 'Speichern' : '✓ Angebot erstellen'}
+          {laedt ? 'Speichern…' : initial ? '✓ Speichern' : '✓ Angebot erstellen'}
         </button>
       </div>
     </form>
@@ -425,8 +429,18 @@ function AngebotDetail({
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
   const [mailAdresse, setMailAdresse] = useState('')
   const [fehler, setFehler] = useState<string | null>(null)
+  const [finLaedt, setFinLaedt] = useState(false)
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
+
+  async function handleFinalisieren() {
+    setFinLaedt(true)
+    try {
+      await updateRechnung(angebot.id, { ist_entwurf: false })
+      qc.invalidateQueries({ queryKey: ['angebote'] })
+    } catch (e: any) { setFehler(e?.message) }
+    finally { setFinLaedt(false) }
+  }
 
   async function fetchPdfBlob(): Promise<string> {
     const blob = await getRechnungPdf(angebot.id)
@@ -542,15 +556,28 @@ function AngebotDetail({
       {/* Inhalt */}
       <div className="p-5 space-y-5 flex-1 overflow-y-auto">
 
+        {/* Entwurf-Banner */}
+        {angebot.ist_entwurf && (
+          <div className="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+            <span className="text-sm text-amber-800 dark:text-amber-300">
+              📝 <strong>Entwurf</strong> – noch nicht versendbar
+            </span>
+            <button onClick={handleFinalisieren} disabled={finLaedt}
+              className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 shrink-0">
+              {finLaedt ? '…' : 'Finalisieren'}
+            </button>
+          </div>
+        )}
+
         {/* Aktionsleiste – direkt oben wie bei Rechnungen */}
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleDrucken} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={handleDrucken} disabled={pdfLaedt || !!angebot.ist_entwurf} className={btnNeutral}>
             🖨️ Drucken
           </button>
-          <button onClick={handlePdf} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={handlePdf} disabled={pdfLaedt || !!angebot.ist_entwurf} className={btnNeutral}>
             📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
           </button>
-          <button onClick={() => handleMail()} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={() => handleMail()} disabled={pdfLaedt || !!angebot.ist_entwurf} className={btnNeutral}>
             ✉️ Mail senden
           </button>
           <button onClick={onEdit} className={btnNeutral}>
@@ -559,8 +586,8 @@ function AngebotDetail({
           {!angebot.rechnung_zu_angebot_id ? (
             <button
               onClick={handleRechnungErstellen}
-              disabled={konvLaedt || !!angebot.lieferschein_zu_angebot_id || angebot.angebot_status !== 'bestaetigt'}
-              title={angebot.lieferschein_zu_angebot_id ? 'Zuerst Lieferschein → Rechnung umwandeln' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+              disabled={konvLaedt || !!angebot.ist_entwurf || !!angebot.lieferschein_zu_angebot_id || angebot.angebot_status !== 'bestaetigt'}
+              title={angebot.ist_entwurf ? 'Erst Entwurf finalisieren' : angebot.lieferschein_zu_angebot_id ? 'Zuerst Lieferschein → Rechnung umwandeln' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
               className={btnGreen}
             >
               {konvLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
@@ -574,8 +601,8 @@ function AngebotDetail({
             !angebot.lieferschein_zu_angebot_id ? (
               <button
                 onClick={handleLieferscheinErstellen}
-                disabled={lsLaedt || angebot.angebot_status !== 'bestaetigt'}
-                title={angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+                disabled={lsLaedt || !!angebot.ist_entwurf || angebot.angebot_status !== 'bestaetigt'}
+                title={angebot.ist_entwurf ? 'Erst Entwurf finalisieren' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
                 className={btnGreen}
               >
                 {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
@@ -782,7 +809,11 @@ export function AngebotePage() {
                     <td className="px-5 py-3 text-right text-slate-700 dark:text-slate-200">
                       {(parseFloat(a.brutto_gesamt as any) || 0).toFixed(2).replace('.', ',')} €
                     </td>
-                    <td className="px-5 py-3 text-center"><StatusBadge status={a.angebot_status} /></td>
+                    <td className="px-5 py-3 text-center">
+                      {a.ist_entwurf
+                        ? <span className="inline-block text-xs font-medium px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">Entwurf</span>
+                        : <StatusBadge status={a.angebot_status} />}
+                    </td>
                   </tr>
                 ))}
               </tbody>
