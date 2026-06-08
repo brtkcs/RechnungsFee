@@ -2130,12 +2130,14 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
     { netto: 0, ust: 0, brutto: 0 }
   )
 
-  // Im Import-Modus: Gesamtbeträge direkt aus dem XML anzeigen (float64-Rundungsfehler vermeiden)
+  // Im Import-Modus: Gesamtbeträge aus dem XML nur anzeigen solange Positionen unverändert.
+  // Hat der Nutzer Positionen korrigiert (Abweichung > 1 Cent), live aus Positionen rechnen.
   const pfN = prefillFromAnalyse?.felder?.gesamt_netto
   const pfU = prefillFromAnalyse?.felder?.gesamt_ust
   const pfB = prefillFromAnalyse?.felder?.gesamt_brutto
-  const anzeigeSummen = (pfN && pfU && pfB)
-    ? { netto: parseFloat(pfN), ust: parseFloat(pfU), brutto: parseFloat(pfB) }
+  const overridePasst = pfB != null && Math.abs(summen.brutto - Number(pfB)) <= 0.01
+  const anzeigeSummen = (pfN && pfU && pfB && overridePasst)
+    ? { netto: parseFloat(String(pfN)), ust: parseFloat(String(pfU)), brutto: parseFloat(String(pfB)) }
     : summen
 
   function toggleEingabeModus() {
@@ -2183,7 +2185,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
           menge: '1',
         }))
     )
-    setEingabeModus('netto')
+    // eingabeModus bleibt erhalten – war Brutto, bleibt Brutto
   }
 
   function addPosition() {
@@ -2232,17 +2234,24 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
       skonto_tage: dokumentTyp === 'Lieferschein' ? undefined : (skontoTage ? parseInt(skontoTage) : undefined),
       dokument_typ: dokumentTyp !== 'Rechnung' ? dokumentTyp : undefined,
       lieferadresse_id: dokumentTyp === 'Lieferschein' && lieferadresseId ? parseInt(lieferadresseId) : undefined,
-      // XML-Import: Gesamtbeträge direkt aus der Rechnung übernehmen
-      // Nur wenn alle drei Werte vorliegen (aus XML oder via _berechne_fehlende_summen abgeleitet)
-      ...(prefillFromAnalyse?.felder?.gesamt_netto &&
-        prefillFromAnalyse?.felder?.gesamt_ust &&
-        prefillFromAnalyse?.felder?.gesamt_brutto
-        ? {
-            netto_gesamt_override: prefillFromAnalyse.felder.gesamt_netto,
-            ust_gesamt_override: prefillFromAnalyse.felder.gesamt_ust,
-            brutto_gesamt_override: prefillFromAnalyse.felder.gesamt_brutto,
-          }
-        : {}),
+      // XML-Import: Gesamtbeträge direkt aus der Rechnung übernehmen –
+      // aber nur wenn die Positionen noch mit dem OCR/XML-Wert übereinstimmen.
+      // Hat der Nutzer Positionen manuell korrigiert (z.B. via Zusammenfassen + USt-Änderung),
+      // weicht die berechnete Summe ab → Override verwerfen, Positionen sind maßgeblich.
+      ...(() => {
+        const pfN = prefillFromAnalyse?.felder?.gesamt_netto
+        const pfU = prefillFromAnalyse?.felder?.gesamt_ust
+        const pfB = prefillFromAnalyse?.felder?.gesamt_brutto
+        if (!pfN || !pfU || !pfB) return {}
+        const calcBrutto = positionen.reduce((sum, p) => {
+          const eingabe = parseFloat(p.netto.replace(',', '.')) || 0
+          const ust = parseFloat(p.ust_satz) || 0
+          const netto = (eingabeModus === 'brutto' && ust > 0) ? (eingabe * 100) / (100 + ust) : eingabe
+          return sum + (netto + netto * ust / 100) * (parseFloat(p.menge) || 1)
+        }, 0)
+        if (Math.abs(calcBrutto - Number(pfB)) > 0.01) return {}
+        return { netto_gesamt_override: pfN, ust_gesamt_override: pfU, brutto_gesamt_override: pfB }
+      })(),
       positionen: positionen.map((p) => {
         const eingabe = parseFloat(p.netto.replace(',', '.')) || 0
         const ust = parseFloat(p.ust_satz) || 0
