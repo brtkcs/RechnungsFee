@@ -610,7 +610,7 @@ function ZahlungsDialog({
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zahlungsart</label>
             <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden text-sm">
-              {([['Bar', 'Bar'], ['Karte', 'Karte'], ['PayPal', 'PayPal'], ['Bank', 'Überw.']] as const).map(([val, label]) => (
+              {([['Bar', 'Bar'], ['Karte', 'Karte'], ['PayPal', 'PayPal'], ['Bank', 'Bank']] as const).map(([val, label]) => (
                 <button
                   key={val}
                   type="button"
