@@ -126,25 +126,51 @@ def _monatsgrenzen(start: date) -> list[tuple[date, date, str]]:
 
 
 def _journal_summen_pro_monat(von: date, bis: date, db: Session) -> dict[str, str]:
-    rows = (
-        db.query(
-            Kategorie.eks_kategorie,
-            func.sum(Journaleintrag.brutto_betrag).label("summe"),
-            func.sum(Journaleintrag.ust_betrag).label("ust_summe"),
+    # Storno-Einträge haben art='Ausgabe' aber eks_kategorie eines A-Codes.
+    # Daher getrennte Abfragen: Einnahmen (+) und Ausgaben (−) pro Kategorie.
+    def _abfrage(art: str):
+        return (
+            db.query(
+                Kategorie.eks_kategorie,
+                func.sum(Journaleintrag.brutto_betrag).label("summe"),
+                func.sum(Journaleintrag.ust_betrag).label("ust_summe"),
+            )
+            .join(Journaleintrag.kategorie)
+            .filter(
+                Journaleintrag.datum >= von,
+                Journaleintrag.datum <= bis,
+                Kategorie.eks_kategorie.isnot(None),
+                Journaleintrag.art == art,
+            )
+            .group_by(Kategorie.eks_kategorie)
+            .all()
         )
-        .join(Journaleintrag.kategorie)
-        .filter(
-            Journaleintrag.datum >= von,
-            Journaleintrag.datum <= bis,
-            Kategorie.eks_kategorie.isnot(None),
-        )
-        .group_by(Kategorie.eks_kategorie)
-        .all()
-    )
-    result = {row.eks_kategorie: str(row.summe or Decimal("0")) for row in rows}
+
+    ein_rows = _abfrage("Einnahme")
+    aus_rows = _abfrage("Ausgabe")
+
+    ein = {r.eks_kategorie: (Decimal(str(r.summe or 0)), Decimal(str(r.ust_summe or 0))) for r in ein_rows}
+    aus = {r.eks_kategorie: (Decimal(str(r.summe or 0)), Decimal(str(r.ust_summe or 0))) for r in aus_rows}
+
+    result: dict[str, str] = {}
+
+    # A-Codes: Einnahmen − Ausgaben (Storni mindern die Einnahmen)
+    for code in A_CODES:
+        e_b, _ = ein.get(code, (Decimal("0"), Decimal("0")))
+        a_b, _ = aus.get(code, (Decimal("0"), Decimal("0")))
+        net = (e_b - a_b).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if net:
+            result[code] = str(net)
+
+    # B/C-Codes: Ausgaben − Einnahmen (Storni mindern die Ausgaben)
+    for code in B_CODES + C_CODES:
+        a_b, _ = aus.get(code, (Decimal("0"), Decimal("0")))
+        e_b, _ = ein.get(code, (Decimal("0"), Decimal("0")))
+        net = (a_b - e_b).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if net:
+            result[code] = str(net)
 
     # B6_5: Privat-PKW betriebliche Fahrten – EKS-Rate 0,10 €/km (nicht 0,30 EÜR)
-    # Wenn km_anzahl gesetzt: km × 0,10; sonst Fallback auf brutto_betrag (Altdaten)
     b6_5_eintraege = (
         db.query(Journaleintrag.km_anzahl, Journaleintrag.brutto_betrag)
         .join(Journaleintrag.kategorie)
@@ -164,16 +190,15 @@ def _journal_summen_pro_monat(von: date, bis: date, db: Session) -> dict[str, st
                 b6_5_total += Decimal(str(e.brutto_betrag))
         result["B6_5"] = str(b6_5_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
-    # A5_1: vereinnahmte USt aus allen Einnahmen (A1, A3, A4) automatisch ableiten
+    # A5_1: vereinnahmte USt netto (Einnahmen-USt − Storni-USt) automatisch ableiten
     # A5_2: USt auf Eigenverbrauch von Waren (A2) automatisch ableiten
-    # Nur addieren wenn nicht bereits manuell gebucht (manuelle A5_x-Buchungen bleiben erhalten)
     ust_a1 = sum(
-        Decimal(row.ust_summe or 0)
-        for row in rows if row.eks_kategorie in ("A1", "A3", "A4")
+        ein.get(code, (Decimal("0"), Decimal("0")))[1] - aus.get(code, (Decimal("0"), Decimal("0")))[1]
+        for code in ("A1", "A3", "A4")
     )
-    ust_a2 = sum(
-        Decimal(row.ust_summe or 0)
-        for row in rows if row.eks_kategorie == "A2"
+    ust_a2 = (
+        ein.get("A2", (Decimal("0"), Decimal("0")))[1]
+        - aus.get("A2", (Decimal("0"), Decimal("0")))[1]
     )
     if ust_a1:
         existing = Decimal(result.get("A5_1", "0"))
