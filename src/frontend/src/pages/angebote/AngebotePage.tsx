@@ -728,7 +728,7 @@ function AngebotDetail({
         {angebot.notizen && (
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notizen</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{angebot.notizen}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-2 whitespace-pre-wrap">{angebot.notizen}</p>
           </div>
         )}
 
@@ -868,7 +868,7 @@ export function AngebotePage() {
         </div>
       )}
       {selected && !formModus && (
-        <div className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden flex flex-col">
+        <div className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
           <AngebotDetail
             angebot={selected}
             onEdit={() => setFormModus('bearbeiten')}
