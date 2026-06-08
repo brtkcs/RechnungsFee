@@ -1181,15 +1181,18 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
 
             satz_d = Decimal(str(satz_int)) if not steuerbefreiung_grund else Decimal("0")
             g_ust03, g_ust04 = (_ust_konto(art, satz_d) if satz_int > 0 and not steuerbefreiung_grund else (None, None))
-            kat_obj_g = db.query(Kategorie).filter(Kategorie.id == kat_id).first() if kat_id else None
-            e = _erstelle_eintrag(kat_id, kat_obj_g, anteil, beschreibung_gs, satz_d, g_ust03, g_ust04)
+            eff_kat_id = kat_id or rechnung.kategorie_id
+            kat_obj_g = db.query(Kategorie).filter(Kategorie.id == eff_kat_id).first() if eff_kat_id else None
+            e = _erstelle_eintrag(eff_kat_id, kat_obj_g, anteil, beschreibung_gs, satz_d, g_ust03, g_ust04)
             db.add(e)
             if i == 0:
                 erster_eintrag_gs = e
 
         if erster_eintrag_gs is None:
-            # Fallback: keine Positionen vorhanden
-            e = _erstelle_eintrag(None, None, betrag_neg, beschreibung_gs)
+            # Fallback: keine Positionen – Rechnung.kategorie_id verwenden
+            fb_kat_id = rechnung.kategorie_id
+            fb_kat = db.query(Kategorie).filter(Kategorie.id == fb_kat_id).first() if fb_kat_id else None
+            e = _erstelle_eintrag(fb_kat_id, fb_kat, betrag_neg, beschreibung_gs)
             db.add(e)
             erster_eintrag_gs = e
 
@@ -1513,7 +1516,7 @@ def create_gutschrift(rechnung_id: int, db: Session = Depends(get_db)):
             ust_satz=pos.ust_satz,
             ust_betrag=pos.ust_betrag,
             brutto=pos.brutto,
-            kategorie_id=pos.kategorie_id,
+            kategorie_id=pos.kategorie_id or original.kategorie_id,
             differenzbesteuerung=pos.differenzbesteuerung,
         )
         db.add(neue_pos)
