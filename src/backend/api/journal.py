@@ -597,9 +597,25 @@ def journal_export(
     else:
         datei_suffix = "gesamt"
 
+    # Filterzeile für PDF und CSV
+    filter_teile = []
+    if art:
+        filter_teile.append("Nur Einnahmen" if art == "Einnahme" else "Nur Ausgaben")
+    if kategorie_id is not None:
+        kat_name = kat_map.get(kategorie_id, f"ID {kategorie_id}")
+        filter_teile.append(f"Kategorie: {kat_name}")
+    if zahlungsart_typ == "bar":
+        filter_teile.append("Nur Bar")
+    elif zahlungsart_typ == "unbar":
+        filter_teile.append("Nur Unbar")
+    filter_zeile = " · ".join(filter_teile) if filter_teile else "Alle Buchungen"
+
     if format == "csv":
         out = io.StringIO()
         writer = csv.writer(out, delimiter=";")
+        # Filterinfo als erste Zeile
+        writer.writerow(["Filter:", filter_zeile])
+        writer.writerow([])
         writer.writerow(["Datum", "Beleg-Nr.", "Beschreibung", "Kategorie",
                          "Zahlungsart", "Art", "Netto (EUR)", "USt %", "USt (EUR)", "Brutto (EUR)"])
         for r in rows:
@@ -626,12 +642,11 @@ def journal_export(
         unt_dict = {"firmenname": unt.firmenname or ""}
 
     # Titel für PDF-Header
+    monate_de = ["", "Januar", "Februar", "März", "April", "Mai", "Juni",
+                 "Juli", "August", "September", "Oktober", "November", "Dezember"]
     if monat:
         try:
             j2, m2 = monat.split("-")
-            from calendar import month_name
-            monate_de = ["", "Januar", "Februar", "März", "April", "Mai", "Juni",
-                         "Juli", "August", "September", "Oktober", "November", "Dezember"]
             titel = f"Journal – {monate_de[int(m2)]} {j2}"
         except Exception:
             titel = f"Journal – {monat}"
@@ -643,7 +658,7 @@ def journal_export(
         titel = "Journal – Alle Buchungen"
 
     from utils.pdf_journal import erstelle_journal_pdf
-    pdf_bytes = erstelle_journal_pdf(unt_dict, rows, titel)
+    pdf_bytes = erstelle_journal_pdf(unt_dict, rows, titel, filter_zeile)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

@@ -65,10 +65,11 @@ ROW_H = 6
 
 
 class JournalPDF(FPDF):
-    def __init__(self, unternehmen: dict, titel: str):
+    def __init__(self, unternehmen: dict, titel: str, filter_zeile: str = ""):
         super().__init__(orientation="L", unit="mm", format="A4")
         self.unt = unternehmen
         self.titel = titel
+        self.filter_zeile = filter_zeile
         font_dir = _find_dejavu_dir()
         self.add_font("DejaVu", "", str(font_dir / "DejaVuSans.ttf"))
         self.add_font("DejaVu", "B", str(font_dir / "DejaVuSans-Bold.ttf"))
@@ -80,6 +81,11 @@ class JournalPDF(FPDF):
         self.cell(0, 7, self.unt.get("firmenname", ""), ln=True)
         self.set_font("DejaVu", "", 9)
         self.cell(0, 5, self.titel, ln=True)
+        if self.filter_zeile:
+            self.set_font("DejaVu", "", 8)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 4, f"Filter: {self.filter_zeile}", ln=True)
+            self.set_text_color(0, 0, 0)
         self.ln(2)
         self.set_draw_color(180, 180, 180)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
@@ -114,8 +120,9 @@ def erstelle_journal_pdf(
     unternehmen: dict,
     eintraege: list[dict],
     titel: str,
+    filter_zeile: str = "",
 ) -> bytes:
-    pdf = JournalPDF(unternehmen, titel)
+    pdf = JournalPDF(unternehmen, titel, filter_zeile)
 
     # Kopfzeile
     _row(pdf, {
