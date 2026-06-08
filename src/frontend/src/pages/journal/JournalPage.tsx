@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getJournal, getKategorien, getKassenbuchExportUrl, openUrl } from '../../api/client'
+import { getJournal, getKategorien, getKassenbuchExportUrl, getJournalExportUrl, openUrl } from '../../api/client'
 import { BuchungForm } from './BuchungForm'
 import { TagesabschlussDialog } from './TagesabschlussDialog'
 import { BuchungDetail } from './BuchungDetail'
@@ -60,6 +60,7 @@ export function JournalPage() {
   const [showAbschluss, setShowAbschluss] = useState(false)
   const [aktiverEintragId, setAktiverEintragId] = useState<number | null>(null)
   const [kassenbuchLaedt, setKassenbuchLaedt] = useState(false)
+  const [exportLaedt, setExportLaedt] = useState(false)
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams = filterModus === 'monat'
@@ -91,6 +92,32 @@ export function JournalPage() {
       await openUrl(url)
     } finally {
       setKassenbuchLaedt(false)
+    }
+  }
+
+  async function handleJournalExport(format: 'pdf' | 'csv') {
+    setExportLaedt(true)
+    try {
+      const p: Parameters<typeof getJournalExportUrl>[0] = { format }
+      if (filterModus === 'monat') {
+        p.monat = monat
+      } else if (filterModus === 'datum') {
+        p.datum_von = datum
+        p.datum_bis = datum
+      } else if (filterModus === 'zeitraum') {
+        p.datum_von = datumVon
+        p.datum_bis = datumBis
+      } else {
+        p.datum_von = `${aktivesJahr}-01-01`
+        p.datum_bis = `${aktivesJahr}-12-31`
+      }
+      if (art) p.art = art
+      if (kategorieId) p.kategorie_id = Number(kategorieId)
+      if (zahlungsartTyp) p.zahlungsart_typ = zahlungsartTyp
+      const url = await getJournalExportUrl(p)
+      await openUrl(url)
+    } finally {
+      setExportLaedt(false)
     }
   }
 
@@ -146,6 +173,26 @@ export function JournalPage() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Journal</h2>
         <div className="flex gap-2">
+          {/* Journal-Export immer sichtbar */}
+          <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
+            <button
+              onClick={() => handleJournalExport('pdf')}
+              disabled={exportLaedt}
+              title="Journal als PDF exportieren"
+              className="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+            >
+              {exportLaedt ? '⏳' : '📄'} PDF
+            </button>
+            <div className="w-px bg-slate-300 dark:bg-slate-600" />
+            <button
+              onClick={() => handleJournalExport('csv')}
+              disabled={exportLaedt}
+              title="Journal als CSV exportieren"
+              className="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+            >
+              CSV
+            </button>
+          </div>
           {zahlungsartTyp === 'bar' && (
             <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
               <button

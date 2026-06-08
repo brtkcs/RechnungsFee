@@ -410,6 +410,29 @@ export const getKassenbuchExportUrl = async (
   return `${base}/journal/kassenbuch-export?datum_von=${datumVon}&datum_bis=${datumBis}&format=${format}`
 }
 
+export const getJournalExportUrl = async (
+  params: {
+    monat?: string
+    datum_von?: string
+    datum_bis?: string
+    kategorie_id?: number
+    art?: string
+    zahlungsart_typ?: string
+    format: 'pdf' | 'csv'
+  }
+): Promise<string> => {
+  const base = await getApiBase()
+  const p = new URLSearchParams()
+  if (params.monat) p.set('monat', params.monat)
+  if (params.datum_von) p.set('datum_von', params.datum_von)
+  if (params.datum_bis) p.set('datum_bis', params.datum_bis)
+  if (params.kategorie_id) p.set('kategorie_id', String(params.kategorie_id))
+  if (params.art) p.set('art', params.art)
+  if (params.zahlungsart_typ) p.set('zahlungsart_typ', params.zahlungsart_typ)
+  p.set('format', params.format)
+  return `${base}/journal/export?${p.toString()}`
+}
+
 // --- Tagesabschluss ---
 export type Tagesabschluss = {
   id: number

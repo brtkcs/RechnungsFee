@@ -527,6 +527,130 @@ def kassenbuch_export(
     )
 
 
+@router.get("/export")
+def journal_export(
+    monat: Optional[str] = Query(None, description="Format: YYYY-MM"),
+    datum_von: Optional[date] = Query(None),
+    datum_bis: Optional[date] = Query(None),
+    kategorie_id: Optional[int] = None,
+    art: Optional[str] = Query(None, description="Einnahme oder Ausgabe"),
+    zahlungsart_typ: Optional[str] = Query(None, description="bar oder unbar"),
+    format: str = Query("pdf", description="pdf oder csv"),
+    db: Session = Depends(get_db),
+):
+    """Journal-Export als PDF oder CSV mit denselben Filtern wie die Journal-Liste."""
+    q = db.query(Journaleintrag)
+    if monat:
+        try:
+            j, m = monat.split("-")
+            q = q.filter(
+                extract("year", Journaleintrag.datum) == int(j),
+                extract("month", Journaleintrag.datum) == int(m),
+            )
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=422, detail="monat muss im Format YYYY-MM sein")
+    else:
+        if datum_von:
+            q = q.filter(Journaleintrag.datum >= datum_von)
+        if datum_bis:
+            q = q.filter(Journaleintrag.datum <= datum_bis)
+    if kategorie_id is not None:
+        q = q.filter(Journaleintrag.kategorie_id == kategorie_id)
+    if art:
+        if art not in ("Einnahme", "Ausgabe"):
+            raise HTTPException(status_code=422, detail="art muss Einnahme oder Ausgabe sein")
+        q = q.filter(Journaleintrag.art == art)
+    if zahlungsart_typ == "bar":
+        q = q.filter(Journaleintrag.zahlungsart == "Bar")
+    elif zahlungsart_typ == "unbar":
+        q = q.filter(Journaleintrag.zahlungsart != "Bar")
+    eintraege = q.order_by(Journaleintrag.datum.asc(), Journaleintrag.id.asc()).all()
+
+    kat_map = {k.id: k.name for k in db.query(Kategorie).all()}
+    rows = [
+        {
+            "datum":          str(e.datum),
+            "belegnr":        e.belegnr or "",
+            "beschreibung":   e.beschreibung or "",
+            "kategorie_name": kat_map.get(e.kategorie_id, "") if e.kategorie_id else "",
+            "zahlungsart":    e.zahlungsart or "",
+            "art":            e.art,
+            "netto_betrag":   str(e.netto_betrag),
+            "ust_satz":       str(e.ust_satz),
+            "ust_betrag":     str(e.ust_betrag),
+            "brutto_betrag":  str(e.brutto_betrag),
+        }
+        for e in eintraege
+    ]
+
+    # Dateinamen aus Zeitraum ableiten
+    if monat:
+        datei_suffix = monat
+    elif datum_von and datum_bis and str(datum_von) == str(datum_bis):
+        datei_suffix = str(datum_von)
+    elif datum_von and datum_bis:
+        datei_suffix = f"{datum_von}_{datum_bis}"
+    elif datum_von:
+        datei_suffix = f"ab_{datum_von}"
+    elif datum_bis:
+        datei_suffix = f"bis_{datum_bis}"
+    else:
+        datei_suffix = "gesamt"
+
+    if format == "csv":
+        out = io.StringIO()
+        writer = csv.writer(out, delimiter=";")
+        writer.writerow(["Datum", "Beleg-Nr.", "Beschreibung", "Kategorie",
+                         "Zahlungsart", "Art", "Netto (EUR)", "USt %", "USt (EUR)", "Brutto (EUR)"])
+        for r in rows:
+            def _de(v: str) -> str:
+                try:
+                    return f"{Decimal(v):.2f}".replace(".", ",")
+                except Exception:
+                    return v
+            writer.writerow([
+                r["datum"], r["belegnr"], r["beschreibung"], r["kategorie_name"],
+                r["zahlungsart"], r["art"],
+                _de(r["netto_betrag"]), r["ust_satz"], _de(r["ust_betrag"]), _de(r["brutto_betrag"]),
+            ])
+        csv_bytes = ("﻿" + out.getvalue()).encode("utf-8")
+        return Response(
+            content=csv_bytes,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="Journal_{datei_suffix}.csv"'},
+        )
+
+    unt = db.query(Unternehmen).first()
+    unt_dict: dict = {}
+    if unt:
+        unt_dict = {"firmenname": unt.firmenname or ""}
+
+    # Titel für PDF-Header
+    if monat:
+        try:
+            j2, m2 = monat.split("-")
+            from calendar import month_name
+            monate_de = ["", "Januar", "Februar", "März", "April", "Mai", "Juni",
+                         "Juli", "August", "September", "Oktober", "November", "Dezember"]
+            titel = f"Journal – {monate_de[int(m2)]} {j2}"
+        except Exception:
+            titel = f"Journal – {monat}"
+    elif datum_von and datum_bis:
+        titel = f"Journal – {datum_von.strftime('%d.%m.%Y')} bis {datum_bis.strftime('%d.%m.%Y')}"
+    elif datum_von:
+        titel = f"Journal – ab {datum_von.strftime('%d.%m.%Y')}"
+    else:
+        titel = "Journal – Alle Buchungen"
+
+    from utils.pdf_journal import erstelle_journal_pdf
+    pdf_bytes = erstelle_journal_pdf(unt_dict, rows, titel)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Journal_{datei_suffix}.pdf"'},
+    )
+
+
 @router.get("/{eintrag_id}/beleg", response_class=HTMLResponse)
 def get_beleg(eintrag_id: int, drucken: bool = Query(False), download: bool = Query(False), db: Session = Depends(get_db)):
     """Gibt einen druckbaren HTML-Beleg für einen Journaleintrag zurück."""
