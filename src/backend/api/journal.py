@@ -423,6 +423,101 @@ def create_split_buchung(data: SplitBuchungCreate, db: Session = Depends(get_db)
     return [JournalEintragResponse.from_orm_with_kunde(e) for e in ergebnisse]
 
 
+# ---------------------------------------------------------------------------
+# Kassenbuch-Export (Bar-Buchungen, PDF oder CSV)
+# ---------------------------------------------------------------------------
+
+def _kassenbuch_anfangsbestand(db: Session, datum_von: date) -> Decimal:
+    letzter = (
+        db.query(Tagesabschluss)
+        .filter(Tagesabschluss.datum < datum_von)
+        .order_by(Tagesabschluss.datum.desc(), Tagesabschluss.id.desc())
+        .first()
+    )
+    if letzter:
+        return letzter.ist_endbestand
+    einnahmen = db.query(func.coalesce(func.sum(Journaleintrag.brutto_betrag), 0)).filter(
+        Journaleintrag.zahlungsart == "Bar",
+        Journaleintrag.art == "Einnahme",
+        Journaleintrag.datum < datum_von,
+    ).scalar()
+    ausgaben = db.query(func.coalesce(func.sum(Journaleintrag.brutto_betrag), 0)).filter(
+        Journaleintrag.zahlungsart == "Bar",
+        Journaleintrag.art == "Ausgabe",
+        Journaleintrag.datum < datum_von,
+    ).scalar()
+    return Decimal(str(einnahmen)) - Decimal(str(ausgaben))
+
+
+@router.get("/kassenbuch-export")
+def kassenbuch_export(
+    datum_von: date = Query(...),
+    datum_bis: date = Query(...),
+    format: str = Query("pdf", description="pdf oder csv"),
+    db: Session = Depends(get_db),
+):
+    eintraege = (
+        db.query(Journaleintrag)
+        .filter(
+            Journaleintrag.zahlungsart == "Bar",
+            Journaleintrag.datum >= datum_von,
+            Journaleintrag.datum <= datum_bis,
+        )
+        .order_by(Journaleintrag.datum.asc(), Journaleintrag.id.asc())
+        .all()
+    )
+    anfangsbestand = _kassenbuch_anfangsbestand(db, datum_von)
+    kat_map = {k.id: k.name for k in db.query(Kategorie).all()}
+    rows = [
+        {
+            "datum":          str(e.datum),
+            "belegnr":        e.belegnr or "",
+            "beschreibung":   e.beschreibung or "",
+            "kategorie_name": kat_map.get(e.kategorie_id, "") if e.kategorie_id else "",
+            "art":            e.art,
+            "brutto_betrag":  str(e.brutto_betrag),
+        }
+        for e in eintraege
+    ]
+    if format == "csv":
+        out = io.StringIO()
+        writer = csv.writer(out, delimiter=";")
+        writer.writerow(["Datum", "Beleg-Nr.", "Beschreibung", "Kategorie",
+                         "Einnahme (EUR)", "Ausgabe (EUR)", "Kassenstand (EUR)"])
+        kassenstand = anfangsbestand
+        writer.writerow([str(datum_von), "", "Anfangsbestand", "", "", "",
+                         f"{kassenstand:.2f}".replace(".", ",")])
+        for r in rows:
+            betrag = Decimal(r["brutto_betrag"])
+            if r["art"] == "Einnahme":
+                kassenstand += betrag
+                ein, aus_ = f"{betrag:.2f}".replace(".", ","), ""
+            else:
+                kassenstand -= betrag
+                ein, aus_ = "", f"{betrag:.2f}".replace(".", ",")
+            writer.writerow([
+                r["datum"], r["belegnr"], r["beschreibung"], r["kategorie_name"],
+                ein, aus_, f"{kassenstand:.2f}".replace(".", ","),
+            ])
+        writer.writerow(["", "", "Endbestand", "", "", "",
+                         f"{kassenstand:.2f}".replace(".", ",")])
+        csv_bytes = ("﻿" + out.getvalue()).encode("utf-8")
+        return Response(
+            content=csv_bytes,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="Kassenbuch_{datum_von}_{datum_bis}.csv"'},
+        )
+    unt = db.query(Unternehmen).first()
+    unt_dict = {"firmenname": unt.firmenname if unt else ""} if unt else {}
+    from utils.pdf_kassenbuch import erstelle_kassenbuch_pdf
+    pdf_bytes = erstelle_kassenbuch_pdf(unt_dict, rows, anfangsbestand, str(datum_von), str(datum_bis))
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Kassenbuch_{datum_von}_{datum_bis}.pdf"'},
+    )
+
+
 @router.get("/{eintrag_id}/beleg", response_class=HTMLResponse)
 def get_beleg(eintrag_id: int, drucken: bool = Query(False), download: bool = Query(False), db: Session = Depends(get_db)):
     """Gibt einen druckbaren HTML-Beleg für einen Journaleintrag zurück."""
@@ -539,116 +634,3 @@ def storno_eintrag(eintrag_id: int, data: StornoRequest, db: Session = Depends(g
     db.commit()
     db.refresh(storno)
     return JournalEintragResponse.from_orm_with_kunde(storno)
-
-
-# ---------------------------------------------------------------------------
-# Kassenbuch-Export (Bar-Buchungen, PDF oder CSV)
-# ---------------------------------------------------------------------------
-
-def _kassenbuch_anfangsbestand(db: Session, datum_von: date) -> Decimal:
-    """Kassenstand am Beginn des Export-Zeitraums.
-
-    Strategie: letzter Tagesabschluss vor datum_von → ist_endbestand.
-    Gibt es keinen, werden alle Bar-Buchungen vor datum_von aufsummiert
-    (inkl. Kassenanfangsbestand-Eintrag aus dem Setup-Wizard).
-    """
-    letzter = (
-        db.query(Tagesabschluss)
-        .filter(Tagesabschluss.datum < datum_von)
-        .order_by(Tagesabschluss.datum.desc(), Tagesabschluss.id.desc())
-        .first()
-    )
-    if letzter:
-        return letzter.ist_endbestand
-
-    # Kein Tagesabschluss vorhanden – aus Bar-Einträgen berechnen
-    einnahmen = db.query(func.coalesce(func.sum(Journaleintrag.brutto_betrag), 0)).filter(
-        Journaleintrag.zahlungsart == "Bar",
-        Journaleintrag.art == "Einnahme",
-        Journaleintrag.datum < datum_von,
-    ).scalar()
-    ausgaben = db.query(func.coalesce(func.sum(Journaleintrag.brutto_betrag), 0)).filter(
-        Journaleintrag.zahlungsart == "Bar",
-        Journaleintrag.art == "Ausgabe",
-        Journaleintrag.datum < datum_von,
-    ).scalar()
-    return Decimal(str(einnahmen)) - Decimal(str(ausgaben))
-
-
-@router.get("/kassenbuch-export")
-def kassenbuch_export(
-    datum_von: date = Query(...),
-    datum_bis: date = Query(...),
-    format: str = Query("pdf", description="pdf oder csv"),
-    db: Session = Depends(get_db),
-):
-    eintraege = (
-        db.query(Journaleintrag)
-        .outerjoin(Kategorie, Journaleintrag.kategorie_id == Kategorie.id)
-        .filter(
-            Journaleintrag.zahlungsart == "Bar",
-            Journaleintrag.datum >= datum_von,
-            Journaleintrag.datum <= datum_bis,
-        )
-        .order_by(Journaleintrag.datum.asc(), Journaleintrag.id.asc())
-        .all()
-    )
-
-    anfangsbestand = _kassenbuch_anfangsbestand(db, datum_von)
-
-    # Kategorienamen voraufladen
-    kat_map = {k.id: k.name for k in db.query(Kategorie).all()}
-
-    rows = [
-        {
-            "datum":         str(e.datum),
-            "belegnr":       e.belegnr or "",
-            "beschreibung":  e.beschreibung or "",
-            "kategorie_name": kat_map.get(e.kategorie_id, "") if e.kategorie_id else "",
-            "art":           e.art,
-            "brutto_betrag": str(e.brutto_betrag),
-        }
-        for e in eintraege
-    ]
-
-    if format == "csv":
-        out = io.StringIO()
-        writer = csv.writer(out, delimiter=";")
-        writer.writerow(["Datum", "Beleg-Nr.", "Beschreibung", "Kategorie",
-                         "Einnahme (EUR)", "Ausgabe (EUR)", "Kassenstand (EUR)"])
-        kassenstand = anfangsbestand
-        writer.writerow([str(datum_von), "", "Anfangsbestand", "", "", "",
-                         f"{kassenstand:.2f}".replace(".", ",")])
-        for r in rows:
-            betrag = Decimal(r["brutto_betrag"])
-            if r["art"] == "Einnahme":
-                kassenstand += betrag
-                ein, aus_ = f"{betrag:.2f}".replace(".", ","), ""
-            else:
-                kassenstand -= betrag
-                ein, aus_ = "", f"{betrag:.2f}".replace(".", ",")
-            writer.writerow([
-                r["datum"], r["belegnr"], r["beschreibung"], r["kategorie_name"],
-                ein, aus_, f"{kassenstand:.2f}".replace(".", ","),
-            ])
-        writer.writerow(["", "", "Endbestand", "", "", "",
-                         f"{kassenstand:.2f}".replace(".", ",")])
-        csv_bytes = ("﻿" + out.getvalue()).encode("utf-8")
-        filename = f"Kassenbuch_{datum_von}_{datum_bis}.csv"
-        return Response(
-            content=csv_bytes,
-            media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-        )
-
-    # PDF
-    unt = db.query(Unternehmen).first()
-    unt_dict = {"firmenname": unt.firmenname if unt else ""} if unt else {}
-    from utils.pdf_kassenbuch import erstelle_kassenbuch_pdf
-    pdf_bytes = erstelle_kassenbuch_pdf(unt_dict, rows, anfangsbestand, str(datum_von), str(datum_bis))
-    filename = f"Kassenbuch_{datum_von}_{datum_bis}.pdf"
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
-    )
