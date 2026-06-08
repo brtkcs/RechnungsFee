@@ -45,6 +45,7 @@
 **Exporte**
 - ZUGFeRD-Export für Ausgangsrechnungen (EN 16931, PDF/A-3 mit XML-Einbettung, XRechnung 3.0)
 - Kassenbuch-Export (PDF mit Unterschrift + CSV) für Bar-Kasse
+- Journal-Export (PDF + CSV) mit allen Filtern – Filtereinstellungen im Dokument dokumentiert
 
 **Auswertungen & Exporte**
 - UStVA-Anzeigehilfe (KZ 81/83/86/88/41/89/93/61/35/36, monatl./quartalsweise)
