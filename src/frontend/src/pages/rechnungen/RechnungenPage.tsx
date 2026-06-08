@@ -3438,7 +3438,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
       <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 min-h-0 transition-all`}>
         <div className="p-6 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Rechnungen</h2>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{lieferscheinModus ? 'Lieferscheine' : 'Rechnungen'}</h2>
             <div className="flex gap-2">
               {typ === 'eingang' && (
                 <button

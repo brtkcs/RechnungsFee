@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getJournal, getKategorien } from '../../api/client'
+import { getJournal, getKategorien, getKassenbuchExportUrl, openUrl } from '../../api/client'
 import { BuchungForm } from './BuchungForm'
 import { TagesabschlussDialog } from './TagesabschlussDialog'
 import { BuchungDetail } from './BuchungDetail'
@@ -59,6 +59,7 @@ export function JournalPage() {
   const [showBuchung, setShowBuchung] = useState(false)
   const [showAbschluss, setShowAbschluss] = useState(false)
   const [aktiverEintragId, setAktiverEintragId] = useState<number | null>(null)
+  const [kassenbuchLaedt, setKassenbuchLaedt] = useState(false)
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams = filterModus === 'monat'
@@ -68,6 +69,30 @@ export function JournalPage() {
       : filterModus === 'zeitraum'
         ? { datum_von: datumVon, datum_bis: datumBis }
         : { datum_von: `${aktivesJahr}-01-01`, datum_bis: `${aktivesJahr}-12-31` }
+
+  function kassenbuchDatumsbereich(): { von: string; bis: string } {
+    if (filterModus === 'monat') {
+      const [y, m] = monat.split('-').map(Number)
+      const von = `${y}-${String(m).padStart(2, '0')}-01`
+      const letzterTag = new Date(y, m, 0).getDate()
+      const bis = `${y}-${String(m).padStart(2, '0')}-${String(letzterTag).padStart(2, '0')}`
+      return { von, bis }
+    }
+    if (filterModus === 'datum') return { von: datum, bis: datum }
+    if (filterModus === 'zeitraum') return { von: datumVon, bis: datumBis }
+    return { von: `${aktivesJahr}-01-01`, bis: `${aktivesJahr}-12-31` }
+  }
+
+  async function handleKassenbuchExport(format: 'pdf' | 'csv') {
+    setKassenbuchLaedt(true)
+    try {
+      const { von, bis } = kassenbuchDatumsbereich()
+      const url = await getKassenbuchExportUrl(von, bis, format)
+      await openUrl(url)
+    } finally {
+      setKassenbuchLaedt(false)
+    }
+  }
 
   const { data: eintraege, isLoading } = useQuery({
     queryKey: ['journal', filterModus, monat, datum, datumVon, datumBis, art, kategorieId, zahlungsartTyp],
@@ -121,6 +146,27 @@ export function JournalPage() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Journal</h2>
         <div className="flex gap-2">
+          {zahlungsartTyp === 'bar' && (
+            <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
+              <button
+                onClick={() => handleKassenbuchExport('pdf')}
+                disabled={kassenbuchLaedt}
+                title="Kassenbuch als PDF exportieren"
+                className="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+              >
+                {kassenbuchLaedt ? '⏳' : '📒'} Kassenbuch PDF
+              </button>
+              <div className="w-px bg-slate-300 dark:bg-slate-600" />
+              <button
+                onClick={() => handleKassenbuchExport('csv')}
+                disabled={kassenbuchLaedt}
+                title="Kassenbuch als CSV exportieren"
+                className="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+              >
+                CSV
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setShowAbschluss(true)}
             className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"

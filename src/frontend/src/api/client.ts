@@ -402,6 +402,13 @@ export const getJournalBelegUrl = async (id: number, drucken = false, download =
   return `${base}/journal/${id}/beleg${qs ? `?${qs}` : ''}`
 }
 
+export const getKassenbuchExportUrl = async (
+  datumVon: string, datumBis: string, format: 'pdf' | 'csv'
+): Promise<string> => {
+  const base = await getApiBase()
+  return `${base}/journal/kassenbuch-export?datum_von=${datumVon}&datum_bis=${datumBis}&format=${format}`
+}
+
 // --- Tagesabschluss ---
 export type Tagesabschluss = {
   id: number
