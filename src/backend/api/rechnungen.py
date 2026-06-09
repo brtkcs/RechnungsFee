@@ -162,8 +162,9 @@ def _aktualisiere_zahlungsstatus(rechnung: Rechnung) -> None:
         rechnung.bezahlt = True
         rechnung.zahlungsdatum = date.today()
         # Automatisch: verknüpfter Auftrag → abgeschlossen
-        # Pfad 1: Rechnung direkt aus Auftrag erstellt (rechnung_zu_auftrag_id)
-        # Pfad 2: Rechnung aus Proforma, die aus Auftrag kam (proforma_zu_auftrag_id → rechnung_zu_proforma_id)
+        # Pfad 1: Rechnung direkt aus Auftrag (rechnung_zu_auftrag_id)
+        # Pfad 2: Auftrag → Proforma → Rechnung (proforma_zu_auftrag_id + rechnung_zu_proforma_id)
+        # Pfad 3: Auftrag → Lieferschein → Rechnung (lieferschein_zu_auftrag_id + lieferschein_zu_rechnung_id)
         try:
             from sqlalchemy import inspect as _sa_inspect
             _session = _sa_inspect(rechnung).session
@@ -180,6 +181,16 @@ def _aktualisiere_zahlungsstatus(rechnung: Rechnung) -> None:
                     if _proforma:
                         _auftrag = _session.query(rechnung.__class__).filter(
                             rechnung.__class__.proforma_zu_auftrag_id == _proforma.id,
+                            rechnung.__class__.dokument_typ == "Auftrag",
+                        ).first()
+                if not _auftrag:
+                    _lieferschein = _session.query(rechnung.__class__).filter(
+                        rechnung.__class__.lieferschein_zu_rechnung_id == rechnung.id,
+                        rechnung.__class__.dokument_typ == "Lieferschein",
+                    ).first()
+                    if _lieferschein:
+                        _auftrag = _session.query(rechnung.__class__).filter(
+                            rechnung.__class__.lieferschein_zu_auftrag_id == _lieferschein.id,
                             rechnung.__class__.dokument_typ == "Auftrag",
                         ).first()
                 if _auftrag and _auftrag.auftrag_status not in ("abgeschlossen", "storniert"):

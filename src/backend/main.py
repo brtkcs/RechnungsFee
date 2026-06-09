@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete
 
-SCHEMA_VERSION = 61
+SCHEMA_VERSION = 62
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1339,6 +1339,26 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 61"))
             conn.commit()
             print("[Migration] Schema auf Version 61 (Auftrag-Status: in_bearbeitung → abgeschlossen bei bezahlter Rechnung)")
+
+        if version < 62:
+            # Pfad 3 nachkorrigieren: Auftrag → Lieferschein → Rechnung bezahlt
+            conn.execute(text("""
+                UPDATE rechnungen SET auftrag_status = 'abgeschlossen'
+                WHERE dokument_typ = 'Auftrag'
+                AND auftrag_status = 'in_bearbeitung'
+                AND EXISTS (
+                    SELECT 1 FROM rechnungen ls
+                    WHERE ls.id = rechnungen.lieferschein_zu_auftrag_id
+                    AND EXISTS (
+                        SELECT 1 FROM rechnungen r
+                        WHERE r.id = ls.lieferschein_zu_rechnung_id
+                        AND r.zahlungsstatus = 'bezahlt'
+                    )
+                )
+            """))
+            conn.execute(text("PRAGMA user_version = 62"))
+            conn.commit()
+            print("[Migration] Schema auf Version 62 (Auftrag-Status: Lieferschein-Pfad nachkorrigiert)")
 
 
 def _migrate_kategorien() -> None:
