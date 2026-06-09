@@ -926,6 +926,15 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         _quell_auftrag = db.query(Rechnung).filter(_auftrag_col == rechnung_id).first()
         rechnung._quell_auftrag_nr = _quell_auftrag.rechnungsnummer if _quell_auftrag else None
 
+        # Wenn Auftrag direkt gefunden: Eltern-Angebot nachschlagen
+        # (auftrag_zu_angebot_id steht auf dem Angebot-Dokument, nicht auf dem Auftrag)
+        if _quell_auftrag and not rechnung._quell_angebot_nr:
+            _angebot_via_auftrag = db.query(Rechnung).filter(
+                Rechnung.auftrag_zu_angebot_id == _quell_auftrag.id,
+                Rechnung.dokument_typ == "Angebot",
+            ).first()
+            rechnung._quell_angebot_nr = _angebot_via_auftrag.rechnungsnummer if _angebot_via_auftrag else None
+
         # Fallback für Rechnung aus Proforma: Auftrag/Angebot über Proforma-Kette
         if _dok == "Rechnung" and not rechnung._quell_auftrag_nr:
             _via_proforma = db.query(Rechnung).filter(
@@ -939,9 +948,11 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
                 ).first()
                 if _auftrag_via:
                     rechnung._quell_auftrag_nr = _auftrag_via.rechnungsnummer
-                    if not rechnung._quell_angebot_nr and _auftrag_via.auftrag_zu_angebot_id:
+                    if not rechnung._quell_angebot_nr:
+                        # auftrag_zu_angebot_id steht auf dem Angebot (FK → Auftrag), nicht auf dem Auftrag selbst
                         _angebot_via = db.query(Rechnung).filter(
-                            Rechnung.id == _auftrag_via.auftrag_zu_angebot_id,
+                            Rechnung.auftrag_zu_angebot_id == _auftrag_via.id,
+                            Rechnung.dokument_typ == "Angebot",
                         ).first()
                         rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
                 elif not rechnung._quell_angebot_nr and _via_proforma.proforma_zu_angebot_id:
