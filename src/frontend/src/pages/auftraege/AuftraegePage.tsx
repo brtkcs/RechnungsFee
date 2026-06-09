@@ -761,7 +761,7 @@ export function AuftraegePage() {
   return (
     <div className="flex h-full">
       {/* Liste – schrumpft auf 1/3 wenn Formular aktiv */}
-      <div className={`${zeigFormular ? 'w-1/3 min-w-[260px] shrink-0' : selAuftrag ? 'hidden md:flex md:w-1/3 md:min-w-[260px] md:shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 min-h-0 transition-all`}>
+      <div className={`${zeigFormular ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 min-h-0 transition-all`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
           <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Aufträge</h1>
