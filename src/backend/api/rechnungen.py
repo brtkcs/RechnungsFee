@@ -962,6 +962,15 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
                     rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
 
 
+    # Auftrag: Eltern-Angebot über Rückwärts-FK suchen
+    # (auftrag_zu_angebot_id steht auf dem Angebot, nicht auf dem Auftrag)
+    if _dok == "Auftrag":
+        _angebot_des_auftrags = db.query(Rechnung).filter(
+            Rechnung.auftrag_zu_angebot_id == rechnung_id,
+            Rechnung.dokument_typ == "Angebot",
+        ).first()
+        rechnung._quell_angebot_nr = _angebot_des_auftrags.rechnungsnummer if _angebot_des_auftrags else None
+
     # Lieferschein: Lieferadresse am Objekt hinterlegen (für PDF + Response)
     if rechnung.lieferadresse_id:
         from database.models import KundeLieferadresse
