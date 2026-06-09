@@ -1954,11 +1954,11 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lieferadressen])
 
-  // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen (default für neue + 1-Positions-Rechnungen)
-  // Bei Import (XML/PDF) mit mehreren Positionen immer aufgeschlüsselten Modus zeigen
+  // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen
+  // Standard ist aufgeschlüsselter Modus – Schnellmodus nur bei Bearbeitung bestehender 1-Positions-Rechnungen
   const [schnellmodus, setSchnellmodus] = useState(
     typ === 'eingang' &&
-    (!initial || initial.positionen.length <= 1) &&
+    !!initial && initial.positionen.length <= 1 &&
     (prefillFromAnalyse?.positionen?.length ?? 0) <= 1
   )
 
