@@ -517,8 +517,13 @@ function AngebotDetail({
     setAuftragLaedt(true)
     try {
       const au = await auftragAusAngebot(angebot.id)
-      await qc.invalidateQueries({ queryKey: ['angebote'] })
-      await qc.invalidateQueries({ queryKey: ['auftraege'] })
+      // Neuen Auftrag sofort in den Cache schreiben damit AuftraegePage ihn
+      // direkt findet – invalidateQueries hat keine aktiven Observer hier
+      qc.setQueryData(['auftraege'], (old: Rechnung[] | undefined) =>
+        old ? [...old, au] : [au]
+      )
+      qc.invalidateQueries({ queryKey: ['angebote'] })
+      qc.invalidateQueries({ queryKey: ['auftraege'] })
       navigate(`/auftraege?id=${au.id}`)
     } catch (e: any) { setFehler(e?.message) }
     finally { setAuftragLaedt(false) }
@@ -603,7 +608,7 @@ function AngebotDetail({
             ✏️ Bearbeiten
           </button>
           {unternehmen?.auftraege_aktiv && (
-            !angebot.angebot_zu_auftrag_id ? (
+            !angebot.auftrag_zu_angebot_id ? (
               <button
                 onClick={handleAuftragErstellen}
                 disabled={auftragLaedt || !!angebot.ist_entwurf || angebot.angebot_status !== 'akzeptiert'}
@@ -617,8 +622,8 @@ function AngebotDetail({
                 {auftragLaedt ? '⏳ Erstelle…' : '→ Auftrag'}
               </button>
             ) : (
-              <button onClick={() => navigate(`/auftraege?id=${angebot.angebot_zu_auftrag_id}`)} className={btnGreen}>
-                → {angebot.angebot_zu_auftrag_nr ?? `AU #${angebot.angebot_zu_auftrag_id}`}
+              <button onClick={() => navigate(`/auftraege?id=${angebot.auftrag_zu_angebot_id}`)} className={btnGreen}>
+                → {angebot.auftrag_zu_angebot_nr ?? `AU #${angebot.auftrag_zu_angebot_id}`}
               </button>
             )
           )}
@@ -681,8 +686,8 @@ function AngebotDetail({
           )}
           <button
             onClick={onDelete}
-            disabled={!!(angebot.rechnung_zu_angebot_id || angebot.lieferschein_zu_angebot_id || angebot.proforma_zu_angebot_id || angebot.angebot_zu_auftrag_id)}
-            title={angebot.rechnung_zu_angebot_id || angebot.lieferschein_zu_angebot_id || angebot.proforma_zu_angebot_id || angebot.angebot_zu_auftrag_id ? 'Nicht löschbar – Dokumente wurden aus diesem Angebot erstellt' : undefined}
+            disabled={!!(angebot.rechnung_zu_angebot_id || angebot.lieferschein_zu_angebot_id || angebot.proforma_zu_angebot_id || angebot.auftrag_zu_angebot_id)}
+            title={angebot.rechnung_zu_angebot_id || angebot.lieferschein_zu_angebot_id || angebot.proforma_zu_angebot_id || angebot.auftrag_zu_angebot_id ? 'Nicht löschbar – Dokumente wurden aus diesem Angebot erstellt' : undefined}
             className={btnRed}
           >
             🗑 Löschen
