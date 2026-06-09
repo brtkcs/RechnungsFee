@@ -2524,7 +2524,10 @@ def auftrag_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
     if not angebot:
         raise HTTPException(status_code=404, detail="Angebot nicht gefunden.")
     if angebot.auftrag_zu_angebot_id:
-        raise HTTPException(status_code=409, detail="Aus diesem Angebot wurde bereits ein Auftrag erstellt.")
+        _vorh = db.query(Rechnung).filter(Rechnung.id == angebot.auftrag_zu_angebot_id).first()
+        if _vorh:
+            raise HTTPException(status_code=409, detail="Aus diesem Angebot wurde bereits ein Auftrag erstellt.")
+        angebot.auftrag_zu_angebot_id = None  # verwaister FK bereinigen
 
     heute = date.today()
     auftragsnummer = _naechste_auftragsnummer(heute, db)
