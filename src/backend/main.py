@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete
 
-SCHEMA_VERSION = 62
+SCHEMA_VERSION = 63
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1359,6 +1359,39 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 62"))
             conn.commit()
             print("[Migration] Schema auf Version 62 (Auftrag-Status: Lieferschein-Pfad nachkorrigiert)")
+
+        if version < 63:
+            # Verwaiste Auftrag-FKs bereinigen: verlinktes Dokument existiert nicht mehr
+            conn.execute(text("""
+                UPDATE rechnungen SET proforma_zu_auftrag_id = NULL
+                WHERE dokument_typ = 'Auftrag'
+                AND proforma_zu_auftrag_id IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM rechnungen p WHERE p.id = rechnungen.proforma_zu_auftrag_id)
+            """))
+            conn.execute(text("""
+                UPDATE rechnungen SET rechnung_zu_auftrag_id = NULL
+                WHERE dokument_typ = 'Auftrag'
+                AND rechnung_zu_auftrag_id IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM rechnungen r WHERE r.id = rechnungen.rechnung_zu_auftrag_id)
+            """))
+            conn.execute(text("""
+                UPDATE rechnungen SET lieferschein_zu_auftrag_id = NULL
+                WHERE dokument_typ = 'Auftrag'
+                AND lieferschein_zu_auftrag_id IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM rechnungen ls WHERE ls.id = rechnungen.lieferschein_zu_auftrag_id)
+            """))
+            # Status auf offen zurücksetzen wenn keine Dokumente mehr verlinkt
+            conn.execute(text("""
+                UPDATE rechnungen SET auftrag_status = 'offen'
+                WHERE dokument_typ = 'Auftrag'
+                AND auftrag_status = 'in_bearbeitung'
+                AND rechnung_zu_auftrag_id IS NULL
+                AND lieferschein_zu_auftrag_id IS NULL
+                AND proforma_zu_auftrag_id IS NULL
+            """))
+            conn.execute(text("PRAGMA user_version = 63"))
+            conn.commit()
+            print("[Migration] Schema auf Version 63 (Auftrag: verwaiste FKs bereinigt, Status zurückgesetzt)")
 
 
 def _migrate_kategorien() -> None:

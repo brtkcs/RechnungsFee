@@ -32,7 +32,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 62` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 63` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -128,6 +128,7 @@ def _run_migrations():
 | 60 | unternehmen.auftraege_aktiv; rechnungen.auftrag_status + auftrag_zu_angebot_id + rechnung/lieferschein/proforma_zu_auftrag_id; Nummernkreis AU-JJNNNN; Auftrag-Dokument-Typ (aus Angebot oder standalone, → Rechnung/LS/Proforma) |
 | 61 | Datenfix: Auftrag-Status in_bearbeitung → abgeschlossen wenn verknüpfte Rechnung bezahlt (Pfad 1: direkt; Pfad 2: via Proforma) |
 | 62 | Datenfix: Auftrag-Status Pfad 3 nachkorrigiert: Auftrag → Lieferschein → Rechnung bezahlt |
+| 63 | Datenfix: verwaiste Auftrag-FKs bereinigen (gelöschte Proforma/Rechnung/LS); auftrag_status → offen wenn keine Dokumente mehr verlinkt |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
