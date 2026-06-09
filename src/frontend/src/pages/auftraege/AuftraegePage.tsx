@@ -259,7 +259,7 @@ function AuftragFormular({
     ))
   }
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent, istEntwurf: boolean) {
     e.preventDefault()
     if (!kundeId) { setFehler('Bitte einen Kunden wählen.'); return }
     if (positionen.some(p => !p.beschreibung.trim())) { setFehler('Alle Positionen benötigen eine Beschreibung.'); return }
@@ -286,7 +286,7 @@ function AuftragFormular({
         notizen: notizen || undefined,
         dokument_typ: 'Auftrag' as const,
         dokumentenpaket_id: paketId ? parseInt(paketId) : undefined,
-        ist_entwurf: false,
+        ist_entwurf: istEntwurf,
         positionen: posPayload,
       }
 
@@ -372,7 +372,11 @@ function AuftragFormular({
           className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors">
           Abbrechen
         </button>
-        <button type="button" disabled={laedt} onClick={submit}
+        <button type="button" disabled={laedt} onClick={(e) => submit(e, true)}
+          className="flex-1 px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
+          📝 Entwurf speichern
+        </button>
+        <button type="button" disabled={laedt} onClick={(e) => submit(e, false)}
           className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
           {laedt ? 'Speichern…' : initial ? '✓ Speichern' : '✓ Auftrag erstellen'}
         </button>
@@ -399,6 +403,7 @@ function AuftragDetail({
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [statusLaedt, setStatusLaedt] = useState(false)
+  const [finLaedt, setFinLaedt] = useState(false)
   const [reLaedt, setReLaedt] = useState(false)
   const [lsLaedt, setLsLaedt] = useState(false)
   const [pfLaedt, setPfLaedt] = useState(false)
@@ -406,6 +411,15 @@ function AuftragDetail({
   const [fehler, setFehler] = useState<string | null>(null)
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
+
+  async function handleFinalisieren() {
+    setFinLaedt(true)
+    try {
+      await updateRechnung(auftrag.id, { ist_entwurf: false })
+      qc.invalidateQueries({ queryKey: ['auftraege'] })
+    } catch (e: any) { setFehler(e?.message) }
+    finally { setFinLaedt(false) }
+  }
 
   async function fetchPdfBlob(): Promise<string> {
     const blob = await getRechnungPdf(auftrag.id)
@@ -528,18 +542,31 @@ function AuftragDetail({
           </div>
         )}
 
+        {/* Entwurf-Banner */}
+        {auftrag.ist_entwurf && (
+          <div className="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+            <span className="text-sm text-amber-800 dark:text-amber-300">
+              📝 <strong>Entwurf</strong> – noch nicht versendbar
+            </span>
+            <button onClick={handleFinalisieren} disabled={finLaedt}
+              className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 shrink-0">
+              {finLaedt ? '…' : 'Finalisieren'}
+            </button>
+          </div>
+        )}
+
         {/* Aktionsleiste */}
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleDrucken} disabled={pdfLaedt} className={btnNeutral}>🖨️ Drucken</button>
-          <button onClick={handlePdf} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={handleDrucken} disabled={pdfLaedt || !!auftrag.ist_entwurf} className={btnNeutral}>🖨️ Drucken</button>
+          <button onClick={handlePdf} disabled={pdfLaedt || !!auftrag.ist_entwurf} className={btnNeutral}>
             📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
           </button>
-          <button onClick={handleMail} disabled={pdfLaedt} className={btnNeutral}>✉️ Mail senden</button>
+          <button onClick={handleMail} disabled={pdfLaedt || !!auftrag.ist_entwurf} className={btnNeutral}>✉️ Mail senden</button>
           <button onClick={onEdit} className={btnNeutral}>✏️ Bearbeiten</button>
 
           {/* → Rechnung */}
           {!auftrag.rechnung_zu_auftrag_id ? (
-            <button onClick={handleRechnungErstellen} disabled={reLaedt || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
+            <button onClick={handleRechnungErstellen} disabled={reLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
               {reLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
             </button>
           ) : (
@@ -551,7 +578,7 @@ function AuftragDetail({
           {/* → Lieferschein */}
           {unternehmen?.lieferschein_aktiv && (
             !auftrag.lieferschein_zu_auftrag_id ? (
-              <button onClick={handleLieferscheinErstellen} disabled={lsLaedt || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
+              <button onClick={handleLieferscheinErstellen} disabled={lsLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
                 {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
               </button>
             ) : (
@@ -564,7 +591,7 @@ function AuftragDetail({
           {/* → Proforma */}
           {unternehmen?.proforma_aktiv && (
             !auftrag.proforma_zu_auftrag_id ? (
-              <button onClick={handleProformaErstellen} disabled={pfLaedt || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
+              <button onClick={handleProformaErstellen} disabled={pfLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
                 {pfLaedt ? '⏳ Erstelle…' : '→ Proforma'}
               </button>
             ) : (
