@@ -812,6 +812,7 @@ function RechnungDetail({
   onRechnungAusLs,
   onSelectId,
   onLieferscheinAusRechnung,
+  onFinalisiert,
 }: {
   rechnung: Rechnung
   onClose: () => void
@@ -821,6 +822,7 @@ function RechnungDetail({
   onRechnungAusLs?: (id: number) => void
   onSelectId?: (id: number, isLieferschein?: boolean, filterRechnungId?: number) => void
   onLieferscheinAusRechnung?: (id: number) => void
+  onFinalisiert?: (r: Rechnung) => void
 }) {
   const [zahlungsDialog, setZahlungsDialog] = useState(false)
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
@@ -897,7 +899,10 @@ function RechnungDetail({
 
   const finalisiereMutation = useMutation({
     mutationFn: () => finalisiereRechnung(rechnung.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['rechnungen'] }),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      onFinalisiert?.(updated)
+    },
     onError: (e: Error) => alert(e.message),
   })
 
@@ -3816,6 +3821,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
                   deleteMutation.mutate(selectedRechnung.id)
                 }
               }}
+              onFinalisiert={(r) => setPendingEditRechnung(r)}
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
               onSelectId={(id, isLieferschein, filterRechnungId) => {

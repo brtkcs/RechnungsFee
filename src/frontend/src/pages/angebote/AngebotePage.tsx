@@ -593,8 +593,14 @@ function AngebotDetail({
           {!angebot.rechnung_zu_angebot_id ? (
             <button
               onClick={handleRechnungErstellen}
-              disabled={konvLaedt || !!angebot.ist_entwurf || !!angebot.lieferschein_zu_angebot_id || angebot.angebot_status !== 'bestaetigt'}
-              title={angebot.ist_entwurf ? 'Erst Entwurf finalisieren' : angebot.lieferschein_zu_angebot_id ? 'Zuerst Lieferschein → Rechnung umwandeln' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+              disabled={konvLaedt || !!angebot.ist_entwurf || !!angebot.lieferschein_zu_angebot_id || !!angebot.proforma_zu_angebot_id || angebot.angebot_status !== 'akzeptiert'}
+              title={
+                angebot.ist_entwurf ? 'Erst Entwurf finalisieren'
+                : angebot.lieferschein_zu_angebot_id ? 'Zuerst Lieferschein → Rechnung umwandeln'
+                : angebot.proforma_zu_angebot_id ? 'Proforma vorhanden – über Proforma abrechnen'
+                : angebot.angebot_status !== 'akzeptiert' ? 'Nur bei Status „Akzeptiert" möglich'
+                : undefined
+              }
               className={btnGreen}
             >
               {konvLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
@@ -608,8 +614,13 @@ function AngebotDetail({
             !angebot.lieferschein_zu_angebot_id ? (
               <button
                 onClick={handleLieferscheinErstellen}
-                disabled={lsLaedt || !!angebot.ist_entwurf || angebot.angebot_status !== 'bestaetigt'}
-                title={angebot.ist_entwurf ? 'Erst Entwurf finalisieren' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+                disabled={lsLaedt || !!angebot.ist_entwurf || !!angebot.proforma_zu_angebot_id || angebot.angebot_status !== 'akzeptiert'}
+                title={
+                  angebot.ist_entwurf ? 'Erst Entwurf finalisieren'
+                  : angebot.proforma_zu_angebot_id ? 'Proforma vorhanden – über Proforma abrechnen'
+                  : angebot.angebot_status !== 'akzeptiert' ? 'Nur bei Status „Akzeptiert" möglich'
+                  : undefined
+                }
                 className={btnGreen}
               >
                 {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
@@ -624,8 +635,8 @@ function AngebotDetail({
             !angebot.proforma_zu_angebot_id ? (
               <button
                 onClick={handleProformaErstellen}
-                disabled={pfLaedt || !!angebot.ist_entwurf || angebot.angebot_status !== 'bestaetigt'}
-                title={angebot.ist_entwurf ? 'Erst Entwurf finalisieren' : angebot.angebot_status !== 'bestaetigt' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
+                disabled={pfLaedt || !!angebot.ist_entwurf || angebot.angebot_status !== 'akzeptiert'}
+                title={angebot.ist_entwurf ? 'Erst Entwurf finalisieren' : angebot.angebot_status !== 'akzeptiert' ? 'Nur bei Status „Bestätigt" möglich' : undefined}
                 className={btnNeutral}
               >
                 {pfLaedt ? '⏳ Erstelle…' : '→ Proforma'}
@@ -636,7 +647,12 @@ function AngebotDetail({
               </button>
             )
           )}
-          <button onClick={onDelete} className={btnRed}>
+          <button
+            onClick={onDelete}
+            disabled={!!(angebot.rechnung_zu_angebot_id || angebot.lieferschein_zu_angebot_id || angebot.proforma_zu_angebot_id)}
+            title={angebot.rechnung_zu_angebot_id || angebot.lieferschein_zu_angebot_id || angebot.proforma_zu_angebot_id ? 'Nicht löschbar – Dokumente wurden aus diesem Angebot erstellt' : undefined}
+            className={btnRed}
+          >
             🗑 Löschen
           </button>
         </div>

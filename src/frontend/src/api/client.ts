@@ -992,8 +992,12 @@ export const getProformas = () =>
 export const proformaAusAngebot = (angebotId: number) =>
   request<Rechnung>(`/rechnungen/${angebotId}/proforma-aus-angebot`, { method: 'POST' })
 
-export const rechnungAusProforma = (proformaId: number) =>
-  request<Rechnung>(`/rechnungen/${proformaId}/rechnung-aus-proforma`, { method: 'POST' })
+export const rechnungAusProforma = (proformaId: number, zahlung: { zahlungsart: string; bezahlt_am: string }) =>
+  request<Rechnung>(`/rechnungen/${proformaId}/rechnung-aus-proforma`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(zahlung),
+  })
 
 export const rechnungAusLieferschein = (lsId: number) =>
   request<Rechnung>(`/rechnungen/${lsId}/rechnung-erstellen`, { method: 'POST' })

@@ -23,6 +23,22 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.7',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Proforma-Rechnungen (aktivierbar unter Einstellungen → Unternehmen): Vorkasse-Aufforderung mit Zahlungsblock und Zahlungsziel; direkt oder aus einem Angebot heraus erstellen' },
+      { typ: 'neu', text: 'Proforma: „Zahlung eingegangen" – Zahlungsart und Datum wählen, Journaleintrag wird automatisch gebucht, Ausgangsrechnung als Entwurf (bezahlt) wird erstellt' },
+      { typ: 'neu', text: 'Proforma-Übersicht: Alterswarnung bei mehr als 14 Tage offenen Proformas (amber-Markierung in der Liste); Navigation aus Angebot filtert die Liste direkt auf das verknüpfte Dokument' },
+      { typ: 'neu', text: 'Proforma-PDF: vollständiger Zahlungsblock mit IBAN, Betrag und Zahlungsziel; kein Skonto, keine Unterschrift; nie ZUGFeRD (die erzeugte Rechnung bekommt ZUGFeRD wenn der Kunde es aktiviert hat)' },
+      { typ: 'verbesserung', text: 'Angebote: → Rechnung und → Lieferschein sind gesperrt wenn eine Proforma zu diesem Angebot existiert; Löschen ist deaktiviert sobald Rechnung, Lieferschein oder Proforma verknüpft sind' },
+      { typ: 'verbesserung', text: 'Nummernkreis-Format JJNNNN (deutsch) wird jetzt korrekt aufgelöst – ANG-260001, PRF-260001 statt unverändertem Platzhalter' },
+      { typ: 'fix', text: 'Angebot löschen schlug still fehl wenn das Angebot finalisiert war (Backend 409, kein Fehlerhinweis) – betrifft alle Plattformen; Issue #135' },
+      { typ: 'fix', text: 'Rechnung aus Angebot / Proforma: Positionen wurden mit falschen Feldnamen kopiert (einzelpreis statt netto) und erzeugten einen 500-Fehler' },
+      { typ: 'fix', text: 'Rechnung finalisieren: Detail-Panel zeigte nach dem Finalisieren weiterhin den Entwurf-Zustand wenn die Rechnung über ?id= Navigation geöffnet wurde' },
+      { typ: 'fix', text: 'Proforma-Rechnungen aktivieren: Toggle wurde nach dem Speichern nicht persistiert (fehlte im Pydantic-Schema)' },
+    ],
+  },
+  {
     version: 'v0.3.6',
     datum: 'Juni 2026',
     eintraege: [

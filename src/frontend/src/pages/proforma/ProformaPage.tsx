@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   getProformas, getKunden, getUstSaetze, getUnternehmen,
   createRechnung, updateRechnung, deleteRechnung,
@@ -78,60 +78,87 @@ function PositionenTabelle({
     return { netto: acc.netto + netto, ust: acc.ust + ustBet, brutto: acc.brutto + brutto }
   }, { netto: 0, ust: 0, brutto: 0 })
 
+  const cellInput = "w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs"
+
   return (
-    <div className="space-y-2">
-      {positionen.map((pos, i) => (
-        <div key={i} className="border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
-          <div className="flex gap-2 items-start">
-            <div className="flex-1">
-              <ArtikelAutocomplete
-                value={pos.beschreibung}
-                onChange={v => update(i, 'beschreibung', v)}
-                onSelect={a => onArtikelWahl(i, a)}
-                placeholder="Beschreibung"
-                className={inputCls}
-              />
-            </div>
-            {positionen.length > 1 && (
-              <button type="button"
-                onClick={() => onChange(positionen.filter((_, idx) => idx !== i))}
-                className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-lg leading-none mt-2">×</button>
-            )}
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400">Menge</label>
-              <input type="number" value={pos.menge} onChange={e => update(i, 'menge', e.target.value)}
-                className={inputCls} min="0.001" step="any" />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400">Einheit</label>
-              <input type="text" value={pos.einheit} onChange={e => update(i, 'einheit', e.target.value)}
-                className={inputCls} placeholder="Stk." />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400">
-                {eingabeModus === 'netto' ? 'Einzelpreis (Netto)' : 'Einzelpreis (Brutto)'}
-              </label>
-              <input type="number" value={pos.einzelpreis} onChange={e => update(i, 'einzelpreis', e.target.value)}
-                className={inputCls} min="0" step="0.01" placeholder="0.00" />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400">USt %</label>
-              <select value={pos.ust_satz} onChange={e => update(i, 'ust_satz', e.target.value)} className={selectCls}>
-                {ustSaetze.map(u => <option key={u.satz} value={u.satz}>{u.satz} %</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-      ))}
-      <div className="text-right text-sm text-slate-600 dark:text-slate-300 pr-1">
-        <span className="text-slate-400 dark:text-slate-500 mr-2">Gesamt:</span>
-        <strong>{gesamt.brutto.toFixed(2).replace('.', ',')} €</strong>
-        <span className="text-slate-400 dark:text-slate-500 ml-2 text-xs">
-          ({gesamt.netto.toFixed(2).replace('.', ',')} € + {gesamt.ust.toFixed(2).replace('.', ',')} € USt)
-        </span>
-      </div>
+    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+      <table className="w-full text-xs">
+        <thead className="bg-slate-50 dark:bg-slate-900">
+          <tr>
+            <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">Menge</th>
+            <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium w-20">Einheit</th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-24">
+              {eingabeModus === 'netto' ? 'Netto (€)' : 'Brutto (€)'}
+            </th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">USt %</th>
+            <th className="px-3 py-2 w-8" />
+          </tr>
+        </thead>
+        <tbody>
+          {positionen.map((pos, i) => (
+            <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+              <td className="px-2 py-1.5">
+                <ArtikelAutocomplete
+                  value={pos.beschreibung}
+                  onChange={v => update(i, 'beschreibung', v)}
+                  onArtikelWahl={a => onArtikelWahl(i, a)}
+                  placeholder="Beschreibung oder Artikel suchen"
+                  inputClassName="w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs placeholder-slate-400 dark:placeholder-slate-500"
+                />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.menge} onChange={e => update(i, 'menge', e.target.value)}
+                  type="text" className={`${cellInput} text-right`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.einheit} onChange={e => update(i, 'einheit', e.target.value)}
+                  placeholder="Stk." className={cellInput} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.einzelpreis} onChange={e => update(i, 'einzelpreis', e.target.value)}
+                  type="text" placeholder="0,00" className={`${cellInput} text-right`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <select value={pos.ust_satz} onChange={e => update(i, 'ust_satz', e.target.value)}
+                  className={`${cellInput} text-right`}>
+                  {ustSaetze.map(u => (
+                    <option key={u.satz} value={u.satz}>{u.satz} %</option>
+                  ))}
+                </select>
+              </td>
+              <td className="px-2 py-1.5 text-center">
+                {positionen.length > 1 && (
+                  <button type="button" onClick={() => onChange(positionen.filter((_, idx) => idx !== i))}
+                    className="text-slate-300 hover:text-red-500 text-base leading-none">×</button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+          <tr>
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400">
+              Netto{eingabeModus === 'brutto' && <span className="text-slate-400 dark:text-slate-500"> (berechnet)</span>}
+            </td>
+            <td colSpan={3} className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-200">
+              {gesamt.netto.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+          <tr className="border-t border-slate-100 dark:border-slate-700">
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">USt</td>
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">
+              {gesamt.ust.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+          <tr className="border-t border-slate-100 dark:border-slate-700">
+            <td colSpan={3} className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Brutto</td>
+            <td colSpan={3} className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-100">
+              {gesamt.brutto.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   )
 }
@@ -158,10 +185,30 @@ function ProformaFormular({
   const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
   const { data: ustSaetze } = useQuery({ queryKey: ['ust-saetze'], queryFn: getUstSaetze })
 
+  const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
+
   const [kundeId, setKundeId] = useState(initial?.kunde_id?.toString() ?? vorKundeId ?? '')
   const [datum, setDatum] = useState(initial?.datum ?? heuteIso())
+  const [faelligAm, setFaelligAm] = useState(initial?.faellig_am ?? '')
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
   const [eingabeModus, setEingabeModus] = useState<EingabeModus>('brutto')
+
+  // Automatisch auf Netto wechseln wenn eine Firma (B2B) gewählt wird
+  useEffect(() => {
+    if (!kundeId || !kunden) return
+    const k = kunden.find(k => String(k.id) === kundeId)
+    if (k) setEingabeModus(k.firmenname?.trim() ? 'netto' : 'brutto')
+  }, [kundeId, kunden])
+
+  // faellig_am aus Unternehmens-Standard berechnen wenn noch leer
+  useEffect(() => {
+    if (initial || faelligAm) return
+    const tage = unternehmen?.standard_zahlungsziel ?? 14
+    const d = new Date(datum)
+    d.setDate(d.getDate() + tage)
+    setFaelligAm(d.toISOString().slice(0, 10))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unternehmen, datum])
 
   const ustSaetzeListe = ustSaetze?.filter(u => u.ist_aktiv) ?? []
   const defaultSatz = ustSaetze?.find(u => u.ist_default)?.satz
@@ -181,6 +228,15 @@ function ProformaFormular({
     return [leerePos()]
   })
 
+  // Sobald UstSätze geladen sind, default-Satz der leeren Positionen korrigieren
+  useEffect(() => {
+    if (!ustSaetze?.length || initial) return
+    setPositionen(prev => prev.map(p =>
+      p.einzelpreis === '' ? { ...p, ust_satz: defaultSatz } : p
+    ))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ustSaetze])
+
   function fillPositionFromArtikel(i: number, a: ArtikelSuche) {
     const ust_satz = a.differenzbesteuerung ? '0'
       : (ustSaetze?.find(u => parseFloat(u.satz) === parseFloat(a.steuersatz))?.satz ?? a.steuersatz)
@@ -192,7 +248,7 @@ function ProformaFormular({
     ))
   }
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent, istEntwurf: boolean) {
     e.preventDefault()
     if (!kundeId) { setFehler('Bitte einen Kunden wählen.'); return }
     if (positionen.some(p => !p.beschreibung.trim())) { setFehler('Alle Positionen benötigen eine Beschreibung.'); return }
@@ -215,10 +271,11 @@ function ProformaFormular({
       const payload = {
         typ: 'ausgang' as const,
         datum,
+        faellig_am: faelligAm || undefined,
         kunde_id: parseInt(kundeId),
         notizen: notizen || undefined,
         dokument_typ: 'Proforma' as const,
-        ist_entwurf: false,
+        ist_entwurf: istEntwurf,
         positionen: posPayload,
       }
 
@@ -251,9 +308,15 @@ function ProformaFormular({
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Datum</label>
-        <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={inputCls} />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Datum</label>
+          <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zahlungsziel</label>
+          <input type="date" value={faelligAm} onChange={e => setFaelligAm(e.target.value)} className={inputCls} />
+        </div>
       </div>
 
       <div>
@@ -294,7 +357,11 @@ function ProformaFormular({
           className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors">
           Abbrechen
         </button>
-        <button type="button" disabled={laedt} onClick={submit}
+        <button type="button" disabled={laedt} onClick={(e) => submit(e, true)}
+          className="flex-1 px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
+          📝 Entwurf speichern
+        </button>
+        <button type="button" disabled={laedt} onClick={(e) => submit(e, false)}
           className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
           {laedt ? 'Speichern…' : initial ? '✓ Speichern' : '✓ Proforma erstellen'}
         </button>
@@ -321,12 +388,25 @@ function ProformaDetail({
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [konvLaedt, setKonvLaedt] = useState(false)
+  const [finLaedt, setFinLaedt] = useState(false)
   const [pdfLaedt, setPdfLaedt] = useState(false)
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
   const [mailAdresse, setMailAdresse] = useState('')
+  const [zeigZahlungsForm, setZeigZahlungsForm] = useState(false)
+  const [zahlungsart, setZahlungsart] = useState('Bank')
+  const [bezahltAm, setBezahltAm] = useState(heuteIso())
   const [fehler, setFehler] = useState<string | null>(null)
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
+
+  async function handleFinalisieren() {
+    setFinLaedt(true)
+    try {
+      await updateRechnung(proforma.id, { ist_entwurf: false })
+      qc.invalidateQueries({ queryKey: ['proformas'] })
+    } catch (e: any) { setFehler(e?.message) }
+    finally { setFinLaedt(false) }
+  }
 
   async function fetchPdfBlob(): Promise<string> {
     const blob = await getRechnungPdf(proforma.id)
@@ -391,9 +471,10 @@ function ProformaDetail({
   }
 
   async function handleRechnungErstellen() {
+    if (!zeigZahlungsForm) { setZeigZahlungsForm(true); return }
     setKonvLaedt(true)
     try {
-      const re = await rechnungAusProforma(proforma.id)
+      const re = await rechnungAusProforma(proforma.id, { zahlungsart, bezahlt_am: bezahltAm })
       qc.invalidateQueries({ queryKey: ['proformas'] })
       navigate(`/rechnungen?id=${re.id}`)
     } catch (e: any) { setFehler(e?.message) }
@@ -421,15 +502,28 @@ function ProformaDetail({
       {/* Inhalt */}
       <div className="p-5 space-y-5 flex-1 overflow-y-auto">
 
+        {/* Entwurf-Banner */}
+        {proforma.ist_entwurf && (
+          <div className="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+            <span className="text-sm text-amber-800 dark:text-amber-300">
+              📝 <strong>Entwurf</strong> – noch nicht versendbar
+            </span>
+            <button onClick={handleFinalisieren} disabled={finLaedt}
+              className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 shrink-0">
+              {finLaedt ? '…' : 'Finalisieren'}
+            </button>
+          </div>
+        )}
+
         {/* Aktionsleiste */}
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleDrucken} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={handleDrucken} disabled={pdfLaedt || !!proforma.ist_entwurf} className={btnNeutral}>
             🖨️ Drucken
           </button>
-          <button onClick={handlePdf} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={handlePdf} disabled={pdfLaedt || !!proforma.ist_entwurf} className={btnNeutral}>
             📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
           </button>
-          <button onClick={() => handleMail()} disabled={pdfLaedt} className={btnNeutral}>
+          <button onClick={() => handleMail()} disabled={pdfLaedt || !!proforma.ist_entwurf} className={btnNeutral}>
             ✉️ Mail senden
           </button>
           <button onClick={onEdit} className={btnNeutral}>
@@ -438,10 +532,11 @@ function ProformaDetail({
           {!proforma.rechnung_zu_proforma_id ? (
             <button
               onClick={handleRechnungErstellen}
-              disabled={konvLaedt}
+              disabled={konvLaedt || !!proforma.ist_entwurf}
+              title={proforma.ist_entwurf ? 'Erst Entwurf finalisieren' : 'Zahlung eingegangen – Rechnung als bezahlt anlegen'}
               className={btnGreen}
             >
-              {konvLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
+              {konvLaedt ? '⏳ Erstelle…' : '✓ Zahlung eingegangen'}
             </button>
           ) : (
             <button onClick={() => navigate(`/rechnungen?id=${proforma.rechnung_zu_proforma_id}`)} className={btnGreen}>
@@ -473,6 +568,40 @@ function ProformaDetail({
               className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-50 dark:hover:bg-slate-700">
               Abbrechen
             </button>
+          </div>
+        )}
+
+        {/* Zahlungs-Formular */}
+        {zeigZahlungsForm && !proforma.rechnung_zu_proforma_id && (
+          <div className="border border-green-200 dark:border-green-800 rounded-xl p-4 bg-green-50 dark:bg-green-950/30 space-y-3">
+            <p className="text-sm font-medium text-green-800 dark:text-green-300">Zahlungseingang buchen</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Zahlungsart</label>
+                <select value={zahlungsart} onChange={e => setZahlungsart(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm bg-white dark:bg-slate-700 dark:text-slate-100">
+                  <option value="Bank">Bank</option>
+                  <option value="PayPal">PayPal</option>
+                  <option value="Karte">Karte</option>
+                  <option value="Bar">Bar</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Zahlungsdatum</label>
+                <input type="date" value={bezahltAm} onChange={e => setBezahltAm(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm dark:bg-slate-700 dark:text-slate-100" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setZeigZahlungsForm(false)}
+                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+                Abbrechen
+              </button>
+              <button onClick={handleRechnungErstellen} disabled={konvLaedt}
+                className="flex-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
+                {konvLaedt ? '⏳ Erstelle…' : '✓ Zahlung buchen & Rechnung erstellen'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -514,6 +643,12 @@ function ProformaDetail({
             <span className="text-slate-500 dark:text-slate-400">Datum</span>
             <span className="text-slate-700 dark:text-slate-200">{formatDatum(proforma.datum)}</span>
           </div>
+          {proforma.faellig_am && (
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Zahlungsziel</span>
+              <span className="font-medium text-slate-700 dark:text-slate-200">{formatDatum(proforma.faellig_am)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-slate-500 dark:text-slate-400">Betrag</span>
             <span className="font-bold text-slate-800 dark:text-slate-100">
@@ -587,7 +722,9 @@ function ProformaDetail({
 
 export function ProformaPage() {
   const qc = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [filterId, setFilterId] = useState<number | null>(null)
   const [formModus, setFormModus] = useState<'neu' | 'bearbeiten' | null>(null)
 
   const { data: proformas, isLoading } = useQuery({
@@ -595,10 +732,26 @@ export function ProformaPage() {
     queryFn: getProformas,
   })
 
+  // ?id=X aus Navigation (z.B. von AngebotePage)
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (id) {
+      const n = parseInt(id)
+      setSelectedId(n)
+      setFilterId(n)
+      setSearchParams({}, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const deleteMut = useMutation({
     mutationFn: deleteRechnung,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['proformas'] }); setSelectedId(null) },
   })
+
+  const anzeigeProformas = filterId
+    ? (proformas?.filter(p => p.id === filterId) ?? [])
+    : (proformas ?? [])
 
   const selected = proformas?.find(p => p.id === selectedId) ?? null
 
@@ -613,7 +766,17 @@ export function ProformaPage() {
       {/* Liste */}
       <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 min-h-0 transition-all`}>
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Proforma</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Proforma</h1>
+            {filterId && (
+              <button
+                onClick={() => setFilterId(null)}
+                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800"
+              >
+                Gefiltert × alle anzeigen
+              </button>
+            )}
+          </div>
           <button
             onClick={() => { setFormModus('neu'); setSelectedId(null) }}
             className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
@@ -627,7 +790,7 @@ export function ProformaPage() {
             <div className="p-6 animate-pulse space-y-2">
               {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 dark:bg-slate-800 rounded" />)}
             </div>
-          ) : !proformas?.length ? (
+          ) : !anzeigeProformas.length ? (
             <div className="p-10 text-center">
               <p className="text-slate-500 dark:text-slate-400">Noch keine Proforma-Rechnungen vorhanden.</p>
               <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Klicke auf „+ Neue Proforma" oder erstelle eine aus einem Angebot.</p>
@@ -644,12 +807,21 @@ export function ProformaPage() {
                 </tr>
               </thead>
               <tbody>
-                {proformas.map(p => (
+                {anzeigeProformas.map(p => {
+                  const tageOffen = p.datum && !p.rechnung_zu_proforma_id
+                    ? Math.floor((Date.now() - new Date(p.datum).getTime()) / 86_400_000)
+                    : 0
+                  const ueberfaellig = tageOffen > 14
+                  return (
                   <tr
                     key={p.id}
                     onClick={() => { setSelectedId(p.id); setFormModus(null) }}
-                    className={`border-b border-slate-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors ${
-                      selectedId === p.id ? 'bg-blue-50 dark:bg-slate-600 border-l-2 border-l-blue-500' : ''
+                    className={`border-b border-slate-50 dark:border-slate-700 last:border-0 cursor-pointer transition-colors ${
+                      selectedId === p.id
+                        ? 'bg-blue-50 dark:bg-slate-600 border-l-2 border-l-blue-500'
+                        : ueberfaellig
+                          ? 'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     <td className="px-5 py-3 font-mono text-xs text-slate-400 dark:text-slate-500">{p.rechnungsnummer}</td>
@@ -661,11 +833,14 @@ export function ProformaPage() {
                     <td className="px-5 py-3 text-center">
                       {p.rechnung_zu_proforma_id
                         ? <span className="inline-block text-xs font-medium px-2 py-0.5 rounded border bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">Abgerechnet</span>
-                        : <span className="inline-block text-xs font-medium px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Offen</span>
+                        : ueberfaellig
+                          ? <span className="inline-block text-xs font-medium px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">{tageOffen}d offen</span>
+                          : <span className="inline-block text-xs font-medium px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Offen</span>
                       }
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}

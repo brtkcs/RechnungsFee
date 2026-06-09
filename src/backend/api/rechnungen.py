@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db, APP_DATA_DIR
 from database.models import (
-    Beleg, Lieferant, Rechnung, Rechnungsposition, Journaleintrag,
+    Beleg, Kunde, Lieferant, Rechnung, Rechnungsposition, Journaleintrag,
     Kategorie, Unternehmen, Nummernkreis,
 )
 from utils.signatur import signatur_journaleintrag
@@ -56,14 +56,18 @@ def _belegnr_aus_format(format_str: str, datum: date, nr: int) -> str:
     day    = f"{datum.day:02d}"
     result = (format_str
               .replace("YYYY", year_4)
+              .replace("JJJJ", year_4)  # dt. Alias
               .replace("YY",   year_2)
+              .replace("JJ",   year_2)  # dt. Alias: Jahr
               .replace("MM",   month)
               .replace("TT",   day))
 
     def _pad(m: _re.Match) -> str:
         return str(nr).zfill(len(m.group()))
 
-    return _re.sub(r"#+", _pad, result)
+    result = _re.sub(r"#+", _pad, result)
+    result = _re.sub(r"N+", _pad, result)  # dt. Alias: Nummer
+    return result
 
 
 def _naechste_belegnr_journal(db: Session, datum: date) -> str:
@@ -493,12 +497,21 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
                 prefix = "RE" if data.typ == "ausgang" else "ER"
                 rechnungsnummer = f"{prefix}-{str(data.datum.year)[-2:]}{count + 1:04d}"
 
+    # Proforma: faellig_am aus Unternehmens-Standard wenn nicht übergeben; kein Skonto
+    proforma_faellig_am = data.faellig_am
+    if data.dokument_typ == "Proforma" and proforma_faellig_am is None:
+        _unt = db.query(Unternehmen).first()
+        if _unt:
+            from datetime import timedelta as _td
+            _zt = int(getattr(_unt, "standard_zahlungsziel", 14) or 14)
+            proforma_faellig_am = data.datum + _td(days=_zt)
+
     rechnung = Rechnung(
         typ=data.typ,
         rechnungsnummer=rechnungsnummer,
         datum=data.datum,
         leistung_von=data.leistung_von, leistung_bis=data.leistung_bis,
-        faellig_am=data.faellig_am,
+        faellig_am=proforma_faellig_am if data.dokument_typ == "Proforma" else data.faellig_am,
         kunde_id=data.kunde_id,
         lieferant_id=data.lieferant_id,
         partner_freitext=data.partner_freitext,
@@ -506,8 +519,8 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
         notizen=data.notizen,
         externe_belegnr=data.externe_belegnr,
         ist_entwurf=data.ist_entwurf,
-        skonto_prozent=data.skonto_prozent,
-        skonto_tage=data.skonto_tage,
+        skonto_prozent=None if data.dokument_typ == "Proforma" else data.skonto_prozent,
+        skonto_tage=None if data.dokument_typ == "Proforma" else data.skonto_tage,
         dokument_typ=data.dokument_typ,
         lieferadresse_id=data.lieferadresse_id if data.dokument_typ == "Lieferschein" else None,
         gueltig_bis=data.gueltig_bis if data.dokument_typ == "Angebot" else None,
@@ -802,10 +815,12 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         and rechnung.kunde.zugferd_aktiv
     )
 
-    # ZUGFeRD: automatisch wenn Kunde zugferd_aktiv gesetzt hat
+    # ZUGFeRD: automatisch wenn Kunde zugferd_aktiv – nur für echte Ausgangsrechnungen
+    _dok_typ = getattr(rechnung, "dokument_typ", "Rechnung")
     kunde_zugferd = (
         not ist_entwurf
         and ist_netto
+        and _dok_typ == "Rechnung"
         and (unternehmen.steuernummer or unternehmen.ust_idnr)
     )
     if kunde_zugferd:
@@ -860,6 +875,8 @@ def rechnung_als_zugferd(rechnung_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
     if rechnung.typ != "ausgang":
         raise HTTPException(status_code=400, detail="ZUGFeRD ist nur für Ausgangsrechnungen verfügbar.")
+    if getattr(rechnung, "dokument_typ", "Rechnung") != "Rechnung":
+        raise HTTPException(status_code=400, detail="ZUGFeRD ist nur für Rechnungen verfügbar, nicht für Proforma, Angebote oder Lieferscheine.")
     if rechnung.ist_entwurf:
         raise HTTPException(status_code=400, detail="Entwürfe können nicht als ZUGFeRD exportiert werden.")
     if rechnung.storniert:
@@ -921,11 +938,27 @@ def delete_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
     rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
     if not rechnung:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
-    if not rechnung.ist_entwurf:
+    ist_proforma = rechnung.dokument_typ == "Proforma"
+    ist_angebot  = rechnung.dokument_typ == "Angebot"
+
+    if not rechnung.ist_entwurf and not ist_proforma and not ist_angebot:
         raise HTTPException(status_code=409, detail="Nur Entwürfe können gelöscht werden.")
-    # FK-Rückverweis auf Lieferscheine zurücksetzen, damit der DELETE nicht scheitert
+
+    if ist_proforma and rechnung.rechnung_zu_proforma_id:
+        raise HTTPException(status_code=409, detail="Proforma wurde bereits abgerechnet und kann nicht gelöscht werden.")
+
+    if ist_angebot and (
+        rechnung.rechnung_zu_angebot_id
+        or rechnung.lieferschein_zu_angebot_id
+        or rechnung.proforma_zu_angebot_id
+    ):
+        raise HTTPException(status_code=409, detail="Angebot kann nicht gelöscht werden, da bereits Dokumente (Rechnung, Lieferschein oder Proforma) daraus erstellt wurden.")
+    # FK-Rückverweise zurücksetzen
     db.query(Rechnung).filter(Rechnung.lieferschein_zu_rechnung_id == rechnung_id).update(
         {"lieferschein_zu_rechnung_id": None}
+    )
+    db.query(Rechnung).filter(Rechnung.proforma_zu_angebot_id == rechnung_id).update(
+        {"proforma_zu_angebot_id": None}
     )
     db.delete(rechnung)
     db.commit()
@@ -2014,15 +2047,14 @@ def rechnung_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
     for pos in angebot.positionen:
         neue_pos = Rechnungsposition(
             rechnung_id=rechnung.id,
+            position_nr=pos.position_nr,
             beschreibung=pos.beschreibung,
             menge=pos.menge,
             einheit=pos.einheit,
-            einzelpreis=pos.einzelpreis,
+            netto=pos.netto,
             ust_satz=pos.ust_satz,
-            netto_gesamt=pos.netto_gesamt,
             ust_betrag=pos.ust_betrag,
-            brutto_gesamt=pos.brutto_gesamt,
-            position=pos.position,
+            brutto=pos.brutto,
             artikel_id=pos.artikel_id,
             kategorie_id=pos.kategorie_id,
         )
@@ -2053,10 +2085,16 @@ def proforma_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
     heute = date.today()
     proforma_nr = _naechste_proformanummer(heute, db)
 
+    _unt = db.query(Unternehmen).first()
+    _zt = int(getattr(_unt, "standard_zahlungsziel", 14) or 14) if _unt else 14
+    from datetime import timedelta as _td
+    _faellig = heute + _td(days=_zt)
+
     proforma = Rechnung(
         typ="ausgang",
         rechnungsnummer=proforma_nr,
         datum=heute,
+        faellig_am=_faellig,
         leistung_von=angebot.leistung_von,
         leistung_bis=angebot.leistung_bis,
         kunde_id=angebot.kunde_id,
@@ -2077,15 +2115,14 @@ def proforma_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
     for pos in angebot.positionen:
         db.add(Rechnungsposition(
             rechnung_id=proforma.id,
+            position_nr=pos.position_nr,
             beschreibung=pos.beschreibung,
             menge=pos.menge,
             einheit=pos.einheit,
-            einzelpreis=pos.einzelpreis,
+            netto=pos.netto,
             ust_satz=pos.ust_satz,
-            netto_gesamt=pos.netto_gesamt,
             ust_betrag=pos.ust_betrag,
-            brutto_gesamt=pos.brutto_gesamt,
-            position=pos.position,
+            brutto=pos.brutto,
             artikel_id=pos.artikel_id,
             kategorie_id=pos.kategorie_id,
         ))
@@ -2100,9 +2137,14 @@ def proforma_aus_angebot(angebot_id: int, db: Session = Depends(get_db)):
 # Proforma → Rechnung
 # ---------------------------------------------------------------------------
 
+class ZahlungEingegangen(BaseModel):
+    zahlungsart: str   # Bar|Karte|Bank|PayPal
+    bezahlt_am: date
+
+
 @router.post("/{proforma_id}/rechnung-aus-proforma", response_model=RechnungResponse, status_code=201)
-def rechnung_aus_proforma(proforma_id: int, db: Session = Depends(get_db)):
-    """Konvertiert eine Proforma-Rechnung in eine echte Ausgangsrechnung."""
+def rechnung_aus_proforma(proforma_id: int, zahlung: ZahlungEingegangen, db: Session = Depends(get_db)):
+    """Konvertiert eine Proforma-Rechnung in eine echte Ausgangsrechnung und bucht den Zahlungseingang."""
     proforma = db.query(Rechnung).filter(
         Rechnung.id == proforma_id, Rechnung.dokument_typ == "Proforma"
     ).first()
@@ -2113,16 +2155,12 @@ def rechnung_aus_proforma(proforma_id: int, db: Session = Depends(get_db)):
 
     heute = date.today()
     rechnungsnummer = _naechste_rechnungsnummer(heute, db)
-    unternehmen = db.query(Unternehmen).first()
-    zahlungsziel = getattr(unternehmen, "standard_zahlungsziel", 14) or 14
-    from datetime import timedelta
-    faellig_am = heute + timedelta(days=int(zahlungsziel))
 
     rechnung = Rechnung(
         typ="ausgang",
         rechnungsnummer=rechnungsnummer,
         datum=heute,
-        faellig_am=faellig_am,
+        faellig_am=zahlung.bezahlt_am,
         leistung_von=proforma.leistung_von,
         leistung_bis=proforma.leistung_bis,
         kunde_id=proforma.kunde_id,
@@ -2143,20 +2181,82 @@ def rechnung_aus_proforma(proforma_id: int, db: Session = Depends(get_db)):
     for pos in proforma.positionen:
         db.add(Rechnungsposition(
             rechnung_id=rechnung.id,
+            position_nr=pos.position_nr,
             beschreibung=pos.beschreibung,
             menge=pos.menge,
             einheit=pos.einheit,
-            einzelpreis=pos.einzelpreis,
+            netto=pos.netto,
             ust_satz=pos.ust_satz,
-            netto_gesamt=pos.netto_gesamt,
             ust_betrag=pos.ust_betrag,
-            brutto_gesamt=pos.brutto_gesamt,
-            position=pos.position,
+            brutto=pos.brutto,
             artikel_id=pos.artikel_id,
             kategorie_id=pos.kategorie_id,
         ))
+    db.flush()
+
+    # Journaleinträge anlegen (je USt-Gruppe wie beim kassieren-Endpoint)
+    unternehmen = db.query(Unternehmen).first()
+    ist_kl = bool(unternehmen and unternehmen.ist_kleinunternehmer)
+    partner = _partner_name(proforma)
+    beschreibung = f"Zahlung {rechnungsnummer}: {partner}"
+    steuerbefreiung = "§19 UStG" if ist_kl else None
+    brutto = rechnung.brutto_gesamt
+
+    if ist_kl or not rechnung.positionen:
+        ust_gruppen: list[tuple[Decimal, Decimal, str | None, str | None]] = [
+            (Decimal("0"), brutto, None, None)
+        ]
+    else:
+        gruppen_brutto: dict[int, Decimal] = {}
+        for pos in rechnung.positionen:
+            s = int(pos.ust_satz)
+            gruppen_brutto[s] = gruppen_brutto.get(s, Decimal("0")) + pos.brutto
+        gesamt_pos_brutto = sum(gruppen_brutto.values())
+        rest_g = brutto
+        ust_gruppen = []
+        for i, satz in enumerate(sorted(gruppen_brutto.keys())):
+            satz_d = Decimal(str(satz))
+            g_ust_skr03, g_ust_skr04 = _ust_konto("Einnahme", satz_d) if satz > 0 else (None, None)
+            if i == len(gruppen_brutto) - 1:
+                g_betrag = rest_g
+            else:
+                g_betrag = (brutto * gruppen_brutto[satz] / gesamt_pos_brutto).quantize(Decimal("0.01"), ROUND_HALF_UP)
+                rest_g -= g_betrag
+            ust_gruppen.append((satz_d, g_betrag, g_ust_skr03, g_ust_skr04))
+
+    for satz_d, g_betrag, g_ust_skr03, g_ust_skr04 in ust_gruppen:
+        if satz_d > 0:
+            n = (g_betrag * 100 / (100 + satz_d)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            u = (g_betrag - n).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        else:
+            n, u = g_betrag, Decimal("0.00")
+        e = Journaleintrag(
+            datum=zahlung.bezahlt_am,
+            belegnr=_naechste_belegnr_journal(db, zahlung.bezahlt_am),
+            beschreibung=beschreibung,
+            zahlungsart=zahlung.zahlungsart,
+            art="Einnahme",
+            netto_betrag=n,
+            ust_satz=satz_d,
+            ust_betrag=u,
+            vorsteuer_betrag=Decimal("0.00"),
+            brutto_betrag=g_betrag,
+            vorsteuerabzug=False,
+            steuerbefreiung_grund=steuerbefreiung,
+            rechnung_id=rechnung.id,
+            kunde_id=proforma.kunde_id,
+            konto_ust_skr03=g_ust_skr03,
+            konto_ust_skr04=g_ust_skr04,
+            immutable=True,
+        )
+        e.signatur = signatur_journaleintrag(e)
+        db.add(e)
+    db.flush()
+
+    _aktualisiere_zahlungsstatus(rechnung)
 
     proforma.rechnung_zu_proforma_id = rechnung.id
+    proforma.zahlungsstatus = "bezahlt"
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)

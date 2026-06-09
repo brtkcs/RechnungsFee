@@ -524,7 +524,7 @@ class RechnungPDFBase(FPDF):
             self._render_summenblock()
             self.ln(self._ln_nach_summen)
             self._render_19_hinweis()
-            if not ist_angebot and not ist_proforma:
+            if not ist_angebot:
                 self._render_zahlungsblock()
         self._render_notizen()
         if ist_lieferschein:
