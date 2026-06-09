@@ -747,10 +747,14 @@ export function AuftraegePage() {
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
 
   const [selId, setSelId] = useState<number | null>(null)
+  const [pendingAuftrag, setPendingAuftrag] = useState<Rechnung | null>(null)
   const [zeigFormular, setZeigFormular] = useState(false)
   const [editAuftrag, setEditAuftrag] = useState<Rechnung | undefined>()
 
-  const selAuftrag = auftraege?.find(a => a.id === selId) ?? null
+  const selAuftrag =
+    (pendingAuftrag?.id === selId ? pendingAuftrag : null) ??
+    auftraege?.find(a => a.id === selId) ??
+    null
 
   // ?id=X beim ersten Mount: Auftrag direkt vom Server laden (wie RechnungenPage)
   useEffect(() => {
@@ -761,6 +765,7 @@ export function AuftraegePage() {
         getRechnung(id)
           .then((r) => {
             setSelId(r.id)
+            setPendingAuftrag(r)
             qc.invalidateQueries({ queryKey: ['auftraege'] })
             setSearchParams({}, { replace: true })
           })

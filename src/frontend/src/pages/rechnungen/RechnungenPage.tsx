@@ -3748,6 +3748,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
         <div className="w-96 shrink-0 h-full overflow-hidden">
           {selectedRechnung ? (
             <RechnungDetail
+              key={selectedId ?? 0}
               rechnung={selectedRechnung}
               onClose={() => setSelectedId(null)}
               onEdit={() => setFormModus('bearbeiten')}
