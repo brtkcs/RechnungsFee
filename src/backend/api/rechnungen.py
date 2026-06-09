@@ -670,7 +670,7 @@ def update_rechnung(rechnung_id: int, data: RechnungUpdate, db: Session = Depend
     rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
     if not rechnung:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
-    if not rechnung.ist_entwurf and rechnung.dokument_typ != "Angebot":
+    if not rechnung.ist_entwurf and rechnung.dokument_typ not in ("Angebot", "Auftrag", "Proforma"):
         raise HTTPException(status_code=409, detail="Nur Entwürfe können bearbeitet werden.")
 
     unternehmen = db.query(Unternehmen).first()
