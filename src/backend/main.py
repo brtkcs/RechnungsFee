@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete
 
-SCHEMA_VERSION = 60
+SCHEMA_VERSION = 61
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1310,6 +1310,35 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 60"))
             conn.commit()
             print("[Migration] Schema auf Version 60 (Aufträge: auftraege_aktiv + FK-Felder + Nummernkreis AU-JJNNNN)")
+
+        if version < 61:
+            # Auftrag-Statuskorrektur: in_bearbeitung → abgeschlossen wenn verknüpfte Rechnung bezahlt
+            # Pfad 1: Rechnung direkt aus Auftrag (rechnung_zu_auftrag_id)
+            # Pfad 2: Proforma aus Auftrag → Rechnung aus Proforma (proforma_zu_auftrag_id + rechnung_zu_proforma_id)
+            conn.execute(text("""
+                UPDATE rechnungen SET auftrag_status = 'abgeschlossen'
+                WHERE dokument_typ = 'Auftrag'
+                AND auftrag_status = 'in_bearbeitung'
+                AND (
+                    EXISTS (
+                        SELECT 1 FROM rechnungen r
+                        WHERE r.id = rechnungen.rechnung_zu_auftrag_id
+                        AND r.zahlungsstatus = 'bezahlt'
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM rechnungen p
+                        WHERE p.id = rechnungen.proforma_zu_auftrag_id
+                        AND EXISTS (
+                            SELECT 1 FROM rechnungen r2
+                            WHERE r2.id = p.rechnung_zu_proforma_id
+                            AND r2.zahlungsstatus = 'bezahlt'
+                        )
+                    )
+                )
+            """))
+            conn.execute(text("PRAGMA user_version = 61"))
+            conn.commit()
+            print("[Migration] Schema auf Version 61 (Auftrag-Status: in_bearbeitung → abgeschlossen bei bezahlter Rechnung)")
 
 
 def _migrate_kategorien() -> None:
