@@ -416,6 +416,13 @@ class RechnungPDFBase(FPDF):
                 self.set_text_color(*TEXT_GRAU)
                 self.cell(0, 5, f"Gutschrift zu Rechnung {gutschrift_nr}", new_x="LMARGIN", new_y="NEXT")
 
+        # Bezugszeile bei Rechnung/Lieferschein/Proforma aus Angebot
+        quell_angebot_nr = getattr(r, "_quell_angebot_nr", None)
+        if quell_angebot_nr:
+            self.set_font("DejaVu", "", 9)
+            self.set_text_color(*TEXT_GRAU)
+            self.cell(0, 5, f"Bezug: Angebot {quell_angebot_nr}", new_x="LMARGIN", new_y="NEXT")
+
         if self._ist_entwurf:
             self.set_font("DejaVu", "", 8)
             self.set_text_color(*TEXT_GRAU)

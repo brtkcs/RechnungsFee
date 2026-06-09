@@ -796,6 +796,17 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         original = db.query(Rechnung).filter(Rechnung.id == rechnung.gutschrift_zu_rechnung_id).first()
         rechnung._gutschrift_original_nr = original.rechnungsnummer if original else None
 
+    # Rechnung/Lieferschein/Proforma aus Angebot: Angebotsnummer für PDF-Bezugszeile ermitteln
+    _dok = getattr(rechnung, "dokument_typ", "Rechnung") or "Rechnung"
+    if _dok in ("Rechnung", "Lieferschein", "Proforma"):
+        _quell_filter = {
+            "Rechnung":    Rechnung.rechnung_zu_angebot_id,
+            "Lieferschein": Rechnung.lieferschein_zu_angebot_id,
+            "Proforma":    Rechnung.proforma_zu_angebot_id,
+        }[_dok]
+        _quell_angebot = db.query(Rechnung).filter(_quell_filter == rechnung_id).first()
+        rechnung._quell_angebot_nr = _quell_angebot.rechnungsnummer if _quell_angebot else None
+
     # Lieferschein: Lieferadresse am Objekt hinterlegen (für PDF + Response)
     if rechnung.lieferadresse_id:
         from database.models import KundeLieferadresse
