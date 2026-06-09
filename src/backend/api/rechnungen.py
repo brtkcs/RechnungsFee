@@ -400,9 +400,10 @@ def list_rechnungen(
     if dokument_typ:
         q = q.filter(Rechnung.dokument_typ == dokument_typ)
     else:
-        # Lieferscheine und Angebote nur auf explizite Anfrage
+        # Lieferscheine, Angebote und Proformas nur auf explizite Anfrage
         q = q.filter(Rechnung.dokument_typ != "Lieferschein")
         q = q.filter(Rechnung.dokument_typ != "Angebot")
+        q = q.filter(Rechnung.dokument_typ != "Proforma")
     if typ:
         if typ not in ("eingang", "ausgang"):
             raise HTTPException(status_code=422, detail="typ muss 'eingang' oder 'ausgang' sein")
