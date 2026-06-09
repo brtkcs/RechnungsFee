@@ -961,6 +961,33 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
                     ).first()
                     rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
 
+        # Fallback für Rechnung aus Lieferschein: Auftrag/Angebot über Lieferschein-Kette
+        if _dok == "Rechnung" and not rechnung._quell_auftrag_nr:
+            _via_ls = db.query(Rechnung).filter(
+                Rechnung.lieferschein_zu_rechnung_id == rechnung_id,
+                Rechnung.dokument_typ == "Lieferschein",
+            ).first()
+            if _via_ls:
+                _auftrag_via_ls = db.query(Rechnung).filter(
+                    Rechnung.lieferschein_zu_auftrag_id == _via_ls.id,
+                    Rechnung.dokument_typ == "Auftrag",
+                ).first()
+                if _auftrag_via_ls:
+                    rechnung._quell_auftrag_nr = _auftrag_via_ls.rechnungsnummer
+                    if not rechnung._quell_angebot_nr:
+                        _angebot_via = db.query(Rechnung).filter(
+                            Rechnung.auftrag_zu_angebot_id == _auftrag_via_ls.id,
+                            Rechnung.dokument_typ == "Angebot",
+                        ).first()
+                        rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
+                elif not rechnung._quell_angebot_nr:
+                    # Lieferschein direkt aus Angebot (kein Auftrag dazwischen)
+                    _angebot_via = db.query(Rechnung).filter(
+                        Rechnung.lieferschein_zu_angebot_id == _via_ls.id,
+                        Rechnung.dokument_typ == "Angebot",
+                    ).first()
+                    rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
+
 
     # Auftrag: Eltern-Angebot über Rückwärts-FK suchen
     # (auftrag_zu_angebot_id steht auf dem Angebot, nicht auf dem Auftrag)
