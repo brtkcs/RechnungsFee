@@ -161,6 +161,19 @@ def _aktualisiere_zahlungsstatus(rechnung: Rechnung) -> None:
         rechnung.zahlungsstatus = "bezahlt"
         rechnung.bezahlt = True
         rechnung.zahlungsdatum = date.today()
+        # Automatisch: verknüpfter Auftrag → abgeschlossen
+        try:
+            from sqlalchemy import inspect as _sa_inspect
+            _session = _sa_inspect(rechnung).session
+            if _session:
+                _auftrag = _session.query(rechnung.__class__).filter(
+                    rechnung.__class__.rechnung_zu_auftrag_id == rechnung.id,
+                    rechnung.__class__.dokument_typ == "Auftrag",
+                ).first()
+                if _auftrag and _auftrag.auftrag_status not in ("abgeschlossen", "storniert"):
+                    _auftrag.auftrag_status = "abgeschlossen"
+        except Exception:
+            pass
     elif abs_bezahlt > Decimal("0.004"):
         rechnung.zahlungsstatus = "teilweise"
         rechnung.bezahlt = False
@@ -2472,6 +2485,8 @@ def rechnung_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     ).first()
     if not auftrag:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden.")
+    if auftrag.auftrag_status in ("offen", "storniert"):
+        raise HTTPException(status_code=409, detail="Auftrag muss zuerst angenommen werden.")
     if auftrag.rechnung_zu_auftrag_id:
         raise HTTPException(status_code=409, detail="Aus diesem Auftrag wurde bereits eine Rechnung erstellt.")
 
@@ -2507,7 +2522,8 @@ def rechnung_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     db.flush()
     _kopiere_positionen(auftrag, rechnung, db)
     auftrag.rechnung_zu_auftrag_id = rechnung.id
-    auftrag.auftrag_status = "abgeschlossen"
+    if auftrag.auftrag_status == "angenommen":
+        auftrag.auftrag_status = "in_bearbeitung"
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)
@@ -2521,6 +2537,8 @@ def lieferschein_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     ).first()
     if not auftrag:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden.")
+    if auftrag.auftrag_status in ("offen", "storniert"):
+        raise HTTPException(status_code=409, detail="Auftrag muss zuerst angenommen werden.")
     if auftrag.lieferschein_zu_auftrag_id:
         raise HTTPException(status_code=409, detail="Aus diesem Auftrag wurde bereits ein Lieferschein erstellt.")
 
@@ -2556,6 +2574,8 @@ def lieferschein_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     db.flush()
     _kopiere_positionen(auftrag, lieferschein, db)
     auftrag.lieferschein_zu_auftrag_id = lieferschein.id
+    if auftrag.auftrag_status == "angenommen":
+        auftrag.auftrag_status = "in_bearbeitung"
     db.commit()
     db.refresh(lieferschein)
     return RechnungResponse.from_orm_extended(lieferschein)
@@ -2569,6 +2589,8 @@ def proforma_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     ).first()
     if not auftrag:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden.")
+    if auftrag.auftrag_status in ("offen", "storniert"):
+        raise HTTPException(status_code=409, detail="Auftrag muss zuerst angenommen werden.")
     if auftrag.proforma_zu_auftrag_id:
         raise HTTPException(status_code=409, detail="Aus diesem Auftrag wurde bereits eine Proforma erstellt.")
 
@@ -2604,18 +2626,20 @@ def proforma_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     db.flush()
     _kopiere_positionen(auftrag, proforma, db)
     auftrag.proforma_zu_auftrag_id = proforma.id
+    if auftrag.auftrag_status == "angenommen":
+        auftrag.auftrag_status = "in_bearbeitung"
     db.commit()
     db.refresh(proforma)
     return RechnungResponse.from_orm_extended(proforma)
 
 
 class AuftragStatusUpdate(BaseModel):
-    status: str  # offen | in_bearbeitung | abgeschlossen | storniert
+    status: str  # offen | angenommen | in_bearbeitung | abgeschlossen | storniert
 
 
 @router.post("/{auftrag_id}/auftrag-status", response_model=RechnungResponse)
 def auftrag_status_setzen(auftrag_id: int, data: AuftragStatusUpdate, db: Session = Depends(get_db)):
-    erlaubt = {"offen", "in_bearbeitung", "abgeschlossen", "storniert"}
+    erlaubt = {"offen", "angenommen", "in_bearbeitung", "abgeschlossen", "storniert"}
     if data.status not in erlaubt:
         raise HTTPException(status_code=422, detail=f"Status muss einer von {erlaubt} sein.")
     auftrag = db.query(Rechnung).filter(

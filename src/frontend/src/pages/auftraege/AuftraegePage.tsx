@@ -29,9 +29,10 @@ const selectCls = `${inputCls} bg-white dark:bg-slate-700`
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   offen:          { label: 'Offen',          cls: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-700' },
+  angenommen:     { label: 'Angenommen',     cls: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-700' },
   in_bearbeitung: { label: 'In Bearbeitung', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-700' },
-  abgeschlossen:  { label: 'Abgeschlossen',  cls: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-700' },
-  storniert:      { label: 'Storniert',      cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700' },
+  abgeschlossen:  { label: 'Abgeschlossen',  cls: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700' },
+  storniert:      { label: 'Storniert',      cls: 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400 border-red-200 dark:border-red-700' },
 }
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -566,7 +567,12 @@ function AuftragDetail({
 
           {/* → Rechnung */}
           {!auftrag.rechnung_zu_auftrag_id ? (
-            <button onClick={handleRechnungErstellen} disabled={reLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
+            <button
+              onClick={handleRechnungErstellen}
+              disabled={reLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'offen' || auftrag.auftrag_status === 'storniert'}
+              title={auftrag.auftrag_status === 'offen' ? 'Auftrag muss zuerst angenommen werden' : undefined}
+              className={btnGreen}
+            >
               {reLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
             </button>
           ) : (
@@ -578,7 +584,12 @@ function AuftragDetail({
           {/* → Lieferschein */}
           {unternehmen?.lieferschein_aktiv && (
             !auftrag.lieferschein_zu_auftrag_id ? (
-              <button onClick={handleLieferscheinErstellen} disabled={lsLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
+              <button
+                onClick={handleLieferscheinErstellen}
+                disabled={lsLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'offen' || auftrag.auftrag_status === 'storniert'}
+                title={auftrag.auftrag_status === 'offen' ? 'Auftrag muss zuerst angenommen werden' : undefined}
+                className={btnGreen}
+              >
                 {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
               </button>
             ) : (
@@ -591,7 +602,12 @@ function AuftragDetail({
           {/* → Proforma */}
           {unternehmen?.proforma_aktiv && (
             !auftrag.proforma_zu_auftrag_id ? (
-              <button onClick={handleProformaErstellen} disabled={pfLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'} className={btnGreen}>
+              <button
+                onClick={handleProformaErstellen}
+                disabled={pfLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'offen' || auftrag.auftrag_status === 'storniert'}
+                title={auftrag.auftrag_status === 'offen' ? 'Auftrag muss zuerst angenommen werden' : undefined}
+                className={btnGreen}
+              >
                 {pfLaedt ? '⏳ Erstelle…' : '→ Proforma'}
               </button>
             ) : (
