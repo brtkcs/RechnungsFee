@@ -808,13 +808,6 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         _quell_angebot = db.query(Rechnung).filter(_angebot_col == rechnung_id).first()
         rechnung._quell_angebot_nr = _quell_angebot.rechnungsnummer if _quell_angebot else None
 
-    if _dok == "Rechnung":
-        # Verknüpfte Lieferscheine (Sammelrechnung: mehrere möglich)
-        _lieferscheine = db.query(Rechnung).filter(
-            Rechnung.lieferschein_zu_rechnung_id == rechnung_id,
-            Rechnung.dokument_typ == "Lieferschein",
-        ).order_by(Rechnung.id).all()
-        rechnung._quell_lieferschein_nrn = [ls.rechnungsnummer for ls in _lieferscheine if ls.rechnungsnummer]
 
     # Lieferschein: Lieferadresse am Objekt hinterlegen (für PDF + Response)
     if rechnung.lieferadresse_id:
