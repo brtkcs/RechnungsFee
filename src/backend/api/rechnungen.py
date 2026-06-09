@@ -905,25 +905,50 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         original = db.query(Rechnung).filter(Rechnung.id == rechnung.gutschrift_zu_rechnung_id).first()
         rechnung._gutschrift_original_nr = original.rechnungsnummer if original else None
 
-    # Bezugsdokumente für PDF-Titel ermitteln (Angebot, Lieferschein – später Auftrag)
+    # Bezugsdokumente für PDF-Titel ermitteln
     _dok = getattr(rechnung, "dokument_typ", "Rechnung") or "Rechnung"
     if _dok in ("Rechnung", "Lieferschein", "Proforma"):
-        # Quell-Angebot
+        # Quell-Angebot (direkt)
         _angebot_col = {
-            "Rechnung":    Rechnung.rechnung_zu_angebot_id,
+            "Rechnung":     Rechnung.rechnung_zu_angebot_id,
             "Lieferschein": Rechnung.lieferschein_zu_angebot_id,
-            "Proforma":    Rechnung.proforma_zu_angebot_id,
+            "Proforma":     Rechnung.proforma_zu_angebot_id,
         }[_dok]
         _quell_angebot = db.query(Rechnung).filter(_angebot_col == rechnung_id).first()
         rechnung._quell_angebot_nr = _quell_angebot.rechnungsnummer if _quell_angebot else None
-        # Quell-Auftrag
+
+        # Quell-Auftrag (direkt)
         _auftrag_col = {
-            "Rechnung":    Rechnung.rechnung_zu_auftrag_id,
+            "Rechnung":     Rechnung.rechnung_zu_auftrag_id,
             "Lieferschein": Rechnung.lieferschein_zu_auftrag_id,
-            "Proforma":    Rechnung.proforma_zu_auftrag_id,
+            "Proforma":     Rechnung.proforma_zu_auftrag_id,
         }[_dok]
         _quell_auftrag = db.query(Rechnung).filter(_auftrag_col == rechnung_id).first()
         rechnung._quell_auftrag_nr = _quell_auftrag.rechnungsnummer if _quell_auftrag else None
+
+        # Fallback für Rechnung aus Proforma: Auftrag/Angebot über Proforma-Kette
+        if _dok == "Rechnung" and not rechnung._quell_auftrag_nr:
+            _via_proforma = db.query(Rechnung).filter(
+                Rechnung.rechnung_zu_proforma_id == rechnung_id,
+                Rechnung.dokument_typ == "Proforma",
+            ).first()
+            if _via_proforma:
+                _auftrag_via = db.query(Rechnung).filter(
+                    Rechnung.proforma_zu_auftrag_id == _via_proforma.id,
+                    Rechnung.dokument_typ == "Auftrag",
+                ).first()
+                if _auftrag_via:
+                    rechnung._quell_auftrag_nr = _auftrag_via.rechnungsnummer
+                    if not rechnung._quell_angebot_nr and _auftrag_via.auftrag_zu_angebot_id:
+                        _angebot_via = db.query(Rechnung).filter(
+                            Rechnung.id == _auftrag_via.auftrag_zu_angebot_id,
+                        ).first()
+                        rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
+                elif not rechnung._quell_angebot_nr and _via_proforma.proforma_zu_angebot_id:
+                    _angebot_via = db.query(Rechnung).filter(
+                        Rechnung.id == _via_proforma.proforma_zu_angebot_id,
+                    ).first()
+                    rechnung._quell_angebot_nr = _angebot_via.rechnungsnummer if _angebot_via else None
 
 
     # Lieferschein: Lieferadresse am Objekt hinterlegen (für PDF + Response)
@@ -2425,10 +2450,10 @@ def rechnung_aus_proforma(proforma_id: int, zahlung: ZahlungEingegangen, db: Ses
         db.add(e)
     db.flush()
 
-    _aktualisiere_zahlungsstatus(rechnung)
-
     proforma.rechnung_zu_proforma_id = rechnung.id
     proforma.zahlungsstatus = "bezahlt"
+    db.flush()
+    _aktualisiere_zahlungsstatus(rechnung)
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)
