@@ -562,7 +562,12 @@ function AuftragDetail({
             📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
           </button>
           <button onClick={handleMail} disabled={pdfLaedt || !!auftrag.ist_entwurf} className={btnNeutral}>✉️ Mail senden</button>
-          <button onClick={onEdit} className={btnNeutral}>✏️ Bearbeiten</button>
+          <button
+            onClick={onEdit}
+            disabled={auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen' || auftrag.auftrag_status === 'storniert'}
+            title={auftrag.auftrag_status !== 'offen' ? 'Nur offene Aufträge können bearbeitet werden' : undefined}
+            className={btnNeutral}
+          >✏️ Bearbeiten</button>
 
           {/* → Rechnung */}
           {!auftrag.rechnung_zu_auftrag_id ? (
