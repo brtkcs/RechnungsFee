@@ -3,13 +3,20 @@ import { downloadBackup } from '../../api/client'
 
 export function BackupPage() {
   const [laedt, setLaedt] = useState(false)
+  const [fehler, setFehler] = useState<string | null>(null)
+  const [erfolg, setErfolg] = useState<string | null>(null)
 
-  function handleBackup() {
+  async function handleBackup() {
     setLaedt(true)
+    setFehler(null)
+    setErfolg(null)
     try {
-      downloadBackup()
+      const name = await downloadBackup()
+      if (name) setErfolg(`Backup gespeichert: ${name}`)
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Unbekannter Fehler')
     } finally {
-      setTimeout(() => setLaedt(false), 1500)
+      setLaedt(false)
     }
   }
 
@@ -32,6 +39,16 @@ export function BackupPage() {
         </div>
 
         <div className="p-6 space-y-5">
+          {fehler && (
+            <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-300">
+              Fehler: {fehler}
+            </div>
+          )}
+          {erfolg && (
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-300">
+              ✓ {erfolg}
+            </div>
+          )}
           <div className="flex items-start gap-4">
             <button
               onClick={handleBackup}

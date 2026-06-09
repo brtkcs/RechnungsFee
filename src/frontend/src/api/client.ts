@@ -670,6 +670,20 @@ export async function downloadBackup(): Promise<string> {
   const cd = res.headers.get('Content-Disposition') ?? ''
   const match = cd.match(/filename="?([^"]+)"?/)
   const filename = match?.[1] ?? 'rechnungsfee_backup.db'
+
+  if (isTauri()) {
+    const { save } = await import('@tauri-apps/plugin-dialog')
+    const { invoke } = await import('@tauri-apps/api/core')
+    const savePath = await save({
+      defaultPath: filename,
+      filters: [{ name: 'SQLite Datenbank', extensions: ['db'] }],
+    })
+    if (!savePath) return '' // Abgebrochen
+    const data = Array.from(new Uint8Array(await blob.arrayBuffer()))
+    await invoke('write_bytes_to_path', { path: savePath, data })
+    return savePath.split(/[\\/]/).pop() ?? filename
+  }
+
   _triggerBlobDownload(blob, filename)
   return filename
 }

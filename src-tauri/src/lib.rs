@@ -91,6 +91,11 @@ fn kill_backend(child_state: tauri::State<BackendChild>, port_state: tauri::Stat
 
 /// IPC-Command: User hat Schließen bestätigt – Backend beenden und Fenster schließen
 #[tauri::command]
+fn write_bytes_to_path(path: String, data: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, &data).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn confirm_close(
     app: tauri::AppHandle,
     child_state: tauri::State<BackendChild>,
@@ -112,6 +117,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(
             tauri_plugin_log::Builder::default()
@@ -274,7 +280,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_backend_port, kill_backend, open_url, confirm_close])
+        .invoke_handler(tauri::generate_handler![get_backend_port, kill_backend, open_url, confirm_close, write_bytes_to_path])
         .build(tauri::generate_context!())
         .expect("Fehler beim Erstellen der Tauri-Anwendung")
         .run(|app_handle, event| {
