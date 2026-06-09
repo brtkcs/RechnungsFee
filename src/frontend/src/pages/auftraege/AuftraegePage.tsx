@@ -750,11 +750,21 @@ export function AuftraegePage() {
   const [pendingAuftrag, setPendingAuftrag] = useState<Rechnung | null>(null)
   const [zeigFormular, setZeigFormular] = useState(false)
   const [editAuftrag, setEditAuftrag] = useState<Rechnung | undefined>()
+  const [suche, setSuche] = useState('')
 
   const selAuftrag =
     (pendingAuftrag?.id === selId ? pendingAuftrag : null) ??
     auftraege?.find(a => a.id === selId) ??
     null
+
+  const auftraegeListe = (auftraege ?? []).filter(a => {
+    if (!suche) return true
+    const q = suche.toLowerCase()
+    return (
+      (a.rechnungsnummer ?? '').toLowerCase().includes(q) ||
+      (a.kunde_name ?? a.partner_freitext ?? '').toLowerCase().includes(q)
+    )
+  })
 
   // ?id=X beim ersten Mount: Auftrag direkt vom Server laden (wie RechnungenPage)
   useEffect(() => {
@@ -766,6 +776,7 @@ export function AuftraegePage() {
           .then((r) => {
             setSelId(r.id)
             setPendingAuftrag(r)
+            setSuche(r.rechnungsnummer ?? '')
             qc.invalidateQueries({ queryKey: ['auftraege'] })
             setSearchParams({}, { replace: true })
           })
@@ -830,6 +841,17 @@ export function AuftraegePage() {
           </button>
         </div>
 
+        {/* Suche */}
+        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <input
+            type="text"
+            value={suche}
+            onChange={e => setSuche(e.target.value)}
+            placeholder="Suche nach Nummer oder Kunde…"
+            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
         {/* Einträge */}
         <div className="flex-1 overflow-y-auto">
           {isLoading && (
@@ -843,7 +865,13 @@ export function AuftraegePage() {
               <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Klicke auf „+ Neuer Auftrag" um zu starten.</p>
             </div>
           )}
-          {auftraege && auftraege.length > 0 && (
+          {!isLoading && auftraege && auftraege.length > 0 && auftraegeListe.length === 0 && (
+            <div className="p-10 text-center">
+              <p className="text-slate-500 dark:text-slate-400">Keine Aufträge für „{suche}".</p>
+              <button onClick={() => setSuche('')} className="mt-2 text-sm text-blue-600 hover:underline">Suche zurücksetzen</button>
+            </div>
+          )}
+          {auftraegeListe.length > 0 && (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800">
@@ -855,7 +883,7 @@ export function AuftraegePage() {
                 </tr>
               </thead>
               <tbody>
-                {auftraege.map(a => (
+                {auftraegeListe.map(a => (
                   <tr
                     key={a.id}
                     onClick={() => { setSelId(a.id); setZeigFormular(false) }}
