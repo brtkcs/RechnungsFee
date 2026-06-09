@@ -953,13 +953,19 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         rechnung.ausgegeben = True
         db.commit()
 
+    _dt_datei = getattr(rechnung, "dokument_typ", "Rechnung") or "Rechnung"
     if kunde_zugferd:
         firma = (unt_dict.get("firmenname") or "").replace("/", "-")
         dateiname = f"{firma}_Invoice {rechnung.rechnungsnummer or rechnung_id}.pdf"
-    elif getattr(rechnung, "dokument_typ", "Rechnung") == "Gutschrift":
-        dateiname = f"Gutschrift_{rechnung.rechnungsnummer or rechnung_id}.pdf"
     else:
-        dateiname = f"Rechnung_{rechnung.rechnungsnummer or rechnung_id}.pdf"
+        _prefix = {
+            "Gutschrift":   "Gutschrift",
+            "Lieferschein": "Lieferschein",
+            "Angebot":      "Angebot",
+            "Proforma":     "Proforma",
+            "Auftrag":      "Auftrag",
+        }.get(_dt_datei, "Rechnung")
+        dateiname = f"{_prefix}_{rechnung.rechnungsnummer or rechnung_id}.pdf"
     disposition = "attachment" if download else "inline"
     return Response(
         content=pdf_bytes,

@@ -363,10 +363,15 @@ class RechnungPDFBase(FPDF):
             self.cell(meta_val, 5.5, val)
             meta_y += 5.5
 
-        if r.typ == "ausgang":
-            _meta("Rechnungsnummer", r.rechnungsnummer or "—")
-        else:
-            _meta("Eingangsrechn.-Nr.", r.rechnungsnummer or "—")
+        _dok_meta = getattr(r, "dokument_typ", "Rechnung") or "Rechnung"
+        _nr_label = {
+            "Angebot":    "Angebotsnr.",
+            "Lieferschein": "Lieferscheinnr.",
+            "Proforma":   "Proforma-Nr.",
+            "Auftrag":    "Auftragsnr.",
+            "Gutschrift": "Gutschriftnr.",
+        }.get(_dok_meta, "Rechnungsnummer" if r.typ == "ausgang" else "Eingangsrechn.-Nr.")
+        _meta(_nr_label, r.rechnungsnummer or "—")
         _meta("Rechnungsdatum", _iso_zu_de(str(r.datum)))
         if r.leistung_von and r.leistung_bis:
             _meta("Leistungszeitraum", f"{_iso_zu_de(str(r.leistung_von))} – {_iso_zu_de(str(r.leistung_bis))}")
@@ -406,6 +411,8 @@ class RechnungPDFBase(FPDF):
             titel = f"Angebot {r.rechnungsnummer or ''}".strip()
         elif dokument_typ == "Proforma":
             titel = f"Proforma-Rechnung {r.rechnungsnummer or ''}".strip()
+        elif dokument_typ == "Auftrag":
+            titel = f"Auftragsbestätigung {r.rechnungsnummer or ''}".strip()
         elif r.typ == "ausgang":
             titel = f"Rechnung {r.rechnungsnummer or ''}".strip()
         else:
@@ -523,19 +530,21 @@ class RechnungPDFBase(FPDF):
         self._render_nach_titel()
         self._render_positionen()
         self.ln(self._ln_nach_positionen)
-        ist_lieferschein = getattr(self._r, "dokument_typ", "Rechnung") == "Lieferschein"
-        ist_angebot      = getattr(self._r, "dokument_typ", "Rechnung") == "Angebot"
-        ist_proforma     = getattr(self._r, "dokument_typ", "Rechnung") == "Proforma"
+        _dt = getattr(self._r, "dokument_typ", "Rechnung") or "Rechnung"
+        ist_lieferschein = _dt == "Lieferschein"
+        ist_angebot      = _dt == "Angebot"
+        ist_proforma     = _dt == "Proforma"
+        ist_auftrag      = _dt == "Auftrag"
         if not ist_lieferschein:
             self._render_summenblock()
             self.ln(self._ln_nach_summen)
             self._render_19_hinweis()
-            if not ist_angebot:
+            if not ist_angebot and not ist_auftrag:
                 self._render_zahlungsblock()
         self._render_notizen()
         if ist_lieferschein:
             self._render_empfangsbestaetigung()
-        elif not ist_angebot and not ist_proforma:
+        elif not ist_angebot and not ist_proforma and not ist_auftrag:
             embed_unterschrift(self, self._unt, L_MARGIN)
         self.set_text_color(0, 0, 0)
         return bytes(self.output())
