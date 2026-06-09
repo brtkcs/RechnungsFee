@@ -8,7 +8,7 @@ import {
   getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen, lieferscheinAusRechnung,
   getLieferadressen,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow,
-  sucheArtikel, getUstSaetze, getKassenstand,
+  getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate,
   type ArtikelSuche, type AnalyseErgebnis, type LieferantVorschlag, type ZahlungSplitPosition,
@@ -18,6 +18,7 @@ import { KategorieErstellenModal } from '../../components/KategorieErstellenModa
 import { LieferantErstellenModal } from '../../components/LieferantErstellenModal'
 import { KundeErstellenModal } from '../../components/KundeErstellenModal'
 import { ArtikelFormModal } from '../artikel/ArtikelPage'
+import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 import { guardedDateChange } from '../../utils/dateInput'
 
 // ---------------------------------------------------------------------------
@@ -1800,75 +1801,6 @@ function StammdatenCombobox({
 
 
 // ---------------------------------------------------------------------------
-// Artikel-Autocomplete für Positionsbeschreibung
-// ---------------------------------------------------------------------------
-
-function BeschreibungAutocomplete({
-  value,
-  onChange,
-  onArtikelWahl,
-}: {
-  value: string
-  onChange: (v: string) => void
-  onArtikelWahl: (a: ArtikelSuche) => void
-}) {
-  const [offen, setOffen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  const { data: treffer } = useQuery({
-    queryKey: ['artikel-suche', value],
-    queryFn: () => sucheArtikel(value),
-    enabled: value.length >= 3,
-    staleTime: 1000 * 30,
-  })
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOffen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  const zeigeDropdown = offen && !!treffer && treffer.length > 0
-
-  return (
-    <div ref={ref} className="relative w-full">
-      <input
-        required
-        type="text"
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setOffen(true) }}
-        onFocus={() => value.length >= 3 && setOffen(true)}
-        className="w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 placeholder-slate-300 dark:placeholder-slate-500"
-        placeholder="Beschreibung"
-      />
-      {zeigeDropdown && (
-        <div className="absolute top-full left-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg min-w-64 max-h-52 overflow-y-auto">
-          {treffer!.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => { onArtikelWahl(a); setOffen(false) }}
-              className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-950 border-b border-slate-100 dark:border-slate-700 last:border-0"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="font-medium text-slate-800 dark:text-slate-100">{a.bezeichnung}</span>
-                {a.differenzbesteuerung && (
-                  <span className="text-xs px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-medium">§25a</span>
-                )}
-              </div>
-              <div className="text-slate-400 dark:text-slate-500">{a.artikelnummer} · {a.einheit} · {formatEuro(a.vk_brutto)}</div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-
-// ---------------------------------------------------------------------------
 // Rechnungs-Formular
 // ---------------------------------------------------------------------------
 
@@ -2731,10 +2663,12 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
               {positionen.map((pos, i) => (
                 <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
                   <td className="px-2 py-1.5">
-                    <BeschreibungAutocomplete
+                    <ArtikelAutocomplete
                       value={pos.beschreibung}
                       onChange={(v) => updatePosition(i, 'beschreibung', v)}
                       onArtikelWahl={(a) => fillPositionFromArtikel(i, a)}
+                      placeholder="Beschreibung"
+                      inputClassName="w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 placeholder-slate-300 dark:placeholder-slate-500 text-xs"
                     />
                   </td>
                   <td className="px-2 py-1.5">
