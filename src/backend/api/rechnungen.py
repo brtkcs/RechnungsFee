@@ -909,9 +909,13 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         ).first()
 
     ist_entwurf = rechnung.ist_entwurf
-    # Entwürfe bekommen kein ausgegeben-Flag und keinen Kopie-Hinweis.
-    # kopie=True: Frontend weiß bereits, dass ausgegeben=True → Kopie erzwingen
-    ist_kopie = (not ist_entwurf) and (rechnung.ausgegeben or kopie)
+    _dt_kopie = getattr(rechnung, "dokument_typ", "Rechnung") or "Rechnung"
+    # Aufträge (Auftragsbestätigungen) können beliebig oft gedruckt werden – kein Kopie-Banner
+    ist_kopie = (
+        _dt_kopie not in ("Auftrag", "Angebot", "Proforma")
+        and (not ist_entwurf)
+        and (rechnung.ausgegeben or kopie)
+    )
 
     # Netto- oder Bruttorechnung: B2B-Kunden (zugferd_aktiv) → Nettorechnung
     ist_netto = (
@@ -944,11 +948,15 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
             pdf_bytes = generate_rechnung_pdf(rechnung, unt_dict, ist_kopie=ist_kopie, ist_entwurf=ist_entwurf, ist_netto=ist_netto)
 
     # ausgegeben beim ersten echten PDF-Öffnen setzen:
-    # – normale Rechnung: sofort beim ersten Öffnen
+    # – Aufträge/Angebote/Proforma: kein ausgegeben-Tracking (beliebig oft druckbar)
     # – Gutschrift: erst wenn Rückerstattung gebucht (zahlungsstatus == 'bezahlt')
-    ist_gutschrift_pdf = getattr(rechnung, "dokument_typ", "Rechnung") == "Gutschrift"
+    _dt_ausg = getattr(rechnung, "dokument_typ", "Rechnung") or "Rechnung"
+    ist_gutschrift_pdf = _dt_ausg == "Gutschrift"
     gutschrift_erstattet = ist_gutschrift_pdf and str(getattr(rechnung, "zahlungsstatus", "offen")) == "bezahlt"
-    darf_ausgegeben = not ist_gutschrift_pdf or gutschrift_erstattet
+    darf_ausgegeben = (
+        _dt_ausg not in ("Auftrag", "Angebot", "Proforma")
+        and (not ist_gutschrift_pdf or gutschrift_erstattet)
+    )
     if not ist_entwurf and not rechnung.ausgegeben and darf_ausgegeben:
         rechnung.ausgegeben = True
         db.commit()
