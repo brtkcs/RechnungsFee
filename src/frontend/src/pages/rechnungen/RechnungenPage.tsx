@@ -10,7 +10,7 @@ import {
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow,
   getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
-  type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate,
+  type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate, type BarZahlungResult,
   type ArtikelSuche, type AnalyseErgebnis, type LieferantVorschlag, type ZahlungSplitPosition,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
@@ -394,7 +394,7 @@ function ZahlungsDialog({
 }: {
   rechnung: Rechnung
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (result: BarZahlungResult) => void
 }) {
   const qc = useQueryClient()
   const istGutschrift = rechnung.dokument_typ === 'Gutschrift'
@@ -441,10 +441,10 @@ function ZahlungsDialog({
 
   const mutation = useMutation({
     mutationFn: (data: BarZahlungCreate) => barZahlungErstellen(rechnung.id, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
       qc.invalidateQueries({ queryKey: ['journal'] })
-      onSuccess()
+      onSuccess(result)
     },
     onError: (e: Error) => setFehler(e.message),
   })
@@ -824,6 +824,7 @@ function RechnungDetail({
   onSelectId?: (id: number, isLieferschein?: boolean, filterRechnungId?: number) => void
   onLieferscheinAusRechnung?: (id: number) => void
   onFinalisiert?: (r: Rechnung) => void
+  onZahlungErfasst?: (r: Rechnung) => void
 }) {
   const [zahlungsDialog, setZahlungsDialog] = useState(false)
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
@@ -1568,7 +1569,7 @@ function RechnungDetail({
         <ZahlungsDialog
           rechnung={rechnung}
           onClose={() => setZahlungsDialog(false)}
-          onSuccess={() => setZahlungsDialog(false)}
+          onSuccess={(result) => { setZahlungsDialog(false); onZahlungErfasst?.(result.rechnung) }}
         />
       )}
     </div>
@@ -3756,6 +3757,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
                 }
               }}
               onFinalisiert={(r) => setPendingEditRechnung(r)}
+              onZahlungErfasst={(r) => setPendingEditRechnung(r)}
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
               onSelectId={(id, isLieferschein, filterRechnungId) => {
