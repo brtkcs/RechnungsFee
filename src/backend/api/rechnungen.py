@@ -438,6 +438,75 @@ def list_rechnungen(
     return [RechnungResponse.from_orm_extended(r) for r in rechnungen]
 
 
+@router.get("/auftraege", response_model=list[RechnungResponse])
+def liste_auftraege(db: Session = Depends(get_db)):
+    """Alle Aufträge zurückgeben."""
+    auftraege = db.query(Rechnung).filter(
+        Rechnung.dokument_typ == "Auftrag"
+    ).order_by(Rechnung.datum.desc(), Rechnung.id.desc()).all()
+    return [RechnungResponse.from_orm_extended(a) for a in auftraege]
+
+
+@router.post("/auftraege", response_model=RechnungResponse, status_code=201)
+def auftrag_erstellen(data: "RechnungCreate", db: Session = Depends(get_db)):
+    """Erstellt einen neuen Auftrag ohne Angebot-Quelle."""
+    heute = date.today()
+    auftragsnummer = _naechste_auftragsnummer(heute, db)
+    auftrag = Rechnung(
+        typ="ausgang",
+        rechnungsnummer=auftragsnummer,
+        datum=data.datum or heute,
+        leistung_von=data.leistung_von,
+        leistung_bis=data.leistung_bis,
+        kunde_id=data.kunde_id,
+        partner_freitext=data.partner_freitext,
+        notizen=data.notizen,
+        ist_entwurf=data.ist_entwurf,
+        dokument_typ="Auftrag",
+        auftrag_status="offen",
+        netto_gesamt=Decimal("0.00"),
+        ust_gesamt=Decimal("0.00"),
+        brutto_gesamt=Decimal("0.00"),
+        skonto_prozent=data.skonto_prozent,
+        skonto_tage=data.skonto_tage,
+        dokumentenpaket_id=data.dokumentenpaket_id,
+    )
+    db.add(auftrag)
+    db.flush()
+    # Positionen
+    netto_sum = Decimal("0.00")
+    ust_sum = Decimal("0.00")
+    for i, pos_data in enumerate(data.positionen or [], start=1):
+        netto_ep = Decimal(str(pos_data.netto)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        ust_satz = Decimal(str(pos_data.ust_satz))
+        ust_ep = (netto_ep * ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        brutto_ep = (netto_ep + ust_ep).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        menge = Decimal(str(pos_data.menge))
+        pos = Rechnungsposition(
+            rechnung_id=auftrag.id,
+            position_nr=i,
+            beschreibung=pos_data.beschreibung,
+            menge=menge,
+            einheit=pos_data.einheit or "Stk.",
+            netto=netto_ep,
+            ust_satz=ust_satz,
+            ust_betrag=ust_ep,
+            brutto=brutto_ep,
+            artikel_id=pos_data.artikel_id,
+            kategorie_id=pos_data.kategorie_id,
+        )
+        db.add(pos)
+        netto_sum += netto_ep * menge
+        ust_sum += ust_ep * menge
+    Q = Decimal("0.01")
+    auftrag.netto_gesamt = netto_sum.quantize(Q, ROUND_HALF_UP)
+    auftrag.ust_gesamt = ust_sum.quantize(Q, ROUND_HALF_UP)
+    auftrag.brutto_gesamt = (auftrag.netto_gesamt + auftrag.ust_gesamt).quantize(Q, ROUND_HALF_UP)
+    db.commit()
+    db.refresh(auftrag)
+    return RechnungResponse.from_orm_extended(auftrag)
+
+
 @router.get("/{rechnung_id}", response_model=RechnungResponse)
 def get_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
     r = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
@@ -2560,73 +2629,6 @@ def auftrag_status_setzen(auftrag_id: int, data: AuftragStatusUpdate, db: Sessio
     return RechnungResponse.from_orm_extended(auftrag)
 
 
-@router.post("/auftraege", response_model=RechnungResponse, status_code=201)
-def auftrag_erstellen(data: "RechnungCreate", db: Session = Depends(get_db)):
-    """Erstellt einen neuen Auftrag ohne Angebot-Quelle."""
-    heute = date.today()
-    auftragsnummer = _naechste_auftragsnummer(heute, db)
-    auftrag = Rechnung(
-        typ="ausgang",
-        rechnungsnummer=auftragsnummer,
-        datum=data.datum or heute,
-        leistung_von=data.leistung_von,
-        leistung_bis=data.leistung_bis,
-        kunde_id=data.kunde_id,
-        partner_freitext=data.partner_freitext,
-        notizen=data.notizen,
-        ist_entwurf=False,
-        dokument_typ="Auftrag",
-        auftrag_status="offen",
-        netto_gesamt=Decimal("0.00"),
-        ust_gesamt=Decimal("0.00"),
-        brutto_gesamt=Decimal("0.00"),
-        skonto_prozent=data.skonto_prozent,
-        skonto_tage=data.skonto_tage,
-        dokumentenpaket_id=data.dokumentenpaket_id,
-    )
-    db.add(auftrag)
-    db.flush()
-    # Positionen
-    netto_sum = Decimal("0.00")
-    ust_sum = Decimal("0.00")
-    for i, pos_data in enumerate(data.positionen or [], start=1):
-        netto_ep = Decimal(str(pos_data.netto)).quantize(Decimal("0.01"), ROUND_HALF_UP)
-        ust_satz = Decimal(str(pos_data.ust_satz))
-        ust_ep = (netto_ep * ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
-        brutto_ep = (netto_ep + ust_ep).quantize(Decimal("0.01"), ROUND_HALF_UP)
-        menge = Decimal(str(pos_data.menge))
-        pos = Rechnungsposition(
-            rechnung_id=auftrag.id,
-            position_nr=i,
-            beschreibung=pos_data.beschreibung,
-            menge=menge,
-            einheit=pos_data.einheit or "Stk.",
-            netto=netto_ep,
-            ust_satz=ust_satz,
-            ust_betrag=ust_ep,
-            brutto=brutto_ep,
-            artikel_id=pos_data.artikel_id,
-            kategorie_id=pos_data.kategorie_id,
-        )
-        db.add(pos)
-        netto_sum += netto_ep * menge
-        ust_sum += ust_ep * menge
-    Q = Decimal("0.01")
-    auftrag.netto_gesamt = netto_sum.quantize(Q, ROUND_HALF_UP)
-    auftrag.ust_gesamt = ust_sum.quantize(Q, ROUND_HALF_UP)
-    auftrag.brutto_gesamt = (auftrag.netto_gesamt + auftrag.ust_gesamt).quantize(Q, ROUND_HALF_UP)
-    db.commit()
-    db.refresh(auftrag)
-    return RechnungResponse.from_orm_extended(auftrag)
-
-
-@router.get("/auftraege", response_model=list[RechnungResponse])
-def liste_auftraege(db: Session = Depends(get_db)):
-    """Alle Aufträge zurückgeben."""
-    auftraege = db.query(Rechnung).filter(
-        Rechnung.dokument_typ == "Auftrag"
-    ).order_by(Rechnung.datum.desc(), Rechnung.id.desc()).all()
-    return [RechnungResponse.from_orm_extended(a) for a in auftraege]
 
 
 @router.post("/sammelrechnung", response_model=RechnungResponse, status_code=201)
