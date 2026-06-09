@@ -568,7 +568,8 @@ function AuftragDetail({
           {!auftrag.rechnung_zu_auftrag_id ? (
             <button
               onClick={handleRechnungErstellen}
-              disabled={reLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'}
+              disabled={reLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert' || auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen'}
+              title={auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen' ? 'Auftrag ist bereits in Bearbeitung' : undefined}
               className={btnGreen}
             >
               {reLaedt ? '⏳ Erstelle…' : '→ Rechnung'}
@@ -584,7 +585,8 @@ function AuftragDetail({
             !auftrag.lieferschein_zu_auftrag_id ? (
               <button
                 onClick={handleLieferscheinErstellen}
-                disabled={lsLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'}
+                disabled={lsLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert' || auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen'}
+                title={auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen' ? 'Auftrag ist bereits in Bearbeitung' : undefined}
                 className={btnGreen}
               >
                 {lsLaedt ? '⏳ Erstelle…' : '→ Lieferschein'}
@@ -601,7 +603,8 @@ function AuftragDetail({
             !auftrag.proforma_zu_auftrag_id ? (
               <button
                 onClick={handleProformaErstellen}
-                disabled={pfLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert'}
+                disabled={pfLaedt || !!auftrag.ist_entwurf || auftrag.auftrag_status === 'storniert' || auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen'}
+                title={auftrag.auftrag_status === 'in_bearbeitung' || auftrag.auftrag_status === 'abgeschlossen' ? 'Auftrag ist bereits in Bearbeitung' : undefined}
                 className={btnGreen}
               >
                 {pfLaedt ? '⏳ Erstelle…' : '→ Proforma'}

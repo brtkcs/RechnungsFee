@@ -2499,8 +2499,8 @@ def rechnung_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     ).first()
     if not auftrag:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden.")
-    if auftrag.auftrag_status == "storniert":
-        raise HTTPException(status_code=409, detail="Stornierte Aufträge können nicht abgerechnet werden.")
+    if auftrag.auftrag_status in ("storniert", "in_bearbeitung", "abgeschlossen"):
+        raise HTTPException(status_code=409, detail="Dokumente können nur für Aufträge mit Status 'offen' erstellt werden.")
     if auftrag.rechnung_zu_auftrag_id:
         raise HTTPException(status_code=409, detail="Aus diesem Auftrag wurde bereits eine Rechnung erstellt.")
 
@@ -2551,8 +2551,8 @@ def lieferschein_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     ).first()
     if not auftrag:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden.")
-    if auftrag.auftrag_status == "storniert":
-        raise HTTPException(status_code=409, detail="Stornierte Aufträge können nicht abgerechnet werden.")
+    if auftrag.auftrag_status in ("storniert", "in_bearbeitung", "abgeschlossen"):
+        raise HTTPException(status_code=409, detail="Dokumente können nur für Aufträge mit Status 'offen' erstellt werden.")
     if auftrag.lieferschein_zu_auftrag_id:
         raise HTTPException(status_code=409, detail="Aus diesem Auftrag wurde bereits ein Lieferschein erstellt.")
 
@@ -2603,8 +2603,8 @@ def proforma_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     ).first()
     if not auftrag:
         raise HTTPException(status_code=404, detail="Auftrag nicht gefunden.")
-    if auftrag.auftrag_status == "storniert":
-        raise HTTPException(status_code=409, detail="Stornierte Aufträge können nicht abgerechnet werden.")
+    if auftrag.auftrag_status in ("storniert", "in_bearbeitung", "abgeschlossen"):
+        raise HTTPException(status_code=409, detail="Dokumente können nur für Aufträge mit Status 'offen' erstellt werden.")
     if auftrag.proforma_zu_auftrag_id:
         raise HTTPException(status_code=409, detail="Aus diesem Auftrag wurde bereits eine Proforma erstellt.")
 
