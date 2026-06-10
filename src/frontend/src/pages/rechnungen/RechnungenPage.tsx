@@ -3154,6 +3154,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
   const [datumBis, setDatumBis] = useState(heuteIso())
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [pendingEditRechnung, setPendingEditRechnung] = useState<Rechnung | null>(null)
+  const [detailVersion, setDetailVersion] = useState(0)
 
   // ?open=ID oder ?id=ID: direkt zu einem Dokument springen
   useEffect(() => {
@@ -3748,7 +3749,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
         <div className="w-96 shrink-0 h-full overflow-hidden">
           {selectedRechnung ? (
             <RechnungDetail
-              key={selectedId ?? 0}
+              key={`${selectedId ?? 0}-${detailVersion}`}
               rechnung={selectedRechnung}
               onClose={() => setSelectedId(null)}
               onEdit={() => setFormModus('bearbeiten')}
@@ -3758,9 +3759,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
                 }
               }}
               onFinalisiert={(r) => setPendingEditRechnung(r)}
-              onZahlungErfasst={(r) => {
-                getRechnung(r.id).then(fresh => setPendingEditRechnung(fresh)).catch(() => setPendingEditRechnung(r))
-              }}
+              onZahlungErfasst={(r) => { setPendingEditRechnung(r); setDetailVersion(v => v + 1) }}
               onGutschriftCreated={(gs) => { setPendingEditRechnung(gs); setSelectedId(gs.id); setFormModus('bearbeiten') }}
               onRechnungAusLs={(id) => rechnungAusLsMutation.mutate(id)}
               onSelectId={(id, isLieferschein, filterRechnungId) => {
