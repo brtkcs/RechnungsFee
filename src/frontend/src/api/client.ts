@@ -959,7 +959,7 @@ export type RechnungCreate = {
   ist_entwurf?: boolean
   skonto_prozent?: number | null
   skonto_tage?: number | null
-  dokument_typ?: 'Rechnung' | 'Gutschrift' | 'Lieferschein' | 'Angebot' | 'Proforma'
+  dokument_typ?: 'Rechnung' | 'Gutschrift' | 'Lieferschein' | 'Angebot' | 'Proforma' | 'Auftrag'
   gueltig_bis?: string
   dokumentenpaket_id?: number
   lieferadresse_id?: number | null

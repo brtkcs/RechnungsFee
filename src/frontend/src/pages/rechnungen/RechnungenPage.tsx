@@ -815,6 +815,7 @@ function RechnungDetail({
   onSelectId,
   onLieferscheinAusRechnung,
   onFinalisiert,
+  onZahlungErfasst,
 }: {
   rechnung: Rechnung
   onClose: () => void
