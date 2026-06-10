@@ -23,6 +23,17 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.9',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Aufträge: neuer Status „Rechnung" (violett) – Auftrag wechselt automatisch auf diesen Status sobald die verknüpfte Rechnung finalisiert wird; erst nach Zahlungseingang folgt „Abgeschlossen" (Issue #145)' },
+      { typ: 'verbesserung', text: 'Aufträge: Auftragsliste und Kennzahlen aktualisieren sich sofort wenn eine verknüpfte Rechnung finalisiert oder gelöscht wird – kein manuelles Refresh mehr nötig' },
+      { typ: 'verbesserung', text: 'Neues Rechnungsformular: wechselt automatisch auf Netto-Eingabe wenn ein Firmenkunde gewählt wird (solange noch keine Preise eingetragen wurden)' },
+      { typ: 'verbesserung', text: 'ZUGFeRD-Badge im Rechnungsdetail: bei Ausgangsrechnungen für ZUGFeRD-Kunden wird „ZUGFeRD ✓" in der Metadaten-Leiste angezeigt' },
+      { typ: 'fix', text: 'Lieferschein-PDF zeigte Preisspalten (Vorlage 0 – Standard); Lieferscheine zeigen jetzt nur noch Beschreibung, Menge und Einheit (Issue #144)' },
+    ],
+  },
+  {
     version: 'v0.3.8',
     datum: 'Juni 2026',
     eintraege: [
