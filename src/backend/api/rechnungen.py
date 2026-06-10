@@ -837,6 +837,16 @@ def finalisiere_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
                 )
 
     rechnung.ist_entwurf = False
+
+    # Auftrag-Status auf rechnung_gestellt setzen sobald Rechnung finalisiert
+    if rechnung.dokument_typ == "Rechnung":
+        _auftrag = db.query(Rechnung).filter(
+            Rechnung.rechnung_zu_auftrag_id == rechnung.id,
+            Rechnung.dokument_typ == "Auftrag",
+        ).first()
+        if _auftrag and _auftrag.auftrag_status not in ("abgeschlossen", "storniert"):
+            _auftrag.auftrag_status = "rechnung_gestellt"
+
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)
@@ -2656,7 +2666,7 @@ def rechnung_aus_auftrag(auftrag_id: int, db: Session = Depends(get_db)):
     _kopiere_positionen(auftrag, rechnung, db)
     auftrag.rechnung_zu_auftrag_id = rechnung.id
     if auftrag.auftrag_status not in ("abgeschlossen", "storniert"):
-        auftrag.auftrag_status = "rechnung_gestellt"
+        auftrag.auftrag_status = "in_bearbeitung"
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)

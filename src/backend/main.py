@@ -1406,7 +1406,7 @@ def _run_migrations() -> None:
             print("[Migration] Schema auf Version 64 (Angebot: verwaiste auftrag_zu_angebot_id bereinigt)")
 
         if version < 65:
-            # Neuer Status rechnung_gestellt: Aufträge mit verknüpfter, noch offener Rechnung
+            # Neuer Status rechnung_gestellt: Aufträge mit finalisierter, noch offener Rechnung
             conn.execute(text("""
                 UPDATE rechnungen SET auftrag_status = 'rechnung_gestellt'
                 WHERE dokument_typ = 'Auftrag'
@@ -1415,6 +1415,7 @@ def _run_migrations() -> None:
                 AND EXISTS (
                     SELECT 1 FROM rechnungen r
                     WHERE r.id = rechnungen.rechnung_zu_auftrag_id
+                    AND r.ist_entwurf = 0
                     AND r.zahlungsstatus != 'bezahlt'
                     AND (r.storniert IS NULL OR r.storniert = 0)
                 )
