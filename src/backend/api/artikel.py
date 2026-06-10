@@ -57,7 +57,7 @@ def _naechste_artikelnummer(db: Session) -> str:
 
 @router.get("/suche", response_model=list[ArtikelSucheResponse])
 def suche_artikel(
-    q: str = Query(..., min_length=3, description="Suchbegriff (min. 3 Zeichen)"),
+    q: str = Query(..., min_length=2, description="Suchbegriff (min. 2 Zeichen)"),
     db: Session = Depends(get_db),
 ):
     """Volltextsuche in Artikelnummer, Bezeichnung und Lieferantenname."""
