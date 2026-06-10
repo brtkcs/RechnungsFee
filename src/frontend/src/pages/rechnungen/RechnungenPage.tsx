@@ -19,6 +19,7 @@ import { LieferantErstellenModal } from '../../components/LieferantErstellenModa
 import { KundeErstellenModal } from '../../components/KundeErstellenModal'
 import { ArtikelFormModal } from '../artikel/ArtikelPage'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
+import { MailDialog } from '../../components/MailDialog'
 import { guardedDateChange } from '../../utils/dateInput'
 
 // ---------------------------------------------------------------------------
@@ -835,6 +836,7 @@ function RechnungDetail({
   const [zeigForderungsausfall, setZeigForderungsausfall] = useState(false)
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
   const [mailAdresse, setMailAdresse] = useState('')
+  const [zeigMailDialog, setZeigMailDialog] = useState(false)
   const [pdfLaeuft, setPdfLaeuft] = useState(false)
   const [pdfHinweis, setPdfHinweis] = useState(false)
   const [belegFehler, setBelegFehler] = useState<string | null>(null)
@@ -972,6 +974,7 @@ function RechnungDetail({
   }
 
   async function handleMail() {
+    if (unternehmen?.smtp_aktiv) { setZeigMailDialog(true); return }
     const email = partnerEmail || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
@@ -1151,6 +1154,15 @@ function RechnungDetail({
             <span className="self-center text-xs text-slate-400 italic">Storniert</span>
           )}
         </div>
+
+        {zeigMailDialog && (
+          <MailDialog
+            dokument={rechnung}
+            dokumentTyp={rechnung.dokument_typ === 'Gutschrift' ? 'Rechnung' : (rechnung.dokument_typ as any) ?? 'Rechnung'}
+            unternehmen={unternehmen}
+            onClose={() => setZeigMailDialog(false)}
+          />
+        )}
 
         {/* Mail-Eingabe */}
         {zeigMailEingabe && (

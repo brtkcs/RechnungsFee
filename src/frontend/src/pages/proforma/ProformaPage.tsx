@@ -9,6 +9,7 @@ import {
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
+import { MailDialog } from '../../components/MailDialog'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -393,6 +394,7 @@ function ProformaDetail({
   const hatBezug = !!proforma.rechnung_zu_proforma_id
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
   const [mailAdresse, setMailAdresse] = useState('')
+  const [zeigMailDialog, setZeigMailDialog] = useState(false)
   const [zeigZahlungsForm, setZeigZahlungsForm] = useState(false)
   const [zahlungsart, setZahlungsart] = useState('Bank')
   const [bezahltAm, setBezahltAm] = useState(heuteIso())
@@ -443,6 +445,7 @@ function ProformaDetail({
   }
 
   async function handleMail() {
+    if (unternehmen?.smtp_aktiv) { setZeigMailDialog(true); return }
     const email = proforma.kunde_email || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
@@ -551,6 +554,15 @@ function ProformaDetail({
             🗑 Löschen
           </button>
         </div>
+
+        {zeigMailDialog && (
+          <MailDialog
+            dokument={proforma}
+            dokumentTyp="Proforma"
+            unternehmen={unternehmen}
+            onClose={() => setZeigMailDialog(false)}
+          />
+        )}
 
         {/* Mail-Eingabe */}
         {zeigMailEingabe && (

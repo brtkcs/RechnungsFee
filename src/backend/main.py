@@ -30,9 +30,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail
 
-SCHEMA_VERSION = 65
+SCHEMA_VERSION = 66
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -65,6 +65,7 @@ app.include_router(zm.router)
 app.include_router(euer.router)
 app.include_router(system.router)
 app.include_router(dokumentenpakete.router)
+app.include_router(mail.router)
 
 
 @app.post("/api/shutdown")
@@ -1423,6 +1424,30 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 65"))
             conn.commit()
             print("[Migration] Schema auf Version 65 (Auftrag: neuer Status rechnung_gestellt)")
+
+        if version < 66:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            new_cols = {
+                "smtp_aktiv":        "BOOLEAN NOT NULL DEFAULT 0",
+                "smtp_host":         "VARCHAR(200)",
+                "smtp_port":         "INTEGER NOT NULL DEFAULT 587",
+                "smtp_ssl":          "BOOLEAN NOT NULL DEFAULT 0",
+                "smtp_user":         "VARCHAR(200)",
+                "smtp_passwort":     "VARCHAR(500)",
+                "smtp_von_adresse":  "VARCHAR(200)",
+                "mail_betreff_angebot":  "VARCHAR(500)",
+                "mail_text_angebot":     "TEXT",
+                "mail_betreff_proforma": "VARCHAR(500)",
+                "mail_text_proforma":    "TEXT",
+                "mail_betreff_auftrag":  "VARCHAR(500)",
+                "mail_text_auftrag":     "TEXT",
+            }
+            for col, typ in new_cols.items():
+                if col not in cols:
+                    conn.execute(text(f"ALTER TABLE unternehmen ADD COLUMN {col} {typ}"))
+            conn.execute(text("PRAGMA user_version = 66"))
+            conn.commit()
+            print("[Migration] Schema auf Version 66 (SMTP + Mail-Templates pro Dokumenttyp)")
 
 
 def _migrate_kategorien() -> None:

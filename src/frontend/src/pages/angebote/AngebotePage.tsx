@@ -9,6 +9,7 @@ import {
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
+import { MailDialog } from '../../components/MailDialog'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -427,6 +428,7 @@ function AngebotDetail({
   const [pdfLaedt, setPdfLaedt] = useState(false)
   const [zeigMailEingabe, setZeigMailEingabe] = useState(false)
   const [mailAdresse, setMailAdresse] = useState('')
+  const [zeigMailDialog, setZeigMailDialog] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [finLaedt, setFinLaedt] = useState(false)
 
@@ -475,6 +477,10 @@ function AngebotDetail({
   }
 
   async function handleMail() {
+    if (unternehmen?.smtp_aktiv) {
+      setZeigMailDialog(true)
+      return
+    }
     const email = angebot.kunde_email || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
@@ -715,6 +721,15 @@ function AngebotDetail({
               Abbrechen
             </button>
           </div>
+        )}
+
+        {zeigMailDialog && (
+          <MailDialog
+            dokument={angebot}
+            dokumentTyp="Angebot"
+            unternehmen={unternehmen}
+            onClose={() => setZeigMailDialog(false)}
+          />
         )}
 
         {/* Status-Umschalter */}

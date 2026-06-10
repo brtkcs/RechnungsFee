@@ -178,7 +178,20 @@ export type Unternehmen = {
   logo_pfad?: string | null
   mail_betreff_vorlage?: string | null
   mail_text_vorlage?: string | null
+  mail_betreff_angebot?: string | null
+  mail_text_angebot?: string | null
+  mail_betreff_proforma?: string | null
+  mail_text_proforma?: string | null
+  mail_betreff_auftrag?: string | null
+  mail_text_auftrag?: string | null
   mail_signatur?: string | null
+  smtp_aktiv?: boolean
+  smtp_host?: string | null
+  smtp_port?: number
+  smtp_ssl?: boolean
+  smtp_user?: string | null
+  smtp_passwort?: string | null
+  smtp_von_adresse?: string | null
   unterschrift_bild?: string | null
   unterschrift_auf_rechnung?: boolean
   standard_zahlungsziel?: number
@@ -1518,4 +1531,30 @@ export const getEUERPdfUrl = async (jahr: number): Promise<string> => {
   const base = await getBaseUrl()
   return `${base}/euer/pdf?jahr=${jahr}`
 }
+
+
+// ---------------------------------------------------------------------------
+// Mail – SMTP-Versand
+// ---------------------------------------------------------------------------
+
+export type MailSendenRequest = {
+  an: string
+  cc?: string
+  betreff: string
+  text: string
+  rechnung_id?: number
+  dokumentenpaket_id?: number
+}
+
+export const sendeMailMitAnhang = (data: MailSendenRequest) =>
+  request<{ ok: boolean }>('/mail/senden', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
+export const sendeTestMail = (an: string) =>
+  request<{ ok: boolean }>('/mail/test', {
+    method: 'POST',
+    body: JSON.stringify({ an }),
+  })
 

@@ -14,3 +14,4 @@ pdfplumber
 pymupdf
 pytesseract
 ocrmypdf
+markdown

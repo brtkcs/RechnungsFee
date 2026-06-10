@@ -9,6 +9,7 @@ import {
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
+import { MailDialog } from '../../components/MailDialog'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -409,6 +410,7 @@ function AuftragDetail({
   const [lsLaedt, setLsLaedt] = useState(false)
   const [pfLaedt, setPfLaedt] = useState(false)
   const [pdfLaedt, setPdfLaedt] = useState(false)
+  const [zeigMailDialog, setZeigMailDialog] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
@@ -456,6 +458,7 @@ function AuftragDetail({
   }
 
   async function handleMail() {
+    if (unternehmen?.smtp_aktiv) { setZeigMailDialog(true); return }
     setPdfLaedt(true)
     try {
       const base = await getApiBase()
@@ -537,6 +540,15 @@ function AuftragDetail({
       </div>
 
       <div className="p-5 space-y-5 flex-1 overflow-y-auto">
+
+        {zeigMailDialog && (
+          <MailDialog
+            dokument={auftrag}
+            dokumentTyp="Auftrag"
+            unternehmen={unternehmen}
+            onClose={() => setZeigMailDialog(false)}
+          />
+        )}
 
         {fehler && (
           <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-3 py-2 text-sm text-red-700 dark:text-red-300">

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getUnternehmen, updateUnternehmen, uploadLogo, deleteLogo, getLogoUrl,
+  getUnternehmen, updateUnternehmen, uploadLogo, deleteLogo, getLogoUrl, sendeTestMail,
   type Unternehmen,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
@@ -671,43 +671,65 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
 }
 
 // ---------------------------------------------------------------------------
-// Mail-Vorlage-Sektion
+// Mail-Vorlage-Sektion (alle Dokumenttypen)
 // ---------------------------------------------------------------------------
 
 const PLATZHALTER = [
-  { key: '{rechnungsnummer}', desc: 'Rechnungsnummer' },
-  { key: '{datum}',           desc: 'Rechnungsdatum (TT.MM.JJJJ)' },
-  { key: '{betrag}',          desc: 'Bruttobetrag (z.B. 119,00 €)' },
+  { key: '{rechnungsnummer}', desc: 'Dokumentnummer' },
+  { key: '{datum}',           desc: 'Datum (TT.MM.JJJJ)' },
+  { key: '{betrag}',          desc: 'Bruttobetrag' },
   { key: '{faellig_am}',      desc: 'Fälligkeitsdatum' },
+  { key: '{gueltig_bis}',     desc: 'Gültig bis (Angebot)' },
   { key: '{kunde}',           desc: 'Name des Empfängers' },
   { key: '{firmenname}',      desc: 'Dein Firmenname' },
 ]
 
-const DEFAULT_BETREFF = 'Rechnung {rechnungsnummer}'
-const DEFAULT_TEXT = `Hallo {kunde},
+type VorlagenTyp = 'Rechnung' | 'Angebot' | 'Proforma' | 'Auftrag'
 
-anbei findest du die Rechnung {rechnungsnummer} vom {datum}.
+const VORLAGEN_DEFAULT: Record<VorlagenTyp, { betreff: string; text: string }> = {
+  Rechnung: {
+    betreff: 'Rechnung {rechnungsnummer}',
+    text: 'Hallo {kunde},\n\nanbei findest du die Rechnung {rechnungsnummer} vom {datum}.\n\nBetrag: {betrag}\nFällig am: {faellig_am}\n\nBitte überweise den Betrag auf das angegebene Konto.\n\nViele Grüße\n{firmenname}',
+  },
+  Angebot: {
+    betreff: 'Angebot {rechnungsnummer}',
+    text: 'Hallo {kunde},\n\nanbei findest du unser Angebot {rechnungsnummer} vom {datum}.\n\nAngebotsbetrag: {betrag}\nGültig bis: {gueltig_bis}\n\nBei Fragen stehe ich gerne zur Verfügung.\n\nViele Grüße\n{firmenname}',
+  },
+  Proforma: {
+    betreff: 'Proforma-Rechnung {rechnungsnummer}',
+    text: 'Hallo {kunde},\n\nanbei findest du unsere Proforma-Rechnung {rechnungsnummer} vom {datum}.\n\nBetrag: {betrag}\nZahlungsziel: {faellig_am}\n\nNach Zahlungseingang erstellst du die Rechnung automatisch.\n\nViele Grüße\n{firmenname}',
+  },
+  Auftrag: {
+    betreff: 'Auftragsbestätigung {rechnungsnummer}',
+    text: 'Hallo {kunde},\n\nvielen Dank für deinen Auftrag! Anbei findest du die Auftragsbestätigung {rechnungsnummer} vom {datum}.\n\nAuftragswert: {betrag}\n\nViele Grüße\n{firmenname}',
+  },
+}
 
-Betrag: {betrag}
-Fällig am: {faellig_am}
-
-Bitte überweise den Betrag auf das angegebene Konto.
-
-Viele Grüße
-{firmenname}`
+function betreffFeld(typ: VorlagenTyp): keyof Unternehmen {
+  return typ === 'Rechnung' ? 'mail_betreff_vorlage' : typ === 'Angebot' ? 'mail_betreff_angebot' : typ === 'Proforma' ? 'mail_betreff_proforma' : 'mail_betreff_auftrag'
+}
+function textFeld(typ: VorlagenTyp): keyof Unternehmen {
+  return typ === 'Rechnung' ? 'mail_text_vorlage' : typ === 'Angebot' ? 'mail_text_angebot' : typ === 'Proforma' ? 'mail_text_proforma' : 'mail_text_auftrag'
+}
 
 function MailVorlageSektion({ data }: { data: Unternehmen }) {
   const qc = useQueryClient()
-  const [betreff, setBetreff] = useState(data.mail_betreff_vorlage ?? DEFAULT_BETREFF)
-  const [text, setText] = useState(data.mail_text_vorlage ?? DEFAULT_TEXT)
+  const [aktTyp, setAktTyp] = useState<VorlagenTyp>('Rechnung')
+  const def = VORLAGEN_DEFAULT[aktTyp]
+  const [betreff, setBetreff] = useState(data[betreffFeld(aktTyp)] as string ?? def.betreff)
+  const [text, setText] = useState(data[textFeld(aktTyp)] as string ?? def.text)
   const [gespeichert, setGespeichert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
 
+  function ladeTyp(typ: VorlagenTyp) {
+    setAktTyp(typ)
+    setBetreff(data[betreffFeld(typ)] as string ?? VORLAGEN_DEFAULT[typ].betreff)
+    setText(data[textFeld(typ)] as string ?? VORLAGEN_DEFAULT[typ].text)
+    setGespeichert(false)
+  }
+
   const mut = useMutation({
-    mutationFn: () => updateUnternehmen({
-      mail_betreff_vorlage: betreff,
-      mail_text_vorlage: text,
-    }),
+    mutationFn: () => updateUnternehmen({ [betreffFeld(aktTyp)]: betreff, [textFeld(aktTyp)]: text }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unternehmen'] })
       setGespeichert(true)
@@ -717,8 +739,19 @@ function MailVorlageSektion({ data }: { data: Unternehmen }) {
     onError: (e: Error) => setFehler(e.message),
   })
 
+  const typen: VorlagenTyp[] = ['Rechnung', 'Angebot', 'Proforma', 'Auftrag']
+
   return (
     <div className="space-y-5">
+      <div className="flex gap-1">
+        {typen.map(t => (
+          <button key={t} onClick={() => ladeTyp(t)}
+            className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${aktTyp === t ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
         <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Verfügbare Platzhalter</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1">
@@ -731,43 +764,149 @@ function MailVorlageSektion({ data }: { data: Unternehmen }) {
         </div>
       </div>
 
-      <Field label="Betreff-Vorlage">
-        <input
-          type="text"
-          value={betreff}
-          onChange={ev => setBetreff(ev.target.value)}
-          placeholder={DEFAULT_BETREFF}
-          className={inputCls}
-        />
+      <Field label="Betreff">
+        <input type="text" value={betreff} onChange={ev => setBetreff(ev.target.value)} className={inputCls} />
       </Field>
 
-      <Field label="Text-Vorlage">
-        <textarea
-          value={text}
-          onChange={ev => setText(ev.target.value)}
-          rows={10}
-          placeholder={DEFAULT_TEXT}
-          className={`${inputCls} resize-y font-mono text-xs`}
-        />
+      <Field label="Text">
+        <textarea value={text} onChange={ev => setText(ev.target.value)} rows={10} className={`${inputCls} resize-y font-mono text-xs`} />
       </Field>
 
       {fehler && <p className="text-sm text-red-600">{fehler}</p>}
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => mut.mutate()}
-          disabled={mut.isPending}
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
-        >
+        <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending}
+          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors">
           {mut.isPending ? 'Speichern…' : 'Vorlage speichern'}
         </button>
-        <button
-          type="button"
-          onClick={() => { setBetreff(DEFAULT_BETREFF); setText(DEFAULT_TEXT) }}
-          className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
-        >
+        <button type="button" onClick={() => { setBetreff(def.betreff); setText(def.text) }}
+          className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
           Zurücksetzen
+        </button>
+        {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// SMTP-Sektion
+// ---------------------------------------------------------------------------
+
+function SmtpSektion({ data }: { data: Unternehmen }) {
+  const qc = useQueryClient()
+  const [aktiv, setAktiv] = useState(data.smtp_aktiv ?? false)
+  const [host, setHost] = useState(data.smtp_host ?? '')
+  const [port, setPort] = useState(String(data.smtp_port ?? 587))
+  const [ssl, setSsl] = useState(data.smtp_ssl ?? false)
+  const [user, setUser] = useState(data.smtp_user ?? '')
+  const [passwort, setPasswort] = useState(data.smtp_passwort ?? '')
+  const [von, setVon] = useState(data.smtp_von_adresse ?? '')
+  const [testMail, setTestMail] = useState('')
+  const [gespeichert, setGespeichert] = useState(false)
+  const [fehler, setFehler] = useState<string | null>(null)
+  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
+  const [testFehler, setTestFehler] = useState<string | null>(null)
+
+  const mut = useMutation({
+    mutationFn: () => updateUnternehmen({
+      smtp_aktiv: aktiv,
+      smtp_host: host || null,
+      smtp_port: parseInt(port) || 587,
+      smtp_ssl: ssl,
+      smtp_user: user || null,
+      smtp_passwort: passwort || null,
+      smtp_von_adresse: von || null,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['unternehmen'] })
+      setGespeichert(true)
+      setFehler(null)
+      setTimeout(() => setGespeichert(false), 2500)
+    },
+    onError: (e: Error) => setFehler(e.message),
+  })
+
+  async function handleTest() {
+    if (!testMail.trim()) return
+    setTestStatus('sending')
+    setTestFehler(null)
+    try {
+      await sendeTestMail(testMail.trim())
+      setTestStatus('ok')
+      setTimeout(() => setTestStatus('idle'), 3000)
+    } catch (e: any) {
+      setTestStatus('error')
+      setTestFehler(e?.message ?? 'Unbekannter Fehler')
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" checked={aktiv} onChange={e => setAktiv(e.target.checked)} className="sr-only peer" />
+          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:bg-blue-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+        </label>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">SMTP-Versand aktivieren</span>
+      </div>
+
+      {aktiv && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <Field label="SMTP-Server (Host)">
+                <input type="text" value={host} onChange={e => setHost(e.target.value)} placeholder="smtp.gmail.com" className={inputCls} />
+              </Field>
+            </div>
+            <Field label="Port">
+              <input type="number" value={port} onChange={e => setPort(e.target.value)} placeholder="587" className={inputCls} />
+            </Field>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input type="checkbox" id="smtp-ssl" checked={ssl} onChange={e => setSsl(e.target.checked)} className="rounded" />
+            <label htmlFor="smtp-ssl" className="text-sm text-slate-600 dark:text-slate-300">SSL (Port 465) statt STARTTLS (Port 587)</label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Benutzername / E-Mail">
+              <input type="email" value={user} onChange={e => setUser(e.target.value)} placeholder="deine@email.de" className={inputCls} />
+            </Field>
+            <Field label="Passwort / App-Passwort">
+              <input type="password" value={passwort} onChange={e => setPasswort(e.target.value)} placeholder="••••••••" className={inputCls} />
+            </Field>
+          </div>
+
+          <Field label={<>Absender-Adresse <span className="text-xs text-slate-400 font-normal">(optional, Standard: Benutzername)</span></>}>
+            <input type="email" value={von} onChange={e => setVon(e.target.value)} placeholder="rechnungen@firma.de" className={inputCls} />
+          </Field>
+
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-300">
+            <strong>Gmail:</strong> Nutze ein App-Passwort (Google-Konto → Sicherheit → 2-FA → App-Passwörter). Host: smtp.gmail.com, Port: 587 (STARTTLS).
+          </div>
+
+          <hr className="border-slate-100 dark:border-slate-700" />
+
+          <div className="flex gap-2 items-center">
+            <input type="email" value={testMail} onChange={e => setTestMail(e.target.value)}
+              placeholder="Test-Empfänger eingeben…" className={`${inputCls} flex-1`} />
+            <button type="button" onClick={handleTest} disabled={!testMail.trim() || testStatus === 'sending'}
+              className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50 whitespace-nowrap">
+              {testStatus === 'sending' ? 'Sende…' : '✉️ Testmail'}
+            </button>
+          </div>
+          {testStatus === 'ok' && <p className="text-sm text-green-600">✓ Testmail gesendet</p>}
+          {testStatus === 'error' && <p className="text-sm text-red-600">{testFehler}</p>}
+        </div>
+      )}
+
+      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending}
+          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors">
+          {mut.isPending ? 'Speichern…' : 'SMTP speichern'}
         </button>
         {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
       </div>
@@ -855,8 +994,16 @@ function EmailSektion({ data }: { data: Unternehmen }) {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Mail-Vorlage</h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500">Wird beim Versand von Rechnungen per E-Mail als Vorlage verwendet.</p>
+        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">SMTP-Versand</h3>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Direkt aus RechnungsFee versenden – mit PDF-Anhang und Dokumentenpaketen.</p>
+      </div>
+      <SmtpSektion data={data} />
+
+      <hr className="border-slate-100 dark:border-slate-700" />
+
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Mail-Vorlagen</h3>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Betreff und Text für jeden Dokumenttyp separat konfigurierbar.</p>
       </div>
       <MailVorlageSektion data={data} />
 
@@ -864,7 +1011,7 @@ function EmailSektion({ data }: { data: Unternehmen }) {
 
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Mail-Signatur</h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500">Wird automatisch unter jede ausgehende E-Mail gesetzt.</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Wird automatisch unter jede ausgehende E-Mail gesetzt (Markdown wird als HTML gerendert).</p>
       </div>
       <SignaturSektion data={data} />
     </div>
