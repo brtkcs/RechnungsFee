@@ -873,6 +873,7 @@ export type Rechnung = {
   kunde_id: number | null
   kunde_name: string | null
   kunde_email: string | null
+  kunde_zugferd_aktiv: boolean
   lieferant_id: number | null
   lieferant_name: string | null
   lieferant_email: string | null
