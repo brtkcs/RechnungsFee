@@ -102,6 +102,9 @@
 - [ ] Anlage AVEUR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
 - [ ] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ
 
+### Backup & Wiederherstellung
+- [ ] Automatische Wiederherstellung aus Backup (Datei-Auswahl → App ersetzt DB und startet neu)
+
 ### Wiederkehrende Buchungen
 - [ ] Vorlagen für Fixkosten (Miete, Leasing, Abonnements) mit Fälligkeitsintervall
 - [ ] Hinweis auf fällige Buchungen beim App-Start
