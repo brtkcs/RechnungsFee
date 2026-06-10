@@ -475,7 +475,7 @@ function AngebotDetail({
   }
 
   async function handleMail() {
-    const email = mailAdresse.trim()
+    const email = angebot.kunde_email || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
     // PDF als Download bereitstellen
@@ -597,7 +597,7 @@ function AngebotDetail({
             📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
           </button>
           <button onClick={() => handleMail()} disabled={pdfLaedt || !!angebot.ist_entwurf} className={btnNeutral}>
-            ✉️ Mail senden
+            ✉️ Mail senden{!angebot.kunde_email ? ' …' : ''}
           </button>
           <button onClick={onEdit} disabled={hatBezug}
             title={hatBezug ? 'Bereits ein Folgedokument vorhanden' : undefined}

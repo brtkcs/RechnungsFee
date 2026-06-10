@@ -443,7 +443,7 @@ function ProformaDetail({
   }
 
   async function handleMail() {
-    const email = mailAdresse.trim()
+    const email = proforma.kunde_email || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
     setPdfLaedt(true)
@@ -525,7 +525,7 @@ function ProformaDetail({
             📄 {pdfLaedt ? 'Lädt…' : 'PDF öffnen'}
           </button>
           <button onClick={() => handleMail()} disabled={pdfLaedt || !!proforma.ist_entwurf} className={btnNeutral}>
-            ✉️ Mail senden
+            ✉️ Mail senden{!proforma.kunde_email ? ' …' : ''}
           </button>
           <button onClick={onEdit} disabled={hatBezug}
             title={hatBezug ? 'Bereits eine Rechnung vorhanden' : undefined}
