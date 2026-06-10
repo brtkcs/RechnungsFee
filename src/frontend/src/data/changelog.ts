@@ -27,7 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'neu', text: 'Aufträge-Modul (aktivierbar unter Einstellungen → Unternehmen): verbindliche Auftragsbestätigungen direkt oder aus einem Angebot heraus; → Rechnung, → Lieferschein, → Proforma; Status-Workflow Offen → In Bearbeitung → Abgeschlossen; Auftrag wechselt automatisch auf „Abgeschlossen" sobald eine verknüpfte Rechnung bezahlt ist' },
-      { typ: 'neu', text: 'Tastaturkürzel Strg+Super+E springt direkt zur Eingangsrechnungen-Ansicht – funktioniert von jeder Seite aus' },
+      { typ: 'neu', text: 'Tastaturkürzel Strg+Shift+E springt direkt zur Eingangsrechnungen-Ansicht – funktioniert von jeder Seite aus' },
       { typ: 'verbesserung', text: 'Alle Dokumentlisten (Angebote, Aufträge, Proforma, Lieferscheine) haben jetzt einen einheitlichen Filterkopf mit Suche, Statusfilter und Kennzahlen; bleibt beim Scrollen stehen' },
       { typ: 'verbesserung', text: 'Spaltenreihenfolge vereinheitlicht: Datum steht jetzt überall vor der Nummer (wie bei Rechnungen und Lieferscheinen)' },
       { typ: 'verbesserung', text: 'Herkunftsbezug in der Liste: Lieferscheine, Proformas, Aufträge und Rechnungen zeigen hinter der Nummer ein kleines Badge mit dem Vordokument (z. B. „aus ANG-260001")' },

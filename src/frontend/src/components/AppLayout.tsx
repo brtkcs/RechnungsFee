@@ -133,10 +133,10 @@ export function AppLayout() {
   const qc = useQueryClient()
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
-  // Ctrl+Super+E (Strg+Win+E) → Eingangsrechnungen
+  // Ctrl+Shift+E (Strg+Shift+E) → Eingangsrechnungen
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.metaKey && e.key.toLowerCase() === 'e') {
+      if (e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'e') {
         e.preventDefault()
         navigate('/rechnungen?typ=eingang')
       }

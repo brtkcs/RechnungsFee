@@ -15,7 +15,7 @@ Open-Source-Buchhaltungssoftware für Freiberufler & Kleinunternehmer (§19 UStG
 
 | Kürzel | Aktion | Implementierung |
 |--------|--------|-----------------|
-| Strg + Super + E | Direkt zu Eingangsrechnungen | `AppLayout.tsx` keydown-Handler → `/rechnungen?typ=eingang`; `RechnungenPage` liest `?typ=`-Parameter |
+| Strg + Shift + E | Direkt zu Eingangsrechnungen | `AppLayout.tsx` keydown-Handler → `/rechnungen?typ=eingang`; `RechnungenPage` liest `?typ=`-Parameter |
 
 ---
 
