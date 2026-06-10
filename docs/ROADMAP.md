@@ -36,6 +36,14 @@
 - Rückverlinkung: Angebot zeigt erstellten Lieferschein / Rechnung / Proforma als Link
 - Dokumentenpakete (Anhänge wie AGB, DSE, LV) als Angebot-Beilage
 
+**Aufträge**
+- Auftragsbestätigung-PDF (Nummernkreis `AU-JJNNNN`, kein Kopie-Banner)
+- Status-Workflow: offen → in Bearbeitung → abgeschlossen (automatisch bei bezahlter Rechnung, alle 3 Pfade: direkt / via Proforma / via Lieferschein)
+- Auftrag direkt erstellen oder aus akzeptiertem Angebot
+- Auftrag → Rechnung / Lieferschein / Proforma
+- Bearbeiten ab Status „in Bearbeitung" gesperrt; neue Dokumente bei abgeschlossen/storniert gesperrt
+- Bidirektionale Verlinkung Angebot ↔ Auftrag ↔ Folgedokumente
+
 **Proforma-Rechnungen**
 - Proforma-Rechnung (Vorkasse-Aufforderung) – direkt erstellen oder aus einem akzeptierten Angebot
 - Entwurf-Modus: Entwurf speichern (ohne Nummer), Finalisieren-Button vergibt Nummer
@@ -87,12 +95,6 @@
 ---
 
 ## 🚧 v0.3.x – In Arbeit
-
-### Aufträge
-- [ ] `dokument_typ = 'Auftrag'`, Nummernkreis `AUF-JJJJ####`
-- [ ] Auftragsbestätigung-PDF mit Dokumentenpaket-Anhängen
-- [ ] Auftrag → Lieferschein oder Rechnung
-- [ ] Status-Tracking (offen / bestätigt / abgeschlossen)
 
 ### Exporte & Auswertungen
 - [ ] DATEV-Export (CSV nach DATEV-Format für Steuerberater)
