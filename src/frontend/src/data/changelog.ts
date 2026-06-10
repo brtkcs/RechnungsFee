@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.3.8',
     datum: 'Juni 2026',
     eintraege: [
+      { typ: 'neu', text: 'Aufträge-Modul (aktivierbar unter Einstellungen → Unternehmen): verbindliche Auftragsbestätigungen direkt oder aus einem Angebot heraus; → Rechnung, → Lieferschein, → Proforma; Status-Workflow Offen → In Bearbeitung → Abgeschlossen; Auftrag wechselt automatisch auf „Abgeschlossen" sobald eine verknüpfte Rechnung bezahlt ist' },
       { typ: 'neu', text: 'Tastaturkürzel Strg+Super+E springt direkt zur Eingangsrechnungen-Ansicht – funktioniert von jeder Seite aus' },
       { typ: 'verbesserung', text: 'Alle Dokumentlisten (Angebote, Aufträge, Proforma, Lieferscheine) haben jetzt einen einheitlichen Filterkopf mit Suche, Statusfilter und Kennzahlen; bleibt beim Scrollen stehen' },
       { typ: 'verbesserung', text: 'Spaltenreihenfolge vereinheitlicht: Datum steht jetzt überall vor der Nummer (wie bei Rechnungen und Lieferscheinen)' },
@@ -33,6 +34,11 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Angebote: Bearbeiten und alle Folgedokument-Erstellen-Buttons werden gesperrt sobald ein Folgedokument (Auftrag, Rechnung, Lieferschein oder Proforma) existiert' },
       { typ: 'verbesserung', text: 'Aufträge: Bearbeiten und Löschen werden gesperrt sobald ein Folgedokument (Rechnung, Lieferschein oder Proforma) existiert' },
       { typ: 'verbesserung', text: 'Proforma: Bearbeiten und Löschen werden gesperrt sobald eine Rechnung aus der Proforma erstellt wurde' },
+      { typ: 'fix', text: 'Backup-Button im Einstellungen-Tab war nach einem Refactor defekt; Dialog öffnet jetzt nativ „Speichern unter" statt immer in den Download-Ordner zu schreiben (Issue #141)' },
+      { typ: 'fix', text: 'Eingangsrechnungen-Tab ist beim Öffnen der Rechnungsübersicht wieder der Standard-Tab (Issue #142)' },
+      { typ: 'fix', text: 'Artikelsuche reagiert schon ab 2 Zeichen (vorher 3)' },
+      { typ: 'fix', text: 'Proforma-Rechnungen erschienen fälschlicherweise in der Rechnungs-Übersicht und wurden dort als leere Zeilen angezeigt (Issue #139)' },
+      { typ: 'fix', text: 'CSV-Export öffnete in Tauri ein schwarzes leeres Fenster statt die Datei zu speichern (Issue #139)' },
     ],
   },
   {
