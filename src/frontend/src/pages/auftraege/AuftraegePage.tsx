@@ -935,7 +935,7 @@ export function AuftraegePage() {
           {auftraegeListe.length > 0 && (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800">
+                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700">
                   <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Datum</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Nummer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Kunde</th>
@@ -948,9 +948,10 @@ export function AuftraegePage() {
                   <tr
                     key={a.id}
                     data-auftrag-id={a.id}
+                    tabIndex={0}
                     onClick={() => { setSelId(a.id); setZeigFormular(false) }}
-                    className={`border-b border-slate-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors ${
-                      selId === a.id ? 'bg-blue-50 dark:bg-slate-600 border-l-2 border-l-blue-500' : ''
+                    className={`border-b border-slate-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer transition-colors focus:outline-none ${
+                      selId === a.id ? 'bg-blue-100 dark:bg-slate-600 border-l-2 border-l-blue-500' : ''
                     }`}
                   >
                     <td className="px-5 py-3 text-slate-500 dark:text-slate-400">{formatDatum(a.datum)}</td>

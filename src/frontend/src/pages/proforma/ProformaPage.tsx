@@ -890,7 +890,7 @@ export function ProformaPage() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800">
+                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700">
                   <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Datum</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Nummer</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Kunde</th>
@@ -908,10 +908,11 @@ export function ProformaPage() {
                   <tr
                     key={p.id}
                     data-proforma-id={p.id}
+                    tabIndex={0}
                     onClick={() => { setSelectedId(p.id); setFormModus(null) }}
-                    className={`border-b border-slate-50 dark:border-slate-700 last:border-0 cursor-pointer transition-colors ${
+                    className={`border-b border-slate-50 dark:border-slate-700 last:border-0 cursor-pointer transition-colors focus:outline-none ${
                       selectedId === p.id
-                        ? 'bg-blue-50 dark:bg-slate-600 border-l-2 border-l-blue-500'
+                        ? 'bg-blue-100 dark:bg-slate-600 border-l-2 border-l-blue-500'
                         : ueberfaellig
                           ? 'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-700'
