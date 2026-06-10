@@ -905,6 +905,7 @@ function RechnungDetail({
     mutationFn: () => finalisiereRechnung(rechnung.id),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      qc.invalidateQueries({ queryKey: ['auftraege'] })
       onFinalisiert?.(updated)
     },
     onError: (e: Error) => alert(e.message),
@@ -3292,6 +3293,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
     mutationFn: deleteRechnung,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      qc.invalidateQueries({ queryKey: ['auftraege'] })
       setSelectedId(null)
       setFehler(null)
     },
