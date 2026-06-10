@@ -25,8 +25,13 @@ class RechnungPDF(RechnungPDFBase):
 
     def _render_positionen(self):
         r = self._r
+        ist_lieferschein = getattr(r, "dokument_typ", "Rechnung") == "Lieferschein"
 
-        if self._ist_netto:
+        if ist_lieferschein:
+            col_w   = [103, 16, 17, 44]
+            headers = ["Beschreibung", "Menge", "Einheit", ""]
+            aligns  = ["L",            "R",     "L",       "L"]
+        elif self._ist_netto:
             col_w   = [82, 16, 17, 27, 14, 24]
             headers = ["Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Netto"]
             aligns  = ["L",            "R",     "L",       "R",           "R",     "R"]
@@ -54,6 +59,12 @@ class RechnungPDF(RechnungPDFBase):
             self.set_x(L_MARGIN + col_w[0])
             self.cell(col_w[1], 6, menge_str, align="R")
             self.cell(col_w[2], 6, pos.einheit[:12])
+            if ist_lieferschein:
+                self.cell(col_w[3], 6, "", new_x="LMARGIN", new_y="NEXT")
+                self.set_xy(L_MARGIN, row_y)
+                self.multi_cell(col_w[0], 6, pos.beschreibung or "",
+                                new_x="LMARGIN", new_y="NEXT")
+                continue
             if self._ist_netto:
                 self.cell(col_w[3], 6, _fmt_euro(pos.netto),             align="R")
                 self.cell(col_w[4], 6, ust_label,                        align="R")
