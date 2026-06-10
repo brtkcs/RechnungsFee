@@ -701,6 +701,18 @@ function _triggerBlobDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+/** Lädt eine Rechnungs-PDF als Datei herunter (kein Viewer).
+ *  Für den Mail-Workflow: User speichert die PDF und hängt sie manuell an. */
+export async function downloadPdfForMail(rechnungId: number): Promise<void> {
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/rechnungen/${rechnungId}/pdf?download=1`)
+  if (!res.ok) throw new Error(`PDF-Download fehlgeschlagen: ${res.status}`)
+  const blob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') ?? ''
+  const match = cd.match(/filename[*]?=(?:UTF-8''|"?)([^";\r\n]+)/i)
+  _triggerBlobDownload(blob, match?.[1]?.trim() ?? 'rechnung.pdf')
+}
+
 // --- Nummernkreise ---
 export type Nummernkreis = {
   id: number

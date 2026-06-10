@@ -5,7 +5,7 @@ import {
   getProformas, getKunden, getUstSaetze, getUnternehmen,
   createRechnung, updateRechnung, deleteRechnung,
   rechnungAusProforma,
-  getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow,
+  getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow, downloadPdfForMail,
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
@@ -448,8 +448,7 @@ function ProformaDetail({
 
     setPdfLaedt(true)
     try {
-      const base = await getApiBase()
-      await openUrl(`${base}/rechnungen/${proforma.id}/pdf?download=1`)
+      await downloadPdfForMail(proforma.id)
     } finally { setPdfLaedt(false) }
 
     const datumDe = proforma.datum.split('-').reverse().join('.')

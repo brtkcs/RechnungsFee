@@ -7,7 +7,7 @@ import {
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
   getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen, lieferscheinAusRechnung,
   getLieferadressen,
-  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow,
+  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow, downloadPdfForMail,
   getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate, type BarZahlungResult,
@@ -975,12 +975,10 @@ function RechnungDetail({
     const email = partnerEmail || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
-    // PDF als Download speichern damit es manuell als Anhang hinzugefügt werden kann
     setPdfLaeuft(true)
     setPdfHinweis(false)
     try {
-      const base = await getApiBase()
-      await openUrl(`${base}/rechnungen/${rechnung.id}/pdf?download=1`)
+      await downloadPdfForMail(rechnung.id)
       setPdfHinweis(true)
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
     } finally {

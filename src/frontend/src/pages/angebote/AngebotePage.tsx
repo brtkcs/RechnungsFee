@@ -5,7 +5,7 @@ import {
   getAngebote, getKunden, getUstSaetze, getDokumentenPakete, getUnternehmen,
   createRechnung, updateRechnung, deleteRechnung,
   rechnungAusAngebot, lieferscheinAusAngebot, proformaAusAngebot, auftragAusAngebot, angebotStatusSetzen,
-  getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow,
+  getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow, downloadPdfForMail,
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
@@ -478,11 +478,9 @@ function AngebotDetail({
     const email = angebot.kunde_email || mailAdresse.trim()
     if (!email) { setZeigMailEingabe(true); return }
 
-    // PDF als Download bereitstellen
     setPdfLaedt(true)
     try {
-      const base = await getApiBase()
-      await openUrl(`${base}/rechnungen/${angebot.id}/pdf?download=1`)
+      await downloadPdfForMail(angebot.id)
     } finally { setPdfLaedt(false) }
 
     const datumDe = angebot.datum.split('-').reverse().join('.')
