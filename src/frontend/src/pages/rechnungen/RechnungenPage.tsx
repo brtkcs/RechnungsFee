@@ -444,6 +444,7 @@ function ZahlungsDialog({
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
       qc.invalidateQueries({ queryKey: ['journal'] })
+      qc.invalidateQueries({ queryKey: ['auftraege'] })
       onSuccess(result)
     },
     onError: (e: Error) => setFehler(e.message),
