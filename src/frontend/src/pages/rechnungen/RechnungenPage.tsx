@@ -1963,6 +1963,16 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lieferadressen])
 
+  // Netto-Modus automatisch aktivieren wenn Firmenkunde gewählt wird (B2B)
+  useEffect(() => {
+    if (typ !== 'ausgang' || !!initial || !partnerId) return
+    const kunde = kunden?.find(k => k.id === parseInt(partnerId))
+    if (!kunde?.firmenname?.trim()) return
+    const preiseNochLeer = positionen.every(p => !p.netto.trim())
+    if (preiseNochLeer) setEingabeModus('netto')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partnerId, kunden])
+
   // Schnellmodus: einfache Betragseingabe für Eingangsrechnungen
   // Standard ist aufgeschlüsselter Modus – Schnellmodus nur bei Bearbeitung bestehender 1-Positions-Rechnungen
   const [schnellmodus, setSchnellmodus] = useState(
