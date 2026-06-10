@@ -202,6 +202,7 @@ class RechnungResponse(BaseModel):
     kunde_id: Optional[int]
     kunde_name: Optional[str] = None
     kunde_email: Optional[str] = None
+    kunde_zugferd_aktiv: bool = False
     lieferant_id: Optional[int]
     lieferant_name: Optional[str] = None
     lieferant_email: Optional[str] = None
@@ -290,6 +291,7 @@ class RechnungResponse(BaseModel):
             parts = [obj.kunde.firmenname or "", obj.kunde.vorname or "", obj.kunde.nachname or ""]
             data.kunde_name = " ".join(p for p in parts if p) or None
             data.kunde_email = obj.kunde.email
+            data.kunde_zugferd_aktiv = bool(getattr(obj.kunde, "zugferd_aktiv", False))
         if obj.lieferant:
             parts = [obj.lieferant.firmenname or "", obj.lieferant.vorname or "", obj.lieferant.nachname or ""]
             data.lieferant_name = " ".join(p for p in parts if p) or None

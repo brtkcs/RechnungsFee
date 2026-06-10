@@ -308,6 +308,7 @@ export type JournalEintrag = {
   kunde_id: number | null
   kunde_name: string | null
   kunde_email: string | null
+  kunde_zugferd_aktiv: boolean
   zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal' | 'Keine'
   art: 'Einnahme' | 'Ausgabe'
   netto_betrag: string

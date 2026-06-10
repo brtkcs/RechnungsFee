@@ -1344,6 +1344,12 @@ function RechnungDetail({
                   ? <LieferscheinStatusBadge r={rechnung} />
                   : <StatusBadge status={rechnung.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
           </div>
+          {rechnung.typ === 'ausgang' && rechnung.kunde_zugferd_aktiv && !rechnung.ist_entwurf && (
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">E-Rechnung</span>
+              <span className="text-xs px-2 py-0.5 rounded border bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800">ZUGFeRD ✓</span>
+            </div>
+          )}
           {rechnung.storniert && rechnung.storno_grund && (
             <div className="flex justify-between gap-2">
               <span className="text-slate-500 dark:text-slate-400 shrink-0">Storno-Grund</span>
