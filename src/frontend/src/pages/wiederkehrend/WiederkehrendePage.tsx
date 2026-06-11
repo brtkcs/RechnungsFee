@@ -494,10 +494,24 @@ export function WiederkehrendePage() {
   const qc = useQueryClient()
   const [formModus, setFormModus] = useState<'neu' | number | null>(null)
   const [letzterEntwurf, setLetzterEntwurf] = useState<EntwurfErgebnis | null>(null)
+  const [suche, setSuche] = useState('')
+  const [intervallFilter, setIntervallFilter] = useState('')
+  const [aktivFilter, setAktivFilter] = useState('')
 
   const { data: vorlagen = [], isLoading } = useQuery({
     queryKey: ['wiederkehrend'],
     queryFn: getVorlagen,
+  })
+
+  const vorlagenGefiltert = vorlagen.filter(v => {
+    if (intervallFilter && v.intervall !== intervallFilter) return false
+    if (aktivFilter === 'aktiv' && !v.aktiv) return false
+    if (aktivFilter === 'inaktiv' && v.aktiv) return false
+    if (suche) {
+      const q = suche.toLowerCase()
+      return v.bezeichnung.toLowerCase().includes(q) || (v.kunde_name ?? '').toLowerCase().includes(q)
+    }
+    return true
   })
 
   const createMut = useMutation({
@@ -543,21 +557,48 @@ export function WiederkehrendePage() {
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Wiederkehrende Rechnungen</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Vorlagen werden automatisch als Entwurf angelegt wenn das Datum erreicht ist.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Wiederkehrende Rechnungen</h1>
         {formModus === null && (
           <button
             onClick={() => setFormModus('neu')}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0">
             + Neue Vorlage
           </button>
         )}
       </div>
+
+      {/* Filter */}
+      {formModus === null && (
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="search"
+            placeholder="Bezeichnung oder Kunde suchen…"
+            value={suche}
+            onChange={e => setSuche(e.target.value)}
+            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 flex-1 min-w-[180px]"
+          />
+          <select
+            value={intervallFilter}
+            onChange={e => setIntervallFilter(e.target.value)}
+            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700"
+          >
+            <option value="">Alle Intervalle</option>
+            <option value="monatlich">Monatlich</option>
+            <option value="quartalsweise">Quartalsweise</option>
+            <option value="jaehrlich">Jährlich</option>
+          </select>
+          <select
+            value={aktivFilter}
+            onChange={e => setAktivFilter(e.target.value)}
+            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700"
+          >
+            <option value="">Aktiv &amp; Inaktiv</option>
+            <option value="aktiv">Nur aktive</option>
+            <option value="inaktiv">Nur inaktive</option>
+          </select>
+        </div>
+      )}
 
       {/* Letzter Entwurf – Ergebnis-Banner */}
       {letzterEntwurf && (
@@ -616,9 +657,11 @@ export function WiederkehrendePage() {
           <p className="text-sm">Noch keine Vorlagen angelegt.</p>
           <p className="text-xs">Erstelle eine Vorlage für regelmäßige Leistungen wie Hosting, Wartung oder Miete.</p>
         </div>
+      ) : vorlagenGefiltert.length === 0 && formModus === null ? (
+        <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">Keine Vorlagen entsprechen dem Filter.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {vorlagen.map(v => (
+          {vorlagenGefiltert.map(v => (
             <VorlageKarte
               key={v.id}
               vorlage={v}
