@@ -1615,6 +1615,7 @@ export type Rechnungsvorlage = {
   intervall: 'monatlich' | 'quartalsweise' | 'jaehrlich'
   naechstes_datum: string
   aktiv: boolean
+  beendet: boolean
   kunde_id: number | null
   kunde_name: string | null
   zahlungsziel_tage: number | null
@@ -1629,7 +1630,7 @@ export type Rechnungsvorlage = {
   beleg_name: string | null
 }
 
-export type VorlageCreate = Omit<Rechnungsvorlage, 'id' | 'kunde_name' | 'auftrag_nr' | 'beleg_id' | 'beleg_name' | 'letzte_erstellung' | 'erstellte_rechnungen' | 'erstellt_am'>
+export type VorlageCreate = Omit<Rechnungsvorlage, 'id' | 'kunde_name' | 'auftrag_nr' | 'beleg_id' | 'beleg_name' | 'letzte_erstellung' | 'erstellte_rechnungen' | 'erstellt_am' | 'beendet'>
 export type VorlageUpdate = Partial<VorlageCreate>
 
 export const getVorlagen = () => request<Rechnungsvorlage[]>('/wiederkehrend')
@@ -1665,4 +1666,6 @@ export const uploadVertragVorlage = (id: number, datei: File) => {
 }
 export const deleteVertragVorlage = (id: number) =>
   request<Rechnungsvorlage>(`/wiederkehrend/${id}/vertrag`, { method: 'DELETE' })
+export const beendenVorlage = (id: number) =>
+  request<Rechnungsvorlage>(`/wiederkehrend/${id}/beenden`, { method: 'POST' })
 

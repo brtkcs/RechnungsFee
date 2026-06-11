@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import {
-  getVorlagen, createVorlage, updateVorlage, deleteVorlage,
+  getVorlagen, createVorlage, updateVorlage, deleteVorlage, beendenVorlage,
   entwurfJetzt, preiseSynchronisieren, getKunden, getUstSaetze,
   getAuftraege, getUnternehmen, uploadVertragVorlage, deleteVertragVorlage,
   getVorlageRechnungen, pruefenWiederkehrend,
@@ -521,8 +521,11 @@ function VorlageKarte({
             </p>
           </div>
         </div>
-        {!vorlage.aktiv && (
-          <span className="shrink-0 text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Inaktiv</span>
+        {vorlage.beendet && (
+          <span className="shrink-0 text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">Beendet</span>
+        )}
+        {!vorlage.aktiv && !vorlage.beendet && (
+          <span className="shrink-0 text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Pausiert</span>
         )}
       </div>
 
@@ -578,16 +581,13 @@ function VorlageKarte({
 
       <div className="flex gap-2 pt-1">
         <button onClick={e => { e.stopPropagation(); onEntwurfJetzt() }}
-          className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
+          disabled={vorlage.beendet}
+          className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           RE-Entwurf jetzt erstellen
         </button>
         <button onClick={e => { e.stopPropagation(); onPreisSync() }} title="Artikel-Preise auf aktuellen Stand bringen"
           className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
           Preise sync
-        </button>
-        <button onClick={e => { e.stopPropagation(); onLoeschen() }}
-          className="px-3 py-1.5 text-xs text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-          Löschen
         </button>
       </div>
     </div>
@@ -609,10 +609,14 @@ function VorlageDetail({
   vorlage,
   onClose,
   onBearbeiten,
+  onBeenden,
+  onLoeschen,
 }: {
   vorlage: Rechnungsvorlage
   onClose: () => void
   onBearbeiten: () => void
+  onBeenden: () => void
+  onLoeschen: () => void
 }) {
   const navigate = useNavigate()
   const { data: rechnungen = [], isLoading } = useQuery({
@@ -621,6 +625,7 @@ function VorlageDetail({
   })
 
   const gesamt = rechnungen.reduce((s, r) => s + parseFloat(r.brutto_gesamt || '0'), 0)
+  const kannLoeschen = (vorlage.erstellte_rechnungen === 0) && !vorlage.auftrag_id && !vorlage.beleg_id
 
   return (
     <div className="flex flex-col h-full">
@@ -635,10 +640,24 @@ function VorlageDetail({
       <div className="p-5 space-y-4 flex-1 overflow-y-auto">
         {/* Schnellaktionen */}
         <div className="flex gap-2 flex-wrap">
-          <button onClick={onBearbeiten}
-            className="px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
-            ✏️ Bearbeiten
-          </button>
+          {!vorlage.beendet && (
+            <button onClick={onBearbeiten}
+              className="px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+              ✏️ Bearbeiten
+            </button>
+          )}
+          {!vorlage.beendet && (
+            <button onClick={onBeenden}
+              className="px-3 py-1.5 text-xs border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-700 dark:text-amber-400 transition-colors">
+              ⏹ Beenden
+            </button>
+          )}
+          {kannLoeschen && (
+            <button onClick={onLoeschen}
+              className="px-3 py-1.5 text-xs border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-colors">
+              Löschen
+            </button>
+          )}
         </div>
 
         {/* Statistik */}
@@ -758,8 +777,10 @@ export function WiederkehrendePage() {
 
   const vorlagenGefiltert = vorlagen.filter(v => {
     if (intervallFilter && v.intervall !== intervallFilter) return false
-    if (aktivFilter === 'aktiv' && !v.aktiv) return false
-    if (aktivFilter === 'inaktiv' && v.aktiv) return false
+    if (aktivFilter === 'aktiv' && (!v.aktiv || v.beendet)) return false
+    if (aktivFilter === 'pausiert' && (v.aktiv || v.beendet)) return false
+    if (aktivFilter === 'beendet' && !v.beendet) return false
+    if (aktivFilter === '' && v.beendet) return false  // beendet standardmäßig ausblenden
     if (suche) {
       const q = suche.toLowerCase()
       return v.bezeichnung.toLowerCase().includes(q) || (v.kunde_name ?? '').toLowerCase().includes(q)
@@ -804,7 +825,16 @@ export function WiederkehrendePage() {
 
   const deleteMut = useMutation({
     mutationFn: deleteVorlage,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wiederkehrend'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['wiederkehrend'] }); setSelId(null) },
+  })
+
+  const beendenMut = useMutation({
+    mutationFn: beendenVorlage,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wiederkehrend'] })
+      qc.invalidateQueries({ queryKey: ['auftraege'] })
+      setSelId(null)
+    },
   })
 
   const entwurfMut = useMutation({
@@ -840,7 +870,13 @@ export function WiederkehrendePage() {
   }
 
   function handleLoeschen(id: number, bezeichnung: string) {
-    if (confirm(`Vorlage „${bezeichnung}" wirklich löschen?`)) deleteMut.mutate(id)
+    if (confirm(`Vorlage „${bezeichnung}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`))
+      deleteMut.mutate(id)
+  }
+
+  function handleBeenden(id: number, bezeichnung: string) {
+    if (confirm(`Vorlage „${bezeichnung}" dauerhaft beenden? Sie wird nicht mehr automatisch ausgeführt. Alle bisherigen Rechnungen bleiben erhalten.`))
+      beendenMut.mutate(id)
   }
 
   const editVorlage = typeof formModus === 'number' ? vorlagen.find(v => v.id === formModus) : undefined
@@ -876,9 +912,10 @@ export function WiederkehrendePage() {
             </select>
             <select value={aktivFilter} onChange={e => setAktivFilter(e.target.value)}
               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700">
-              <option value="">Aktiv &amp; Inaktiv</option>
+              <option value="">Aktiv &amp; Pausiert</option>
               <option value="aktiv">Nur aktive</option>
-              <option value="inaktiv">Nur inaktive</option>
+              <option value="pausiert">Nur pausierte</option>
+              <option value="beendet">Beendete</option>
             </select>
           </div>
         </div>
@@ -975,6 +1012,8 @@ export function WiederkehrendePage() {
             vorlage={selVorlage}
             onClose={() => setSelId(null)}
             onBearbeiten={() => { setFormModus(selVorlage.id); setSelId(null) }}
+            onBeenden={() => handleBeenden(selVorlage.id, selVorlage.bezeichnung)}
+            onLoeschen={() => handleLoeschen(selVorlage.id, selVorlage.bezeichnung)}
           />
         </div>
       )}

@@ -599,6 +599,7 @@ class Rechnungsvorlage(Base):
     intervall: Mapped[str] = mapped_column(String(20), nullable=False)  # monatlich|quartalsweise|jaehrlich
     naechstes_datum: Mapped[date] = mapped_column(Date, nullable=False)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    beendet: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     kunde_id: Mapped[int | None] = mapped_column(ForeignKey("kunden.id", ondelete="SET NULL"))
     zahlungsziel_tage: Mapped[int | None] = mapped_column(Integer)  # NULL = Unternehmens-Standard
     notizen: Mapped[str | None] = mapped_column(Text)

@@ -70,6 +70,7 @@ class VorlageUpdate(BaseModel):
     intervall: Optional[str] = None
     naechstes_datum: Optional[date] = None
     aktiv: Optional[bool] = None
+    beendet: Optional[bool] = None
     kunde_id: Optional[int] = None
     zahlungsziel_tage: Optional[int] = None
     notizen: Optional[str] = None
@@ -110,6 +111,7 @@ class VorlageResponse(BaseModel):
     intervall: str
     naechstes_datum: date
     aktiv: bool
+    beendet: bool
     kunde_id: Optional[int]
     kunde_name: Optional[str]
     zahlungsziel_tage: Optional[int]
@@ -185,6 +187,7 @@ def _to_response(v: Rechnungsvorlage) -> VorlageResponse:
         intervall=v.intervall,
         naechstes_datum=v.naechstes_datum,
         aktiv=v.aktiv,
+        beendet=bool(v.beendet),
         kunde_id=v.kunde_id,
         kunde_name=_kunde_name(v),
         zahlungsziel_tage=v.zahlungsziel_tage,
@@ -315,7 +318,11 @@ def pruefen_intern(db: Session) -> list[dict]:
     heute = date.today()
     vorlagen = (
         db.query(Rechnungsvorlage)
-        .filter(Rechnungsvorlage.aktiv == True, Rechnungsvorlage.naechstes_datum <= heute)  # noqa: E712
+        .filter(
+            Rechnungsvorlage.aktiv == True,  # noqa: E712
+            Rechnungsvorlage.beendet == False,  # noqa: E712
+            Rechnungsvorlage.naechstes_datum <= heute,
+        )
         .all()
     )
     ergebnisse = []
@@ -431,16 +438,34 @@ def aktualisiere_vorlage(vorlage_id: int, data: VorlageUpdate, db: Session = Dep
     return _to_response(v)
 
 
+@router.post("/{vorlage_id}/beenden", response_model=VorlageResponse)
+def beende_vorlage(vorlage_id: int, db: Session = Depends(get_db)):
+    """Vorlage dauerhaft beenden: aktiv=False, beendet=True. Auftrag → abgeschlossen."""
+    v = db.query(Rechnungsvorlage).filter(Rechnungsvorlage.id == vorlage_id).first()
+    if not v:
+        raise HTTPException(404, "Vorlage nicht gefunden.")
+    auftrag_id = v.auftrag_id
+    v.aktiv = False
+    v.beendet = True
+    if auftrag_id:
+        _revert_auftrag_status(auftrag_id, db, ziel_status="abgeschlossen")
+    db.commit()
+    db.refresh(v)
+    return _to_response(v)
+
+
 @router.delete("/{vorlage_id}", status_code=204)
 def loesche_vorlage(vorlage_id: int, db: Session = Depends(get_db)):
     v = db.query(Rechnungsvorlage).filter(Rechnungsvorlage.id == vorlage_id).first()
     if not v:
         raise HTTPException(404, "Vorlage nicht gefunden.")
-    auftrag_id = v.auftrag_id
+    if v.erstellte_rechnungen and v.erstellte_rechnungen > 0:
+        raise HTTPException(409, "Vorlage hat bereits Rechnungen – bitte 'Beenden' statt Löschen verwenden.")
+    if v.auftrag_id:
+        raise HTTPException(409, "Vorlage ist mit einem Auftrag verknüpft – bitte 'Beenden' statt Löschen verwenden.")
+    if v.beleg_id:
+        raise HTTPException(409, "Vorlage hat ein Vertragsdokument – bitte zuerst das Dokument entfernen.")
     db.delete(v)
-    db.flush()
-    if auftrag_id:
-        _revert_auftrag_status(auftrag_id, db, ziel_status="abgeschlossen")
     db.commit()
 
 

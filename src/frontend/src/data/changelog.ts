@@ -38,6 +38,9 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Wiederkehrende Rechnungen: Vorlage kann einem Auftrag verknüpft werden – der Auftrag wechselt automatisch auf Status „Laufend" solange die Vorlage aktiv ist, und zurück auf „In Bearbeitung" wenn sie deaktiviert wird' },
       { typ: 'neu', text: 'Wiederkehrende Rechnungen: Vertragsdokument (PDF/Bild) direkt an einer Vorlage hinterlegen – erscheint als Badge auf der Karte und kann jederzeit ersetzt oder entfernt werden' },
       { typ: 'neu', text: 'Aufträge: neuer Status „Laufend" (teal) für Aufträge mit aktiver wiederkehrender Vorlage – im Filter und Zähler-Kachel zusammen mit „In Bearbeitung" sichtbar' },
+      { typ: 'neu', text: 'Wiederkehrende Rechnungen: Vorlage kann dauerhaft beendet werden – Datensatz und alle bisherigen Rechnungen bleiben erhalten, Auftrag wechselt auf „Abgeschlossen"; Unterschied zu Pausieren: beendete Vorlagen werden standardmäßig im Filter ausgeblendet' },
+      { typ: 'verbesserung', text: 'Wiederkehrende Rechnungen – Statusfilter: Optionen „Nur aktive", „Nur pausierte" und „Beendete" – beendete Vorlagen sind standardmäßig ausgeblendet' },
+      { typ: 'verbesserung', text: 'Wiederkehrende Rechnungen – Löschen: nur noch möglich wenn keine Rechnungen erstellt wurden und keine Auftrag- oder Vertrag-Verknüpfung vorhanden; sonst muss „Beenden" verwendet werden' },
     ],
   },
   {
