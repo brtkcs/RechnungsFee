@@ -406,6 +406,7 @@ def aktualisiere_vorlage(vorlage_id: int, data: VorlageUpdate, db: Session = Dep
         war_aktiv = v.aktiv
         v.aktiv = data.aktiv
         if war_aktiv and not data.aktiv and v.auftrag_id:
+            db.flush()
             _revert_auftrag_status(v.auftrag_id, db)
         elif not war_aktiv and data.aktiv and v.auftrag_id:
             auftrag = db.query(Rechnung).filter(Rechnung.id == v.auftrag_id).first()
@@ -423,6 +424,7 @@ def aktualisiere_vorlage(vorlage_id: int, data: VorlageUpdate, db: Session = Dep
         if data.auftrag_id != v.auftrag_id:
             # Alten Auftrag-Status ggf. zurücksetzen
             if alter_auftrag_id:
+                db.flush()
                 _revert_auftrag_status(alter_auftrag_id, db)
             if data.auftrag_id > 0:
                 neuer_auftrag = db.query(Rechnung).filter(Rechnung.id == data.auftrag_id).first()
