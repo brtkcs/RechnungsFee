@@ -578,7 +578,7 @@ function VorlageKarte({
       <div className="flex gap-2 pt-1">
         <button onClick={onEntwurfJetzt}
           className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
-          Entwurf jetzt erstellen
+          RE-Entwurf jetzt erstellen
         </button>
         <button onClick={onPreisSync} title="Artikel-Preise auf aktuellen Stand bringen"
           className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
@@ -760,7 +760,7 @@ export function WiederkehrendePage() {
           <span className="text-green-600 dark:text-green-400 text-xl">✓</span>
           <div className="flex-1 space-y-1">
             <p className="text-sm font-medium text-green-800 dark:text-green-300">
-              Entwurf <span className="font-bold">{letzterEntwurf.rechnungsnummer}</span> erstellt aus „{letzterEntwurf.vorlage_bezeichnung}"
+              RE-Entwurf <span className="font-bold">{letzterEntwurf.rechnungsnummer}</span> erstellt aus „{letzterEntwurf.vorlage_bezeichnung}"
             </p>
             {letzterEntwurf.preisaenderungen.length > 0 && (
               <div>
