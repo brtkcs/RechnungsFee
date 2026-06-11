@@ -496,10 +496,9 @@ function VorlageFormular({
 // ---------------------------------------------------------------------------
 
 function VorlageKarte({
-  vorlage, onBearbeiten, onLoeschen, onEntwurfJetzt, onPreisSync,
+  vorlage, onLoeschen, onEntwurfJetzt, onPreisSync,
 }: {
   vorlage: Rechnungsvorlage
-  onBearbeiten: () => void
   onLoeschen: () => void
   onEntwurfJetzt: () => void
   onPreisSync: () => void
@@ -578,19 +577,15 @@ function VorlageKarte({
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onEntwurfJetzt}
+        <button onClick={e => { e.stopPropagation(); onEntwurfJetzt() }}
           className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
           RE-Entwurf jetzt erstellen
         </button>
-        <button onClick={onPreisSync} title="Artikel-Preise auf aktuellen Stand bringen"
+        <button onClick={e => { e.stopPropagation(); onPreisSync() }} title="Artikel-Preise auf aktuellen Stand bringen"
           className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
           Preise sync
         </button>
-        <button onClick={onBearbeiten}
-          className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
-          Bearbeiten
-        </button>
-        <button onClick={onLoeschen}
+        <button onClick={e => { e.stopPropagation(); onLoeschen() }}
           className="px-3 py-1.5 text-xs text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
           Löschen
         </button>
@@ -974,7 +969,6 @@ export function WiederkehrendePage() {
               className={`cursor-pointer rounded-xl transition-all ${selId === v.id ? 'ring-2 ring-blue-500' : ''}`}>
               <VorlageKarte
                 vorlage={v}
-                onBearbeiten={() => { setFormModus(v.id); setSelId(null) }}
                 onLoeschen={() => handleLoeschen(v.id, v.bezeichnung)}
                 onEntwurfJetzt={() => entwurfMut.mutate(v.id)}
                 onPreisSync={() => syncMut.mutate(v.id)}
