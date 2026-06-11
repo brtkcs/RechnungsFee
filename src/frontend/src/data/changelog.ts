@@ -34,6 +34,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Wiederkehrende Rechnungen – Übersicht: Suchfeld (Bezeichnung/Kunde), Intervall-Filter und Aktiv/Inaktiv-Filter' },
       { typ: 'verbesserung', text: 'GoBD-Export (Journal-CSV): neue Spalte „Vorsteuer-Betrag" zeigt den tatsächlich abziehbaren Vorsteueranteil; USt-Betrag bei normalen Ausgaben korrekt auf 0 gesetzt; Sonderfall (ig_erwerb/§13b) als eigene Spalte' },
       { typ: 'fix', text: 'KDE: Dateiauswahl-Dialog erschien im falschen Theme – install.sh setzt nun GTK_THEME automatisch aus den KDE-Einstellungen im Desktop-Starter (Issue #151)' },
+      { typ: 'fix', text: 'EÜR: Betriebseinnahmen aus Ausgangsrechnungen (19 % USt) fehlten in Zeile 12, wenn die Datenbank aus einer sehr alten Version stammte – Kategorie hieß damals „Betriebseinnahmen (19%)" und wurde nicht gefunden; bestehende kategorielose Buchungen werden beim App-Start automatisch repariert (Issue #132)' },
     ],
   },
   {

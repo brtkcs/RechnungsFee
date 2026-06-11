@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend
 
-SCHEMA_VERSION = 68
+SCHEMA_VERSION = 69
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1484,6 +1484,25 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 68 (wiederkehrende Rechnungen: wiederkehrend_aktiv + rechnungsvorlagen)")
 
+        if version < 69:
+            # Datenfix Issue #132: Kategorie "Betriebseinnahmen (19%)" → "Betriebseinnahmen"
+            # In älteren Installationen hieß die Kategorie noch mit (19%)-Suffix.
+            # _erloes_kategorie() suchte nach "Betriebseinnahmen" → fand nichts → kategorie_id=NULL
+            # → Einnahmen fehlten komplett in EÜR Zeile 12.
+            conn.execute(text(
+                "UPDATE kategorien SET name='Betriebseinnahmen', euer_zeile=12 "
+                "WHERE name='Betriebseinnahmen (19%)'"
+            ))
+            # Sicherheitsnetz: euer_zeile=12 für alle Betriebseinnahmen-Varianten erzwingen
+            conn.execute(text(
+                "UPDATE kategorien SET euer_zeile=12 "
+                "WHERE name IN ('Betriebseinnahmen', 'Betriebseinnahmen (0%)') "
+                "AND (euer_zeile IS NULL OR euer_zeile != 12)"
+            ))
+            conn.execute(text("PRAGMA user_version = 69"))
+            conn.commit()
+            print("[Migration] Schema auf Version 69 (Datenfix #132: 'Betriebseinnahmen (19%)' → 'Betriebseinnahmen', euer_zeile=12 gesichert)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -1543,9 +1562,12 @@ def _migrate_kategorien() -> None:
             if kat and kat.eks_kategorie != eks:
                 kat.eks_kategorie = eks
 
-        # EÜR-Zeilen-Korrekturen (Issue #106)
+        # EÜR-Zeilen-Korrekturen
         euer_korrekturen = [
-            ("Mitgliedsbeiträge", 60),  # war 46 (Beratungskosten)
+            ("Mitgliedsbeiträge", 60),         # war 46 (Beratungskosten) – Issue #106
+            ("Betriebseinnahmen", 12),          # Sicherheitsnetz: nie NULL lassen
+            ("Betriebseinnahmen (0%)", 12),     # dto.
+            ("Gewährte Skonti", 12),            # war 15 in der neue-Liste (Migration 58 korrigiert DB, aber nicht neue-Liste)
         ]
         for name, zeile in euer_korrekturen:
             kat = db.query(Kategorie).filter(Kategorie.name == name).first()
@@ -1557,6 +1579,8 @@ def _migrate_kategorien() -> None:
             ("Miete Büro", "Miete Büro (19%)"),
             ("Reisekosten", "Reisekosten – Übernachtung"),
             ("Fahrtkosten (km-Pauschale)", "Fahrtkosten Privat-PKW (0,10 €/km)"),
+            # Issue #132: ältere Installs hatten Kategorie noch mit (19%)-Suffix
+            ("Betriebseinnahmen (19%)", "Betriebseinnahmen"),
         ]
         for alt, neu in umbenennungen:
             kat = db.query(Kategorie).filter(Kategorie.name == alt).first()
@@ -1598,7 +1622,7 @@ def _migrate_kategorien() -> None:
             {"name": "Buchführungskosten",                   "kontenart": "Aufwand", "konto_skr03": "4955", "konto_skr04": "6830", "eks_kategorie": "B12",   "euer_zeile": 46,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "KFZ-Steuer",                           "kontenart": "Aufwand", "konto_skr03": "4510", "konto_skr04": "6500", "eks_kategorie": "B6_1",  "euer_zeile": 69,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "KFZ-Reparatur",                        "kontenart": "Aufwand", "konto_skr03": "4540", "konto_skr04": "6450", "eks_kategorie": "B6_4",  "euer_zeile": 70,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
-            {"name": "Reparatur Anlagevermögen",              "kontenart": "Aufwand", "konto_skr03": "4260", "konto_skr04": "6335", "eks_kategorie": "B14_1", "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Reparatur Anlagevermögen",              "kontenart": "Aufwand", "konto_skr03": "4260", "konto_skr04": "6335", "eks_kategorie": "B14_1", "euer_zeile": 60,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "Miete Einrichtung",                     "kontenart": "Aufwand", "konto_skr03": "4200", "konto_skr04": "6318", "eks_kategorie": "B14_2", "euer_zeile": 47,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "Betriebliche Abfallbeseitigung",        "kontenart": "Aufwand", "konto_skr03": "4969", "konto_skr04": "6859", "eks_kategorie": "B14_4", "euer_zeile": 52,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "Reisekosten – Nebenkosten",            "kontenart": "Aufwand", "konto_skr03": "4663", "konto_skr04": "6644", "eks_kategorie": "B7_2",  "euer_zeile": 44,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
@@ -1624,7 +1648,7 @@ def _migrate_kategorien() -> None:
             {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B14_5", "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "4730", "konto_skr04": "6580", "eks_kategorie": "B14_5", "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             # Skonti
-            {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": 15,   "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
+            {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": 12,   "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Bewirtungskosten nicht abzugsfähiger Anteil
             {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
@@ -1641,7 +1665,7 @@ def _migrate_kategorien() -> None:
             {"name": "EU-Dienstleistungen (§13b Abs. 1)",    "kontenart": "Aufwand", "konto_skr03": "3300", "konto_skr04": "5300", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # §13b Abs. 2 – Bauleistungen, Gebäudereinigung, Sicherheit, Metallieferungen aus Inland/EU
             # Reverse Charge: Empfänger schuldet USt (KZ 84/85); Vorsteuer KZ 67; Rechnungsbetrag = Netto
-            {"name": "Bauleistungen / §13b Abs. 2",          "kontenart": "Aufwand", "konto_skr03": "3610", "konto_skr04": "5600", "eks_kategorie": "B14_1", "euer_zeile": 48,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Bauleistungen / §13b Abs. 2",          "kontenart": "Aufwand", "konto_skr03": "3610", "konto_skr04": "5600", "eks_kategorie": "B14_1", "euer_zeile": 60,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # §25a Differenzbesteuerung – Ankauf von Privatpersonen oder anderen ohne USt-Ausweis
             # Keine Vorsteuer abziehbar; EK-Preis ist Basis für Margenberechnung (VK − EK)
             {"name": "Wareneinkauf §25a (privat)",            "kontenart": "Aufwand", "konto_skr03": "3000", "konto_skr04": "5000", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
@@ -1690,6 +1714,36 @@ def _migrate_signaturen() -> None:
     # Signaturen via ORM prüfen und bei Abweichung aktualisieren
     db = SessionLocal()
     try:
+        # Issue #132: kategorielose Einnahme-Buchungen aus Ausgangsrechnungen reparieren.
+        # Ursache: _erloes_kategorie() fand "Betriebseinnahmen" nicht (Kategorie hieß früher
+        # "Betriebseinnahmen (19%)") → kategorie_id=NULL → EÜR Zeile 12 fehlte.
+        # Kategorien sind jetzt durch Migration 69 / _migrate_kategorien() korrekt benannt.
+        from database.models import Kategorie as _Kat
+        _kat19 = db.query(_Kat).filter(_Kat.name == "Betriebseinnahmen").first()
+        _kat7  = db.query(_Kat).filter(_Kat.name == "Betriebseinnahmen (7%)").first()
+        _kat0  = db.query(_Kat).filter(_Kat.name == "Betriebseinnahmen (0%)").first()
+        if _kat19:
+            _ohne_kat = (
+                db.query(Journaleintrag)
+                .filter(
+                    Journaleintrag.immutable == True,
+                    Journaleintrag.art == "Einnahme",
+                    Journaleintrag.rechnung_id.isnot(None),
+                    Journaleintrag.kategorie_id.is_(None),
+                )
+                .all()
+            )
+            for _e in _ohne_kat:
+                _satz = int(_e.ust_satz)
+                if _satz == 19 and _kat19:
+                    _e.kategorie_id = _kat19.id
+                elif _satz == 7 and _kat7:
+                    _e.kategorie_id = _kat7.id
+                elif _kat0:
+                    _e.kategorie_id = _kat0.id
+            if _ohne_kat:
+                print(f"[Signaturen] {len(_ohne_kat)} kategorielose Einnahme-Buchung(en) repariert (Issue #132)")
+
         eintraege = (
             db.query(Journaleintrag)
             .filter(Journaleintrag.immutable == True)
