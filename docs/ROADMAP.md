@@ -82,6 +82,7 @@
 - PDF-Vorlagen (Briefbogen, Schriftart, Fußzeile)
 - Setup-Wizard (4 Schritte inkl. Kassenbestand)
 - Transferleistungen: Abrechnungszeitraum-Beginn (Monat aus Leistungsbescheid)
+- SMTP-Mailversand: PDF + Dokumentenpakete direkt aus der App senden; je Dokumenttyp eigene Betreff-/Text-Vorlage; Markdown-Signatur (HTML-Mail mit plain-text-Fallback)
 
 **Dashboard**
 - Zufluss-Monitor (§11b SGB II): Stufenfreibetrag, anrechenbar; Toggle Monat / Leistungszeitraum (6 Monate rollierend)

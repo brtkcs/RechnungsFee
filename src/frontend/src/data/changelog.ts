@@ -23,6 +23,17 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.10',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'SMTP-Mailversand: Rechnungen, Angebote, Proforma-Rechnungen und Auftragsbestätigungen direkt aus RechnungsFee versenden – PDF und Dokumentenpakete werden automatisch angehängt (Einstellungen → Unternehmen → E-Mail → SMTP)' },
+      { typ: 'neu', text: 'Mail-Vorlagen je Dokumenttyp: eigene Betreff- und Text-Vorlage für Rechnung, Angebot, Proforma und Auftrag – mit Platzhaltern wie {rechnungsnummer}, {betrag}, {faellig_am}' },
+      { typ: 'neu', text: 'Markdown-Signatur: die Mail-Signatur wird als HTML gerendert (Fett, Links, Zeilenumbrüche) mit plain-text-Fallback für ältere Mailprogramme' },
+      { typ: 'verbesserung', text: 'Beim Fallback auf den OS-Mailclient erscheint ein Hinweis-Toast mit Link zur SMTP-Einrichtung – Dokumentenpakete können per mailto nicht als Anhang mitgesendet werden' },
+      { typ: 'fix', text: 'Dokumentenpaket-Anhang: Dateiname wurde fälschlicherweise auf dem Paket-Eintrag gesucht statt auf dem verknüpften Beleg – Anhänge haben jetzt den korrekten Originalnamen' },
+    ],
+  },
+  {
     version: 'v0.3.9',
     datum: 'Juni 2026',
     eintraege: [
