@@ -654,6 +654,17 @@ function AuftragDetail({
             )
           )}
 
+          {/* → Wiederkehrende Vorlage */}
+          {unternehmen?.wiederkehrend_aktiv && auftrag.auftrag_status !== 'storniert' && auftrag.auftrag_status !== 'abgeschlossen' && (
+            <button
+              onClick={() => navigate(`/wiederkehrend?auftrag_id=${auftrag.id}`)}
+              className={btnNeutral}
+              title="Wiederkehrende Vorlage für diesen Auftrag erstellen"
+            >
+              🔁 Wiederkehrend
+            </button>
+          )}
+
           <button onClick={onDelete} disabled={hatBezug}
             title={hatBezug ? 'Kann nicht gelöscht werden – es wurden bereits Dokumente erstellt' : undefined}
             className={btnRed}>🗑️ Löschen</button>

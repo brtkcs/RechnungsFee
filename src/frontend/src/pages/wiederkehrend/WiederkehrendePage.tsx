@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import {
   getVorlagen, createVorlage, updateVorlage, deleteVorlage,
   entwurfJetzt, preiseSynchronisieren, getKunden, getUstSaetze,
@@ -185,6 +186,7 @@ function VorlageFormular({
   onAbbrechen,
   auftraegeAktiv = false,
   auftraege = [],
+  defaultAuftragId,
   onVertragUpload,
   onVertragDelete,
   isVertragUploading = false,
@@ -195,6 +197,7 @@ function VorlageFormular({
   onAbbrechen: () => void
   auftraegeAktiv?: boolean
   auftraege?: Rechnung[]
+  defaultAuftragId?: number
   onVertragUpload?: (file: File) => void
   onVertragDelete?: () => void
   isVertragUploading?: boolean
@@ -214,7 +217,9 @@ function VorlageFormular({
   const [kundeId, setKundeId] = useState(initial?.kunde_id ? String(initial.kunde_id) : '')
   const [zahlungsziel, setZahlungsziel] = useState(initial?.zahlungsziel_tage ? String(initial.zahlungsziel_tage) : '')
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
-  const [auftragId, setAuftragId] = useState(initial?.auftrag_id ? String(initial.auftrag_id) : '')
+  const [auftragId, setAuftragId] = useState(
+    initial?.auftrag_id ? String(initial.auftrag_id) : defaultAuftragId ? String(defaultAuftragId) : ''
+  )
   const [eingabeModus, setEingabeModus] = useState<EingabeModus>('netto')
   const [fehler, setFehler] = useState<string | null>(null)
 
@@ -574,11 +579,27 @@ function VorlageKarte({
 
 export function WiederkehrendePage() {
   const qc = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [formModus, setFormModus] = useState<'neu' | number | null>(null)
+  const [defaultAuftragId, setDefaultAuftragId] = useState<number | undefined>()
   const [letzterEntwurf, setLetzterEntwurf] = useState<EntwurfErgebnis | null>(null)
   const [suche, setSuche] = useState('')
   const [intervallFilter, setIntervallFilter] = useState('')
   const [aktivFilter, setAktivFilter] = useState('')
+
+  // ?auftrag_id=X von AuftraegePage: Formular direkt öffnen
+  useEffect(() => {
+    const aid = searchParams.get('auftrag_id')
+    if (aid) {
+      const id = parseInt(aid, 10)
+      if (!isNaN(id)) {
+        setDefaultAuftragId(id)
+        setFormModus('neu')
+      }
+      setSearchParams({}, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { data: vorlagen = [], isLoading } = useQuery({
     queryKey: ['wiederkehrend'],
@@ -748,6 +769,7 @@ export function WiederkehrendePage() {
             onAbbrechen={() => setFormModus(null)}
             auftraegeAktiv={!!unternehmen?.auftraege_aktiv}
             auftraege={auftraege}
+            defaultAuftragId={formModus === 'neu' ? defaultAuftragId : undefined}
             onVertragUpload={typeof formModus === 'number' ? (datei) => vertragUploadMut.mutate({ id: formModus, datei }) : undefined}
             onVertragDelete={typeof formModus === 'number' ? () => vertragDeleteMut.mutate(formModus) : undefined}
             isVertragUploading={vertragUploadMut.isPending || vertragDeleteMut.isPending}
