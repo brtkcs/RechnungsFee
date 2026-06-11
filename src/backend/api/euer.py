@@ -4,9 +4,11 @@ EÜR – Einnahmen-Überschuss-Rechnung (Anlage EÜR 2025)
 Berechnet EÜR-Zeilen aus Journalbuchungen nach Ist-Versteuerung (Zuflussprinzip).
 
 Besonderheiten:
-  - Zeile 17: vereinnahmte USt = Summe ust_betrag aller Einnahmen
-  - Zeile 57: abziehbare Vorsteuer = Summe vorsteuer_betrag aller Ausgaben
-  - Alle anderen Zeilen: netto_betrag aus kategorie.euer_zeile
+  - Zeile 17: vereinnahmte USt = Summe ust_betrag aller Einnahmen (inkl. Storno-Abzug)
+  - Zeile 57: abziehbare Vorsteuer = Summe vorsteuer_betrag (positiv Ausgaben, negativ Storni)
+  - Alle anderen Zeilen: netto_betrag aus kategorie.euer_zeile, vorzeichenkorrigiert nach art
+  - Storno-Gegenbuchungen: art wird gespiegelt, netto bleibt positiv →
+    Einnahmen-Zeile + art=Ausgabe = subtrahieren; Ausgaben-Zeile + art=Einnahme = subtrahieren
   - Anlage-Buchungen (kontenart=Anlage, euer_zeile=None) → AVEUR-Hinweis
   - km-Pauschale: brutto_betrag enthält bereits km×0,30 €
 """
@@ -77,6 +79,9 @@ ABSCHNITT_LABEL = {
 EINNAHMEN_ZEILEN = {z for z, (_, ab) in EUR_ZEILEN_META.items() if ab == "A" and z not in (106, 107)}
 AUSGABEN_ZEILEN  = {z for z, (_, ab) in EUR_ZEILEN_META.items() if ab == "B" and z not in (106, 107)}
 
+# USt-Konten die Ausgangs-USt tragen (kein Vorsteuer-Konto) – für Zeile 17 Storno-Erkennung
+_EINNAHME_UST_KONTEN = {"1776", "3806", "1771", "3801", "1780", "1781", "1787", "1789"}
+
 
 # ---------------------------------------------------------------------------
 # Berechnung
@@ -98,6 +103,7 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
     for e in eintraege:
         kat: Optional[Kategorie] = e.kategorie
         euer_zeile = kat.euer_zeile if kat else None
+        ust_konto = e.konto_ust_skr03 or e.konto_ust_skr04 or ""
 
         # Anlage-Buchungen (KFZ-Kauf, EDV etc.) → AVEUR-Hinweis
         if kat and kat.kontenart == "Anlage":
@@ -105,14 +111,28 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
             continue
 
         if euer_zeile is not None:
-            zeilen[euer_zeile] = zeilen.get(euer_zeile, ZERO) + (e.netto_betrag or ZERO)
+            ab = EUR_ZEILEN_META.get(euer_zeile, ("", ""))[1]
+            if ab == "A":
+                # Einnahmen-Zeile: Einnahme = addieren, Storno (art=Ausgabe) = subtrahieren
+                vz = Decimal("1") if e.art == "Einnahme" else Decimal("-1")
+            elif ab == "B":
+                # Ausgaben-Zeile: Ausgabe = addieren, Storno (art=Einnahme) = subtrahieren
+                vz = Decimal("1") if e.art == "Ausgabe" else Decimal("-1")
+            else:
+                vz = Decimal("1")
+            zeilen[euer_zeile] = zeilen.get(euer_zeile, ZERO) + vz * (e.netto_betrag or ZERO)
 
-        # Zeile 17: vereinnahmte USt aus Einnahmen (Anlage EÜR 2025)
-        if e.art == "Einnahme" and e.ust_betrag and e.ust_betrag > 0:
-            zeilen[17] = zeilen.get(17, ZERO) + e.ust_betrag
+        # Zeile 17: vereinnahmte USt – reguläre Einnahmen addieren, Storno subtrahieren.
+        # Storno einer Einnahme hat art=Ausgabe + Einnahme-USt-Konto (1776/1771/…).
+        if e.ust_betrag and e.ust_betrag != 0:
+            if e.art == "Einnahme" and e.ust_betrag > 0:
+                zeilen[17] = zeilen.get(17, ZERO) + e.ust_betrag
+            elif e.art == "Ausgabe" and e.ust_betrag > 0 and ust_konto in _EINNAHME_UST_KONTEN:
+                zeilen[17] = zeilen.get(17, ZERO) - e.ust_betrag
 
-        # Zeile 57: abziehbare Vorsteuer aus Ausgaben (Anlage EÜR 2025)
-        if e.art == "Ausgabe" and e.vorsteuer_betrag and e.vorsteuer_betrag > 0:
+        # Zeile 57: abziehbare Vorsteuer – Summe aller vorsteuer_betrag-Werte (ohne art-Filter).
+        # Storno einer Ausgabe hat art=Einnahme mit negativem vorsteuer_betrag → subtrahiert korrekt.
+        if e.vorsteuer_betrag and e.vorsteuer_betrag != 0:
             zeilen[57] = zeilen.get(57, ZERO) + e.vorsteuer_betrag
 
     # Runden
