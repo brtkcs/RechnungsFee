@@ -8,7 +8,7 @@ import {
   getAuftraege, getUnternehmen, uploadVertragVorlage, deleteVertragVorlage,
   getVorlageRechnungen, pruefenWiederkehrend,
   type Rechnungsvorlage, type VorlageCreate, type EntwurfErgebnis,
-  type ArtikelSuche, type Rechnung, type VorlageRechnungKompakt,
+  type ArtikelSuche, type Rechnung,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 
@@ -331,7 +331,7 @@ function VorlageFormular({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Intervall *</label>
-          <select value={intervall} onChange={e => setIntervall(e.target.value)} className={selectCls}>
+          <select value={intervall} onChange={e => setIntervall(e.target.value as 'monatlich' | 'quartalsweise' | 'jaehrlich')} className={selectCls}>
             <option value="monatlich">Monatlich</option>
             <option value="quartalsweise">Quartalsweise</option>
             <option value="jaehrlich">Jährlich</option>
@@ -496,10 +496,9 @@ function VorlageFormular({
 // ---------------------------------------------------------------------------
 
 function VorlageKarte({
-  vorlage, onLoeschen, onEntwurfJetzt, onPreisSync,
+  vorlage, onEntwurfJetzt, onPreisSync,
 }: {
   vorlage: Rechnungsvorlage
-  onLoeschen: () => void
   onEntwurfJetzt: () => void
   onPreisSync: () => void
 }) {
@@ -965,7 +964,6 @@ export function WiederkehrendePage() {
                   className={`cursor-pointer rounded-xl transition-all ${selId === v.id ? 'ring-2 ring-blue-500' : ''}`}>
                   <VorlageKarte
                     vorlage={v}
-                    onLoeschen={() => handleLoeschen(v.id, v.bezeichnung)}
                     onEntwurfJetzt={() => entwurfMut.mutate(v.id)}
                     onPreisSync={() => syncMut.mutate(v.id)}
                   />
