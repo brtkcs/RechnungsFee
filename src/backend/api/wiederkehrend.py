@@ -194,7 +194,7 @@ def _set_auftrag_laufend(auftrag: Rechnung) -> None:
         auftrag.auftrag_status = "laufend"
 
 
-def _revert_auftrag_status(auftrag_id: int, db: Session) -> None:
+def _revert_auftrag_status(auftrag_id: int, db: Session, ziel_status: str = "in_bearbeitung") -> None:
     """Setzt Auftrag-Status zurück wenn keine aktiven Vorlagen mehr existieren."""
     hat_aktive = db.query(Rechnungsvorlage).filter(
         Rechnungsvorlage.auftrag_id == auftrag_id,
@@ -204,7 +204,7 @@ def _revert_auftrag_status(auftrag_id: int, db: Session) -> None:
         return
     auftrag = db.query(Rechnung).filter(Rechnung.id == auftrag_id).first()
     if auftrag and auftrag.auftrag_status == "laufend":
-        auftrag.auftrag_status = "in_bearbeitung"
+        auftrag.auftrag_status = ziel_status
 
 
 def _erstelle_entwurf(vorlage: Rechnungsvorlage, db: Session) -> tuple[int, str, list[dict]]:
@@ -427,7 +427,7 @@ def loesche_vorlage(vorlage_id: int, db: Session = Depends(get_db)):
     db.delete(v)
     db.flush()
     if auftrag_id:
-        _revert_auftrag_status(auftrag_id, db)
+        _revert_auftrag_status(auftrag_id, db, ziel_status="abgeschlossen")
     db.commit()
 
 
