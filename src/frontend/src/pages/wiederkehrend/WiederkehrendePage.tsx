@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getVorlagen, createVorlage, updateVorlage, deleteVorlage,
-  entwurfJetzt, preiseSynchronisieren, getKunden, sucheArtikel,
-  type Rechnungsvorlage, type VorlageCreate, type VorlagePosition,
-  type EntwurfErgebnis, type ArtikelSuche, type Kunde,
+  entwurfJetzt, preiseSynchronisieren, getKunden, getUstSaetze,
+  type Rechnungsvorlage, type VorlageCreate, type EntwurfErgebnis,
+  type ArtikelSuche,
 } from '../../api/client'
+import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 
 // ---------------------------------------------------------------------------
-// Typen & Konstanten
+// Konstanten & Hilfsfunktionen
 // ---------------------------------------------------------------------------
 
 const INTERVALL_LABEL: Record<string, string> = {
@@ -23,335 +24,374 @@ const INTERVALL_ICON: Record<string, string> = {
   jaehrlich: '🗓️',
 }
 
-type PositionEntwurf = Omit<VorlagePosition, 'netto'> & { netto: string; _suche?: string; _treffer?: ArtikelSuche[] }
+const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
+const selectCls = `${inputCls} bg-white dark:bg-slate-700`
 
-const leerPosition = (): PositionEntwurf => ({
-  beschreibung: '', menge: '1.000', einheit: 'Stück', netto: '', ust_satz: '0.00',
-  artikel_id: null, kategorie_id: null, _suche: '', _treffer: [],
-})
+type EingabeModus = 'netto' | 'brutto'
 
 function fmt(iso: string) {
   const [y, m, d] = iso.split('-')
   return `${d}.${m}.${y}`
 }
 
-function fmtBetrag(s: string) {
-  return parseFloat(s || '0').toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function heuteIso() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 // ---------------------------------------------------------------------------
-// Unterkomponente: Positions-Zeile
+// Positions-Typen & Berechnungen
 // ---------------------------------------------------------------------------
 
-function PositionZeile({
-  pos, index, onChange, onRemove,
+interface PositionEntwurf {
+  beschreibung: string
+  menge: string
+  einheit: string
+  einzelpreis: string
+  ust_satz: string
+  artikel_id: number | null
+}
+
+function leerPosition(defaultSatz = '19'): PositionEntwurf {
+  return { beschreibung: '', menge: '1', einheit: 'Stk.', einzelpreis: '', ust_satz: defaultSatz, artikel_id: null }
+}
+
+function nettoProStueck(pos: PositionEntwurf, modus: EingabeModus): number {
+  const ep = parseFloat(pos.einzelpreis.replace(',', '.')) || 0
+  const ust = parseFloat(pos.ust_satz) || 0
+  return modus === 'brutto' ? ep / (1 + ust / 100) : ep
+}
+
+function berechneGesamt(positionen: PositionEntwurf[], modus: EingabeModus) {
+  return positionen.reduce((acc, p) => {
+    const menge = parseFloat(p.menge) || 0
+    const netto = nettoProStueck(p, modus) * menge
+    const ust = (netto * (parseFloat(p.ust_satz) || 0)) / 100
+    return { netto: acc.netto + netto, ust: acc.ust + ust, brutto: acc.brutto + netto + ust }
+  }, { netto: 0, ust: 0, brutto: 0 })
+}
+
+// ---------------------------------------------------------------------------
+// Positionen-Tabelle
+// ---------------------------------------------------------------------------
+
+function PositionenTabelle({
+  positionen, onChange, ustSaetze, onArtikelWahl, eingabeModus,
 }: {
-  pos: PositionEntwurf
-  index: number
-  onChange: (i: number, p: PositionEntwurf) => void
-  onRemove: (i: number) => void
+  positionen: PositionEntwurf[]
+  onChange: (p: PositionEntwurf[]) => void
+  ustSaetze: { satz: string }[]
+  onArtikelWahl: (i: number, a: ArtikelSuche) => void
+  eingabeModus: EingabeModus
 }) {
-  const [sucheOffen, setSucheOffen] = useState(false)
-
-  async function handleSuche(q: string) {
-    onChange(index, { ...pos, _suche: q })
-    if (q.length < 2) { setSucheOffen(false); return }
-    const treffer = await sucheArtikel(q)
-    onChange(index, { ...pos, _suche: q, _treffer: treffer })
-    setSucheOffen(treffer.length > 0)
+  function update(i: number, field: keyof PositionEntwurf, val: string | number | null) {
+    onChange(positionen.map((p, idx) => idx === i ? { ...p, [field]: val } : p))
   }
 
-  function waehleArtikel(a: ArtikelSuche) {
-    onChange(index, {
-      ...pos,
-      beschreibung: a.bezeichnung,
-      einheit: a.einheit,
-      netto: a.vk_netto,
-      ust_satz: a.steuersatz,
-      artikel_id: a.id,
-      _suche: a.bezeichnung,
-      _treffer: [],
-    })
-    setSucheOffen(false)
-  }
+  const gesamt = berechneGesamt(positionen, eingabeModus)
+  const cellInput = "w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs"
 
   return (
-    <div className="grid grid-cols-[2fr_80px_80px_90px_80px_32px] gap-2 items-start">
-      {/* Beschreibung + Artikel-Suche */}
-      <div className="relative">
-        <input
-          value={pos._suche ?? pos.beschreibung}
-          onChange={e => handleSuche(e.target.value)}
-          onBlur={() => {
-            if (!pos.artikel_id) onChange(index, { ...pos, beschreibung: pos._suche ?? pos.beschreibung })
-            setTimeout(() => setSucheOffen(false), 150)
-          }}
-          placeholder="Bezeichnung oder Artikel suchen…"
-          className="w-full px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-        />
-        {sucheOffen && pos._treffer && pos._treffer.length > 0 && (
-          <div className="absolute z-20 top-full left-0 right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded shadow-lg max-h-48 overflow-y-auto mt-0.5">
-            {pos._treffer.map(a => (
-              <button
-                key={a.id}
-                onMouseDown={() => waehleArtikel(a)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between gap-2"
-              >
-                <span className="text-slate-800 dark:text-slate-100">{a.bezeichnung}</span>
-                <span className="text-slate-400 dark:text-slate-500 text-xs shrink-0">{fmtBetrag(a.vk_netto)} €</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      <input
-        value={pos.menge}
-        onChange={e => onChange(index, { ...pos, menge: e.target.value })}
-        placeholder="Menge"
-        className="px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-right"
-      />
-      <input
-        value={pos.einheit}
-        onChange={e => onChange(index, { ...pos, einheit: e.target.value })}
-        placeholder="Einheit"
-        className="px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-      />
-      <input
-        value={pos.netto}
-        onChange={e => onChange(index, { ...pos, netto: e.target.value, artikel_id: null })}
-        placeholder="Netto €"
-        className="px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-right"
-      />
-      <input
-        value={pos.ust_satz}
-        onChange={e => onChange(index, { ...pos, ust_satz: e.target.value })}
-        placeholder="USt %"
-        className="px-2 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-right"
-      />
-      <button
-        onClick={() => onRemove(index)}
-        className="mt-1 text-slate-400 hover:text-red-500 transition-colors text-lg leading-none"
-        title="Position entfernen"
-      >
-        ×
-      </button>
+    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+      <table className="w-full text-xs">
+        <thead className="bg-slate-50 dark:bg-slate-900">
+          <tr>
+            <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Beschreibung</th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">Menge</th>
+            <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium w-20">Einheit</th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-24">
+              {eingabeModus === 'netto' ? 'Netto (€)' : 'Brutto (€)'}
+            </th>
+            <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium w-16">USt %</th>
+            <th className="px-3 py-2 w-8" />
+          </tr>
+        </thead>
+        <tbody>
+          {positionen.map((pos, i) => (
+            <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+              <td className="px-2 py-1.5">
+                <ArtikelAutocomplete
+                  value={pos.beschreibung}
+                  onChange={v => update(i, 'beschreibung', v)}
+                  onArtikelWahl={a => onArtikelWahl(i, a)}
+                  placeholder="Beschreibung oder Artikel suchen"
+                  inputClassName="w-full border-0 outline-none bg-transparent text-slate-700 dark:text-slate-200 text-xs placeholder-slate-400 dark:placeholder-slate-500"
+                />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.menge} onChange={e => update(i, 'menge', e.target.value)}
+                  type="text" className={`${cellInput} text-right`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.einheit} onChange={e => update(i, 'einheit', e.target.value)}
+                  placeholder="Stk." className={cellInput} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input value={pos.einzelpreis} onChange={e => { update(i, 'einzelpreis', e.target.value); update(i, 'artikel_id', null) }}
+                  type="text" placeholder="0,00" className={`${cellInput} text-right`} />
+              </td>
+              <td className="px-2 py-1.5">
+                <select value={pos.ust_satz} onChange={e => update(i, 'ust_satz', e.target.value)}
+                  className={`${cellInput} text-right`}>
+                  {ustSaetze.map(u => (
+                    <option key={u.satz} value={u.satz}>{u.satz} %</option>
+                  ))}
+                </select>
+              </td>
+              <td className="px-2 py-1.5 text-center">
+                {positionen.length > 1 && (
+                  <button type="button" onClick={() => onChange(positionen.filter((_, idx) => idx !== i))}
+                    className="text-slate-300 hover:text-red-500 text-base leading-none">×</button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+          <tr>
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400">
+              Netto{eingabeModus === 'brutto' && <span className="text-slate-400 dark:text-slate-500"> (berechnet)</span>}
+            </td>
+            <td colSpan={3} className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-200">
+              {gesamt.netto.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+          <tr className="border-t border-slate-100 dark:border-slate-700">
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">USt</td>
+            <td colSpan={3} className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">
+              {gesamt.ust.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+          <tr className="border-t border-slate-100 dark:border-slate-700">
+            <td colSpan={3} className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">Brutto</td>
+            <td colSpan={3} className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-100">
+              {gesamt.brutto.toFixed(2).replace('.', ',')} €
+            </td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Unterkomponente: Formular (Neu / Bearbeiten)
+// Formular
 // ---------------------------------------------------------------------------
 
 function VorlageFormular({
   initial,
-  kunden,
-  onSave,
-  onAbbrechen,
   isSaving,
+  onSpeichern,
+  onAbbrechen,
 }: {
   initial?: Rechnungsvorlage
-  kunden: Kunde[]
-  onSave: (data: VorlageCreate) => void
-  onAbbrechen: () => void
   isSaving: boolean
+  onSpeichern: (data: VorlageCreate) => void
+  onAbbrechen: () => void
 }) {
-  const heute = new Date().toISOString().slice(0, 10)
-  const [form, setForm] = useState<{
-    bezeichnung: string
-    intervall: string
-    naechstes_datum: string
-    aktiv: boolean
-    kunde_id: string
-    zahlungsziel_tage: string
-    notizen: string
-  }>({
-    bezeichnung: initial?.bezeichnung ?? '',
-    intervall: initial?.intervall ?? 'monatlich',
-    naechstes_datum: initial?.naechstes_datum ?? heute,
-    aktiv: initial?.aktiv ?? true,
-    kunde_id: initial?.kunde_id ? String(initial.kunde_id) : '',
-    zahlungsziel_tage: initial?.zahlungsziel_tage ? String(initial.zahlungsziel_tage) : '',
-    notizen: initial?.notizen ?? '',
-  })
+  const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
+  const { data: ustSaetze } = useQuery({ queryKey: ['ust-saetze'], queryFn: getUstSaetze })
 
-  const [positionen, setPositionen] = useState<PositionEntwurf[]>(
-    initial?.positionen.length
-      ? initial.positionen.map(p => ({ ...p, _suche: p.beschreibung, _treffer: [] }))
+  const ustSaetzeListe = ustSaetze?.filter(u => u.ist_aktiv) ?? []
+  const defaultSatz = ustSaetze?.find(u => u.ist_default)?.satz
+    ?? ustSaetze?.find(u => parseFloat(u.satz) === 19)?.satz
+    ?? '19'
+
+  const [bezeichnung, setBezeichnung] = useState(initial?.bezeichnung ?? '')
+  const [intervall, setIntervall] = useState(initial?.intervall ?? 'monatlich')
+  const [naechstesDatum, setNaechstesDatum] = useState(initial?.naechstes_datum ?? heuteIso())
+  const [aktiv, setAktiv] = useState(initial?.aktiv ?? true)
+  const [kundeId, setKundeId] = useState(initial?.kunde_id ? String(initial.kunde_id) : '')
+  const [zahlungsziel, setZahlungsziel] = useState(initial?.zahlungsziel_tage ? String(initial.zahlungsziel_tage) : '')
+  const [notizen, setNotizen] = useState(initial?.notizen ?? '')
+  const [eingabeModus, setEingabeModus] = useState<EingabeModus>('netto')
+  const [fehler, setFehler] = useState<string | null>(null)
+
+  const [positionen, setPositionen] = useState<PositionEntwurf[]>(() =>
+    initial?.positionen?.length
+      ? initial.positionen.map(p => ({
+          beschreibung: p.beschreibung,
+          menge: String(p.menge),
+          einheit: p.einheit,
+          einzelpreis: String(p.netto),
+          ust_satz: String(p.ust_satz),
+          artikel_id: p.artikel_id ?? null,
+        }))
       : [leerPosition()]
   )
 
-  const set = (k: string, v: string | boolean) => setForm(f => ({ ...f, [k]: v }))
+  // Default-USt setzen sobald Sätze geladen sind
+  useEffect(() => {
+    if (!ustSaetze?.length || initial) return
+    setPositionen(prev => prev.map(p =>
+      p.einzelpreis === '' ? { ...p, ust_satz: defaultSatz } : p
+    ))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ustSaetze])
 
-  function handlePositionChange(i: number, p: PositionEntwurf) {
-    setPositionen(prev => prev.map((x, j) => j === i ? p : x))
+  function fillPositionFromArtikel(i: number, a: ArtikelSuche) {
+    const ust_satz = ustSaetze?.find(u => parseFloat(u.satz) === parseFloat(a.steuersatz))?.satz ?? a.steuersatz
+    const preis = eingabeModus === 'netto'
+      ? parseFloat(a.vk_netto).toFixed(2)
+      : parseFloat(a.vk_brutto).toFixed(2)
+    setPositionen(prev => prev.map((p, idx) =>
+      idx !== i ? p : { ...p, beschreibung: a.bezeichnung, einheit: a.einheit, einzelpreis: preis, ust_satz, artikel_id: a.id }
+    ))
   }
 
-  function handlePositionRemove(i: number) {
-    setPositionen(prev => prev.filter((_, j) => j !== i))
-  }
+  function handleSpeichern() {
+    if (!bezeichnung.trim()) { setFehler('Bezeichnung ist erforderlich.'); return }
+    if (!naechstesDatum) { setFehler('Datum ist erforderlich.'); return }
+    setFehler(null)
 
-  function handleSave() {
-    const data: VorlageCreate = {
-      bezeichnung: form.bezeichnung.trim(),
-      intervall: form.intervall as VorlageCreate['intervall'],
-      naechstes_datum: form.naechstes_datum,
-      aktiv: form.aktiv,
-      kunde_id: form.kunde_id ? parseInt(form.kunde_id) : null,
-      zahlungsziel_tage: form.zahlungsziel_tage ? parseInt(form.zahlungsziel_tage) : null,
-      notizen: form.notizen.trim() || null,
+    onSpeichern({
+      bezeichnung: bezeichnung.trim(),
+      intervall: intervall as VorlageCreate['intervall'],
+      naechstes_datum: naechstesDatum,
+      aktiv,
+      kunde_id: kundeId ? parseInt(kundeId) : null,
+      zahlungsziel_tage: zahlungsziel ? parseInt(zahlungsziel) : null,
+      notizen: notizen.trim() || null,
       positionen: positionen
         .filter(p => p.beschreibung.trim())
         .map(p => ({
           beschreibung: p.beschreibung.trim(),
-          menge: p.menge || '1.000',
-          einheit: p.einheit || 'Stück',
-          netto: p.netto || '0.00',
-          ust_satz: p.ust_satz || '0.00',
+          menge: String(parseFloat(p.menge) || 1),
+          einheit: p.einheit || 'Stk.',
+          netto: String(nettoProStueck(p, eingabeModus)),
+          ust_satz: String(parseFloat(p.ust_satz) || 0),
           artikel_id: p.artikel_id ?? null,
-          kategorie_id: p.kategorie_id ?? null,
+          kategorie_id: null,
         })),
-    }
-    onSave(data)
+    })
   }
 
-  const kannSpeichern = form.bezeichnung.trim().length > 0 && form.naechstes_datum
-
   return (
-    <div className="space-y-5">
+    <form onSubmit={e => e.preventDefault()} className="space-y-5">
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Bezeichnung *</label>
+        <input
+          value={bezeichnung}
+          onChange={e => setBezeichnung(e.target.value)}
+          placeholder="z. B. Webhosting Muster GmbH"
+          className={inputCls}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Bezeichnung *</label>
-          <input
-            value={form.bezeichnung}
-            onChange={e => set('bezeichnung', e.target.value)}
-            placeholder="z. B. Webhosting Muster GmbH"
-            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Intervall *</label>
-          <select
-            value={form.intervall}
-            onChange={e => set('intervall', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-          >
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Intervall *</label>
+          <select value={intervall} onChange={e => setIntervall(e.target.value)} className={selectCls}>
             <option value="monatlich">Monatlich</option>
             <option value="quartalsweise">Quartalsweise</option>
             <option value="jaehrlich">Jährlich</option>
           </select>
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Erster / nächster Entwurf *</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Erster / nächster Entwurf *</label>
           <input
             type="date"
-            value={form.naechstes_datum}
-            onChange={e => set('naechstes_datum', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            value={naechstesDatum}
+            onChange={e => setNaechstesDatum(e.target.value)}
+            className={inputCls}
           />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde</label>
+          <select value={kundeId} onChange={e => setKundeId(e.target.value)} className={selectCls}>
+            <option value="">— Kein Kunde —</option>
+            {kunden?.map(k => (
+              <option key={k.id} value={k.id}>
+                {k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' ')}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Zahlungsziel (Tage)</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zahlungsziel (Tage)</label>
           <input
             type="number"
-            value={form.zahlungsziel_tage}
-            onChange={e => set('zahlungsziel_tage', e.target.value)}
+            value={zahlungsziel}
+            onChange={e => setZahlungsziel(e.target.value)}
             placeholder="Unternehmens-Standard"
-            className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            className={inputCls}
           />
         </div>
-        <div className="flex items-end pb-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.aktiv}
-              onChange={e => set('aktiv', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600"
-            />
-            <span className="text-sm text-slate-700 dark:text-slate-200">Aktiv</span>
-          </label>
-        </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Kunde</label>
-        <select
-          value={form.kunde_id}
-          onChange={e => set('kunde_id', e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-        >
-          <option value="">— kein Kunde —</option>
-          {kunden.map(k => (
-            <option key={k.id} value={k.id}>
-              {k.firmenname || `${k.vorname ?? ''} ${k.nachname ?? ''}`.trim()}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Notiz (erscheint auf Rechnung)</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Notizen</label>
         <textarea
-          value={form.notizen}
-          onChange={e => set('notizen', e.target.value)}
+          value={notizen}
+          onChange={e => setNotizen(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 resize-none"
+          className={`${inputCls} resize-none`}
+          placeholder="Erscheint als Fußtext auf der Rechnung"
         />
       </div>
 
-      {/* Positionen */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Positionen</label>
-          <div className="grid grid-cols-[2fr_80px_80px_90px_80px_32px] gap-2 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-            <span>Bezeichnung</span><span className="text-right">Menge</span><span>Einheit</span><span className="text-right">Netto €</span><span className="text-right">USt %</span><span />
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Positionen</label>
+          <div className="flex items-center gap-3">
+            <button type="button"
+              onClick={() => setEingabeModus(eingabeModus === 'netto' ? 'brutto' : 'netto')}
+              className="text-xs text-blue-600 hover:text-blue-700 underline">
+              {eingabeModus === 'netto' ? 'Brutto eingeben' : 'Netto eingeben'}
+            </button>
+            <button type="button"
+              onClick={() => setPositionen(prev => [...prev, leerPosition(defaultSatz)])}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              + Position hinzufügen
+            </button>
           </div>
         </div>
-        <div className="space-y-2">
-          {positionen.map((pos, i) => (
-            <PositionZeile key={i} pos={pos} index={i} onChange={handlePositionChange} onRemove={handlePositionRemove} />
-          ))}
-        </div>
-        <button
-          onClick={() => setPositionen(prev => [...prev, leerPosition()])}
-          className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          + Position hinzufügen
-        </button>
+        <PositionenTabelle
+          positionen={positionen}
+          onChange={setPositionen}
+          ustSaetze={ustSaetzeListe}
+          onArtikelWahl={fillPositionFromArtikel}
+          eingabeModus={eingabeModus}
+        />
       </div>
 
-      <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-        <button
-          onClick={onAbbrechen}
-          className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-        >
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="vorlage-aktiv"
+          checked={aktiv}
+          onChange={e => setAktiv(e.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 text-blue-600"
+        />
+        <label htmlFor="vorlage-aktiv" className="text-sm text-slate-700 dark:text-slate-200 cursor-pointer">
+          Vorlage aktiv (automatisch Entwürfe erstellen)
+        </label>
+      </div>
+
+      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+
+      <div className="flex gap-2">
+        <button type="button" onClick={onAbbrechen}
+          className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors">
           Abbrechen
         </button>
-        <button
-          onClick={handleSave}
-          disabled={!kannSpeichern || isSaving}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isSaving ? 'Wird gespeichert…' : 'Speichern'}
+        <button type="button" onClick={handleSpeichern} disabled={isSaving}
+          className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          {isSaving ? 'Speichern…' : initial ? '✓ Speichern' : '✓ Vorlage erstellen'}
         </button>
       </div>
-    </div>
+    </form>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Unterkomponente: Vorlage-Karte
+// Vorlage-Karte
 // ---------------------------------------------------------------------------
 
 function VorlageKarte({
-  vorlage,
-  onBearbeiten,
-  onLoeschen,
-  onEntwurfJetzt,
-  onPreisSync,
+  vorlage, onBearbeiten, onLoeschen, onEntwurfJetzt, onPreisSync,
 }: {
   vorlage: Rechnungsvorlage
   onBearbeiten: () => void
@@ -389,7 +429,9 @@ function VorlageKarte({
         </div>
         <div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Betrag (ca. brutto)</p>
-          <p className="font-medium text-slate-700 dark:text-slate-200">{fmtBetrag(String(brutto))} €</p>
+          <p className="font-medium text-slate-700 dark:text-slate-200">
+            {brutto.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+          </p>
         </div>
         <div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Erstellt</p>
@@ -404,7 +446,9 @@ function VorlageKarte({
           {vorlage.positionen.slice(0, 3).map((p, i) => (
             <div key={i} className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 py-0.5">
               <span className="truncate">{p.beschreibung}</span>
-              <span className="shrink-0 ml-2">{fmtBetrag(p.netto)} €</span>
+              <span className="shrink-0 ml-2">
+                {parseFloat(p.netto || '0').toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+              </span>
             </div>
           ))}
           {vorlage.positionen.length > 3 && (
@@ -414,30 +458,20 @@ function VorlageKarte({
       )}
 
       <div className="flex gap-2 pt-1">
-        <button
-          onClick={onEntwurfJetzt}
-          title="Jetzt Entwurf erstellen"
-          className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-        >
+        <button onClick={onEntwurfJetzt}
+          className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
           Entwurf jetzt erstellen
         </button>
-        <button
-          onClick={onPreisSync}
-          title="Artikel-Preise auf aktuellen Stand bringen"
-          className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
-        >
+        <button onClick={onPreisSync} title="Artikel-Preise auf aktuellen Stand bringen"
+          className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
           Preise sync
         </button>
-        <button
-          onClick={onBearbeiten}
-          className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
-        >
+        <button onClick={onBearbeiten}
+          className="px-3 py-1.5 text-xs font-medium bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
           Bearbeiten
         </button>
-        <button
-          onClick={onLoeschen}
-          className="px-3 py-1.5 text-xs text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
+        <button onClick={onLoeschen}
+          className="px-3 py-1.5 text-xs text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
           Löschen
         </button>
       </div>
@@ -457,11 +491,6 @@ export function WiederkehrendePage() {
   const { data: vorlagen = [], isLoading } = useQuery({
     queryKey: ['wiederkehrend'],
     queryFn: getVorlagen,
-  })
-
-  const { data: kunden = [] } = useQuery({
-    queryKey: ['kunden'],
-    queryFn: () => getKunden({}),
   })
 
   const createMut = useMutation({
@@ -517,8 +546,7 @@ export function WiederkehrendePage() {
         {formModus === null && (
           <button
             onClick={() => setFormModus('neu')}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
             + Neue Vorlage
           </button>
         )}
@@ -555,15 +583,19 @@ export function WiederkehrendePage() {
       {/* Formular */}
       {formModus !== null && (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
-          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">
-            {formModus === 'neu' ? 'Neue Vorlage' : 'Vorlage bearbeiten'}
-          </h2>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
+              {formModus === 'neu' ? 'Neue Vorlage' : 'Vorlage bearbeiten'}
+            </h2>
+            <button onClick={() => setFormModus(null)}
+              className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl leading-none">×</button>
+          </div>
           <VorlageFormular
+            key={typeof formModus === 'number' ? formModus : 'neu'}
             initial={editVorlage}
-            kunden={kunden}
-            onSave={handleSave}
-            onAbbrechen={() => setFormModus(null)}
             isSaving={createMut.isPending || updateMut.isPending}
+            onSpeichern={handleSave}
+            onAbbrechen={() => setFormModus(null)}
           />
         </div>
       )}
