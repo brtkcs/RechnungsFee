@@ -219,6 +219,13 @@ function VorlageFormular({
       : [leerPosition()]
   )
 
+  // Gewerbekunde → Netto, Privatkunde → Brutto
+  useEffect(() => {
+    if (!kundeId || !kunden) return
+    const k = kunden.find(k => String(k.id) === kundeId)
+    if (k) setEingabeModus(k.firmenname?.trim() ? 'netto' : 'brutto')
+  }, [kundeId, kunden])
+
   // Default-USt setzen sobald Sätze geladen sind
   useEffect(() => {
     if (!ustSaetze?.length || initial) return
