@@ -107,6 +107,9 @@
 ### Backup & Wiederherstellung
 - [ ] Automatische Wiederherstellung aus Backup (Datei-Auswahl → App ersetzt DB und startet neu)
 
+### Wiederkehrende Ausgangsrechnungen (Abo)
+- [ ] Wiederkehrende Ausgangsrechnungen: Vorlage mit Intervall (monatlich, quartalsweise, jährlich) und automatischer Erstellung als Entwurf am Fälligkeitstag
+
 ### Wiederkehrende Buchungen
 - [ ] Vorlagen für Fixkosten (Miete, Leasing, Abonnements) mit Fälligkeitsintervall
 - [ ] Hinweis auf fällige Buchungen beim App-Start
