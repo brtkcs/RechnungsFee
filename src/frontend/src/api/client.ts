@@ -202,6 +202,7 @@ export type Unternehmen = {
   angebote_aktiv?: boolean
   proforma_aktiv?: boolean
   auftraege_aktiv?: boolean
+  wiederkehrend_aktiv?: boolean
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -1578,4 +1579,66 @@ export const sendeTestMail = (an: string) =>
     method: 'POST',
     body: JSON.stringify({ an }),
   })
+
+// ---------------------------------------------------------------------------
+// Wiederkehrende Ausgangsrechnungen
+// ---------------------------------------------------------------------------
+
+export type VorlagePosition = {
+  beschreibung: string
+  menge: string
+  einheit: string
+  netto: string
+  ust_satz: string
+  artikel_id?: number | null
+  kategorie_id?: number | null
+}
+
+export type Preisaenderung = {
+  beschreibung: string
+  artikel_id: number
+  preis_vorlage: string
+  preis_aktuell: string
+}
+
+export type EntwurfErgebnis = {
+  vorlage_id: number
+  vorlage_bezeichnung: string
+  rechnung_id: number
+  rechnungsnummer: string
+  preisaenderungen: Preisaenderung[]
+}
+
+export type Rechnungsvorlage = {
+  id: number
+  bezeichnung: string
+  intervall: 'monatlich' | 'quartalsweise' | 'jaehrlich'
+  naechstes_datum: string
+  aktiv: boolean
+  kunde_id: number | null
+  kunde_name: string | null
+  zahlungsziel_tage: number | null
+  notizen: string | null
+  positionen: VorlagePosition[]
+  letzte_erstellung: string | null
+  erstellte_rechnungen: number
+  erstellt_am: string
+}
+
+export type VorlageCreate = Omit<Rechnungsvorlage, 'id' | 'kunde_name' | 'letzte_erstellung' | 'erstellte_rechnungen' | 'erstellt_am'>
+export type VorlageUpdate = Partial<VorlageCreate>
+
+export const getVorlagen = () => request<Rechnungsvorlage[]>('/wiederkehrend')
+export const createVorlage = (data: VorlageCreate) =>
+  request<Rechnungsvorlage>('/wiederkehrend', { method: 'POST', body: JSON.stringify(data) })
+export const updateVorlage = (id: number, data: VorlageUpdate) =>
+  request<Rechnungsvorlage>(`/wiederkehrend/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteVorlage = (id: number) =>
+  request<void>(`/wiederkehrend/${id}`, { method: 'DELETE' })
+export const pruefenWiederkehrend = () =>
+  request<EntwurfErgebnis[]>('/wiederkehrend/pruefen', { method: 'POST' })
+export const entwurfJetzt = (id: number) =>
+  request<EntwurfErgebnis>(`/wiederkehrend/${id}/jetzt`, { method: 'POST' })
+export const preiseSynchronisieren = (id: number) =>
+  request<Rechnungsvorlage>(`/wiederkehrend/${id}/preise-sync`, { method: 'POST' })
 

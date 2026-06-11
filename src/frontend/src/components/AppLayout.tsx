@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM } from '../api/client'
+import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM, pruefenWiederkehrend, type EntwurfErgebnis } from '../api/client'
 import { TagesabschlussDialog } from '../pages/journal/TagesabschlussDialog'
 import { useUpdateCheck } from '../hooks/useUpdateCheck'
 
@@ -10,11 +10,12 @@ import { useUpdateCheck } from '../hooks/useUpdateCheck'
 // ---------------------------------------------------------------------------
 
 const fakturierungAlleItems = [
-  { to: '/angebote',      label: 'Angebote',      icon: '📝', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.angebote_aktiv },
-  { to: '/auftraege',     label: 'Aufträge',      icon: '📋', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.auftraege_aktiv },
-  { to: '/proformas',     label: 'Proforma',      icon: '📋', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.proforma_aktiv },
-  { to: '/lieferscheine', label: 'Lieferscheine', icon: '🚚', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.lieferschein_aktiv },
-  { to: '/rechnungen',    label: 'Rechnungen',    icon: '🧾', bald: false, zeigen: (_u: Unternehmen | undefined) => true },
+  { to: '/angebote',        label: 'Angebote',               icon: '📝', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.angebote_aktiv },
+  { to: '/auftraege',       label: 'Aufträge',               icon: '📋', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.auftraege_aktiv },
+  { to: '/proformas',       label: 'Proforma',               icon: '📋', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.proforma_aktiv },
+  { to: '/lieferscheine',   label: 'Lieferscheine',          icon: '🚚', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.lieferschein_aktiv },
+  { to: '/rechnungen',      label: 'Rechnungen',             icon: '🧾', bald: false, zeigen: (_u: Unternehmen | undefined) => true },
+  { to: '/wiederkehrend',   label: 'Wiederkehrend',          icon: '🔁', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.wiederkehrend_aktiv },
 ]
 
 const buchhaltungNav = [
@@ -146,6 +147,14 @@ export function AppLayout() {
   }, [navigate])
   const [abschlussDialog, setAbschlussDialog] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
+  const [wiederErgebnisse, setWiederErgebnisse] = useState<EntwurfErgebnis[]>([])
+
+  // Beim Start: fällige Vorlagen prüfen, Entwürfe anlegen
+  useEffect(() => {
+    pruefenWiederkehrend().then(ergebnisse => {
+      if (ergebnisse.length > 0) setWiederErgebnisse(ergebnisse)
+    }).catch(() => {/* ignorieren, Startup soll nie blockieren */})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { updateAvailable, version: updateVersion, downloading, progress, error: updateError, readyToRestart, installUpdate } = useUpdateCheck()
 
@@ -327,6 +336,35 @@ export function AppLayout() {
                 ×
               </button>
             )}
+          </div>
+        )}
+
+        {/* Wiederkehrende Rechnungen – Entwürfe erstellt */}
+        {wiederErgebnisse.length > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800 px-4 py-2.5 flex items-center gap-3 shrink-0">
+            <span className="text-blue-600 dark:text-blue-400 text-base leading-none">🔁</span>
+            <p className="text-sm text-blue-800 dark:text-blue-300 flex-1">
+              {wiederErgebnisse.length === 1
+                ? <>Entwurf <span className="font-semibold">{wiederErgebnisse[0].rechnungsnummer}</span> aus Vorlage „{wiederErgebnisse[0].vorlage_bezeichnung}" erstellt.</>
+                : <>{wiederErgebnisse.length} Rechnungs-Entwürfe aus wiederkehrenden Vorlagen erstellt.</>
+              }
+              {wiederErgebnisse.some(e => e.preisaenderungen.length > 0) && (
+                <span className="ml-2 text-amber-700 dark:text-amber-400 font-medium">⚠ Preisänderungen erkannt – Vorlagen prüfen.</span>
+              )}
+            </p>
+            <button
+              onClick={() => navigate('/wiederkehrend')}
+              className="text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 border border-blue-300 rounded-md px-3 py-1 transition-colors shrink-0 dark:text-blue-300 dark:bg-blue-900 dark:hover:bg-blue-800 dark:border-blue-700"
+            >
+              Vorlagen
+            </button>
+            <button
+              onClick={() => setWiederErgebnisse([])}
+              className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200 text-lg leading-none px-1 shrink-0"
+              title="Schließen"
+            >
+              ×
+            </button>
           </div>
         )}
 

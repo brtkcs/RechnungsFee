@@ -658,6 +658,23 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
               </p>
             </div>
           </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.wiederkehrend_aktiv}
+              onChange={ev => set('wiederkehrend_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Wiederkehrende Rechnungen aktivieren
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Vorlagen mit Intervall (monatlich, quartalsweise, jährlich) – Entwürfe werden automatisch beim App-Start erstellt.
+              </p>
+            </div>
+          </label>
         </div>
 
         <hr className="border-slate-100 dark:border-slate-700" />

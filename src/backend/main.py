@@ -30,9 +30,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend
 
-SCHEMA_VERSION = 67
+SCHEMA_VERSION = 68
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -66,6 +66,7 @@ app.include_router(euer.router)
 app.include_router(system.router)
 app.include_router(dokumentenpakete.router)
 app.include_router(mail.router)
+app.include_router(wiederkehrend.router)
 
 
 @app.post("/api/shutdown")
@@ -1459,6 +1460,30 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 67 (Datenfix: Betriebseinnahmen (7%) euer_zeile=12)")
 
+        if version < 68:
+            conn.execute(text(
+                "ALTER TABLE unternehmen ADD COLUMN wiederkehrend_aktiv BOOLEAN NOT NULL DEFAULT 0"
+            ))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS rechnungsvorlagen (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bezeichnung VARCHAR(200) NOT NULL,
+                    intervall VARCHAR(20) NOT NULL,
+                    naechstes_datum DATE NOT NULL,
+                    aktiv BOOLEAN NOT NULL DEFAULT 1,
+                    kunde_id INTEGER REFERENCES kunden(id) ON DELETE SET NULL,
+                    zahlungsziel_tage INTEGER,
+                    notizen TEXT,
+                    positionen_json TEXT NOT NULL DEFAULT '[]',
+                    letzte_erstellung DATE,
+                    erstellte_rechnungen INTEGER NOT NULL DEFAULT 0,
+                    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("PRAGMA user_version = 68"))
+            conn.commit()
+            print("[Migration] Schema auf Version 68 (wiederkehrende Rechnungen: wiederkehrend_aktiv + rechnungsvorlagen)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -1752,6 +1777,12 @@ def startup():
     db = SessionLocal()
     try:
         run_all_seeds(db)
+        # Fällige Rechnungsvorlagen als Entwürfe anlegen (blockiert Startup nie)
+        try:
+            from api.wiederkehrend import pruefen_intern as _wi
+            _wi(db)
+        except Exception as _e:
+            logging.getLogger(__name__).warning("Wiederkehrende Rechnungen: %s", _e)
     finally:
         db.close()
 

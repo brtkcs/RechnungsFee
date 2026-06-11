@@ -27,6 +27,7 @@ import { UStVAPage } from './pages/ustva/UStVAPage'
 import { ZMPage } from './pages/zm/ZMPage'
 import { EUERPage } from './pages/euer/EUERPage'
 import { RechnungenPage } from './pages/rechnungen/RechnungenPage'
+import { WiederkehrendePage } from './pages/wiederkehrend/WiederkehrendePage'
 import { BackupPage } from './pages/backup/BackupPage'
 import { InfoPage } from './pages/info/InfoPage'
 
@@ -100,6 +101,7 @@ function AppRoutes() {
           <Route path="/unternehmen" element={<UnternehmenPage />} />
           <Route path="/dokumentenpakete" element={<DokumentenpaketePage />} />
           <Route path="/rechnungen" element={<RechnungenPage />} />
+          <Route path="/wiederkehrend" element={<WiederkehrendePage />} />
           <Route path="/lieferscheine" element={<LieferscheineUebersicht />} />
           <Route path="/angebote" element={<AngebotePage />} />
           <Route path="/auftraege" element={<AuftraegePage />} />

@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 67` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 68` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -154,6 +154,7 @@ def _run_migrations():
 | 65 | Neuer Auftrag-Status `rechnung_gestellt`: Rechnung gestellt, Zahlung offen (zwischen in_bearbeitung und abgeschlossen) |
 | 66 | unternehmen: smtp_aktiv, smtp_host, smtp_port, smtp_ssl, smtp_user, smtp_passwort, smtp_von_adresse + mail_betreff/text_angebot/proforma/auftrag (13 Spalten); neues mail.py-Backend; MailDialog-Frontend |
 | 67 | Datenfix Issue #132: kategorien „Betriebseinnahmen (7%)" euer_zeile=12 (fehlte in Migration 26 → 7%-Umsätze unsichtbar in EÜR) |
+| 68 | unternehmen.wiederkehrend_aktiv BOOLEAN; neue Tabelle rechnungsvorlagen (Vorlage mit Intervall, Positionen als JSON, Preisabgleich via artikel_id) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

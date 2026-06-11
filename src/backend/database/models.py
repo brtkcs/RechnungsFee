@@ -67,6 +67,7 @@ class Unternehmen(Base):
     angebote_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     proforma_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     auftraege_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
+    wiederkehrend_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     # Buchführung
     versteuerungsart: Mapped[str] = mapped_column(String(4), default="ist", nullable=False)  # ist|soll
     kontenrahmen: Mapped[str] = mapped_column(String(10), default="SKR03", nullable=False)  # SKR03|SKR04|SKR49
@@ -582,6 +583,30 @@ class Rechnungsposition(Base):
     __table_args__ = (
         UniqueConstraint("rechnung_id", "position_nr", name="uq_rechnung_position"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Wiederkehrende Ausgangsrechnungen
+# ---------------------------------------------------------------------------
+
+class Rechnungsvorlage(Base):
+    """Vorlage für wiederkehrende Ausgangsrechnungen (Abo-Modell)."""
+    __tablename__ = "rechnungsvorlagen"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bezeichnung: Mapped[str] = mapped_column(String(200), nullable=False)
+    intervall: Mapped[str] = mapped_column(String(20), nullable=False)  # monatlich|quartalsweise|jaehrlich
+    naechstes_datum: Mapped[date] = mapped_column(Date, nullable=False)
+    aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    kunde_id: Mapped[int | None] = mapped_column(ForeignKey("kunden.id", ondelete="SET NULL"))
+    zahlungsziel_tage: Mapped[int | None] = mapped_column(Integer)  # NULL = Unternehmens-Standard
+    notizen: Mapped[str | None] = mapped_column(Text)
+    positionen_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="[]")
+    letzte_erstellung: Mapped[date | None] = mapped_column(Date)
+    erstellte_rechnungen: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    kunde: Mapped["Kunde | None"] = relationship()
 
 
 # ---------------------------------------------------------------------------
