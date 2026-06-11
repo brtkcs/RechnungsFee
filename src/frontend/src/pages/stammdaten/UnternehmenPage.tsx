@@ -150,7 +150,7 @@ function LogoSektion({
           </button>
         )}
         <p className="text-xs text-slate-400 dark:text-slate-500">PNG, JPEG oder WEBP · max. 2 MB</p>
-        {fehler && <p className="text-xs text-red-600">{fehler}</p>}
+        {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
       </div>
     </div>
   )
@@ -695,7 +695,7 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
       {/* Fehler + Speichern-Button (nur für Firma/Steuer/Rechnungen-Tabs) */}
       {isFormTab && (
         <>
-          {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+          {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
           <div className="flex items-center gap-3 pt-1">
             <button
               type="submit"
@@ -704,7 +704,7 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
             >
               {mut.isPending ? 'Speichern…' : 'Speichern'}
             </button>
-            {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+            {gespeichert && <span className="text-sm text-green-600 dark:text-green-400">✓ Gespeichert</span>}
           </div>
         </>
       )}
@@ -814,7 +814,7 @@ function MailVorlageSektion({ data }: { data: Unternehmen }) {
         <textarea value={text} onChange={ev => setText(ev.target.value)} rows={10} className={`${inputCls} resize-y font-mono text-xs`} />
       </Field>
 
-      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
 
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending}
@@ -825,7 +825,7 @@ function MailVorlageSektion({ data }: { data: Unternehmen }) {
           className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
           Zurücksetzen
         </button>
-        {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+        {gespeichert && <span className="text-sm text-green-600 dark:text-green-400">✓ Gespeichert</span>}
       </div>
     </div>
   )
@@ -938,19 +938,19 @@ function SmtpSektion({ data }: { data: Unternehmen }) {
               {testStatus === 'sending' ? 'Sende…' : '✉️ Testmail'}
             </button>
           </div>
-          {testStatus === 'ok' && <p className="text-sm text-green-600">✓ Testmail gesendet</p>}
-          {testStatus === 'error' && <p className="text-sm text-red-600">{testFehler}</p>}
+          {testStatus === 'ok' && <p className="text-sm text-green-600 dark:text-green-400">✓ Testmail gesendet</p>}
+          {testStatus === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{testFehler}</p>}
         </div>
       )}
 
-      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
 
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending}
           className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors">
           {mut.isPending ? 'Speichern…' : 'SMTP speichern'}
         </button>
-        {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+        {gespeichert && <span className="text-sm text-green-600 dark:text-green-400">✓ Gespeichert</span>}
       </div>
     </div>
   )
@@ -1052,7 +1052,7 @@ function SignaturSektion({ data }: { data: Unternehmen }) {
         </div>
       </div>
 
-      {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
 
       <div className="flex items-center gap-3">
         <button
@@ -1070,7 +1070,7 @@ function SignaturSektion({ data }: { data: Unternehmen }) {
         >
           Zurücksetzen
         </button>
-        {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
+        {gespeichert && <span className="text-sm text-green-600 dark:text-green-400">✓ Gespeichert</span>}
       </div>
     </div>
   )
@@ -1372,8 +1372,8 @@ function UnterschriftSektion({ data }: { data: Unternehmen }) {
             </button>
           </>
         )}
-        {gespeichert && <span className="text-sm text-green-600">✓ Gespeichert</span>}
-        {fehler && <p className="text-sm text-red-600">{fehler}</p>}
+        {gespeichert && <span className="text-sm text-green-600 dark:text-green-400">✓ Gespeichert</span>}
+        {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
       </div>
     </div>
   )
@@ -1406,7 +1406,7 @@ export function UnternehmenPage() {
   if (isError || !data) {
     return (
       <div className="p-6">
-        <p className="text-red-600 text-sm">Unternehmensdaten konnten nicht geladen werden.</p>
+        <p className="text-red-600 dark:text-red-400 text-sm">Unternehmensdaten konnten nicht geladen werden.</p>
       </div>
     )
   }
