@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.11',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'EÜR Aufschlüsselung: Schaltfläche „🔍 Aufschlüsselung" zeigt je EÜR-Zeile die enthaltenen Kategorien mit Einzelbeträgen – für Steuerberater und eigene Kontrolle' },
+      { typ: 'verbesserung', text: 'Buchungsanzeige: Kategorie-Dropdowns können optional die SKR03- oder SKR04-Kontonummer hinter der Bezeichnung anzeigen (z. B. „Büromaterial [4930]") – einstellbar unter Einstellungen → Unternehmen → Rechnungen' },
+    ],
+  },
+  {
     version: 'v0.3.10',
     datum: 'Juni 2026',
     eintraege: [
@@ -33,8 +41,6 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Dokumentenpaket-Anhang: Dateiname wurde fälschlicherweise auf dem Paket-Eintrag gesucht statt auf dem verknüpften Beleg – Anhänge haben jetzt den korrekten Originalnamen' },
       { typ: 'fix', text: 'EÜR: Betriebseinnahmen aus Rechnungen mit 7 % USt wurden nicht angezeigt – die Kategorie „Betriebseinnahmen (7%)" fehlte in Migration 26 und hatte kein EÜR-Zeilen-Mapping (Issue #132)' },
       { typ: 'fix', text: 'EÜR und UStVA: Storno-Gegenbuchungen wurden nicht korrekt verrechnet – Einnahme-Storni wurden addiert statt subtrahiert; Vorsteuer-Storni wurden ignoriert' },
-      { typ: 'verbesserung', text: 'Buchungsanzeige: Kategorie-Dropdowns können optional die SKR03- oder SKR04-Kontonummer hinter der Bezeichnung anzeigen (z. B. „Büromaterial [4930]") – einstellbar unter Einstellungen → Unternehmen → Rechnungen' },
-      { typ: 'neu', text: 'EÜR Aufschlüsselung: Schaltfläche „🔍 Aufschlüsselung" zeigt je EÜR-Zeile die enthaltenen Kategorien mit Einzelbeträgen – für Steuerberater und eigene Kontrolle' },
     ],
   },
   {
