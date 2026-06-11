@@ -836,6 +836,7 @@ function RechnungDetail({
   onFinalisiert?: (r: Rechnung) => void
   onZahlungErfasst?: (r: Rechnung) => void
 }) {
+  const navigate = useNavigate()
   const [zahlungsDialog, setZahlungsDialog] = useState(false)
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
   const [stornoGrund, setStornoGrund] = useState<string | null>(null)

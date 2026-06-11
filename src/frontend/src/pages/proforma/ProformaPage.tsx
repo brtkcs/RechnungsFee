@@ -5,7 +5,7 @@ import {
   getProformas, getKunden, getUstSaetze, getUnternehmen,
   createRechnung, updateRechnung, deleteRechnung,
   rechnungAusProforma,
-  getApiBase, openUrl, getRechnungPdf, isTauri, openInPdfWindow, downloadPdfForMail,
+  openUrl, getRechnungPdf, isTauri, openInPdfWindow, downloadPdfForMail,
   type Rechnung, type ArtikelSuche,
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
