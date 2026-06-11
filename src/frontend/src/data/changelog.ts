@@ -45,6 +45,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Wiederkehrende Rechnungen – Löschen: nur noch möglich wenn keine Rechnungen erstellt wurden und keine Auftrag- oder Vertrag-Verknüpfung vorhanden; sonst muss „Beenden" verwendet werden' },
       { typ: 'fix', text: 'Wiederkehrende Rechnungen – Detail-Panel: Rechnungsstatus (Entwurf → Offen → Bezahlt) wird jetzt sofort aktualisiert wenn eine Rechnung in der Rechnungsübersicht finalisiert oder bezahlt wird' },
       { typ: 'fix', text: 'Aufträge: Status blieb nach „Vorlage beenden" auf „Laufend" – fehlender DB-Flush vor der Auftrag-Status-Abfrage im Backend' },
+      { typ: 'fix', text: 'EÜR: Skonto-Doppelabzug in Zeile 12 – beim Zuflussprinzip enthält die Zahlungsbuchung bereits den tatsächlich vereinnahmten Betrag (z. B. 98 € bei 2 % Skonto); ein separater Skonto-Eintrag mit EÜR-Zeile darf die Einnahme nicht nochmals mindern; EÜR-Zeile für „Gewährte Skonti" und „Erhaltene Skonti" wird bei bestehenden Installationen automatisch korrigiert (Issue #132)' },
     ],
   },
   {

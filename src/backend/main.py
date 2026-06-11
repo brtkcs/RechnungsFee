@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend
 
-SCHEMA_VERSION = 72
+SCHEMA_VERSION = 73
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1537,6 +1537,18 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 72 (rechnungsvorlagen.beendet: Vorlage dauerhaft beenden)")
 
+        if version < 73:
+            # EÜR-Doppelabzug bei Skonti: Zahlung enthält per Zuflussprinzip bereits den
+            # korrekten Betrag (z.B. 98 € bei 2 % Skonto auf 100 €). Ein zusätzlicher
+            # Skonto-Eintrag mit euer_zeile=12/27 subtrahiert nochmals → 96 € statt 98 €.
+            # Lösung: Skonto-Kategorien brauchen keine eigene EÜR-Zeile.
+            # Zeile 17 (vereinnahmte USt) wird über konto_ust_skr03/04 korrekt berechnet.
+            conn.execute(text("UPDATE kategorien SET euer_zeile = NULL WHERE name = 'Gewährte Skonti'"))
+            conn.execute(text("UPDATE kategorien SET euer_zeile = NULL WHERE name = 'Erhaltene Skonti'"))
+            conn.execute(text("PRAGMA user_version = 73"))
+            conn.commit()
+            print("[Migration] Schema auf Version 73 (Skonto-Kategorien: euer_zeile→NULL, kein Doppelabzug in EÜR)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -1601,7 +1613,7 @@ def _migrate_kategorien() -> None:
             ("Mitgliedsbeiträge", 60),         # war 46 (Beratungskosten) – Issue #106
             ("Betriebseinnahmen", 12),          # Sicherheitsnetz: nie NULL lassen
             ("Betriebseinnahmen (0%)", 12),     # dto.
-            ("Gewährte Skonti", 12),            # war 15 in der neue-Liste (Migration 58 korrigiert DB, aber nicht neue-Liste)
+            # Gewährte Skonti: euer_zeile → NULL (Issue #132, Migration 73 – kein Doppelabzug)
         ]
         for name, zeile in euer_korrekturen:
             kat = db.query(Kategorie).filter(Kategorie.name == name).first()
@@ -1682,8 +1694,8 @@ def _migrate_kategorien() -> None:
             {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B14_5", "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "4730", "konto_skr04": "6580", "eks_kategorie": "B14_5", "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             # Skonti
-            {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": 12,   "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
-            {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
+            {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
+            {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Bewirtungskosten nicht abzugsfähiger Anteil
             {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
             # Anlagevermögen KFZ (Anlage AVEUR: eigene Kategorie „Kraftfahrzeuge")
