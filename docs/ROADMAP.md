@@ -100,7 +100,7 @@
 
 ### Exporte & Auswertungen
 - [ ] DATEV-Export (CSV nach DATEV-Format für Steuerberater)
-- [ ] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung
+- [x] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung (🔍 Aufschlüsselung-Toggle in der EÜR)
 - [ ] Anlage AVEUR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
 - [ ] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ
 

@@ -302,6 +302,64 @@ def _generate_pdf(daten: dict, unt: Unternehmen) -> bytes:
 
 
 # ---------------------------------------------------------------------------
+# Kategorie-Aufschlüsselung
+# ---------------------------------------------------------------------------
+
+def _berechne_euer_kategorien(jahr: int, db: Session) -> dict[int, dict[str, Decimal]]:
+    """Gleiche Logik wie _berechne_euer, aber gruppiert nach (euer_zeile, kategorie_name)."""
+    from datetime import date as _date
+    von = _date(jahr, 1, 1)
+    bis = _date(jahr, 12, 31)
+
+    eintraege = (
+        db.query(Journaleintrag)
+        .filter(Journaleintrag.datum >= von, Journaleintrag.datum <= bis)
+        .all()
+    )
+
+    zeilen: dict[int, dict[str, Decimal]] = {}
+
+    for e in eintraege:
+        kat: Optional[Kategorie] = e.kategorie
+        euer_zeile = kat.euer_zeile if kat else None
+        kat_name = kat.name if kat else "Unbekannt"
+        ust_konto = e.konto_ust_skr03 or e.konto_ust_skr04 or ""
+
+        if kat and kat.kontenart == "Anlage":
+            continue
+
+        if euer_zeile is not None:
+            ab = EUR_ZEILEN_META.get(euer_zeile, ("", ""))[1]
+            if ab == "A":
+                vz = Decimal("1") if e.art == "Einnahme" else Decimal("-1")
+            elif ab == "B":
+                vz = Decimal("1") if e.art == "Ausgabe" else Decimal("-1")
+            else:
+                vz = Decimal("1")
+            zeilen.setdefault(euer_zeile, {})
+            zeilen[euer_zeile][kat_name] = zeilen[euer_zeile].get(kat_name, ZERO) + vz * (e.netto_betrag or ZERO)
+
+        if e.ust_betrag and e.ust_betrag != 0:
+            if e.art == "Einnahme" and e.ust_betrag > 0:
+                zeilen.setdefault(17, {})
+                zeilen[17]["Umsatzsteuer"] = zeilen[17].get("Umsatzsteuer", ZERO) + e.ust_betrag
+            elif e.art == "Ausgabe" and e.ust_betrag > 0 and ust_konto in _EINNAHME_UST_KONTEN:
+                zeilen.setdefault(17, {})
+                zeilen[17]["Umsatzsteuer"] = zeilen[17].get("Umsatzsteuer", ZERO) - e.ust_betrag
+
+        if e.vorsteuer_betrag and e.vorsteuer_betrag != 0:
+            zeilen.setdefault(57, {})
+            zeilen[57]["Vorsteuer"] = zeilen[57].get("Vorsteuer", ZERO) + e.vorsteuer_betrag
+
+    q = Decimal("0.01")
+    return {
+        z: {k: v.quantize(q, ROUND_HALF_UP) for k, v in kats.items() if v != ZERO}
+        for z, kats in zeilen.items()
+        if any(v != ZERO for v in kats.values())
+    }
+
+
+# ---------------------------------------------------------------------------
 # Response-Schemas
 # ---------------------------------------------------------------------------
 
@@ -319,6 +377,21 @@ class EUERErgebnis(BaseModel):
     gewinn_verlust: Decimal
     anlage_zugaenge: Decimal
     ist_kleinunternehmer: bool
+
+class EUERKatSumme(BaseModel):
+    name: str
+    betrag: Decimal
+
+class EUERZeileDetail(BaseModel):
+    zeile: int
+    bezeichnung: str
+    abschnitt: str
+    betrag_gesamt: Decimal
+    kategorien: list[EUERKatSumme]
+
+class EUERDetailErgebnis(BaseModel):
+    jahr: int
+    zeilen: list[EUERZeileDetail]
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +428,31 @@ def euer_berechnen(
         anlage_zugaenge=daten["anlage_zugaenge"],
         ist_kleinunternehmer=bool(unt.ist_kleinunternehmer),
     )
+
+
+@router.get("/kategorien", response_model=EUERDetailErgebnis)
+def euer_kategorien(
+    jahr: int = Query(..., ge=2020, le=2100),
+    db: Session = Depends(get_db),
+):
+    kat_daten = _berechne_euer_kategorien(jahr, db)
+    euer_daten = _berechne_euer(jahr, db)
+
+    zeilen_liste = []
+    for z, kats in sorted(kat_daten.items()):
+        betrag_gesamt = euer_daten["zeilen"].get(z, ZERO)
+        zeilen_liste.append(EUERZeileDetail(
+            zeile=z,
+            bezeichnung=EUR_ZEILEN_META[z][0] if z in EUR_ZEILEN_META else f"Zeile {z}",
+            abschnitt=EUR_ZEILEN_META[z][1] if z in EUR_ZEILEN_META else "?",
+            betrag_gesamt=betrag_gesamt,
+            kategorien=[
+                EUERKatSumme(name=k, betrag=v)
+                for k, v in sorted(kats.items(), key=lambda x: abs(x[1]), reverse=True)
+            ],
+        ))
+
+    return EUERDetailErgebnis(jahr=jahr, zeilen=zeilen_liste)
 
 
 @router.get("/pdf")

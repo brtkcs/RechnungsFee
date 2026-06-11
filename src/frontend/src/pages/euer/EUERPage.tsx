@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { berechneEUER, getEUERPdfUrl, openUrl, type EUERErgebnis } from '../../api/client'
+import { berechneEUER, berechneEUERDetail, getEUERPdfUrl, openUrl, type EUERErgebnis, type EUERDetailErgebnis } from '../../api/client'
 
 const ABSCHNITT_LABEL: Record<string, string> = {
   A: 'A – Betriebseinnahmen',
@@ -36,11 +36,18 @@ export function EUERPage() {
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const [pdfLaedt, setPdfLaedt] = useState(false)
   const [pdfFehler, setPdfFehler] = useState<string | null>(null)
+  const [detailansicht, setDetailansicht] = useState(false)
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
 
   const { data: ergebnis, isLoading, error } = useQuery<EUERErgebnis>({
     queryKey: ['euer-berechnen', jahr],
     queryFn: () => berechneEUER(jahr),
+  })
+
+  const { data: detail } = useQuery<EUERDetailErgebnis>({
+    queryKey: ['euer-kategorien', jahr],
+    queryFn: () => berechneEUERDetail(jahr),
+    enabled: detailansicht,
   })
 
   async function handlePdf() {
@@ -59,6 +66,11 @@ export function EUERPage() {
         }, {})
       ).sort(([a], [b]) => a.localeCompare(b))
     : []
+
+  // Detail-Index für schnellen Zugriff per Zeilen-Nr.
+  const detailByZeile = detail
+    ? Object.fromEntries(detail.zeilen.map(z => [z.zeile, z]))
+    : {}
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
@@ -81,6 +93,15 @@ export function EUERPage() {
         {isLoading && <span className="text-sm text-slate-500 dark:text-slate-400">Berechne…</span>}
         {ergebnis && (
           <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => setDetailansicht(v => !v)}
+              className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
+                detailansicht
+                  ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }`}>
+              🔍 Aufschlüsselung
+            </button>
             <button onClick={handlePdf} disabled={pdfLaedt}
               className="px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
               {pdfLaedt ? '…' : '📄 PDF'}
@@ -110,17 +131,35 @@ export function EUERPage() {
                 {ABSCHNITT_LABEL[abschnitt] ?? abschnitt}
               </div>
               <div className="divide-y divide-slate-50 dark:divide-slate-700">
-                {zeilen.map(z => (
-                  <div key={z.zeile} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-blue-600 dark:bg-blue-700">
-                      Z. {z.zeile}
-                    </span>
-                    <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{z.bezeichnung}</span>
-                    <span className={`tabular-nums text-sm font-medium ${parseFloat(z.betrag) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
-                      {euroFmt(z.betrag)}
-                    </span>
-                  </div>
-                ))}
+                {zeilen.map(z => {
+                  const d = detailByZeile[z.zeile]
+                  return (
+                    <div key={z.zeile}>
+                      <div className="flex items-center gap-3 px-4 py-2.5">
+                        <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-blue-600 dark:bg-blue-700">
+                          Z. {z.zeile}
+                        </span>
+                        <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{z.bezeichnung}</span>
+                        <span className={`tabular-nums text-sm font-medium ${parseFloat(z.betrag) < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                          {euroFmt(z.betrag)}
+                        </span>
+                      </div>
+                      {detailansicht && d && d.kategorien.length > 0 && (
+                        <div className="bg-slate-50 dark:bg-slate-900/40 divide-y divide-slate-100 dark:divide-slate-800">
+                          {d.kategorien.map(k => (
+                            <div key={k.name} className="flex items-center gap-3 pl-10 pr-4 py-1.5">
+                              <span className="text-slate-400 dark:text-slate-600 text-xs shrink-0">└</span>
+                              <span className="flex-1 text-xs text-slate-500 dark:text-slate-400">{k.name}</span>
+                              <span className={`tabular-nums text-xs ${parseFloat(k.betrag) < 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {euroFmt(k.betrag)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
               {abschnitt === 'A' && (
                 <SummenZeile label="Summe Betriebseinnahmen (Z. 22)" betrag={ergebnis.summe_einnahmen} />

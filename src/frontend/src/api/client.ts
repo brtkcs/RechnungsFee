@@ -1532,6 +1532,27 @@ export const getEUERPdfUrl = async (jahr: number): Promise<string> => {
   return `${base}/euer/pdf?jahr=${jahr}`
 }
 
+export type EUERKatSumme = {
+  name: string
+  betrag: string
+}
+
+export type EUERZeileDetail = {
+  zeile: number
+  bezeichnung: string
+  abschnitt: string
+  betrag_gesamt: string
+  kategorien: EUERKatSumme[]
+}
+
+export type EUERDetailErgebnis = {
+  jahr: number
+  zeilen: EUERZeileDetail[]
+}
+
+export const berechneEUERDetail = (jahr: number) =>
+  request<EUERDetailErgebnis>(`/euer/kategorien?jahr=${jahr}`)
+
 
 // ---------------------------------------------------------------------------
 // Mail – SMTP-Versand
