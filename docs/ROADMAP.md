@@ -109,6 +109,11 @@
 
 ### Wiederkehrende Ausgangsrechnungen (Abo)
 - [x] Wiederkehrende Ausgangsrechnungen: Vorlage mit Intervall (monatlich, quartalsweise, jährlich) und automatischer Erstellung als Entwurf am Fälligkeitstag; Preisabgleich mit Artikelstamm
+- [x] Auftrag verknüpfen: Auftrag wechselt automatisch auf „Laufend" solange Vorlage aktiv; zurück auf „In Bearbeitung" wenn pausiert; „Abgeschlossen" wenn beendet
+- [x] Vertragsdokument (PDF/Bild) an Vorlage hinterlegen – Badge auf der Karte, jederzeit ersetzbar
+- [x] 3-Zustands-Lifecycle: aktiv (läuft) / pausiert (aktiv=false) / beendet (dauerhaft, Datensatz bleibt erhalten)
+- [x] Detail-Panel: Rechnungsliste aller aus der Vorlage generierten Rechnungen mit Gesamtumsatz-Kachel
+- [x] Schnellstart von Auftrags-Seite: „🔁 Wiederkehrend"-Button befüllt das Formular mit Auftragsdaten
 
 ### Wiederkehrende Buchungen
 - [ ] Vorlagen für Fixkosten (Miete, Leasing, Abonnements) mit Fälligkeitsintervall
