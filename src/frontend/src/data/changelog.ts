@@ -38,9 +38,13 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Wiederkehrende Rechnungen: Vorlage kann einem Auftrag verknüpft werden – der Auftrag wechselt automatisch auf Status „Laufend" solange die Vorlage aktiv ist, und zurück auf „In Bearbeitung" wenn sie deaktiviert wird' },
       { typ: 'neu', text: 'Wiederkehrende Rechnungen: Vertragsdokument (PDF/Bild) direkt an einer Vorlage hinterlegen – erscheint als Badge auf der Karte und kann jederzeit ersetzt oder entfernt werden' },
       { typ: 'neu', text: 'Aufträge: neuer Status „Laufend" (teal) für Aufträge mit aktiver wiederkehrender Vorlage – im Filter und Zähler-Kachel zusammen mit „In Bearbeitung" sichtbar' },
+      { typ: 'neu', text: 'Wiederkehrende Rechnungen – Detail-Panel: Klick auf eine Vorlage zeigt alle daraus generierten Rechnungen mit Datum, Nummer, Brutto und Zahlungsstatus; Gesamtumsatz-Kachel; Klick auf Zeile öffnet Rechnung direkt' },
+      { typ: 'neu', text: 'Aufträge: Schaltfläche „🔁 Wiederkehrend" öffnet das Wiederkehrend-Formular mit vorausgefüllten Auftragsdaten (Kunde, Positionen, Auftrag bereits verknüpft)' },
       { typ: 'neu', text: 'Wiederkehrende Rechnungen: Vorlage kann dauerhaft beendet werden – Datensatz und alle bisherigen Rechnungen bleiben erhalten, Auftrag wechselt auf „Abgeschlossen"; Unterschied zu Pausieren: beendete Vorlagen werden standardmäßig im Filter ausgeblendet' },
       { typ: 'verbesserung', text: 'Wiederkehrende Rechnungen – Statusfilter: Optionen „Nur aktive", „Nur pausierte" und „Beendete" – beendete Vorlagen sind standardmäßig ausgeblendet' },
       { typ: 'verbesserung', text: 'Wiederkehrende Rechnungen – Löschen: nur noch möglich wenn keine Rechnungen erstellt wurden und keine Auftrag- oder Vertrag-Verknüpfung vorhanden; sonst muss „Beenden" verwendet werden' },
+      { typ: 'fix', text: 'Wiederkehrende Rechnungen – Detail-Panel: Rechnungsstatus (Entwurf → Offen → Bezahlt) wird jetzt sofort aktualisiert wenn eine Rechnung in der Rechnungsübersicht finalisiert oder bezahlt wird' },
+      { typ: 'fix', text: 'Aufträge: Status blieb nach „Vorlage beenden" auf „Laufend" – fehlender DB-Flush vor der Auftrag-Status-Abfrage im Backend' },
     ],
   },
   {
