@@ -6,7 +6,7 @@ import {
   getVorlagen, createVorlage, updateVorlage, deleteVorlage,
   entwurfJetzt, preiseSynchronisieren, getKunden, getUstSaetze,
   getAuftraege, getUnternehmen, uploadVertragVorlage, deleteVertragVorlage,
-  getVorlageRechnungen,
+  getVorlageRechnungen, pruefenWiederkehrend,
   type Rechnungsvorlage, type VorlageCreate, type EntwurfErgebnis,
   type ArtikelSuche, type Rechnung, type VorlageRechnungKompakt,
 } from '../../api/client'
@@ -774,12 +774,37 @@ export function WiederkehrendePage() {
 
   const createMut = useMutation({
     mutationFn: createVorlage,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['wiederkehrend'] }); setFormModus(null) },
+    onSuccess: (vorlage) => {
+      qc.invalidateQueries({ queryKey: ['wiederkehrend'] })
+      setFormModus(null)
+      // Sofort prüfen ob ein Entwurf fällig ist (naechstes_datum <= heute)
+      if (vorlage.aktiv) {
+        pruefenWiederkehrend().then(ergebnisse => {
+          if (ergebnisse.length > 0) {
+            setLetzterEntwurf(ergebnisse[ergebnisse.length - 1])
+            qc.invalidateQueries({ queryKey: ['wiederkehrend'] })
+            qc.invalidateQueries({ queryKey: ['rechnungen'] })
+          }
+        }).catch(() => {})
+      }
+    },
   })
 
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: number; data: VorlageCreate }) => updateVorlage(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['wiederkehrend'] }); setFormModus(null) },
+    onSuccess: (vorlage) => {
+      qc.invalidateQueries({ queryKey: ['wiederkehrend'] })
+      setFormModus(null)
+      if (vorlage.aktiv) {
+        pruefenWiederkehrend().then(ergebnisse => {
+          if (ergebnisse.length > 0) {
+            setLetzterEntwurf(ergebnisse[ergebnisse.length - 1])
+            qc.invalidateQueries({ queryKey: ['wiederkehrend'] })
+            qc.invalidateQueries({ queryKey: ['rechnungen'] })
+          }
+        }).catch(() => {})
+      }
+    },
   })
 
   const deleteMut = useMutation({
