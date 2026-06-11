@@ -21,6 +21,7 @@ import { ArtikelFormModal } from '../artikel/ArtikelPage'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 import { MailDialog } from '../../components/MailDialog'
 import { guardedDateChange } from '../../utils/dateInput'
+import { getKontorahmenModus, katLabel, KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -400,6 +401,12 @@ function ZahlungsDialog({
   const qc = useQueryClient()
   const istGutschrift = rechnung.dokument_typ === 'Gutschrift'
   const restbetrag = parseFloat(rechnung.brutto_gesamt) - parseFloat(rechnung.bezahlt_betrag)
+  const [katModus, setKatModus] = useState<KontorahmenModus>(getKontorahmenModus)
+  useEffect(() => {
+    const h = (e: StorageEvent) => { if (e.key === KONTORAHMEN_LS_KEY) setKatModus((e.newValue ?? '') as KontorahmenModus) }
+    window.addEventListener('storage', h)
+    return () => window.removeEventListener('storage', h)
+  }, [])
   const [betrag, setBetrag] = useState(Math.abs(restbetrag).toFixed(2).replace('.', ','))
   const [datum, setDatum] = useState(heuteIso())
   const [zahlungsart, setZahlungsart] = useState<'Bar' | 'Karte' | 'PayPal' | 'Bank'>('Bar')
@@ -692,11 +699,11 @@ function ZahlungsDialog({
                             >
                               <option value="">— wählen —</option>
                               <optgroup label="Betriebsausgaben">
-                                {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                                {aufwandKat.map((k) => <option key={k.id} value={String(k.id)}>{katLabel(k, katModus)}</option>)}
                               </optgroup>
                               {anlageKat.length > 0 && (
                                 <optgroup label="Investitionen">
-                                  {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{k.name}</option>)}
+                                  {anlageKat.map((k) => <option key={k.id} value={String(k.id)}>{katLabel(k, katModus)}</option>)}
                                 </optgroup>
                               )}
                             </select>
@@ -1889,6 +1896,12 @@ function RechnungForm({
   const { data: kategorien } = useQuery({ queryKey: ['kategorien', 'aktiv'], queryFn: () => getKategorien(true) })
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 10 })
   const { data: ustSaetze = [] } = useQuery({ queryKey: ['ust-saetze'], queryFn: getUstSaetze, staleTime: 1000 * 60 * 10 })
+  const [katModus, setKatModus] = useState<KontorahmenModus>(getKontorahmenModus)
+  useEffect(() => {
+    const h = (e: StorageEvent) => { if (e.key === KONTORAHMEN_LS_KEY) setKatModus((e.newValue ?? '') as KontorahmenModus) }
+    window.addEventListener('storage', h)
+    return () => window.removeEventListener('storage', h)
+  }, [])
 
   const istKleinunternehmer = unternehmen?.ist_kleinunternehmer ?? false
   const aktiveSaetze = ustSaetze.filter((s) => s.ist_aktiv)
@@ -2776,7 +2789,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
                         >
                           <option value="">— Hauptkategorie —</option>
                           {(kategorien ?? []).filter((k) => k.kontenart === 'Aufwand' || k.kontenart === 'Anlage').map((k) => (
-                            <option key={k.id} value={String(k.id)}>{k.name}</option>
+                            <option key={k.id} value={String(k.id)}>{katLabel(k, katModus)}</option>
                           ))}
                         </select>
                       </td>

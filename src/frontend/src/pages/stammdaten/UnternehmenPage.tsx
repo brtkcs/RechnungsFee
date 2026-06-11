@@ -6,6 +6,7 @@ import {
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { guardedDateChange } from '../../utils/dateInput'
+import { KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
 
 // ---------------------------------------------------------------------------
 // Hilfskomponenten
@@ -167,6 +168,16 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
   })
   const [gespeichert, setGespeichert] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
+  const [kontorahmenModus, setKontorahmenModus] = useState<KontorahmenModus>(
+    () => (localStorage.getItem(KONTORAHMEN_LS_KEY) ?? '') as KontorahmenModus
+  )
+
+  function handleKontorahmenChange(modus: KontorahmenModus) {
+    setKontorahmenModus(modus)
+    if (modus) localStorage.setItem(KONTORAHMEN_LS_KEY, modus)
+    else localStorage.removeItem(KONTORAHMEN_LS_KEY)
+    window.dispatchEvent(new StorageEvent('storage', { key: KONTORAHMEN_LS_KEY, newValue: modus || null }))
+  }
 
   const mut = useMutation({
     mutationFn: (d: Partial<Unternehmen>) => updateUnternehmen(d),
@@ -647,6 +658,37 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
               </p>
             </div>
           </label>
+        </div>
+
+        <hr className="border-slate-100 dark:border-slate-700" />
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Buchungsanzeige</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Kontonummer hinter der Kategorie-Bezeichnung anzeigen – beim Buchen im Journal und beim Rechnungsschreiben.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {([
+              { value: '' as KontorahmenModus, label: 'Nur Bezeichnung' },
+              { value: 'skr03' as KontorahmenModus, label: 'Bezeichnung + SKR03' },
+              { value: 'skr04' as KontorahmenModus, label: 'Bezeichnung + SKR04' },
+            ] as const).map(opt => (
+              <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="kontorahmen_anzeige"
+                  value={opt.value}
+                  checked={kontorahmenModus === opt.value}
+                  onChange={() => handleKontorahmenChange(opt.value)}
+                  className="h-4 w-4 text-blue-600 border-slate-300"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-200">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Beispiel SKR03: Betriebseinnahmen [8400] · Büromaterial [4930]
+          </p>
         </div>
       </div>
 

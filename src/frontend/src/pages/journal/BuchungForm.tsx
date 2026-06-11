@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
+import { getKontorahmenModus, katLabel, KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -81,6 +82,15 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
   const [keineGeldbewegung, setKeineGeldbewegung] = useState(false)
   const [kmAnzahl, setKmAnzahl] = useState<string>('')
   const [showNeuKategorie, setShowNeuKategorie] = useState(false)
+  const [katModus, setKatModus] = useState<KontorahmenModus>(getKontorahmenModus)
+
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === KONTORAHMEN_LS_KEY) setKatModus((e.newValue ?? '') as KontorahmenModus)
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
 
   const { data: kategorien } = useQuery({ queryKey: ['kategorien', 'aktiv'], queryFn: () => getKategorien(true) })
   const { data: kunden } = useQuery({ queryKey: ['kunden'], queryFn: getKunden })
@@ -279,27 +289,27 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
     return artWert === 'Einnahme' ? (
       <>
         <optgroup label="Erlöse">
-          {erloeseKat.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+          {erloeseKat.map((k) => <option key={k.id} value={k.id}>{katLabel(k, katModus)}</option>)}
         </optgroup>
         {einlageKat.length > 0 && (
           <optgroup label="Sonstiges">
-            {einlageKat.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+            {einlageKat.map((k) => <option key={k.id} value={k.id}>{katLabel(k, katModus)}</option>)}
           </optgroup>
         )}
       </>
     ) : (
       <>
         <optgroup label="Betriebsausgaben">
-          {aufwandKat.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+          {aufwandKat.map((k) => <option key={k.id} value={k.id}>{katLabel(k, katModus)}</option>)}
         </optgroup>
         {anlageKat.length > 0 && (
           <optgroup label="Investitionen">
-            {anlageKat.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+            {anlageKat.map((k) => <option key={k.id} value={k.id}>{katLabel(k, katModus)}</option>)}
           </optgroup>
         )}
         {entnahmeKat.length > 0 && (
           <optgroup label="Sonstiges">
-            {entnahmeKat.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+            {entnahmeKat.map((k) => <option key={k.id} value={k.id}>{katLabel(k, katModus)}</option>)}
           </optgroup>
         )}
       </>
