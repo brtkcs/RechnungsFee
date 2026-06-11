@@ -102,7 +102,7 @@
 - [ ] DATEV-Export (CSV nach DATEV-Format für Steuerberater)
 - [x] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung (🔍 Aufschlüsselung-Toggle in der EÜR)
 - [ ] Anlage AVEUR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
-- [ ] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ
+- [x] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ (neue Spalte „Vorsteuer-Betrag")
 
 ### Backup & Wiederherstellung
 - [ ] Automatische Wiederherstellung aus Backup (Datei-Auswahl → App ersetzt DB und startet neu)

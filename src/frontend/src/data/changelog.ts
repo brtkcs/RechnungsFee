@@ -29,6 +29,8 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'EÜR Aufschlüsselung: Schaltfläche „🔍 Aufschlüsselung" zeigt je EÜR-Zeile die enthaltenen Kategorien mit Einzelbeträgen – für Steuerberater und eigene Kontrolle' },
       { typ: 'verbesserung', text: 'Mail-Signatur: Vorschau rendert jetzt Markdown als HTML (Fett, Links, Bilder) statt Rohtext – Markdown-Hilfe mit Cheatsheet einblendbar (Issue #150)' },
       { typ: 'verbesserung', text: 'Buchungsanzeige: Kategorie-Dropdowns können optional die SKR03- oder SKR04-Kontonummer hinter der Bezeichnung anzeigen (z. B. „Büromaterial [4930]") – einstellbar unter Einstellungen → Unternehmen → Rechnungen' },
+      { typ: 'verbesserung', text: 'GoBD-Export (Journal-CSV): neue Spalte „Vorsteuer-Betrag" zeigt den tatsächlich abziehbaren Vorsteueranteil; USt-Betrag bei normalen Ausgaben korrekt auf 0 gesetzt; Sonderfall (ig_erwerb/§13b) als eigene Spalte' },
+      { typ: 'fix', text: 'KDE: Dateiauswahl-Dialog erschien im falschen Theme – install.sh setzt nun GTK_THEME automatisch aus den KDE-Einstellungen im Desktop-Starter (Issue #151)' },
     ],
   },
   {

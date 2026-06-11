@@ -124,8 +124,8 @@ def export_journal_csv(db: Session, jahr: int, kontenrahmen: str = "SKR03") -> t
     header = [
         "Lfd. Nr.", "Datum", "Belegnummer", "Ext. Belegnummer", "Beschreibung",
         "Art", "Zahlungsart", "Kategorie", konto_spalte,
-        "Netto-Betrag (EUR)", "USt-Satz (%)", "USt-Betrag (EUR)", "Brutto-Betrag (EUR)",
-        "Vorsteuerabzug", "Steuerbefreiung", "Kunde/Lieferant",
+        "Netto-Betrag (EUR)", "USt-Satz (%)", "USt-Betrag (EUR)", "Vorsteuer-Betrag (EUR)", "Brutto-Betrag (EUR)",
+        "Vorsteuerabzug", "Steuerbefreiung", "Sonderfall", "Kunde/Lieferant",
         "Signatur (SHA-256)", "Erstellt am",
     ]
     rows = []
@@ -149,6 +149,18 @@ def export_journal_csv(db: Session, jahr: int, kontenrahmen: str = "SKR03") -> t
                 teile.append(f"{e.kunde.vorname or ''} {e.kunde.nachname or ''}".strip())
             kunde_name = ", ".join(t for t in teile if t)
 
+        # USt-Betrag: bei Einnahmen = vereinnahmte USt; bei Ausgaben mit Reverse Charge = selbst
+        # geschuldete USt (ig_erwerb/§13b); bei normalen Ausgaben = 0 (die gezahlte USt ist Vorsteuer)
+        ist_reverse_charge = e.ust_sonderfall in ("ig_erwerb", "13b_abs1", "13b_abs2")
+        if e.art == "Einnahme" or ist_reverse_charge:
+            ust_betrag_csv = e.ust_betrag
+        else:
+            ust_betrag_csv = Decimal(0)
+
+        # Vorsteuer-Betrag: tatsächlich abziehbarer Anteil (berücksichtigt vorsteuer_prozent der
+        # Kategorie, z.B. nur 70% bei Bewirtungskosten); bei Einnahmen immer 0
+        vorsteuer_betrag_csv = e.vorsteuer_betrag if e.art == "Ausgabe" else Decimal(0)
+
         rows.append([
             str(lfd),
             _fmt_date(e.datum),
@@ -161,10 +173,12 @@ def export_journal_csv(db: Session, jahr: int, kontenrahmen: str = "SKR03") -> t
             konto,
             _fmt_decimal(e.netto_betrag),
             _fmt_decimal(e.ust_satz),
-            _fmt_decimal(e.ust_betrag),
+            _fmt_decimal(ust_betrag_csv),
+            _fmt_decimal(vorsteuer_betrag_csv),
             _fmt_decimal(e.brutto_betrag),
             _fmt_bool(e.vorsteuerabzug),
             e.steuerbefreiung_grund or "",
+            e.ust_sonderfall or "",
             kunde_name,
             e.signatur or "",
             _fmt_datetime(e.erstellt_am),
@@ -521,9 +535,9 @@ def _sammle_statistiken(db: Session, jahr: int) -> dict:
         if e.art == "Einnahme" and int(float(str(e.ust_satz))) == 0
     )
     vorsteuer = sum(
-        Decimal(str(e.ust_betrag))
+        Decimal(str(e.vorsteuer_betrag))
         for e in eintraege
-        if e.art == "Ausgabe" and e.vorsteuerabzug
+        if e.art == "Ausgabe"
     )
 
     # Tagesabschlüsse
