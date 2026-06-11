@@ -629,11 +629,22 @@ DESKTOP_DIR="$HOME/.local/share/applications"
 DESKTOP_FILE="$DESKTOP_DIR/de.rechnungsfee.app.desktop"
 mkdir -p "$DESKTOP_DIR"
 
+# Auf KDE: GTK_THEME setzen damit der Dateiauswahl-Dialog das System-Theme übernimmt.
+# Das AppImage bündelt WebKit2GTK und ignoriert sonst das systemseitige GTK-Theme (Issue #151).
+GTK_THEME_ENV=""
+if [ "${XDG_CURRENT_DESKTOP:-}" = "KDE" ] || [ "${DESKTOP_SESSION:-}" = "plasma" ]; then
+  KDE_GTK_THEME="$(kreadconfig5 --group "GTK" --key "theme" 2>/dev/null || true)"
+  if [ -n "$KDE_GTK_THEME" ]; then
+    GTK_THEME_ENV="GTK_THEME=$KDE_GTK_THEME "
+    echo "KDE erkannt – GTK_THEME=$KDE_GTK_THEME wird im Desktop-Starter gesetzt"
+  fi
+fi
+
 cat > "$DESKTOP_FILE" << DESKTOP
 [Desktop Entry]
 Name=RechnungsFee
 Comment=Buchhaltung für Freiberufler & Kleinunternehmer (§19 UStG)
-Exec=env GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 $APPIMAGE %u
+Exec=env ${GTK_THEME_ENV}GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 $APPIMAGE %u
 Icon=de.rechnungsfee.app
 Type=Application
 Categories=Office;Finance;Accounting;
