@@ -1,0 +1,21 @@
+name: Inaktive Issues schließen
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          only-labels: 'awaiting-response'
+          days-before-stale: 14
+          days-before-close: 0
+          stale-issue-label: 'stale'
+          close-issue-label: 'stale'
+          stale-issue-message: ''
+          close-issue-message: 'Automatisch geschlossen – 14 Tage keine Antwort. Bei weiteren Fragen gerne ein neues Issue öffnen.'
+          operations-per-run: 50
