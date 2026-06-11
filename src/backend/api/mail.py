@@ -193,7 +193,7 @@ def mail_senden(req: MailSendenRequest, db: Session = Depends(get_db)):
             for eintrag in sorted(paket.dateien, key=lambda e: e.sort_order):
                 pfad = APP_DATA_DIR / "uploads" / eintrag.beleg.dateiname
                 if pfad.exists():
-                    attachments.append((pfad.read_bytes(), eintrag.original_name or eintrag.beleg.dateiname))
+                    attachments.append((pfad.read_bytes(), eintrag.bezeichnung or eintrag.beleg.original_name or eintrag.beleg.dateiname))
 
     empfaenger = [req.an]
     if req.cc:
