@@ -849,147 +849,135 @@ export function WiederkehrendePage() {
 
   return (
     <div className="flex h-full">
-    {/* Linke Seite */}
-    <div className={`${selVorlage && !formModus ? 'flex-1 min-w-0' : 'flex-1'} flex flex-col overflow-hidden`}>
-    <div className="p-6 space-y-6 overflow-y-auto flex-1">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Wiederkehrende Rechnungen</h1>
-        {formModus === null && (
-          <button
-            onClick={() => { setFormModus('neu'); setSelId(null) }}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0">
-            + Neue Vorlage
-          </button>
-        )}
-      </div>
 
-      {/* Filter */}
-      {formModus === null && (
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="search"
-            placeholder="Bezeichnung oder Kunde suchen…"
-            value={suche}
-            onChange={e => setSuche(e.target.value)}
-            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 flex-1 min-w-[180px]"
-          />
-          <select
-            value={intervallFilter}
-            onChange={e => setIntervallFilter(e.target.value)}
-            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700"
-          >
-            <option value="">Alle Intervalle</option>
-            <option value="monatlich">Monatlich</option>
-            <option value="quartalsweise">Quartalsweise</option>
-            <option value="jaehrlich">Jährlich</option>
-          </select>
-          <select
-            value={aktivFilter}
-            onChange={e => setAktivFilter(e.target.value)}
-            className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700"
-          >
-            <option value="">Aktiv &amp; Inaktiv</option>
-            <option value="aktiv">Nur aktive</option>
-            <option value="inaktiv">Nur inaktive</option>
-          </select>
+      {/* Linke Seite – Liste (schrumpft wenn rechts etwas geöffnet ist) */}
+      <div className={`${formModus !== null ? 'w-1/3 min-w-[280px] shrink-0' : selVorlage ? 'flex-1' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 overflow-hidden`}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Wiederkehrende Rechnungen</h1>
+            <button
+              onClick={() => { setFormModus('neu'); setSelId(null) }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shrink-0">
+              + Neue Vorlage
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input type="search" placeholder="Bezeichnung oder Kunde suchen…"
+              value={suche} onChange={e => setSuche(e.target.value)}
+              className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 flex-1 min-w-[140px]"
+            />
+            <select value={intervallFilter} onChange={e => setIntervallFilter(e.target.value)}
+              className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700">
+              <option value="">Alle Intervalle</option>
+              <option value="monatlich">Monatlich</option>
+              <option value="quartalsweise">Quartalsweise</option>
+              <option value="jaehrlich">Jährlich</option>
+            </select>
+            <select value={aktivFilter} onChange={e => setAktivFilter(e.target.value)}
+              className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 bg-white dark:bg-slate-700">
+              <option value="">Aktiv &amp; Inaktiv</option>
+              <option value="aktiv">Nur aktive</option>
+              <option value="inaktiv">Nur inaktive</option>
+            </select>
+          </div>
         </div>
-      )}
 
-      {/* Letzter Entwurf – Ergebnis-Banner */}
-      {letzterEntwurf && (
-        <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-start gap-3">
-          <span className="text-green-600 dark:text-green-400 text-xl">✓</span>
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium text-green-800 dark:text-green-300">
-              RE-Entwurf <span className="font-bold">{letzterEntwurf.rechnungsnummer}</span> erstellt aus „{letzterEntwurf.vorlage_bezeichnung}"
-            </p>
-            {letzterEntwurf.preisaenderungen.length > 0 && (
-              <div>
-                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mt-1">
-                  ⚠ Preisänderungen im Entwurf übernommen:
+        {/* Liste – scrollbar */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* Entwurf-Banner */}
+          {letzterEntwurf && (
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-green-600 dark:text-green-400 text-xl">✓</span>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  RE-Entwurf <span className="font-bold">{letzterEntwurf.rechnungsnummer}</span> erstellt aus „{letzterEntwurf.vorlage_bezeichnung}"
                 </p>
-                {letzterEntwurf.preisaenderungen.map((pa, i) => (
-                  <p key={i} className="text-xs text-amber-700 dark:text-amber-400 ml-3">
-                    · {pa.beschreibung}: {parseFloat(pa.preis_vorlage).toFixed(2)} € → {parseFloat(pa.preis_aktuell).toFixed(2)} €
-                  </p>
-                ))}
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Klicke „Preise sync" um die Vorlage auf die neuen Preise zu aktualisieren.
-                </p>
+                {letzterEntwurf.preisaenderungen.length > 0 && (
+                  <div>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mt-1">⚠ Preisänderungen im Entwurf übernommen:</p>
+                    {letzterEntwurf.preisaenderungen.map((pa, i) => (
+                      <p key={i} className="text-xs text-amber-700 dark:text-amber-400 ml-3">
+                        · {pa.beschreibung}: {parseFloat(pa.preis_vorlage).toFixed(2)} € → {parseFloat(pa.preis_aktuell).toFixed(2)} €
+                      </p>
+                    ))}
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Klicke „Preise sync" um die Vorlage auf die neuen Preise zu aktualisieren.
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+              <button onClick={() => setLetzterEntwurf(null)} className="text-green-400 hover:text-green-600 text-lg leading-none">×</button>
+            </div>
+          )}
+
+          {isLoading ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">Lade Vorlagen…</p>
+          ) : vorlagen.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 dark:text-slate-500 space-y-2">
+              <p className="text-4xl">🔁</p>
+              <p className="text-sm">Noch keine Vorlagen angelegt.</p>
+              <p className="text-xs">Erstelle eine Vorlage für regelmäßige Leistungen wie Hosting, Wartung oder Miete.</p>
+            </div>
+          ) : vorlagenGefiltert.length === 0 ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">Keine Vorlagen entsprechen dem Filter.</p>
+          ) : (
+            <div className={`grid gap-4 ${formModus !== null ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+              {vorlagenGefiltert.map(v => (
+                <div key={v.id} onClick={() => { setSelId(v.id); setFormModus(null) }}
+                  className={`cursor-pointer rounded-xl transition-all ${selId === v.id ? 'ring-2 ring-blue-500' : ''}`}>
+                  <VorlageKarte
+                    vorlage={v}
+                    onLoeschen={() => handleLoeschen(v.id, v.bezeichnung)}
+                    onEntwurfJetzt={() => entwurfMut.mutate(v.id)}
+                    onPreisSync={() => syncMut.mutate(v.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Rechts: Formular */}
+      {formModus !== null && (
+        <div className="flex-1 border-l border-slate-200 dark:border-slate-700 overflow-auto">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100">
+              {formModus === 'neu' ? 'Neue Vorlage' : 'Vorlage bearbeiten'}
+            </h3>
+            <button onClick={() => setFormModus(null)}
+              className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl">×</button>
           </div>
-          <button onClick={() => setLetzterEntwurf(null)} className="text-green-400 hover:text-green-600 text-lg leading-none">×</button>
+          <div className="p-6">
+            <VorlageFormular
+              key={typeof formModus === 'number' ? formModus : 'neu'}
+              initial={editVorlage}
+              isSaving={createMut.isPending || updateMut.isPending}
+              onSpeichern={handleSave}
+              onAbbrechen={() => setFormModus(null)}
+              auftraegeAktiv={!!unternehmen?.auftraege_aktiv}
+              auftraege={auftraege}
+              defaultAuftragId={formModus === 'neu' ? defaultAuftragId : undefined}
+              defaultAuftrag={formModus === 'neu' ? defaultAuftrag : undefined}
+              onVertragUpload={typeof formModus === 'number' ? (datei) => vertragUploadMut.mutate({ id: formModus, datei }) : undefined}
+              onVertragDelete={typeof formModus === 'number' ? () => vertragDeleteMut.mutate(formModus) : undefined}
+              isVertragUploading={vertragUploadMut.isPending || vertragDeleteMut.isPending}
+            />
+          </div>
         </div>
       )}
 
-      {/* Formular */}
-      {formModus !== null && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-blue-800 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-              {formModus === 'neu' ? 'Neue Vorlage' : 'Vorlage bearbeiten'}
-            </h2>
-            <button onClick={() => setFormModus(null)}
-              className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 text-xl leading-none">×</button>
-          </div>
-          <VorlageFormular
-            key={typeof formModus === 'number' ? formModus : 'neu'}
-            initial={editVorlage}
-            isSaving={createMut.isPending || updateMut.isPending}
-            onSpeichern={handleSave}
-            onAbbrechen={() => setFormModus(null)}
-            auftraegeAktiv={!!unternehmen?.auftraege_aktiv}
-            auftraege={auftraege}
-            defaultAuftragId={formModus === 'neu' ? defaultAuftragId : undefined}
-            defaultAuftrag={formModus === 'neu' ? defaultAuftrag : undefined}
-            onVertragUpload={typeof formModus === 'number' ? (datei) => vertragUploadMut.mutate({ id: formModus, datei }) : undefined}
-            onVertragDelete={typeof formModus === 'number' ? () => vertragDeleteMut.mutate(formModus) : undefined}
-            isVertragUploading={vertragUploadMut.isPending || vertragDeleteMut.isPending}
+      {/* Rechts: Detail-Panel */}
+      {selVorlage && formModus === null && (
+        <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+          <VorlageDetail
+            vorlage={selVorlage}
+            onClose={() => setSelId(null)}
+            onBearbeiten={() => { setFormModus(selVorlage.id); setSelId(null) }}
           />
         </div>
       )}
-
-      {/* Liste */}
-      {isLoading ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Lade Vorlagen…</p>
-      ) : vorlagen.length === 0 && formModus === null ? (
-        <div className="text-center py-16 text-slate-400 dark:text-slate-500 space-y-2">
-          <p className="text-4xl">🔁</p>
-          <p className="text-sm">Noch keine Vorlagen angelegt.</p>
-          <p className="text-xs">Erstelle eine Vorlage für regelmäßige Leistungen wie Hosting, Wartung oder Miete.</p>
-        </div>
-      ) : vorlagenGefiltert.length === 0 && formModus === null ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">Keine Vorlagen entsprechen dem Filter.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {vorlagenGefiltert.map(v => (
-            <div key={v.id} onClick={() => { setSelId(v.id); setFormModus(null) }}
-              className={`cursor-pointer rounded-xl transition-all ${selId === v.id ? 'ring-2 ring-blue-500' : ''}`}>
-              <VorlageKarte
-                vorlage={v}
-                onLoeschen={() => handleLoeschen(v.id, v.bezeichnung)}
-                onEntwurfJetzt={() => entwurfMut.mutate(v.id)}
-                onPreisSync={() => syncMut.mutate(v.id)}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>{/* end overflow scroll */}
-    </div>{/* end linke Seite */}
-
-    {/* Rechtes Detail-Panel */}
-    {selVorlage && !formModus && (
-      <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-        <VorlageDetail
-          vorlage={selVorlage}
-          onClose={() => setSelId(null)}
-          onBearbeiten={() => { setFormModus(selVorlage.id); setSelId(null) }}
-        />
-      </div>
-    )}
     </div>
   )
 }
