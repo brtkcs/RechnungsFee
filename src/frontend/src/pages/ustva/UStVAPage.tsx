@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   berechneUStVA, speichereUStVA, getUStVAHistorie, getUStVAPdfUrl,
@@ -88,6 +88,7 @@ export function UStVAPage() {
   const qc = useQueryClient()
   const now = new Date()
   const [modus, setModus] = useState<'monat' | 'quartal'>('quartal')
+  const modusInitRef = useRef(false)
   const [jahr, setJahr] = useState(now.getFullYear())
   const [monat, setMonat] = useState(now.getMonth() + 1)
   const [quartal, setQuartal] = useState(Math.ceil((now.getMonth() + 1) / 3))
@@ -104,6 +105,14 @@ export function UStVAPage() {
 
   const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
   const { data: historie } = useQuery({ queryKey: ['ustva-historie'], queryFn: getUStVAHistorie })
+
+  useEffect(() => {
+    if (unt && !modusInitRef.current) {
+      modusInitRef.current = true
+      const r = (unt as any).voranmeldungsrhythmus as 'monat' | 'quartal' | undefined
+      if (r === 'monat' || r === 'quartal') setModus(r)
+    }
+  }, [unt])
 
   const { data: ergebnis, isLoading, error } = useQuery({
     queryKey: ['ustva-berechnen', zeitraum],
