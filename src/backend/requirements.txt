@@ -16,3 +16,4 @@ pymupdf
 pytesseract
 ocrmypdf
 markdown
+cryptography

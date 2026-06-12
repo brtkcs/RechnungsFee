@@ -118,6 +118,9 @@ class Unternehmen(Base):
     qr_zahlung_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     standard_skonto_prozent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     standard_skonto_tage: Mapped[int | None] = mapped_column(Integer)
+    backup_extern_pfad_1:  Mapped[str | None] = mapped_column(Text)
+    backup_extern_pfad_2:  Mapped[str | None] = mapped_column(Text)
+    backup_extern_passwort: Mapped[str | None] = mapped_column(Text)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 

@@ -204,6 +204,9 @@ export type Unternehmen = {
   auftraege_aktiv?: boolean
   wiederkehrend_aktiv?: boolean
   buchungsvorlagen_aktiv?: boolean
+  backup_extern_pfad_1?: string | null
+  backup_extern_pfad_2?: string | null
+  backup_extern_passwort?: string | null
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>

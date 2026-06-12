@@ -80,6 +80,9 @@ class UnternehmenBase(BaseModel):
     auftraege_aktiv: bool = False
     wiederkehrend_aktiv: bool = False
     buchungsvorlagen_aktiv: bool = False
+    backup_extern_pfad_1:   Optional[str] = None
+    backup_extern_pfad_2:   Optional[str] = None
+    backup_extern_passwort: Optional[str] = None
 
     @field_validator("versteuerungsart")
     @classmethod

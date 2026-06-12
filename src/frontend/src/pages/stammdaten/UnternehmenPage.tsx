@@ -28,7 +28,7 @@ const selectCls = `${inputCls} bg-white dark:bg-slate-700`
 // Tab-Navigation
 // ---------------------------------------------------------------------------
 
-type TabId = 'firma' | 'steuer' | 'rechnungen' | 'email' | 'unterschrift'
+type TabId = 'firma' | 'steuer' | 'rechnungen' | 'email' | 'unterschrift' | 'backup'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'firma',        label: 'Firma' },
@@ -36,6 +36,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'rechnungen',   label: 'Rechnungen' },
   { id: 'email',        label: 'E-Mail' },
   { id: 'unterschrift', label: 'Unterschrift' },
+  { id: 'backup',       label: 'Backup' },
 ]
 
 function TabNav({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
@@ -1119,6 +1120,140 @@ function SignaturSektion({ data }: { data: Unternehmen }) {
 // E-Mail-Tab (Vorlage + Signatur kombiniert)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Backup-Einstellungen
+// ---------------------------------------------------------------------------
+
+function BackupSektion({ data }: { data: Unternehmen }) {
+  const queryClient = useQueryClient()
+  const [pfad1, setPfad1] = useState(data.backup_extern_pfad_1 ?? '')
+  const [pfad2, setPfad2] = useState(data.backup_extern_pfad_2 ?? '')
+  const [passwort, setPasswort] = useState(data.backup_extern_passwort ?? '')
+  const [zeigPasswort, setZeigPasswort] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle')
+
+  const mutation = useMutation({
+    mutationFn: (payload: Partial<typeof data>) => updateUnternehmen(payload as typeof data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unternehmen'] })
+      setStatus('ok')
+      setTimeout(() => setStatus('idle'), 2000)
+    },
+    onError: () => setStatus('err'),
+  })
+
+  async function waehlePfad(setter: (v: string) => void) {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({ directory: true, title: 'Backup-Zielordner wählen' })
+      if (typeof selected === 'string' && selected) setter(selected)
+    } catch {
+      // Im Browser nicht verfügbar – Nutzer tippt Pfad manuell
+    }
+  }
+
+  function speichern() {
+    setStatus('saving')
+    mutation.mutate({
+      ...data,
+      backup_extern_pfad_1:   pfad1 || null,
+      backup_extern_pfad_2:   pfad2 || null,
+      backup_extern_passwort: passwort || null,
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Beim Beenden der App wird automatisch ein lokales Backup erstellt (max. 5 Kopien).
+          Optional können hier bis zu zwei externe Ziele konfiguriert werden – z.B. ein NAS oder ein USB-Laufwerk.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Externes Ziel 1</h4>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={pfad1}
+              onChange={e => setPfad1(e.target.value)}
+              placeholder="z.B. /mnt/nas/backup oder \\\\NAS\backup"
+              className={`${inputCls} flex-1`}
+            />
+            <button type="button" onClick={() => waehlePfad(setPfad1)}
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+              Ordner wählen
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Externes Ziel 2 <span className="font-normal text-slate-400">(optional)</span></h4>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={pfad2}
+              onChange={e => setPfad2(e.target.value)}
+              placeholder="z.B. /media/usb/backup"
+              className={`${inputCls} flex-1`}
+            />
+            <button type="button" onClick={() => waehlePfad(setPfad2)}
+              className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+              Ordner wählen
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <hr className="border-slate-100 dark:border-slate-700" />
+
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Verschlüsselung</h4>
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          Mit Passwort wird die externe Backup-Datei AES-256-GCM-verschlüsselt gespeichert (.db.enc).
+          Ohne Passwort liegt die Datei als lesbare SQLite-Datei vor.
+        </p>
+        <div className="relative">
+          <input
+            type={zeigPasswort ? 'text' : 'password'}
+            value={passwort}
+            onChange={e => setPasswort(e.target.value)}
+            placeholder="Backup-Passwort (optional)"
+            className={`${inputCls} pr-20`}
+          />
+          <button
+            type="button"
+            onClick={() => setZeigPasswort(z => !z)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1"
+          >
+            {zeigPasswort ? 'Verbergen' : 'Anzeigen'}
+          </button>
+        </div>
+        {(pfad1 || pfad2) && !passwort && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Ohne Passwort ist das externe Backup unverschlüsselt – empfohlen wenn das Ziel bereits geschützt ist (z.B. verschlüsseltes NAS).
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={speichern}
+          disabled={status === 'saving'}
+          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          {status === 'saving' ? 'Wird gespeichert…' : 'Backup-Einstellungen speichern'}
+        </button>
+        {status === 'ok' && <span className="text-sm text-green-600 dark:text-green-400">Gespeichert</span>}
+        {status === 'err' && <span className="text-sm text-red-600 dark:text-red-400">Fehler beim Speichern</span>}
+      </div>
+    </div>
+  )
+}
+
 function EmailSektion({ data }: { data: Unternehmen }) {
   return (
     <div className="space-y-8">
@@ -1470,6 +1605,7 @@ export function UnternehmenPage() {
 
           {activeTab === 'email' && <EmailSektion data={data} />}
           {activeTab === 'unterschrift' && <UnterschriftSektion data={data} />}
+          {activeTab === 'backup' && <BackupSektion data={data} />}
         </div>
       </div>
     </div>

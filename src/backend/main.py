@@ -32,7 +32,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen
 
-SCHEMA_VERSION = 75
+SCHEMA_VERSION = 76
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -81,14 +81,62 @@ def shutdown():
     return {"ok": True}
 
 
+def _encrypt_backup(src: Path, dst: Path, passwort: str) -> None:
+    """AES-256-GCM mit PBKDF2-SHA256 (100k Iterationen). Format: salt(16)+nonce(12)+ciphertext+tag."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.primitives import hashes
+    import os as _os
+
+    salt  = _os.urandom(16)
+    nonce = _os.urandom(12)
+    kdf   = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000)
+    key   = kdf.derive(passwort.encode())
+    dst.write_bytes(salt + nonce + AESGCM(key).encrypt(nonce, src.read_bytes(), None))
+
+
 @app.post("/api/backup/erstellen")
 def backup_erstellen():
-    """Backup bei App-Ende – WAL-sicher, max. 5 Kopien (Rotation wie Migrations-Backup)."""
+    """Backup bei App-Ende – WAL-sicher lokal (max. 5), optional AES-256-GCM auf externen Pfaden."""
     try:
         _backup_datenbank()
-        return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    backup_dir = DB_PATH.parent / "backups"
+    backups = sorted(backup_dir.glob("rechnungsfee_*.db"))
+    if not backups:
+        return {"ok": True}
+    neuestes = backups[-1]
+
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT backup_extern_pfad_1, backup_extern_pfad_2, backup_extern_passwort "
+                "FROM unternehmen WHERE id=1"
+            )).fetchone()
+    except Exception:
+        return {"ok": True}
+
+    if not row:
+        return {"ok": True}
+
+    pfad1, pfad2, passwort = row
+    fehler = []
+    for pfad in filter(None, [pfad1, pfad2]):
+        try:
+            import shutil
+            ziel_dir = Path(pfad)
+            ziel_dir.mkdir(parents=True, exist_ok=True)
+            if passwort:
+                _encrypt_backup(neuestes, ziel_dir / (neuestes.stem + ".db.enc"), passwort)
+            else:
+                shutil.copy2(str(neuestes), str(ziel_dir / neuestes.name))
+        except Exception as e:
+            fehler.append(f"{pfad}: {e}")
+            print(f"[Backup] Externer Backup-Fehler ({pfad}): {e}")
+
+    return {"ok": True, "fehler": fehler or None}
 
 
 def _backup_datenbank() -> None:
@@ -1612,6 +1660,19 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 75"))
             conn.commit()
             print("[Migration] Schema auf Version 75 (Datenfix #132: Betriebseinnahmen-Varianten euer_zeile=12)")
+
+        if version < 76:
+            cols76 = {c[1] for c in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            for col, typ in [
+                ("backup_extern_pfad_1",  "TEXT"),
+                ("backup_extern_pfad_2",  "TEXT"),
+                ("backup_extern_passwort", "TEXT"),
+            ]:
+                if col not in cols76:
+                    conn.execute(text(f"ALTER TABLE unternehmen ADD COLUMN {col} {typ}"))
+            conn.execute(text("PRAGMA user_version = 76"))
+            conn.commit()
+            print("[Migration] Schema auf Version 76 (Backup: externe Pfade + AES-Passwort)")
 
 
 def _migrate_kategorien() -> None:
