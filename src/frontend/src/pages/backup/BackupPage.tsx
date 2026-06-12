@@ -40,18 +40,25 @@ function ExterneBackupEinstellungen() {
     } catch { /* Im Browser nicht verfügbar */ }
   }
 
+  const hatZiel = !!(pfad1 || pfad2)
+  const passwortFehlt = hatZiel && !passwort
+  const kannSpeichern = !passwortFehlt && !!data && status !== 'saving'
+
   function speichern() {
-    if (!data) return
+    if (!kannSpeichern) return
     setStatus('saving')
-    mutation.mutate({ ...data, backup_extern_pfad_1: pfad1 || null, backup_extern_pfad_2: pfad2 || null, backup_extern_passwort: passwort || null })
+    mutation.mutate({ ...data!, backup_extern_pfad_1: pfad1 || null, backup_extern_pfad_2: pfad2 || null, backup_extern_passwort: passwort || null })
   }
+
+  const pfadInputCls = (hatFehler: boolean) =>
+    `${inputCls} flex-1 ${hatFehler ? 'border-red-400 focus:ring-red-400' : ''}`
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
       <div className="bg-blue-600 px-6 py-4">
         <h2 className="text-white font-bold text-lg">Externe Backup-Ziele</h2>
         <p className="text-blue-100 text-sm mt-0.5">
-          Beim Beenden der App automatisch auf NAS, USB oder Netzlaufwerk sichern
+          Beim Beenden der App automatisch auf NAS, USB oder Netzlaufwerk sichern – immer AES-256-verschlüsselt (DSGVO Art. 32)
         </p>
       </div>
       <div className="p-6 space-y-5">
@@ -60,8 +67,8 @@ function ExterneBackupEinstellungen() {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Ziel 1</label>
             <div className="flex gap-2">
               <input type="text" value={pfad1} onChange={e => setPfad1(e.target.value)}
-                placeholder={`z.B. ${navigator.platform.startsWith('Win') ? '\\\\\\\\NAS\\backup' : '/mnt/nas/backup'}`}
-                className={`${inputCls} flex-1`} />
+                placeholder="z.B. /mnt/nas/backup oder \\NAS\backup"
+                className={pfadInputCls(false)} />
               {isTauri() && (
                 <button type="button" onClick={() => waehlePfad(setPfad1)}
                   className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -77,7 +84,7 @@ function ExterneBackupEinstellungen() {
             <div className="flex gap-2">
               <input type="text" value={pfad2} onChange={e => setPfad2(e.target.value)}
                 placeholder="z.B. /media/usb/backup"
-                className={`${inputCls} flex-1`} />
+                className={pfadInputCls(false)} />
               {isTauri() && (
                 <button type="button" onClick={() => waehlePfad(setPfad2)}
                   className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -91,35 +98,38 @@ function ExterneBackupEinstellungen() {
         <hr className="border-slate-100 dark:border-slate-700" />
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Verschlüsselung (AES-256)</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            Verschlüsselungs-Passwort
+            {hatZiel && <span className="ml-1 text-red-500">*</span>}
+          </label>
           <div className="relative">
             <input
               type={zeigPasswort ? 'text' : 'password'}
               value={passwort}
               onChange={e => setPasswort(e.target.value)}
-              placeholder="Backup-Passwort (optional)"
-              className={`${inputCls} pr-24`}
+              placeholder={hatZiel ? 'Pflichtfeld – externes Backup ist immer verschlüsselt' : 'Wird benötigt sobald ein Ziel konfiguriert ist'}
+              className={`${inputCls} pr-24 ${passwortFehlt ? 'border-red-400 focus:ring-red-400' : ''}`}
             />
             <button type="button" onClick={() => setZeigPasswort(z => !z)}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1">
               {zeigPasswort ? 'Verbergen' : 'Anzeigen'}
             </button>
           </div>
-          {(pfad1 || pfad2) && !passwort && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Ohne Passwort wird die externe Backup-Datei unverschlüsselt gespeichert. Empfohlen nur wenn das Ziel selbst verschlüsselt ist.
+          {passwortFehlt && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              Externes Backup erfordert ein Passwort – Kundendaten und Rechnungen müssen gemäß DSGVO Art. 32 verschlüsselt gespeichert werden.
             </p>
           )}
           {passwort && (
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              Verschlüsselte Datei endet auf <code className="font-mono">.db.enc</code> – zum Wiederherstellen wird dieses Passwort benötigt.
+              Datei wird als <code className="font-mono">.db.enc</code> gespeichert. Dieses Passwort wird zur Wiederherstellung benötigt – sicher aufbewahren.
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="button" onClick={speichern} disabled={status === 'saving' || !data}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <button type="button" onClick={speichern} disabled={!kannSpeichern}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
             {status === 'saving' ? 'Wird gespeichert…' : 'Einstellungen speichern'}
           </button>
           {status === 'ok' && <span className="text-sm text-green-600 dark:text-green-400">Gespeichert</span>}

@@ -124,15 +124,16 @@ def backup_erstellen():
 
     pfad1, pfad2, passwort = row
     fehler = []
+    if not passwort:
+        # Kein Passwort → keine externe Kopie (DSGVO Art. 32 – personenbezogene Daten)
+        print("[Backup] Externe Ziele übersprungen: kein Verschlüsselungs-Passwort gesetzt")
+        return {"ok": True}
+
     for pfad in filter(None, [pfad1, pfad2]):
         try:
-            import shutil
             ziel_dir = Path(pfad)
             ziel_dir.mkdir(parents=True, exist_ok=True)
-            if passwort:
-                _encrypt_backup(neuestes, ziel_dir / (neuestes.stem + ".db.enc"), passwort)
-            else:
-                shutil.copy2(str(neuestes), str(ziel_dir / neuestes.name))
+            _encrypt_backup(neuestes, ziel_dir / (neuestes.stem + ".db.enc"), passwort)
         except Exception as e:
             fehler.append(f"{pfad}: {e}")
             print(f"[Backup] Externer Backup-Fehler ({pfad}): {e}")
