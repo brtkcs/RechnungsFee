@@ -1,5 +1,134 @@
-import { useState } from 'react'
-import { downloadBackup } from '../../api/client'
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { downloadBackup, getUnternehmen, updateUnternehmen, isTauri } from '../../api/client'
+
+const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
+
+function ExterneBackupEinstellungen() {
+  const queryClient = useQueryClient()
+  const { data } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
+
+  const [pfad1, setPfad1] = useState<string>('')
+  const [pfad2, setPfad2] = useState<string>('')
+  const [passwort, setPasswort] = useState<string>('')
+  const [zeigPasswort, setZeigPasswort] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle')
+
+  useEffect(() => {
+    if (!data) return
+    setPfad1(data.backup_extern_pfad_1 ?? '')
+    setPfad2(data.backup_extern_pfad_2 ?? '')
+    setPasswort(data.backup_extern_passwort ?? '')
+  }, [data])
+
+  const mutation = useMutation({
+    mutationFn: (payload: typeof data) => updateUnternehmen(payload!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unternehmen'] })
+      setStatus('ok')
+      setTimeout(() => setStatus('idle'), 2000)
+    },
+    onError: () => setStatus('err'),
+  })
+
+  async function waehlePfad(setter: (v: string) => void) {
+    if (!isTauri()) return
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({ directory: true, title: 'Backup-Zielordner wählen' })
+      if (typeof selected === 'string' && selected) setter(selected)
+    } catch { /* Im Browser nicht verfügbar */ }
+  }
+
+  function speichern() {
+    if (!data) return
+    setStatus('saving')
+    mutation.mutate({ ...data, backup_extern_pfad_1: pfad1 || null, backup_extern_pfad_2: pfad2 || null, backup_extern_passwort: passwort || null })
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-blue-600 px-6 py-4">
+        <h2 className="text-white font-bold text-lg">Externe Backup-Ziele</h2>
+        <p className="text-blue-100 text-sm mt-0.5">
+          Beim Beenden der App automatisch auf NAS, USB oder Netzlaufwerk sichern
+        </p>
+      </div>
+      <div className="p-6 space-y-5">
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Ziel 1</label>
+            <div className="flex gap-2">
+              <input type="text" value={pfad1} onChange={e => setPfad1(e.target.value)}
+                placeholder={`z.B. ${navigator.platform.startsWith('Win') ? '\\\\\\\\NAS\\backup' : '/mnt/nas/backup'}`}
+                className={`${inputCls} flex-1`} />
+              {isTauri() && (
+                <button type="button" onClick={() => waehlePfad(setPfad1)}
+                  className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  Ordner wählen
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+              Ziel 2 <span className="font-normal text-slate-400">(optional)</span>
+            </label>
+            <div className="flex gap-2">
+              <input type="text" value={pfad2} onChange={e => setPfad2(e.target.value)}
+                placeholder="z.B. /media/usb/backup"
+                className={`${inputCls} flex-1`} />
+              {isTauri() && (
+                <button type="button" onClick={() => waehlePfad(setPfad2)}
+                  className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  Ordner wählen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-slate-100 dark:border-slate-700" />
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Verschlüsselung (AES-256)</label>
+          <div className="relative">
+            <input
+              type={zeigPasswort ? 'text' : 'password'}
+              value={passwort}
+              onChange={e => setPasswort(e.target.value)}
+              placeholder="Backup-Passwort (optional)"
+              className={`${inputCls} pr-24`}
+            />
+            <button type="button" onClick={() => setZeigPasswort(z => !z)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1">
+              {zeigPasswort ? 'Verbergen' : 'Anzeigen'}
+            </button>
+          </div>
+          {(pfad1 || pfad2) && !passwort && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Ohne Passwort wird die externe Backup-Datei unverschlüsselt gespeichert. Empfohlen nur wenn das Ziel selbst verschlüsselt ist.
+            </p>
+          )}
+          {passwort && (
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Verschlüsselte Datei endet auf <code className="font-mono">.db.enc</code> – zum Wiederherstellen wird dieses Passwort benötigt.
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={speichern} disabled={status === 'saving' || !data}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {status === 'saving' ? 'Wird gespeichert…' : 'Einstellungen speichern'}
+          </button>
+          {status === 'ok' && <span className="text-sm text-green-600 dark:text-green-400">Gespeichert</span>}
+          {status === 'err' && <span className="text-sm text-red-600 dark:text-red-400">Fehler beim Speichern</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function BackupPage() {
   const [laedt, setLaedt] = useState(false)
@@ -103,13 +232,15 @@ export function BackupPage() {
         </div>
       </div>
 
+      {/* Externe Backup-Ziele */}
+      <ExterneBackupEinstellungen />
+
       {/* Automatische Backups */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6 space-y-3">
-        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Automatische Backups vor Updates</h2>
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Automatische Backups</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          RechnungsFee erstellt automatisch ein Backup deiner Datenbank, bevor bei einem
-          App-Update Datenbankmigrationen durchgeführt werden. Die letzten 5 Backups werden
-          aufbewahrt.
+          RechnungsFee erstellt automatisch ein Backup beim Beenden der App sowie vor
+          Datenbankmigrationen. Die letzten 5 Backups werden lokal aufbewahrt.
         </p>
         <div className="space-y-1.5">
           {[
