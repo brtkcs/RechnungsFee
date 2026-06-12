@@ -31,6 +31,9 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Buchungsvorlagen: Fälligkeits-Badge im Menü – bei überfälligen Vorlagen erscheint ein oranger Punkt neben „Buchungsvorlagen" und neben „Buchhaltung"; Fälligkeiten werden alle 5 Minuten aktualisiert' },
       { typ: 'neu', text: 'Buchungsvorlagen: Vertragsdokument (PDF/Bild) direkt an einer Vorlage hinterlegen; Suche nach Bezeichnung, Lieferant oder Kategorie; Filter nach aktiv/inaktiv und Modus' },
       { typ: 'verbesserung', text: 'Buchungsvorlagen – Übersicht: Karten im Wiederkehrend-Stil (2-spaltig, Nächste Fälligkeit zuerst, Erstellt×-Datum, Modus-Badge mit Border, Aktionsbutton direkt in der Karte)' },
+      { typ: 'neu', text: 'Logo-Upload: SVG-Dateien werden jetzt akzeptiert – bei Upload automatisch in hochauflösendes PNG (300 DPI) umgewandelt, inkl. Gradienten, Transparenz und komplexen Vektorformen (Issue #153)' },
+      { typ: 'verbesserung', text: 'SMTP-Einstellungen: Testmail-Button jetzt unterhalb des Speichern-Buttons mit Hinweistext – macht deutlich, dass erst gespeichert werden muss, bevor der Test sinnvoll ist (Issue #148)' },
+      { typ: 'fix', text: 'EÜR: Betriebseinnahmen mit 19 % und 7 % USt fehlten in Zeile 12 wenn die Kategorie in der Datenbank noch als „Betriebseinnahmen (19%)" bzw. „Betriebseinnahmen (7%)" gespeichert war – wird beim App-Start automatisch repariert (Issue #132)' },
     ],
   },
   {
