@@ -131,7 +131,7 @@ def _to_response(v: Buchungsvorlage) -> BuchungsvorlageResponse:
         kategorie_id=v.kategorie_id,
         kategorie_name=v.kategorie.name if v.kategorie else None,
         konto_id=v.konto_id,
-        konto_name=v.konto.bezeichnung if v.konto else None,
+        konto_name=v.konto.name if v.konto else None,
         betrag=v.betrag,
         ist_brutto=bool(v.ist_brutto),
         ust_satz=v.ust_satz,
