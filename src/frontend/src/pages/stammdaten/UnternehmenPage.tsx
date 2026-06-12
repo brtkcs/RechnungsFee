@@ -675,6 +675,23 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
               </p>
             </div>
           </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.buchungsvorlagen_aktiv}
+              onChange={ev => set('buchungsvorlagen_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Wiederkehrende Buchungen aktivieren
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Vorlagen für Fixkosten (Miete, Leasing, Abonnements) – Modus „Direkt" bucht sofort ins Journal, Modus „Warte auf Beleg" füllt das Eingangsrechnungs-Formular vor.
+              </p>
+            </div>
+          </label>
         </div>
 
         <hr className="border-slate-100 dark:border-slate-700" />

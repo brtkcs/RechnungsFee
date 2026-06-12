@@ -203,6 +203,7 @@ export type Unternehmen = {
   proforma_aktiv?: boolean
   auftraege_aktiv?: boolean
   wiederkehrend_aktiv?: boolean
+  buchungsvorlagen_aktiv?: boolean
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
