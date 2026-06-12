@@ -202,13 +202,21 @@ export function BackupPage() {
               ) : (
                 <>
                   <span>💾</span>
-                  Backup erstellen
+                  Backup herunterladen
                 </>
               )}
             </button>
             <p className="text-sm text-slate-500 dark:text-slate-400 pt-1.5">
-              Erstellt eine konsistente Kopie deiner Datenbank und startet den Download.
-              Die Datei heißt <span className="font-mono text-slate-700 dark:text-slate-200">RechnungsFee-Backup-JJJJ-MM-TT.db</span>.
+              Erstellt ein vollständiges ZIP-Archiv (Datenbank + Belege) und startet den Download.
+              Dateiname: <span className="font-mono text-slate-700 dark:text-slate-200">RechnungsFee-Backup-JJJJ-MM-TT.zip</span>
+            </p>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex gap-3">
+            <span className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5">⚠</span>
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              Der Download ist <strong>unverschlüsselt</strong> – die ZIP-Datei enthält alle Kundendaten und Rechnungen im Klartext.
+              Bewahre sie nur an einem sicheren, zugangsbeschränkten Ort auf (lokales Laufwerk, verschlüsselter Cloud-Speicher).
             </p>
           </div>
 
@@ -221,6 +229,7 @@ export function BackupPage() {
                 'Kunden und Lieferanten',
                 'Unternehmensdaten, Konten, Kategorien',
                 'Nummernkreise und alle Einstellungen',
+                'Hochgeladene Belege und Eingangsrechnungen (PDF, Scans)',
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2">
                   <span className="text-green-500 shrink-0">✓</span>
@@ -228,16 +237,6 @@ export function BackupPage() {
                 </li>
               ))}
             </ul>
-          </div>
-
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 flex gap-3">
-            <span className="text-blue-500 dark:text-blue-400 shrink-0 mt-0.5">ℹ</span>
-            <p className="text-xs text-blue-800 dark:text-blue-300">
-              Das Backup ist eine vollständige SQLite-Datenbank und kann direkt mit dem
-              SQLite-Browser oder DB Browser for SQLite geöffnet werden.
-              Bewahre Backups an einem sicheren Ort auf – idealerweise auf einem externen
-              Laufwerk oder in einem Cloud-Speicher.
-            </p>
           </div>
         </div>
       </div>
