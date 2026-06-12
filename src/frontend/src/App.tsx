@@ -157,6 +157,13 @@ export default function App() {
 
   async function handleBestaetigenSchliessen() {
     setZeigSchliessen(false)
+    try {
+      const { getApiBase } = await import('./api/client')
+      const base = await getApiBase()
+      await fetch(`${base}/api/backup/erstellen`, { method: 'POST' })
+    } catch {
+      // Backup-Fehler blockiert das Schließen nicht
+    }
     const { invoke } = await import('@tauri-apps/api/core')
     await invoke('confirm_close')
   }

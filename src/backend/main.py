@@ -81,6 +81,16 @@ def shutdown():
     return {"ok": True}
 
 
+@app.post("/api/backup/erstellen")
+def backup_erstellen():
+    """Backup bei App-Ende – WAL-sicher, max. 5 Kopien (Rotation wie Migrations-Backup)."""
+    try:
+        _backup_datenbank()
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 def _backup_datenbank() -> None:
     """Erstellt ein WAL-sicheres Backup der DB vor Migrationen (max. 5 Backups)."""
     backup_dir = DB_PATH.parent / "backups"
