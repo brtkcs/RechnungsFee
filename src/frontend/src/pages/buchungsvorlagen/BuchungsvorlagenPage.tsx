@@ -120,7 +120,7 @@ function VorlageFormular({
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.bezeichnung.trim() || !form.betrag) return
+    if (!form.bezeichnung.trim()) return
     onSave({
       bezeichnung: form.bezeichnung.trim(),
       lieferant_id: form.lieferant_id,
@@ -199,8 +199,8 @@ function VorlageFormular({
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
             {form.ist_brutto ? 'Brutto-Betrag *' : 'Netto-Betrag *'}
           </label>
-          <input type="number" step="0.01" min="0.01" value={form.betrag}
-            onChange={e => set('betrag', e.target.value)} required placeholder="0,00" className={inputCls} />
+          <input type="number" step="0.01" min="0" value={form.betrag}
+            onChange={e => set('betrag', e.target.value)} placeholder="0,00 (variabel)" className={inputCls} />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">USt-Satz (%)</label>
@@ -308,7 +308,7 @@ function VorlageKarte({ vorlage, onClick, aktiv }: {
         <div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">Betrag ({vorlage.ist_brutto ? 'brutto' : 'netto'})</p>
           <p className="font-semibold text-slate-800 dark:text-slate-100">
-            {betragNum.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+            {betragNum === 0 ? <span className="text-slate-400 dark:text-slate-500 font-normal italic">variabel</span> : `${betragNum.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
           </p>
         </div>
         <div>
@@ -380,7 +380,7 @@ function VorlageDetail({
           ['Modus', vorlage.modus === 'direkt' ? '⚡ Direkt buchen' : '📄 Warte auf Beleg'],
           ['Intervall', INTERVALL_LABEL[vorlage.intervall]],
           ['Nächste Fälligkeit', fmt(vorlage.naechstes_datum)],
-          ['Betrag', `${betragNum.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € (${vorlage.ist_brutto ? 'brutto' : 'netto'})`],
+          ['Betrag', betragNum === 0 ? 'variabel' : `${betragNum.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € (${vorlage.ist_brutto ? 'brutto' : 'netto'})`],
           ['USt-Satz', `${vorlage.ust_satz} %`],
           ['Buchungen erstellt', `${vorlage.erstellte_buchungen}×`],
           ...(vorlage.letzte_buchung ? [['Letzte Buchung', fmt(vorlage.letzte_buchung)]] : []),
@@ -408,10 +408,12 @@ function VorlageDetail({
             {faellig ? '⚠️ Fällig – jetzt buchen' : '📒 Journal-Eintrag erstellen'}
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            Erstellt einen Journal-Eintrag über {betragNum.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € und rückt das Datum um ein Intervall vor.
+            {betragNum === 0
+              ? 'Betrag ist variabel – bitte zuerst den Betrag in der Vorlage eintragen.'
+              : `Erstellt einen Journal-Eintrag über ${betragNum.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € und rückt das Datum um ein Intervall vor.`}
           </p>
-          <button onClick={onBuchen}
-            className="w-full px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button onClick={onBuchen} disabled={betragNum === 0}
+            className="w-full px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             📒 Jetzt buchen
           </button>
         </div>
