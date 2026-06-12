@@ -82,8 +82,8 @@ def shutdown():
     return {"ok": True}
 
 
-def _encrypt_backup(src: Path, dst: Path, passwort: str) -> None:
-    """AES-256-GCM mit PBKDF2-SHA256 (100k Iterationen). Format: salt(16)+nonce(12)+ciphertext+tag."""
+def _encrypt_bytes(data: bytes, passwort: str) -> bytes:
+    """AES-256-GCM mit PBKDF2-SHA256 (100k Iterationen). Rückgabe: salt(16)+nonce(12)+ciphertext+tag."""
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
@@ -93,7 +93,40 @@ def _encrypt_backup(src: Path, dst: Path, passwort: str) -> None:
     nonce = _os.urandom(12)
     kdf   = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100_000)
     key   = kdf.derive(passwort.encode())
-    dst.write_bytes(salt + nonce + AESGCM(key).encrypt(nonce, src.read_bytes(), None))
+    return salt + nonce + AESGCM(key).encrypt(nonce, data, None)
+
+
+def _erstelle_vollbackup_zip() -> bytes:
+    """ZIP mit WAL-sicherem DB-Snapshot + Uploads-Ordner (Belege, PDFs)."""
+    import io
+    import zipfile
+    import tempfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # DB: WAL-sicherer Snapshot über sqlite3.backup()
+        fd, tmp = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        try:
+            src = sqlite3.connect(str(DB_PATH))
+            dst = sqlite3.connect(tmp)
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
+                src.close()
+            zf.write(tmp, "rechnungsfee.db")
+        finally:
+            os.unlink(tmp)
+
+        # Uploads: Belege, PDFs, OCR-Dateien
+        uploads_dir = APP_DATA_DIR / "uploads"
+        if uploads_dir.exists():
+            for f in sorted(uploads_dir.rglob("*")):
+                if f.is_file():
+                    zf.write(f, f"uploads/{f.relative_to(uploads_dir)}")
+
+    return buf.getvalue()
 
 
 @app.post("/api/backup/erstellen")
@@ -129,11 +162,21 @@ def backup_erstellen():
         print("[Backup] Externe Ziele übersprungen: kein Verschlüsselungs-Passwort gesetzt")
         return {"ok": True}
 
+    # Vollbackup (DB + Uploads) als ZIP erstellen und verschlüsseln
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    dateiname = f"rechnungsfee_{ts}.zip.enc"
+    try:
+        zip_bytes = _erstelle_vollbackup_zip()
+        enc_bytes = _encrypt_bytes(zip_bytes, passwort)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Backup-ZIP-Erstellung fehlgeschlagen: {e}")
+
     for pfad in filter(None, [pfad1, pfad2]):
         try:
             ziel_dir = Path(pfad)
             ziel_dir.mkdir(parents=True, exist_ok=True)
-            _encrypt_backup(neuestes, ziel_dir / (neuestes.stem + ".db.enc"), passwort)
+            (ziel_dir / dateiname).write_bytes(enc_bytes)
+            print(f"[Backup] Extern gesichert: {ziel_dir / dateiname}")
         except Exception as e:
             fehler.append(f"{pfad}: {e}")
             print(f"[Backup] Externer Backup-Fehler ({pfad}): {e}")
