@@ -537,7 +537,7 @@ export default function BuchungsvorlagenPage() {
   const [modusFilter, setModusFilter] = useState<'' | 'direkt' | 'beleg'>('')
 
   const { data: vorlagen = [] } = useQuery({ queryKey: ['buchungsvorlagen'], queryFn: getBuchungsvorlagen })
-  const { data: kategorien = [] } = useQuery({ queryKey: ['kategorien'], queryFn: getKategorien })
+  const { data: kategorien = [] } = useQuery({ queryKey: ['kategorien'], queryFn: () => getKategorien() })
   const { data: lieferanten = [] } = useQuery({ queryKey: ['lieferanten'], queryFn: getLieferanten })
   const { data: konten = [] } = useQuery({ queryKey: ['konten'], queryFn: getKonten })
   const bankKonten = konten.filter(k => k.kontoart === 'bank')
