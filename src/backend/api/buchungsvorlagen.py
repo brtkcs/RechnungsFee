@@ -127,7 +127,7 @@ def _to_response(v: Buchungsvorlage) -> BuchungsvorlageResponse:
         id=v.id,
         bezeichnung=v.bezeichnung,
         lieferant_id=v.lieferant_id,
-        lieferant_name=v.lieferant.name if v.lieferant else None,
+        lieferant_name=v.lieferant.firmenname if v.lieferant else None,
         kategorie_id=v.kategorie_id,
         kategorie_name=v.kategorie.name if v.kategorie else None,
         konto_id=v.konto_id,
