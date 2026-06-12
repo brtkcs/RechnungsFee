@@ -1669,3 +1669,57 @@ export const deleteVertragVorlage = (id: number) =>
 export const beendenVorlage = (id: number) =>
   request<Rechnungsvorlage>(`/wiederkehrend/${id}/beenden`, { method: 'POST' })
 
+// ---------------------------------------------------------------------------
+// Buchungsvorlagen (Wiederkehrende Buchungen)
+// ---------------------------------------------------------------------------
+
+export type Buchungsvorlage = {
+  id: number
+  bezeichnung: string
+  lieferant_id: number | null
+  lieferant_name: string | null
+  kategorie_id: number | null
+  kategorie_name: string | null
+  konto_id: number | null
+  konto_name: string | null
+  betrag: string
+  ist_brutto: boolean
+  ust_satz: string
+  intervall: 'monatlich' | 'quartalsweise' | 'jaehrlich'
+  naechstes_datum: string
+  aktiv: boolean
+  modus: 'direkt' | 'beleg'
+  notizen: string | null
+  beleg_id: number | null
+  beleg_name: string | null
+  letzte_buchung: string | null
+  erstellte_buchungen: number
+  erstellt_am: string
+}
+
+export type BuchungsvorlageCreate = Omit<Buchungsvorlage,
+  'id' | 'lieferant_name' | 'kategorie_name' | 'konto_name' |
+  'beleg_id' | 'beleg_name' | 'letzte_buchung' | 'erstellte_buchungen' | 'erstellt_am'>
+
+export const getBuchungsvorlagen = () =>
+  request<Buchungsvorlage[]>('/buchungsvorlagen')
+export const getBuchungsvorlage = (id: number) =>
+  request<Buchungsvorlage>(`/buchungsvorlagen/${id}`)
+export const getFaelligeBuchungsvorlagen = () =>
+  request<Buchungsvorlage[]>('/buchungsvorlagen/faellige')
+export const createBuchungsvorlage = (data: BuchungsvorlageCreate) =>
+  request<Buchungsvorlage>('/buchungsvorlagen', { method: 'POST', body: JSON.stringify(data) })
+export const updateBuchungsvorlage = (id: number, data: Partial<BuchungsvorlageCreate>) =>
+  request<Buchungsvorlage>(`/buchungsvorlagen/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteBuchungsvorlage = (id: number) =>
+  request<void>(`/buchungsvorlagen/${id}`, { method: 'DELETE' })
+export const buchungAusfuehren = (id: number) =>
+  request<unknown>(`/buchungsvorlagen/${id}/buchen`, { method: 'POST' })
+export const uploadBuchungsvorlageBeleg = (id: number, datei: File) => {
+  const form = new FormData()
+  form.append('datei', datei)
+  return request<{ id: number; original_name: string }>(`/buchungsvorlagen/${id}/beleg`, { method: 'POST', body: form })
+}
+export const deleteBuchungsvorlageBeleg = (id: number) =>
+  request<void>(`/buchungsvorlagen/${id}/beleg`, { method: 'DELETE' })
+

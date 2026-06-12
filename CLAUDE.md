@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 73` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 74` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -160,6 +160,7 @@ def _run_migrations():
 | 71 | rechnungen.vorlage_id FK → rechnungsvorlagen (ON DELETE SET NULL) – verknüpft jede generierte Rechnung mit ihrer Vorlage; Grundlage für Rechnungsliste im Detail-Panel |
 | 72 | rechnungsvorlagen.beendet BOOLEAN DEFAULT 0 – 3-Zustands-Lifecycle: aktiv (laufend) / pausiert (aktiv=false) / beendet (aktiv=false, beendet=true → Auftrag abgeschlossen, Datensatz bleibt erhalten) |
 | 73 | Datenfix Issue #132: kategorien „Gewährte Skonti" + „Erhaltene Skonti" → euer_zeile=NULL (Zuflussprinzip: Zahlung enthält bereits korrekten Betrag, Skonto-Eintrag darf EÜR nicht zusätzlich mindern) |
+| 74 | buchungsvorlagen-Tabelle (Wiederkehrende Buchungen für Fixkosten/Eingangsrechnungen): Modus direkt (Journal) oder beleg (Eingangsrechnung vorausfüllen); journal + rechnungen bekommen buchungsvorlage_id FK; unternehmen.buchungsvorlagen_aktiv |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

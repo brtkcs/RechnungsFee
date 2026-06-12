@@ -30,9 +30,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen
 
-SCHEMA_VERSION = 73
+SCHEMA_VERSION = 74
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -67,6 +67,7 @@ app.include_router(system.router)
 app.include_router(dokumentenpakete.router)
 app.include_router(mail.router)
 app.include_router(wiederkehrend.router)
+app.include_router(buchungsvorlagen.router)
 
 
 @app.post("/api/shutdown")
@@ -1550,6 +1551,42 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 73"))
             conn.commit()
             print("[Migration] Schema auf Version 73 (Skonto-Kategorien: euer_zeile→NULL, kein Doppelabzug in EÜR)")
+
+        if version < 74:
+            # Wiederkehrende Buchungen: Vorlagen für Fixkosten (Miete, Leasing, Abo)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS buchungsvorlagen (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bezeichnung VARCHAR(200) NOT NULL,
+                    lieferant_id INTEGER REFERENCES lieferanten(id) ON DELETE SET NULL,
+                    kategorie_id INTEGER REFERENCES kategorien(id) ON DELETE SET NULL,
+                    konto_id INTEGER REFERENCES konten(id) ON DELETE SET NULL,
+                    betrag NUMERIC(12,2) NOT NULL,
+                    ist_brutto BOOLEAN NOT NULL DEFAULT 1,
+                    ust_satz NUMERIC(5,2) NOT NULL DEFAULT 0,
+                    intervall VARCHAR(20) NOT NULL DEFAULT 'monatlich',
+                    naechstes_datum DATE NOT NULL,
+                    aktiv BOOLEAN NOT NULL DEFAULT 1,
+                    modus VARCHAR(20) NOT NULL DEFAULT 'direkt',
+                    notizen TEXT,
+                    beleg_id INTEGER REFERENCES belege(id) ON DELETE SET NULL,
+                    letzte_buchung DATE,
+                    erstellte_buchungen INTEGER NOT NULL DEFAULT 0,
+                    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            cols74_j = {r[1] for r in conn.execute(text("PRAGMA table_info(journal)")).fetchall()}
+            if "buchungsvorlage_id" not in cols74_j:
+                conn.execute(text("ALTER TABLE journal ADD COLUMN buchungsvorlage_id INTEGER REFERENCES buchungsvorlagen(id) ON DELETE SET NULL"))
+            cols74_r = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "buchungsvorlage_id" not in cols74_r:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN buchungsvorlage_id INTEGER REFERENCES buchungsvorlagen(id) ON DELETE SET NULL"))
+            cols74_u = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            if "buchungsvorlagen_aktiv" not in cols74_u:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN buchungsvorlagen_aktiv BOOLEAN NOT NULL DEFAULT 0"))
+            conn.execute(text("PRAGMA user_version = 74"))
+            conn.commit()
+            print("[Migration] Schema auf Version 74 (buchungsvorlagen: Wiederkehrende Buchungen für Fixkosten)")
 
 
 def _migrate_kategorien() -> None:

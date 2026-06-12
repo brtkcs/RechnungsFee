@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM, pruefenWiederkehrend, type EntwurfErgebnis } from '../api/client'
+import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM, pruefenWiederkehrend, getFaelligeBuchungsvorlagen, type EntwurfErgebnis } from '../api/client'
 import { TagesabschlussDialog } from '../pages/journal/TagesabschlussDialog'
 import { useUpdateCheck } from '../hooks/useUpdateCheck'
 
@@ -18,7 +18,7 @@ const fakturierungAlleItems = [
   { to: '/wiederkehrend',   label: 'Wiederkehrend',          icon: '🔁', bald: false, zeigen: (u: Unternehmen | undefined) => !!u?.wiederkehrend_aktiv },
 ]
 
-const buchhaltungNav = [
+const buchhaltungNavBase = [
   { to: '/journal',          label: 'Journal',          icon: '📒' },
   { to: '/tagesabschluesse', label: 'Tagesabschlüsse',  icon: '📋' },
 ]
@@ -52,7 +52,7 @@ const einstellungenNav = [
   { to: '/unternehmen',      label: 'Unternehmen',       icon: '🏢' },
 ]
 
-const buchhaltungPfade   = buchhaltungNav.map(n => n.to)
+const buchhaltungPfade   = [...buchhaltungNavBase.map(n => n.to), '/buchungsvorlagen']
 const auswertungAllePfade = auswertungNavAlle.map(n => n.to)
 const stammdatenPfade    = stammdatenNav.map(n => n.to)
 const einstellungenPfade = einstellungenNav.map(n => n.to)
@@ -79,11 +79,13 @@ function CollapsibleSection({
   icon,
   aktiv,
   items,
+  badge,
 }: {
   label: string
   icon: string
   aktiv: boolean
-  items: { to: string; label: string; icon: string }[]
+  items: { to: string; label: string; icon: string; badge?: boolean }[]
+  badge?: boolean
 }) {
   const [offen, setOffen] = useState(aktiv)
 
@@ -107,15 +109,17 @@ function CollapsibleSection({
         <span className="flex items-center gap-3">
           <span>{icon}</span>
           <span>{label}</span>
+          {badge && <span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />}
         </span>
         <span className="text-xs text-slate-400 dark:text-slate-500">{offen ? '▲' : '▼'}</span>
       </button>
 
       {offen && (
         <div className="border-l-2 border-slate-100 dark:border-slate-800 ml-6">
-          {items.map(({ to, label: l, icon: ic }) => (
+          {items.map(({ to, label: l, icon: ic, badge: itemBadge }) => (
             <NavLink key={to} to={to} className={navLinkClass}>
-              <span>{ic}</span><span>{l}</span>
+              <span>{ic}</span><span className="flex-1">{l}</span>
+              {itemBadge && <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />}
             </NavLink>
           ))}
         </div>
@@ -182,6 +186,18 @@ export function AppLayout() {
   const navKontext: NavKontext = { unt: untDef, zm: zmPruefung }
   const auswertungNav = auswertungNavAlle.filter(n => n.zeigen(navKontext))
   const fakturierungNav = fakturierungAlleItems.filter(n => n.zeigen(untDef))
+  const buchhaltungNav = [
+    ...buchhaltungNavBase,
+    ...(untDef?.buchungsvorlagen_aktiv ? [{ to: '/buchungsvorlagen', label: 'Buchungsvorlagen', icon: '🔄' }] : []),
+  ]
+
+  const { data: faelligeBuchungen = [] } = useQuery({
+    queryKey: ['buchungsvorlagen-faellig'],
+    queryFn: getFaelligeBuchungsvorlagen,
+    enabled: !!untDef?.buchungsvorlagen_aktiv,
+    refetchInterval: 5 * 60 * 1000,
+  })
+  const faelligBadge = faelligeBuchungen.length > 0
 
   const zeigeBanner = fehltGestern?.fehlt === true && !bannerDismissed
 
@@ -237,7 +253,11 @@ export function AppLayout() {
             label="Buchhaltung"
             icon="📒"
             aktiv={buchhaltungAktiv}
-            items={buchhaltungNav}
+            badge={faelligBadge}
+            items={buchhaltungNav.map(n => ({
+              ...n,
+              badge: n.to === '/buchungsvorlagen' && faelligBadge,
+            }))}
           />
 
           {/* Auswertung */}

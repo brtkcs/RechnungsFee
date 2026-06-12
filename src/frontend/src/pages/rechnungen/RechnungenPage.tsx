@@ -10,6 +10,7 @@ import {
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow, downloadPdfForMail,
   getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
+  getBuchungsvorlage,
   type Rechnung, type RechnungCreate, type RechnungspositionCreate, type BarZahlungCreate, type BarZahlungResult,
   type ArtikelSuche, type AnalyseErgebnis, type LieferantVorschlag, type ZahlungSplitPosition,
 } from '../../api/client'
@@ -3245,6 +3246,39 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
     const typParam = searchParams.get('typ')
     if (typParam === 'eingang' || typParam === 'ausgang') {
       setTyp(typParam)
+      // ?vorlage=ID: Eingangsrechnung aus Buchungsvorlage vorausfüllen (Warte-auf-Beleg)
+      const vorlageParam = searchParams.get('vorlage')
+      if (typParam === 'eingang' && vorlageParam) {
+        const vorlageId = parseInt(vorlageParam, 10)
+        if (!isNaN(vorlageId)) {
+          getBuchungsvorlage(vorlageId).then(v => {
+            const ustSatz = parseFloat(v.ust_satz)
+            const betrag = parseFloat(v.betrag)
+            const netto = v.ist_brutto && ustSatz > 0
+              ? (betrag / (1 + ustSatz / 100)).toFixed(2).replace('.', ',')
+              : betrag.toFixed(2).replace('.', ',')
+            const prefill: AnalyseErgebnis = {
+              format: 'vorlage',
+              felder: {},
+              positionen: [{
+                beschreibung: v.bezeichnung,
+                menge: '1',
+                einheit: 'Monat',
+                netto,
+                ust_satz: String(ustSatz),
+              }],
+              warnungen: [],
+              positionen_modus: 'netto',
+              lieferant_vorschlaege: v.lieferant_id
+                ? [{ id: v.lieferant_id, name: v.lieferant_name ?? '', score: 1 }]
+                : [],
+            }
+            setImportPrefill(prefill)
+            setImportKey(k => k + 1)
+            setFormModus('neu')
+          }).catch(() => setFormModus('neu'))
+        }
+      }
       setSearchParams({}, { replace: true })
       return
     }

@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.12',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Wiederkehrende Buchungen (Fixkosten): Vorlagen für Daueraufträge und monatliche Eingangsrechnungen – Modus „Direkt" erstellt sofort einen Journal-Eintrag, Modus „Warte auf Beleg" füllt das Eingangsrechnungs-Formular mit Lieferant, Betrag und USt-Satz vor; optional aktivierbar unter Einstellungen → Unternehmen' },
+      { typ: 'neu', text: 'Buchungsvorlagen: Fälligkeits-Badge im Menü – bei überfälligen Vorlagen erscheint ein oranger Punkt neben „Buchungsvorlagen" und neben „Buchhaltung"; Fälligkeiten werden alle 5 Minuten aktualisiert' },
+      { typ: 'neu', text: 'Buchungsvorlagen: Vertragsdokument (PDF/Bild) direkt an einer Vorlage hinterlegen; Suche nach Bezeichnung, Lieferant oder Kategorie; Filter nach aktiv/inaktiv und Modus' },
+    ],
+  },
+  {
     version: 'v0.3.11',
     datum: 'Juni 2026',
     eintraege: [

@@ -68,6 +68,7 @@ class Unternehmen(Base):
     proforma_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     auftraege_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     wiederkehrend_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
+    buchungsvorlagen_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     # Buchführung
     versteuerungsart: Mapped[str] = mapped_column(String(4), default="ist", nullable=False)  # ist|soll
     kontenrahmen: Mapped[str] = mapped_column(String(10), default="SKR03", nullable=False)  # SKR03|SKR04|SKR49
@@ -226,6 +227,7 @@ class Journaleintrag(Base):
     steuerbefreiung_grund: Mapped[str | None] = mapped_column(String(100))  # z.B. "§19 UStG"
     rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))
     beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id"))
+    buchungsvorlage_id: Mapped[int | None] = mapped_column(ForeignKey("buchungsvorlagen.id"))
     # Kontonummern-Snapshot (aus Kategorie zum Buchungszeitpunkt – unveränderbar)
     konto_skr03: Mapped[str | None] = mapped_column(String(10))
     konto_skr04: Mapped[str | None] = mapped_column(String(10))
@@ -541,6 +543,7 @@ class Rechnung(Base):
     # Aufträge
     auftrag_status: Mapped[str | None] = mapped_column(String(20))  # offen|in_bearbeitung|abgeschlossen|storniert
     vorlage_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungsvorlagen.id", ondelete="SET NULL"), nullable=True)
+    buchungsvorlage_id: Mapped[int | None] = mapped_column(ForeignKey("buchungsvorlagen.id", ondelete="SET NULL"), nullable=True)
     auftrag_zu_angebot_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)   # auf Angebot: welcher Auftrag entstand
     rechnung_zu_auftrag_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)  # auf Auftrag: welche Rechnung entstand
     lieferschein_zu_auftrag_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"), nullable=True)
@@ -612,6 +615,34 @@ class Rechnungsvorlage(Base):
 
     kunde: Mapped["Kunde | None"] = relationship(foreign_keys=[kunde_id])
     auftrag: Mapped["Rechnung | None"] = relationship(foreign_keys=[auftrag_id])
+    beleg: Mapped["Beleg | None"] = relationship(foreign_keys=[beleg_id])
+
+
+class Buchungsvorlage(Base):
+    """Vorlage für wiederkehrende Journal-Buchungen (Miete, Leasing, Abonnements)."""
+    __tablename__ = "buchungsvorlagen"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bezeichnung: Mapped[str] = mapped_column(String(200), nullable=False)
+    lieferant_id: Mapped[int | None] = mapped_column(ForeignKey("lieferanten.id", ondelete="SET NULL"))
+    kategorie_id: Mapped[int | None] = mapped_column(ForeignKey("kategorien.id", ondelete="SET NULL"))
+    konto_id: Mapped[int | None] = mapped_column(ForeignKey("konten.id", ondelete="SET NULL"))
+    betrag: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    ist_brutto: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    ust_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0, nullable=False)
+    intervall: Mapped[str] = mapped_column(String(20), nullable=False)  # monatlich|quartalsweise|jaehrlich
+    naechstes_datum: Mapped[date] = mapped_column(Date, nullable=False)
+    aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    modus: Mapped[str] = mapped_column(String(20), default="direkt", nullable=False)  # direkt|beleg
+    notizen: Mapped[str | None] = mapped_column(Text)
+    beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id", ondelete="SET NULL"))
+    letzte_buchung: Mapped[date | None] = mapped_column(Date)
+    erstellte_buchungen: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    lieferant: Mapped["Lieferant | None"] = relationship(foreign_keys=[lieferant_id])
+    kategorie: Mapped["Kategorie | None"] = relationship(foreign_keys=[kategorie_id])
+    konto: Mapped["Konto | None"] = relationship(foreign_keys=[konto_id])
     beleg: Mapped["Beleg | None"] = relationship(foreign_keys=[beleg_id])
 
 
