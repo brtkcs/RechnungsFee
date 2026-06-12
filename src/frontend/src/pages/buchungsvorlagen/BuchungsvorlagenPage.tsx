@@ -529,7 +529,7 @@ export default function BuchungsvorlagenPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Linke Spalte – Liste */}
-      <div className={`${formModus || selVorlage ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 overflow-hidden`}>
+      <div className={`${formModus ? 'w-1/3 min-w-[260px] shrink-0' : 'flex-1'} flex flex-col border-e border-slate-200 dark:border-slate-700 min-w-0 overflow-hidden`}>
 
         {/* Kopfzeile */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
@@ -615,9 +615,9 @@ export default function BuchungsvorlagenPage() {
         </div>
       )}
 
-      {/* Rechte Spalte – Detail (breit) */}
+      {/* Rechte Spalte – Detail (schmal) */}
       {formModus === null && selVorlage && (
-        <div className="flex-1 border-l border-slate-200 dark:border-slate-700 overflow-y-auto p-6">
+        <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-y-auto p-6">
           <VorlageDetail
             vorlage={selVorlage}
             onBearbeiten={() => setFormModus('bearbeiten')}
