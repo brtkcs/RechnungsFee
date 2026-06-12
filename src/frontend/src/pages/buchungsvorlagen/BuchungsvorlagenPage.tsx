@@ -529,7 +529,7 @@ export default function BuchungsvorlagenPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Linke Spalte – Liste */}
-      <div className={`flex flex-col ${formModus || selVorlage ? 'w-1/3' : 'flex-1'} border-r border-slate-200 dark:border-slate-700 overflow-hidden transition-all`}>
+      <div className={`flex flex-col ${formModus || selVorlage ? 'w-1/3 min-w-[280px] shrink-0' : 'flex-1'} border-r border-slate-200 dark:border-slate-700 overflow-hidden`}>
 
         {/* Kopfzeile */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
@@ -584,9 +584,9 @@ export default function BuchungsvorlagenPage() {
         </div>
       </div>
 
-      {/* Rechte Spalte – Detail oder Formular */}
-      {(formModus || selVorlage) && (
-        <div className="flex-1 overflow-y-auto p-6">
+      {/* Rechte Spalte – Formular (schmal) */}
+      {formModus && (
+        <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-y-auto p-6">
           {formModus === 'neu' && (
             <>
               <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-5">Neue Vorlage</h2>
@@ -612,16 +612,20 @@ export default function BuchungsvorlagenPage() {
               />
             </>
           )}
-          {formModus === null && selVorlage && (
-            <VorlageDetail
-              vorlage={selVorlage}
-              onBearbeiten={() => setFormModus('bearbeiten')}
-              onLoeschen={() => handleLoeschen(selVorlage.id, selVorlage.bezeichnung)}
-              onBuchen={() => handleBuchen(selVorlage.id)}
-              onBelegUpload={f => belegUploadMut.mutate({ id: selVorlage.id, datei: f })}
-              onBelegLoeschen={() => belegLoeschenMut.mutate(selVorlage.id)}
-            />
-          )}
+        </div>
+      )}
+
+      {/* Rechte Spalte – Detail (breit) */}
+      {formModus === null && selVorlage && (
+        <div className="flex-1 border-l border-slate-200 dark:border-slate-700 overflow-y-auto p-6">
+          <VorlageDetail
+            vorlage={selVorlage}
+            onBearbeiten={() => setFormModus('bearbeiten')}
+            onLoeschen={() => handleLoeschen(selVorlage.id, selVorlage.bezeichnung)}
+            onBuchen={() => handleBuchen(selVorlage.id)}
+            onBelegUpload={f => belegUploadMut.mutate({ id: selVorlage.id, datei: f })}
+            onBelegLoeschen={() => belegLoeschenMut.mutate(selVorlage.id)}
+          />
         </div>
       )}
     </div>
