@@ -1719,6 +1719,7 @@ export type Buchungsvorlage = {
   naechstes_datum: string
   aktiv: boolean
   modus: 'direkt' | 'beleg'
+  art: 'Einnahme' | 'Ausgabe'
   notizen: string | null
   beleg_id: number | null
   beleg_name: string | null

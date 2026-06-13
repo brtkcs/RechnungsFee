@@ -637,6 +637,7 @@ class Buchungsvorlage(Base):
     naechstes_datum: Mapped[date] = mapped_column(Date, nullable=False)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     modus: Mapped[str] = mapped_column(String(20), default="direkt", nullable=False)  # direkt|beleg
+    art: Mapped[str] = mapped_column(String(20), default="Ausgabe", server_default="Ausgabe", nullable=False)  # Einnahme|Ausgabe
     notizen: Mapped[str | None] = mapped_column(Text)
     beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id", ondelete="SET NULL"))
     letzte_buchung: Mapped[date | None] = mapped_column(Date)

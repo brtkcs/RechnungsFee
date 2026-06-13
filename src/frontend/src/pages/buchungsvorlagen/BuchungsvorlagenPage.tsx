@@ -56,6 +56,7 @@ type FormData = {
   naechstes_datum: string
   aktiv: boolean
   modus: 'direkt' | 'beleg'
+  art: 'Einnahme' | 'Ausgabe'
   notizen: string
 }
 
@@ -72,6 +73,7 @@ function leereForm(): FormData {
     naechstes_datum: heuteIso(),
     aktiv: true,
     modus: 'direkt',
+    art: 'Ausgabe',
     notizen: '',
   }
 }
@@ -89,6 +91,7 @@ function fromVorlage(v: Buchungsvorlage): FormData {
     naechstes_datum: v.naechstes_datum,
     aktiv: v.aktiv,
     modus: v.modus,
+    art: v.art,
     notizen: v.notizen ?? '',
   }
 }
@@ -117,14 +120,25 @@ function VorlageFormular({
 
   const set = (k: keyof FormData, v: unknown) => setForm(f => ({ ...f, [k]: v }))
 
-  const aufwandKategorien = kategorien.filter(k => k.kontenart === 'Aufwand')
+  const relevanteKategorien = form.art === 'Einnahme'
+    ? kategorien.filter(k => k.kontenart === 'Erlös')
+    : kategorien.filter(k => k.kontenart === 'Aufwand')
+
+  function setArt(neu: 'Einnahme' | 'Ausgabe') {
+    setForm(f => ({
+      ...f,
+      art: neu,
+      kategorie_id: null,
+      modus: neu === 'Einnahme' ? 'direkt' : f.modus,
+    }))
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.bezeichnung.trim()) return
     onSave({
       bezeichnung: form.bezeichnung.trim(),
-      lieferant_id: form.lieferant_id,
+      lieferant_id: form.art === 'Einnahme' ? null : form.lieferant_id,
       kategorie_id: form.kategorie_id,
       konto_id: form.konto_id,
       betrag: form.betrag,
@@ -134,6 +148,7 @@ function VorlageFormular({
       naechstes_datum: form.naechstes_datum,
       aktiv: form.aktiv,
       modus: form.modus,
+      art: form.art,
       notizen: form.notizen || null,
     } as BuchungsvorlageCreate)
   }
@@ -143,16 +158,39 @@ function VorlageFormular({
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Bezeichnung *</label>
         <input value={form.bezeichnung} onChange={e => set('bezeichnung', e.target.value)}
-          placeholder="z. B. Büromiete, Telefonrechnung" required className={inputCls} />
+          placeholder="z. B. Büromiete, Eigenverbrauch Telefon" required className={inputCls} />
+      </div>
+
+      {/* Art: Einnahme / Ausgabe */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Art *</label>
+        <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">
+          <button type="button"
+            onClick={() => setArt('Ausgabe')}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${form.art === 'Ausgabe' ? 'bg-red-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'}`}>
+            📤 Ausgabe
+          </button>
+          <button type="button"
+            onClick={() => setArt('Einnahme')}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${form.art === 'Einnahme' ? 'bg-green-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'}`}>
+            📥 Einnahme
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Modus *</label>
-          <select value={form.modus} onChange={e => set('modus', e.target.value as 'direkt' | 'beleg')} className={selectCls}>
+          <select value={form.modus}
+            onChange={e => set('modus', e.target.value as 'direkt' | 'beleg')}
+            disabled={form.art === 'Einnahme'}
+            className={selectCls + (form.art === 'Einnahme' ? ' opacity-50 cursor-not-allowed' : '')}>
             <option value="direkt">Direkt buchen (Dauerauftrag/SEPA)</option>
-            <option value="beleg">Warte auf Beleg (monatl. Rechnung)</option>
+            <option value="beleg" disabled={form.art === 'Einnahme'}>Warte auf Beleg (monatl. Rechnung)</option>
           </select>
+          {form.art === 'Einnahme' && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Einnahmen werden immer direkt gebucht.</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Intervall *</label>
@@ -164,35 +202,37 @@ function VorlageFormular({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={form.art === 'Ausgabe' ? 'grid grid-cols-2 gap-4' : ''}>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nächste Fälligkeit *</label>
           <input type="date" value={form.naechstes_datum} onChange={e => set('naechstes_datum', e.target.value)} required className={inputCls} />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Lieferant</label>
-          <div className="flex gap-1">
-            <select value={form.lieferant_id ?? ''} onChange={e => set('lieferant_id', e.target.value ? Number(e.target.value) : null)} className={selectCls + ' flex-1'}>
-              <option value="">– kein Lieferant –</option>
-              {lieferanten.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-            <button type="button" onClick={() => setShowNeuLieferant(true)}
-              title="Neuen Lieferanten anlegen"
-              className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none">
-              +
-            </button>
+        {form.art === 'Ausgabe' && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Lieferant</label>
+            <div className="flex gap-1">
+              <select value={form.lieferant_id ?? ''} onChange={e => set('lieferant_id', e.target.value ? Number(e.target.value) : null)} className={selectCls + ' flex-1'}>
+                <option value="">– kein Lieferant –</option>
+                {lieferanten.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+              <button type="button" onClick={() => setShowNeuLieferant(true)}
+                title="Neuen Lieferanten anlegen"
+                className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none">
+                +
+              </button>
+            </div>
+            {showNeuLieferant && (
+              <LieferantErstellenModal
+                onClose={() => setShowNeuLieferant(false)}
+                onSave={(neu) => {
+                  setShowNeuLieferant(false)
+                  set('lieferant_id', neu.id)
+                  qc.invalidateQueries({ queryKey: ['lieferanten'] })
+                }}
+              />
+            )}
           </div>
-          {showNeuLieferant && (
-            <LieferantErstellenModal
-              onClose={() => setShowNeuLieferant(false)}
-              onSave={(neu) => {
-                setShowNeuLieferant(false)
-                set('lieferant_id', neu.id)
-                qc.invalidateQueries({ queryKey: ['lieferanten'] })
-              }}
-            />
-          )}
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -222,10 +262,12 @@ function VorlageFormular({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kategorie (Aufwand)</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            Kategorie ({form.art === 'Einnahme' ? 'Erlös' : 'Aufwand'})
+          </label>
           <select value={form.kategorie_id ?? ''} onChange={e => set('kategorie_id', e.target.value ? Number(e.target.value) : null)} className={selectCls}>
             <option value="">– keine Kategorie –</option>
-            {aufwandKategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+            {relevanteKategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
           </select>
         </div>
         <div>
@@ -324,6 +366,13 @@ function VorlageKarte({ vorlage, onBuchen, onEingangsrechnung }: {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${
+          vorlage.art === 'Einnahme'
+            ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700'
+            : 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 border-red-200 dark:border-red-700'
+        }`}>
+          {vorlage.art === 'Einnahme' ? '📥 Einnahme' : '📤 Ausgabe'}
+        </span>
         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
           vorlage.modus === 'direkt'
             ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700'
@@ -426,6 +475,7 @@ function VorlageDetail({
       {/* Metadaten */}
       <div className="grid grid-cols-2 gap-3 text-sm">
         {[
+          ['Art', vorlage.art === 'Einnahme' ? '📥 Einnahme' : '📤 Ausgabe'],
           ['Modus', vorlage.modus === 'direkt' ? '⚡ Direkt buchen' : '📄 Warte auf Beleg'],
           ['Intervall', INTERVALL_LABEL[vorlage.intervall]],
           ['Nächste Fälligkeit', fmt(vorlage.naechstes_datum)],

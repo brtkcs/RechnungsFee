@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 75` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 77` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -162,6 +162,8 @@ def _run_migrations():
 | 73 | Datenfix Issue #132: kategorien „Gewährte Skonti" + „Erhaltene Skonti" → euer_zeile=NULL (Zuflussprinzip: Zahlung enthält bereits korrekten Betrag, Skonto-Eintrag darf EÜR nicht zusätzlich mindern) |
 | 74 | buchungsvorlagen-Tabelle (Wiederkehrende Buchungen für Fixkosten/Eingangsrechnungen): Modus direkt (Journal) oder beleg (Eingangsrechnung vorausfüllen); journal + rechnungen bekommen buchungsvorlage_id FK; unternehmen.buchungsvorlagen_aktiv |
 | 75 | Datenfix Issue #132: kategorien „Betriebseinnahmen (19%)" + „Betriebseinnahmen (7%)" → euer_zeile=12 (ältere DBs wo Umbenennung in Migration 69 nicht griff → Rechnungseinnahmen fehlten in EÜR trotz korrekter UStVA) |
+| 76 | unternehmen: backup_extern_pfad_1/2, backup_extern_passwort – externes AES-256-GCM-verschlüsseltes Backup auf NAS/USB |
+| 77 | buchungsvorlagen.art TEXT DEFAULT 'Ausgabe' – Buchungsvorlagen können jetzt als Einnahme (z. B. Eigenverbrauch) oder Ausgabe angelegt werden; buche_vorlage() verwendet art-korrekte USt-Konten |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

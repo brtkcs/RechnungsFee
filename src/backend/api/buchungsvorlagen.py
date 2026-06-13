@@ -41,6 +41,9 @@ MODI = {"direkt", "beleg"}
 # Pydantic-Schemas
 # ---------------------------------------------------------------------------
 
+ARTS = {"Einnahme", "Ausgabe"}
+
+
 class BuchungsvorlageCreate(BaseModel):
     bezeichnung: str
     lieferant_id: Optional[int] = None
@@ -53,6 +56,7 @@ class BuchungsvorlageCreate(BaseModel):
     naechstes_datum: date
     aktiv: bool = True
     modus: str = "direkt"
+    art: str = "Ausgabe"
     notizen: Optional[str] = None
 
 
@@ -68,6 +72,7 @@ class BuchungsvorlageUpdate(BaseModel):
     naechstes_datum: Optional[date] = None
     aktiv: Optional[bool] = None
     modus: Optional[str] = None
+    art: Optional[str] = None
     notizen: Optional[str] = None
 
 
@@ -89,6 +94,7 @@ class BuchungsvorlageResponse(BaseModel):
     naechstes_datum: date
     aktiv: bool
     modus: str
+    art: str
     notizen: Optional[str]
     beleg_id: Optional[int]
     beleg_name: Optional[str] = None
@@ -139,6 +145,7 @@ def _to_response(v: Buchungsvorlage) -> BuchungsvorlageResponse:
         naechstes_datum=v.naechstes_datum,
         aktiv=bool(v.aktiv),
         modus=v.modus,
+        art=v.art if v.art else "Ausgabe",
         notizen=v.notizen,
         beleg_id=v.beleg_id,
         beleg_name=v.beleg.original_name if v.beleg else None,
@@ -164,6 +171,10 @@ def erstelle_vorlage(data: BuchungsvorlageCreate, db: Session = Depends(get_db))
         raise HTTPException(422, f"intervall muss einer von {INTERVALLE} sein")
     if data.modus not in MODI:
         raise HTTPException(422, f"modus muss 'direkt' oder 'beleg' sein")
+    if data.art not in ARTS:
+        raise HTTPException(422, "art muss 'Einnahme' oder 'Ausgabe' sein")
+    if data.art == "Einnahme" and data.modus == "beleg":
+        raise HTTPException(422, "Einnahme-Vorlagen können nicht im Beleg-Modus betrieben werden")
     v = Buchungsvorlage(**data.model_dump())
     db.add(v)
     db.commit()
@@ -203,6 +214,12 @@ def aktualisiere_vorlage(vorlage_id: int, data: BuchungsvorlageUpdate, db: Sessi
         raise HTTPException(422, f"intervall muss einer von {INTERVALLE} sein")
     if data.modus and data.modus not in MODI:
         raise HTTPException(422, f"modus muss 'direkt' oder 'beleg' sein")
+    if data.art and data.art not in ARTS:
+        raise HTTPException(422, "art muss 'Einnahme' oder 'Ausgabe' sein")
+    neue_art = data.art if data.art else v.art
+    neuer_modus = data.modus if data.modus else v.modus
+    if neue_art == "Einnahme" and neuer_modus == "beleg":
+        raise HTTPException(422, "Einnahme-Vorlagen können nicht im Beleg-Modus betrieben werden")
     db.commit()
     db.refresh(v)
     return _to_response(v)
@@ -234,16 +251,23 @@ def buche_vorlage(vorlage_id: int, db: Session = Depends(get_db)):
 
     heute = date.today()
     kat = db.query(Kategorie).filter(Kategorie.id == v.kategorie_id).first() if v.kategorie_id else None
+    art = v.art if v.art else "Ausgabe"
 
     # Betrag: brutto oder netto → immer als brutto speichern
     brutto = v.betrag if v.ist_brutto else (v.betrag * (1 + v.ust_satz / 100)).quantize(Q, ROUND_HALF_UP)
     netto, ust_betrag = _berechne_ust(brutto, v.ust_satz)
-    ist_privat = kat.kontenart == "Privat" if kat else False
-    vorsteuerabzug_flag = bool(v.ust_satz > 0 and not ist_privat)
-    vorsteuer = _berechne_vorsteuer(ust_betrag, vorsteuerabzug_flag, kat)
+
+    if art == "Einnahme":
+        vorsteuerabzug_flag = False
+        vorsteuer = Decimal("0")
+    else:
+        ist_privat = kat.kontenart == "Privat" if kat else False
+        vorsteuerabzug_flag = bool(v.ust_satz > 0 and not ist_privat)
+        vorsteuer = _berechne_vorsteuer(ust_betrag, vorsteuerabzug_flag, kat)
+
     konto_skr03 = kat.konto_skr03 if kat else None
     konto_skr04 = kat.konto_skr04 if kat else None
-    konto_ust_skr03, konto_ust_skr04 = _ust_konto("Ausgabe", v.ust_satz)
+    konto_ust_skr03, konto_ust_skr04 = _ust_konto(art, v.ust_satz)
 
     belegnr = _naechste_belegnr(db, heute)
     eintrag = Journaleintrag(
@@ -252,7 +276,7 @@ def buche_vorlage(vorlage_id: int, db: Session = Depends(get_db)):
         beschreibung=v.bezeichnung + (f" ({v.notizen})" if v.notizen else ""),
         kategorie_id=v.kategorie_id,
         zahlungsart="Bank",
-        art="Ausgabe",
+        art=art,
         brutto_betrag=brutto,
         netto_betrag=netto,
         ust_satz=v.ust_satz,

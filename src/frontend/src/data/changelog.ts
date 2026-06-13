@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.14',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Buchungsvorlagen: Vorlagen können jetzt auch als Einnahme angelegt werden (z. B. Eigenverbrauch Telefon, Sachentnahmen) – Art-Umschalter im Formular, Kategorienliste zeigt passende Erlös-Kategorien' },
+      { typ: 'verbesserung', text: 'Buchungsvorlagen: Einnahme-Vorlagen buchen automatisch mit art="Einnahme" und richtigen USt-Konten (1776/1771 SKR03) – kein Vorsteuerabzug' },
+      { typ: 'verbesserung', text: 'Buchungsvorlagen: Beleg-Modus nur noch für Ausgaben verfügbar; Einnahme-Vorlagen sind immer Direkt-Buchungen' },
+    ],
+  },
+  {
     version: 'v0.3.13',
     datum: 'Juni 2026',
     eintraege: [
