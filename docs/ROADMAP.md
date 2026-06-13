@@ -100,6 +100,7 @@
 
 ### Exporte & Auswertungen
 - [ ] DATEV-Export (CSV nach DATEV-Format für Steuerberater)
+- [ ] Jahresumsatzsteuererklärung (USt 2 / Anlage UR): Anzeigehilfe mit allen KZ-Werten aus den UStVA-Voranmeldungen; PDF-Zusammenfassung für ELSTER oder Steuerberater
 - [x] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung (🔍 Aufschlüsselung-Toggle in der EÜR)
 - [x] Anlage AVEUR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
 - [x] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ (neue Spalte „Vorsteuer-Betrag")
@@ -137,18 +138,6 @@
 - [ ] Auto-Filter-Regeln (Empfänger/Verwendungszweck → Kategorie)
 - [ ] Duplikat-Erkennung
 - [ ] Import-Protokoll (GoBD: Herkunft nachvollziehbar)
-
----
-
-## 📋 v0.5.x – Umsatzsteuererklärung
-
-Die jährliche USt-Erklärung (Formular USt 2 / Anlage UR) als Ausfüllhilfe – aufgebaut auf den bereits vorhandenen UStVA-Daten.
-
-- [ ] **Jahres-USt-Berechnung** – Summierung aller UStVA-Voranmeldungsdaten über das Steuerjahr; Abgleich gezahlter Vorauszahlungen vs. Jahressteuerschuld
-- [ ] **Anzeigehilfe Formular USt 2** – alle relevanten Kennzahlen (KZ 81/86/35/36/41/43/47/48/51/66/89/93) je Steuerjahr tabellarisch
-- [ ] **Anlage UR** – Umsätze nach Steuersätzen aufgeschlüsselt (19 %, 7 %, steuerfrei, ig. Lieferungen, §13b)
-- [ ] **PDF-Zusammenfassung** – druckbares Beiblatt mit allen Kennzahlen und Berechnungsweg (zur Weitergabe an Steuerberater oder als Arbeitshilfe beim ELSTER-Ausfüllen)
-- [ ] **ELSTER-Export (XML)** – Datenübergabe-Datei nach ELSTER-Schema (ERiC-Schnittstelle) als optionaler Export
 
 ---
 
