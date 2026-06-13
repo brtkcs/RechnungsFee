@@ -36,6 +36,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Backup-Seite: zwei Karteireiter „Backup" und „Wiederherstellung" mit klarer Trennung der drei Backup-Ebenen (Lokal-Snapshot, Manuell-ZIP, Extern-verschlüsselt)' },
       { typ: 'fix', text: 'UStVA / EÜR: Skonto-Buchungen haben USt-Konten nicht doppelt gemindert (KZ 81/83 und EÜR Zeile 17) – der Zahlungsbetrag enthielt Skonto bereits korrekt (Issue #155)' },
       { typ: 'fix', text: 'Kategorien: Fehlermeldung beim Löschen einer belegten Kategorie wird jetzt inline angezeigt statt als nativer alert()-Dialog (Issue #156)' },
+      { typ: 'verbesserung', text: 'Buchungsvorlagen: Warndialog wenn „Jetzt buchen" für einen Zeitraum ausgelöst wird der noch nicht fällig ist – verhindert versehentliche Doppelbuchungen (Issue #158)' },
     ],
   },
   {

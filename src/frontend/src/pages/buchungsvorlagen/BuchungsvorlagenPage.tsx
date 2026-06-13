@@ -641,7 +641,13 @@ export default function BuchungsvorlagenPage() {
   }
 
   function handleBuchen(id: number) {
-    if (!confirm('Jetzt einen Journal-Eintrag erstellen und Datum vorrücken?')) return
+    const v = vorlagen.find(v => v.id === id)
+    if (!v) return
+    const nichtFaellig = v.naechstes_datum > heuteIso()
+    const meldung = nichtFaellig
+      ? `Diese Vorlage wurde bereits gebucht und ist erst am ${fmt(v.naechstes_datum)} wieder fällig.\n\nTrotzdem jetzt buchen?`
+      : 'Jetzt einen Journal-Eintrag erstellen und Datum vorrücken?'
+    if (!confirm(meldung)) return
     buchenMut.mutate(id)
   }
 
