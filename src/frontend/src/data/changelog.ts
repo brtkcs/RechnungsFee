@@ -23,18 +23,10 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
-    version: 'v0.3.14',
-    datum: 'Juni 2026',
-    eintraege: [
-      { typ: 'neu', text: 'Buchungsvorlagen: Vorlagen können jetzt auch als Einnahme angelegt werden (z. B. Eigenverbrauch Telefon, Sachentnahmen) – Art-Umschalter im Formular, Kategorienliste zeigt passende Erlös-Kategorien' },
-      { typ: 'verbesserung', text: 'Buchungsvorlagen: Einnahme-Vorlagen buchen automatisch mit art="Einnahme" und richtigen USt-Konten (1776/1771 SKR03) – kein Vorsteuerabzug' },
-      { typ: 'verbesserung', text: 'Buchungsvorlagen: Beleg-Modus nur noch für Ausgaben verfügbar; Einnahme-Vorlagen sind immer Direkt-Buchungen' },
-    ],
-  },
-  {
     version: 'v0.3.13',
     datum: 'Juni 2026',
     eintraege: [
+      { typ: 'neu', text: 'Buchungsvorlagen: Vorlagen können jetzt auch als Einnahme angelegt werden (z. B. Eigenverbrauch Telefon, Sachentnahmen) – Art-Umschalter im Formular, Kategorienliste zeigt passende Erlös-Kategorien (Issue #157)' },
       { typ: 'neu', text: 'Backup – Ebene 1: Beim Beenden der App wird automatisch ein lokaler WAL-sicherer DB-Snapshot erstellt (max. 5 Kopien, älteste werden automatisch gelöscht)' },
       { typ: 'neu', text: 'Backup – Ebene 2: Externes Backup auf NAS, USB oder Netzlaufwerk beim App-Ende – immer AES-256-GCM-verschlüsselt (DSGVO Art. 32); bis zu 2 Ziele konfigurierbar; enthält Datenbank und alle hochgeladenen Belege' },
       { typ: 'neu', text: 'Backup – Retry-Dialog: Wenn das externe Backup beim Beenden fehlschlägt, kann das Laufwerk angesteckt oder das NAS gestartet werden und direkt erneut versucht werden' },
@@ -42,6 +34,8 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Wiederherstellung – Lokale Snapshots: Aus dem automatisch erstellten lokalen DB-Snapshot direkt über die Backup-Seite wiederherstellen – Backup auswählen, bestätigen, Neustart; kein manuelles Dateikopieren nötig' },
       { typ: 'neu', text: 'Wiederherstellung – ZIP-Upload: Manuelles Backup (.zip) oder verschlüsseltes externes Backup (.zip.enc) hochladen; Passwortfeld erscheint automatisch bei .zip.enc; Datenbank und Belege werden beim Neustart vollständig wiederhergestellt' },
       { typ: 'verbesserung', text: 'Backup-Seite: zwei Karteireiter „Backup" und „Wiederherstellung" mit klarer Trennung der drei Backup-Ebenen (Lokal-Snapshot, Manuell-ZIP, Extern-verschlüsselt)' },
+      { typ: 'fix', text: 'UStVA / EÜR: Skonto-Buchungen haben USt-Konten nicht doppelt gemindert (KZ 81/83 und EÜR Zeile 17) – der Zahlungsbetrag enthielt Skonto bereits korrekt (Issue #155)' },
+      { typ: 'fix', text: 'Kategorien: Fehlermeldung beim Löschen einer belegten Kategorie wird jetzt inline angezeigt statt als nativer alert()-Dialog (Issue #156)' },
     ],
   },
   {

@@ -125,6 +125,7 @@
 - [x] Vertragsdokument (PDF/Bild) an Vorlage hinterlegen
 - [x] Lieferant direkt aus dem Vorlagenformular anlegen
 - [x] Variabler Betrag (0 = variabel): Beleg-Modus mit OCR statt manuellem Eintrag
+- [x] Einnahmen-Vorlagen: Art-Umschalter Ausgabe/Einnahme; Erlös-Kategorien (Eigenverbrauch, Sachentnahmen); korrekte USt-Konten ohne Vorsteuerabzug (Issue #157)
 
 ---
 
