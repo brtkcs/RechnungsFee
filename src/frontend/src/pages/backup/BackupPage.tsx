@@ -280,7 +280,7 @@ function formatTimestamp(iso: string | null): string {
 // ---------------------------------------------------------------------------
 
 function LokaleBackupListe({ onErfolg }: { onErfolg: () => void }) {
-  const { data: liste, isLoading, error, refetch } = useQuery({
+  const { data: liste, isLoading, error } = useQuery({
     queryKey: ['backup-liste'],
     queryFn: getBackupListe,
     refetchOnWindowFocus: false,
