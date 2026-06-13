@@ -696,7 +696,7 @@ export async function downloadBackup(): Promise<string> {
     const { invoke } = await import('@tauri-apps/api/core')
     const savePath = await save({
       defaultPath: filename,
-      filters: [{ name: 'SQLite Datenbank', extensions: ['db'] }],
+      filters: [{ name: 'ZIP-Archiv', extensions: ['zip'] }],
     })
     if (!savePath) return '' // Abgebrochen
     const data = Array.from(new Uint8Array(await blob.arrayBuffer()))
@@ -706,6 +706,17 @@ export async function downloadBackup(): Promise<string> {
 
   _triggerBlobDownload(blob, filename)
   return filename
+}
+
+export async function uploadBackupWiederherstellen(datei: File): Promise<void> {
+  const base = await getBaseUrl()
+  const form = new FormData()
+  form.append('datei', datei)
+  const res = await fetch(`${base}/backup/wiederherstellen`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail ?? 'Wiederherstellung fehlgeschlagen')
+  }
 }
 
 function _triggerBlobDownload(blob: Blob, filename: string) {

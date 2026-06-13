@@ -1,8 +1,39 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { downloadBackup, getUnternehmen, updateUnternehmen, isTauri } from '../../api/client'
+import { downloadBackup, getUnternehmen, updateUnternehmen, uploadBackupWiederherstellen, isTauri } from '../../api/client'
+
+type TabId = 'backup' | 'wiederherstellung'
 
 const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
+
+// ---------------------------------------------------------------------------
+// Tab-Navigation
+// ---------------------------------------------------------------------------
+
+function TabNav({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'backup',          label: 'Backup' },
+    { id: 'wiederherstellung', label: 'Wiederherstellung' },
+  ]
+  return (
+    <div className="flex gap-0 border-b border-slate-200 dark:border-slate-700">
+      {tabs.map(t => (
+        <button key={t.id} type="button" onClick={() => onChange(t.id)}
+          className={`px-5 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+            active === t.id
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+          }`}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Backup-Tab
+// ---------------------------------------------------------------------------
 
 function ExterneBackupEinstellungen() {
   const queryClient = useQueryClient()
@@ -50,15 +81,12 @@ function ExterneBackupEinstellungen() {
     mutation.mutate({ ...data!, backup_extern_pfad_1: pfad1 || null, backup_extern_pfad_2: pfad2 || null, backup_extern_passwort: passwort || null })
   }
 
-  const pfadInputCls = (hatFehler: boolean) =>
-    `${inputCls} flex-1 ${hatFehler ? 'border-red-400 focus:ring-red-400' : ''}`
-
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
       <div className="bg-blue-600 px-6 py-4">
-        <h2 className="text-white font-bold text-lg">Externe Backup-Ziele</h2>
+        <h2 className="text-white font-bold text-lg">Automatisches Backup beim Beenden</h2>
         <p className="text-blue-100 text-sm mt-0.5">
-          Beim Beenden der App automatisch auf NAS, USB oder Netzlaufwerk sichern – immer AES-256-verschlüsselt (DSGVO Art. 32)
+          Beim Schließen der App auf NAS, USB oder Netzlaufwerk sichern – immer AES-256-verschlüsselt (DSGVO Art. 32)
         </p>
       </div>
       <div className="p-6 space-y-5">
@@ -68,7 +96,7 @@ function ExterneBackupEinstellungen() {
             <div className="flex gap-2">
               <input type="text" value={pfad1} onChange={e => setPfad1(e.target.value)}
                 placeholder="z.B. /mnt/nas/backup oder \\NAS\backup"
-                className={pfadInputCls(false)} />
+                className={`${inputCls} flex-1`} />
               {isTauri() && (
                 <button type="button" onClick={() => waehlePfad(setPfad1)}
                   className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -84,7 +112,7 @@ function ExterneBackupEinstellungen() {
             <div className="flex gap-2">
               <input type="text" value={pfad2} onChange={e => setPfad2(e.target.value)}
                 placeholder="z.B. /media/usb/backup"
-                className={pfadInputCls(false)} />
+                className={`${inputCls} flex-1`} />
               {isTauri() && (
                 <button type="button" onClick={() => waehlePfad(setPfad2)}
                   className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -99,17 +127,12 @@ function ExterneBackupEinstellungen() {
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-            Verschlüsselungs-Passwort
-            {hatZiel && <span className="ml-1 text-red-500">*</span>}
+            Verschlüsselungs-Passwort{hatZiel && <span className="ml-1 text-red-500">*</span>}
           </label>
           <div className="relative">
-            <input
-              type={zeigPasswort ? 'text' : 'password'}
-              value={passwort}
-              onChange={e => setPasswort(e.target.value)}
+            <input type={zeigPasswort ? 'text' : 'password'} value={passwort} onChange={e => setPasswort(e.target.value)}
               placeholder={hatZiel ? 'Pflichtfeld – externes Backup ist immer verschlüsselt' : 'Wird benötigt sobald ein Ziel konfiguriert ist'}
-              className={`${inputCls} pr-24 ${passwortFehlt ? 'border-red-400 focus:ring-red-400' : ''}`}
-            />
+              className={`${inputCls} pr-24 ${passwortFehlt ? 'border-red-400 focus:ring-red-400' : ''}`} />
             <button type="button" onClick={() => setZeigPasswort(z => !z)}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1">
               {zeigPasswort ? 'Verbergen' : 'Anzeigen'}
@@ -117,12 +140,12 @@ function ExterneBackupEinstellungen() {
           </div>
           {passwortFehlt && (
             <p className="text-xs text-red-600 dark:text-red-400">
-              Externes Backup erfordert ein Passwort – Kundendaten und Rechnungen müssen gemäß DSGVO Art. 32 verschlüsselt gespeichert werden.
+              Externes Backup erfordert ein Passwort – Kundendaten müssen gemäß DSGVO Art. 32 verschlüsselt gespeichert werden.
             </p>
           )}
           {passwort && (
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              Datei wird als <code className="font-mono">.db.enc</code> gespeichert. Dieses Passwort wird zur Wiederherstellung benötigt – sicher aufbewahren.
+              Datei wird als <code className="font-mono">.zip.enc</code> gespeichert. Dieses Passwort wird zur Wiederherstellung benötigt – sicher aufbewahren.
             </p>
           )}
         </div>
@@ -140,15 +163,13 @@ function ExterneBackupEinstellungen() {
   )
 }
 
-export function BackupPage() {
+function BackupTab() {
   const [laedt, setLaedt] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [erfolg, setErfolg] = useState<string | null>(null)
 
   async function handleBackup() {
-    setLaedt(true)
-    setFehler(null)
-    setErfolg(null)
+    setLaedt(true); setFehler(null); setErfolg(null)
     try {
       const name = await downloadBackup()
       if (name) setErfolg(`Backup gespeichert: ${name}`)
@@ -160,80 +181,44 @@ export function BackupPage() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Backup</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-          Deine Daten sichern und im Notfall wiederherstellen.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Manuelles Backup */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-green-600 px-6 py-4">
-          <h2 className="text-white font-bold text-lg">Backup erstellen</h2>
-          <p className="text-green-100 text-sm mt-0.5">
-            Vollständige Kopie deiner Datenbank als SQLite-Datei herunterladen
-          </p>
+          <h2 className="text-white font-bold text-lg">Manuelles Backup</h2>
+          <p className="text-green-100 text-sm mt-0.5">ZIP-Archiv (Datenbank + Belege) herunterladen</p>
         </div>
-
         <div className="p-6 space-y-5">
-          {fehler && (
-            <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-300">
-              Fehler: {fehler}
-            </div>
-          )}
-          {erfolg && (
-            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-300">
-              ✓ {erfolg}
-            </div>
-          )}
+          {fehler && <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 text-sm text-red-700 dark:text-red-300">Fehler: {fehler}</div>}
+          {erfolg && <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-300">✓ {erfolg}</div>}
+
           <div className="flex items-start gap-4">
-            <button
-              onClick={handleBackup}
-              disabled={laedt}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-medium text-sm px-5 py-2 rounded-lg transition-colors shrink-0"
-            >
-              {laedt ? (
-                <>
-                  <span className="animate-spin">⏳</span>
-                  Wird erstellt…
-                </>
-              ) : (
-                <>
-                  <span>💾</span>
-                  Backup herunterladen
-                </>
-              )}
+            <button onClick={handleBackup} disabled={laedt}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-medium text-sm px-5 py-2 rounded-lg transition-colors shrink-0">
+              {laedt ? <><span className="animate-spin">⏳</span>Wird erstellt…</> : <>💾 Backup herunterladen</>}
             </button>
             <p className="text-sm text-slate-500 dark:text-slate-400 pt-1.5">
-              Erstellt ein vollständiges ZIP-Archiv (Datenbank + Belege) und startet den Download.
               Dateiname: <span className="font-mono text-slate-700 dark:text-slate-200">RechnungsFee-Backup-JJJJ-MM-TT.zip</span>
             </p>
           </div>
 
           <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 flex gap-3">
-            <span className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5">⚠</span>
+            <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
             <p className="text-xs text-amber-800 dark:text-amber-300">
               Der Download ist <strong>unverschlüsselt</strong> – die ZIP-Datei enthält alle Kundendaten und Rechnungen im Klartext.
-              Bewahre sie nur an einem sicheren, zugangsbeschränkten Ort auf (lokales Laufwerk, verschlüsselter Cloud-Speicher).
+              Nur an sicheren, zugangsbeschränkten Orten aufbewahren.
             </p>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-2">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Was wird gesichert?</p>
-            <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1 list-none">
-              {[
-                'Alle Journaleinträge und Tagesabschlüsse',
-                'Rechnungen (Eingang & Ausgang) mit Zahlungen',
-                'Kunden und Lieferanten',
-                'Unternehmensdaten, Konten, Kategorien',
-                'Nummernkreise und alle Einstellungen',
-                'Hochgeladene Belege und Eingangsrechnungen (PDF, Scans)',
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <span className="text-green-500 shrink-0">✓</span>
-                  {item}
+            <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+              {['Alle Journaleinträge und Tagesabschlüsse', 'Rechnungen (Eingang & Ausgang) mit Zahlungen',
+                'Kunden und Lieferanten', 'Unternehmensdaten, Konten, Kategorien',
+                'Nummernkreise und alle Einstellungen', 'Hochgeladene Belege und Eingangsrechnungen (PDF, Scans)',
+              ].map(item => (
+                <li key={item} className="flex items-center gap-2 list-none">
+                  <span className="text-green-500 shrink-0">✓</span>{item}
                 </li>
               ))}
             </ul>
@@ -244,18 +229,17 @@ export function BackupPage() {
       {/* Externe Backup-Ziele */}
       <ExterneBackupEinstellungen />
 
-      {/* Automatische Backups */}
+      {/* Automatische Backups – Info */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6 space-y-3">
-        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Automatische Backups</h2>
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Lokale automatische Backups</h2>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          RechnungsFee erstellt automatisch ein Backup beim Beenden der App sowie vor
-          Datenbankmigrationen. Die letzten 5 Backups werden lokal aufbewahrt.
+          Beim Beenden der App und vor Datenbankmigrationen wird automatisch ein lokales DB-Backup erstellt (max. 5 Kopien).
         </p>
         <div className="space-y-1.5">
           {[
-            { os: 'Linux', pfad: '~/.local/share/RechnungsFee/backups/' },
+            { os: 'Linux',   pfad: '~/.local/share/RechnungsFee/backups/' },
             { os: 'Windows', pfad: '%APPDATA%\\RechnungsFee\\backups\\' },
-            { os: 'macOS', pfad: '~/Library/Application Support/RechnungsFee/backups/' },
+            { os: 'macOS',   pfad: '~/Library/Application Support/RechnungsFee/backups/' },
           ].map(({ os, pfad }) => (
             <div key={os} className="flex items-center gap-2 text-sm">
               <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium w-16 text-center shrink-0">{os}</span>
@@ -264,46 +248,166 @@ export function BackupPage() {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Wiederherstellen */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6 space-y-3">
-        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Backup wiederherstellen</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Eine automatische Wiederherstellungsfunktion ist in Vorbereitung. Bis dahin kannst
-          du ein Backup manuell wiederherstellen:
-        </p>
-        <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-2 list-none">
-          <li className="flex items-start gap-2">
-            <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">1</span>
-            RechnungsFee beenden
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">2</span>
-            <span>Aktuelle Datenbank sichern (optional) – Datei umbenennen:
-              <div className="mt-1 space-y-0.5">
-                {[
-                  { os: 'Linux', pfad: '~/.local/share/RechnungsFee/rechnungsfee.db' },
-                  { os: 'Windows', pfad: '%APPDATA%\\RechnungsFee\\rechnungsfee.db' },
-                  { os: 'macOS', pfad: '~/Library/Application Support/RechnungsFee/rechnungsfee.db' },
-                ].map(({ os, pfad }) => (
-                  <div key={os} className="flex items-center gap-2">
-                    <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium w-16 text-center shrink-0">{os}</span>
-                    <code className="font-mono text-xs text-slate-500 dark:text-slate-400">{pfad}</code>
-                  </div>
-                ))}
+// ---------------------------------------------------------------------------
+// Wiederherstellung-Tab
+// ---------------------------------------------------------------------------
+
+function WiederherstellungTab() {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [datei, setDatei] = useState<File | null>(null)
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'bereit' | 'err'>('idle')
+  const [fehler, setFehler] = useState<string | null>(null)
+
+  async function waehleDatei() {
+    if (isTauri()) {
+      try {
+        const { open } = await import('@tauri-apps/plugin-dialog')
+        const pfad = await open({ title: 'Backup-ZIP wählen', filters: [{ name: 'Backup', extensions: ['zip'] }] })
+        if (typeof pfad === 'string' && pfad) {
+          // Datei über fetch einlesen (Tauri file:// protocol)
+          const res = await fetch(`file://${pfad}`)
+          const blob = await res.blob()
+          const name = pfad.split(/[\\/]/).pop() ?? 'backup.zip'
+          setDatei(new File([blob], name, { type: 'application/zip' }))
+        }
+        return
+      } catch { /* Fallback auf normalen Input */ }
+    }
+    fileInputRef.current?.click()
+  }
+
+  async function wiederherstellen() {
+    if (!datei) return
+    setStatus('uploading'); setFehler(null)
+    try {
+      await uploadBackupWiederherstellen(datei)
+      setStatus('bereit')
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Unbekannter Fehler')
+      setStatus('err')
+    }
+  }
+
+  async function neustart() {
+    if (isTauri()) {
+      const { relaunch } = await import('@tauri-apps/plugin-process')
+      await relaunch()
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-orange-600 px-6 py-4">
+          <h2 className="text-white font-bold text-lg">Aus Backup wiederherstellen</h2>
+          <p className="text-orange-100 text-sm mt-0.5">
+            ZIP-Backup hochladen – RechnungsFee stellt beim Neustart Datenbank und Belege wieder her
+          </p>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 flex gap-3">
+            <span className="text-red-500 shrink-0 mt-0.5">⚠</span>
+            <p className="text-xs text-red-800 dark:text-red-300">
+              <strong>Achtung:</strong> Die Wiederherstellung überschreibt alle aktuellen Daten unwiderruflich.
+              Vor der Wiederherstellung wird automatisch ein Sicherheits-Backup der aktuellen Daten angelegt.
+            </p>
+          </div>
+
+          {status === 'bereit' ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-300">
+                ✓ Backup bereit – RechnungsFee stellt die Daten beim Neustart wieder her.
               </div>
-            </span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">3</span>
-            Backup-Datei in den jeweiligen Ordner kopieren und in <code className="font-mono text-xs">rechnungsfee.db</code> umbenennen
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">4</span>
-            RechnungsFee neu starten
-          </li>
-        </ol>
+              {isTauri() ? (
+                <button onClick={neustart}
+                  className="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg">
+                  Jetzt neu starten und wiederherstellen
+                </button>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">Bitte starte RechnungsFee neu um die Wiederherstellung abzuschließen.</p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <input ref={fileInputRef} type="file" accept=".zip" className="hidden"
+                onChange={e => setDatei(e.target.files?.[0] ?? null)} />
+
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={waehleDatei}
+                  className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">
+                  ZIP-Datei wählen
+                </button>
+                {datei && <span className="text-sm text-slate-600 dark:text-slate-300 font-mono">{datei.name}</span>}
+              </div>
+
+              {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+
+              <button onClick={wiederherstellen} disabled={!datei || status === 'uploading'}
+                className="px-5 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg">
+                {status === 'uploading' ? 'Wird hochgeladen…' : 'Backup hochladen und vorbereiten'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Manuelle Anleitung als Fallback */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6 space-y-3">
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Manuelle Wiederherstellung</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-300">Alternativ kannst du ein Backup manuell einspielen:</p>
+        <ol className="text-sm text-slate-600 dark:text-slate-300 space-y-2 list-none">
+          {[
+            'RechnungsFee beenden',
+            'ZIP entpacken',
+            'rechnungsfee.db in den Datenpfad kopieren (vorherige DB ersetzen)',
+            'uploads/-Ordner in den Datenpfad kopieren',
+            'RechnungsFee neu starten',
+          ].map((schritt, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+              {schritt}
+            </li>
+          ))}
+        </ol>
+        <div className="space-y-1.5 pt-1">
+          {[
+            { os: 'Linux',   pfad: '~/.local/share/RechnungsFee/' },
+            { os: 'Windows', pfad: '%APPDATA%\\RechnungsFee\\' },
+            { os: 'macOS',   pfad: '~/Library/Application Support/RechnungsFee/' },
+          ].map(({ os, pfad }) => (
+            <div key={os} className="flex items-center gap-2 text-sm">
+              <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium w-16 text-center shrink-0">{os}</span>
+              <code className="text-slate-600 dark:text-slate-300 font-mono text-xs">{pfad}</code>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Haupt-Seite
+// ---------------------------------------------------------------------------
+
+export function BackupPage() {
+  const [activeTab, setActiveTab] = useState<TabId>('backup')
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Backup & Wiederherstellung</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Deine Daten sichern und im Notfall wiederherstellen.</p>
+      </div>
+
+      <TabNav active={activeTab} onChange={setActiveTab} />
+
+      {activeTab === 'backup'          && <BackupTab />}
+      {activeTab === 'wiederherstellung' && <WiederherstellungTab />}
     </div>
   )
 }

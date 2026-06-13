@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -184,6 +184,24 @@ def backup_erstellen():
     return {"ok": True, "fehler": fehler or None}
 
 
+@app.post("/api/backup/wiederherstellen")
+async def backup_wiederherstellen(datei: UploadFile = File(...)):
+    """Nimmt ein Backup-ZIP entgegen, validiert es und speichert als Pending-Marker."""
+    import io
+    import zipfile
+    if not (datei.filename or "").endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Nur ZIP-Dateien (.zip) werden akzeptiert")
+    content = await datei.read()
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as zf:
+            if "rechnungsfee.db" not in zf.namelist():
+                raise HTTPException(status_code=400, detail="Ungültiges Backup: rechnungsfee.db nicht gefunden")
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Ungültige ZIP-Datei")
+    RESTORE_MARKER.write_bytes(content)
+    return {"ok": True, "neustart_erforderlich": True}
+
+
 def _backup_datenbank() -> None:
     """Erstellt ein WAL-sicheres Backup der DB vor Migrationen (max. 5 Backups)."""
     backup_dir = DB_PATH.parent / "backups"
@@ -206,6 +224,39 @@ def _backup_datenbank() -> None:
     for old in backups[:-5]:
         old.unlink()
         print(f"[Migration] Altes Backup gelöscht: {old.name}")
+
+
+RESTORE_MARKER = APP_DATA_DIR / "restore_pending.zip"
+
+
+def _prüfe_wiederherstellung() -> None:
+    """Stellt Backup wieder her wenn restore_pending.zip existiert (vor DB-Öffnung)."""
+    if not RESTORE_MARKER.exists():
+        return
+    import io
+    import shutil
+    import zipfile
+    print("[Wiederherstellung] Pending-Marker gefunden – stelle wieder her …")
+    try:
+        _backup_datenbank()  # Sicherheitsbackup der aktuellen DB
+        with zipfile.ZipFile(RESTORE_MARKER, "r") as zf:
+            names = zf.namelist()
+            if "rechnungsfee.db" in names:
+                zf.extract("rechnungsfee.db", APP_DATA_DIR)
+                print("[Wiederherstellung] Datenbank wiederhergestellt")
+            upload_entries = [n for n in names if n.startswith("uploads/") and not n.endswith("/")]
+            if upload_entries:
+                uploads_dir = APP_DATA_DIR / "uploads"
+                if uploads_dir.exists():
+                    shutil.rmtree(uploads_dir)
+                for name in upload_entries:
+                    zf.extract(name, APP_DATA_DIR)
+                print(f"[Wiederherstellung] {len(upload_entries)} Belege wiederhergestellt")
+        RESTORE_MARKER.unlink()
+        print("[Wiederherstellung] Abgeschlossen")
+    except Exception as e:
+        print(f"[Wiederherstellung] Fehler: {e}")
+        RESTORE_MARKER.unlink(missing_ok=True)
 
 
 def _run_migrations() -> None:
@@ -2041,6 +2092,7 @@ def _setup_gobd_triggers() -> None:
 
 @app.on_event("startup")
 def startup():
+    _prüfe_wiederherstellung()   # Vor create_all – DB muss ggf. erst ersetzt werden
     Base.metadata.create_all(bind=engine)
     _run_migrations()
     _migrate_kategorien()   # Fehlende Kategorien nachträglich eintragen
