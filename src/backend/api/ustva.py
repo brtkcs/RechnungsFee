@@ -169,7 +169,10 @@ def _berechne_kz(von: date, bis: date, db: Session) -> dict[str, Decimal]:
         # Storno einer Einnahme: art ist "Ausgabe" (umgekehrt), konto_ust_skr ist Einnahme-Konto.
         # Muss Ausgangsumsätze (KZ 81/83 etc.) reduzieren – sonst bleibt der Original-Umsatz
         # stehen und der Storno ist in der UStVA unsichtbar.
-        if e.art == "Ausgabe" and e.ust_betrag and e.ust_betrag != 0:
+        # Skonto-Einträge (zahlungsart == "Skonto") ausschließen: der Zahlungseingang (brutto)
+        # enthält bereits den reduzierten Betrag (Zuflussprinzip / Ist-Versteuerung) – eine
+        # zusätzliche Kürzung durch den Skonto-Gegeneintrag würde KZ 81/83 doppelt mindern.
+        if e.art == "Ausgabe" and e.ust_betrag and e.ust_betrag != 0 and e.zahlungsart != "Skonto":
             mapping = _KONTO_EINNAHME.get(ust_konto)
             if mapping:
                 kz[mapping[0]] -= e.netto_betrag

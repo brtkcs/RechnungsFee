@@ -124,10 +124,11 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
 
         # Zeile 17: vereinnahmte USt – reguläre Einnahmen addieren, Storno subtrahieren.
         # Storno einer Einnahme hat art=Ausgabe + Einnahme-USt-Konto (1776/1771/…).
+        # Skonto-Einträge ausschließen: Zahlung (Zuflussprinzip) enthält bereits reduzierten USt-Betrag.
         if e.ust_betrag and e.ust_betrag != 0:
             if e.art == "Einnahme" and e.ust_betrag > 0:
                 zeilen[17] = zeilen.get(17, ZERO) + e.ust_betrag
-            elif e.art == "Ausgabe" and e.ust_betrag > 0 and ust_konto in _EINNAHME_UST_KONTEN:
+            elif e.art == "Ausgabe" and e.ust_betrag > 0 and ust_konto in _EINNAHME_UST_KONTEN and e.zahlungsart != "Skonto":
                 zeilen[17] = zeilen.get(17, ZERO) - e.ust_betrag
 
         # Zeile 57: abziehbare Vorsteuer – Summe aller vorsteuer_betrag-Werte (ohne art-Filter).
@@ -343,7 +344,7 @@ def _berechne_euer_kategorien(jahr: int, db: Session) -> dict[int, dict[str, Dec
             if e.art == "Einnahme" and e.ust_betrag > 0:
                 zeilen.setdefault(17, {})
                 zeilen[17]["Umsatzsteuer"] = zeilen[17].get("Umsatzsteuer", ZERO) + e.ust_betrag
-            elif e.art == "Ausgabe" and e.ust_betrag > 0 and ust_konto in _EINNAHME_UST_KONTEN:
+            elif e.art == "Ausgabe" and e.ust_betrag > 0 and ust_konto in _EINNAHME_UST_KONTEN and e.zahlungsart != "Skonto":
                 zeilen.setdefault(17, {})
                 zeilen[17]["Umsatzsteuer"] = zeilen[17].get("Umsatzsteuer", ZERO) - e.ust_betrag
 
