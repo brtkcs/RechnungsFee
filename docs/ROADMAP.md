@@ -106,8 +106,8 @@
 
 ### Backup & Wiederherstellung
 - [x] Backup bei App-Ende (automatisch, WAL-sicher, max. 5 Kopien lokal)
-- [ ] Backup auf externes Laufwerk/Freigabe bei App-Ende (Ordner konfigurierbar, Angebot beim Schließen)
-- [x] Wiederherstellung aus Backup (ZIP hochladen → Pending-Marker → Neustart stellt DB + Uploads wieder her)
+- [x] Backup auf externes Laufwerk/Freigabe bei App-Ende (AES-256-GCM, DSGVO Art. 32, bis zu 2 Ziele, NAS/USB/Netzlaufwerk; Retry-Dialog bei Fehler)
+- [x] Wiederherstellung aus Backup: lokale DB-Snapshots direkt auswählen; ZIP-Backup (unverschlüsselt) oder .zip.enc (verschlüsselt) hochladen → Pending-Marker → Neustart stellt DB + Uploads wieder her
 
 ### Wiederkehrende Ausgangsrechnungen (Abo)
 - [x] Wiederkehrende Ausgangsrechnungen: Vorlage mit Intervall (monatlich, quartalsweise, jährlich) und automatischer Erstellung als Entwurf am Fälligkeitstag; Preisabgleich mit Artikelstamm

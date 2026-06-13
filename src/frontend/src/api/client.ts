@@ -720,6 +720,20 @@ export async function uploadBackupWiederherstellen(datei: File, passwort?: strin
   }
 }
 
+export type BackupEintrag = {
+  dateiname: string
+  timestamp: string | null
+  groesse: number
+}
+
+export const getBackupListe = () => request<BackupEintrag[]>('/backup/liste')
+
+export const wiederherstellenLokal = (dateiname: string) =>
+  request<{ ok: boolean; neustart_erforderlich: boolean }>('/backup/wiederherstellen-lokal', {
+    method: 'POST',
+    body: JSON.stringify({ dateiname }),
+  })
+
 function _triggerBlobDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

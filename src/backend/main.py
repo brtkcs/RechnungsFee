@@ -254,37 +254,54 @@ def _backup_datenbank() -> None:
         print(f"[Migration] Altes Backup gelöscht: {old.name}")
 
 
-RESTORE_MARKER = APP_DATA_DIR / "restore_pending.zip"
+RESTORE_MARKER_ZIP = APP_DATA_DIR / "restore_pending.zip"
+RESTORE_MARKER_DB  = APP_DATA_DIR / "restore_pending.db"
 
 
 def _prüfe_wiederherstellung() -> None:
-    """Stellt Backup wieder her wenn restore_pending.zip existiert (vor DB-Öffnung)."""
-    if not RESTORE_MARKER.exists():
+    """Stellt Backup wieder her wenn ein Pending-Marker existiert (vor DB-Öffnung).
+
+    restore_pending.zip  → vollständiges Backup (DB + Uploads) aus ZIP
+    restore_pending.db   → lokaler DB-Snapshot (nur Datenbank, Uploads bleiben)
+    """
+    marker_zip = RESTORE_MARKER_ZIP
+    marker_db  = RESTORE_MARKER_DB
+    if not marker_zip.exists() and not marker_db.exists():
         return
+
     import io
     import shutil
     import zipfile
     print("[Wiederherstellung] Pending-Marker gefunden – stelle wieder her …")
     try:
         _backup_datenbank()  # Sicherheitsbackup der aktuellen DB
-        with zipfile.ZipFile(RESTORE_MARKER, "r") as zf:
-            names = zf.namelist()
-            if "rechnungsfee.db" in names:
-                zf.extract("rechnungsfee.db", APP_DATA_DIR)
-                print("[Wiederherstellung] Datenbank wiederhergestellt")
-            upload_entries = [n for n in names if n.startswith("uploads/") and not n.endswith("/")]
-            if upload_entries:
-                uploads_dir = APP_DATA_DIR / "uploads"
-                if uploads_dir.exists():
-                    shutil.rmtree(uploads_dir)
-                for name in upload_entries:
-                    zf.extract(name, APP_DATA_DIR)
-                print(f"[Wiederherstellung] {len(upload_entries)} Belege wiederhergestellt")
-        RESTORE_MARKER.unlink()
+
+        if marker_zip.exists():
+            with zipfile.ZipFile(marker_zip, "r") as zf:
+                names = zf.namelist()
+                if "rechnungsfee.db" in names:
+                    zf.extract("rechnungsfee.db", APP_DATA_DIR)
+                    print("[Wiederherstellung] Datenbank (ZIP) wiederhergestellt")
+                upload_entries = [n for n in names if n.startswith("uploads/") and not n.endswith("/")]
+                if upload_entries:
+                    uploads_dir = APP_DATA_DIR / "uploads"
+                    if uploads_dir.exists():
+                        shutil.rmtree(uploads_dir)
+                    for name in upload_entries:
+                        zf.extract(name, APP_DATA_DIR)
+                    print(f"[Wiederherstellung] {len(upload_entries)} Belege wiederhergestellt")
+            marker_zip.unlink()
+
+        elif marker_db.exists():
+            shutil.copy2(str(marker_db), str(DB_PATH))
+            marker_db.unlink()
+            print("[Wiederherstellung] Datenbank (lokales Backup) wiederhergestellt")
+
         print("[Wiederherstellung] Abgeschlossen")
     except Exception as e:
         print(f"[Wiederherstellung] Fehler: {e}")
-        RESTORE_MARKER.unlink(missing_ok=True)
+        marker_zip.unlink(missing_ok=True)
+        marker_db.unlink(missing_ok=True)
 
 
 def _run_migrations() -> None:

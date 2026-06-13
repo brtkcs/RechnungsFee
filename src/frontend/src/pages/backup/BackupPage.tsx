@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { downloadBackup, getUnternehmen, updateUnternehmen, uploadBackupWiederherstellen, isTauri } from '../../api/client'
+import { downloadBackup, getUnternehmen, updateUnternehmen, uploadBackupWiederherstellen, getBackupListe, wiederherstellenLokal, isTauri } from '../../api/client'
+import type { BackupEintrag } from '../../api/client'
 
 type TabId = 'backup' | 'wiederherstellung'
 
@@ -253,6 +254,119 @@ function BackupTab() {
 }
 
 // ---------------------------------------------------------------------------
+// Hilfsfunktionen
+// ---------------------------------------------------------------------------
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatTimestamp(iso: string | null): string {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('de-DE', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lokale Backup-Liste
+// ---------------------------------------------------------------------------
+
+function LokaleBackupListe({ onErfolg }: { onErfolg: () => void }) {
+  const { data: liste, isLoading, error, refetch } = useQuery({
+    queryKey: ['backup-liste'],
+    queryFn: getBackupListe,
+    refetchOnWindowFocus: false,
+  })
+  const [selected, setSelected] = useState<BackupEintrag | null>(null)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'err'>('idle')
+  const [fehler, setFehler] = useState<string | null>(null)
+
+  async function wiederherstellen(eintrag: BackupEintrag) {
+    setStatus('loading'); setFehler(null)
+    try {
+      await wiederherstellenLokal(eintrag.dateiname)
+      onErfolg()
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : 'Unbekannter Fehler')
+      setStatus('err')
+    }
+  }
+
+  if (isLoading) {
+    return <p className="text-sm text-slate-400 py-2">Lade Backup-Liste…</p>
+  }
+  if (error) {
+    return <p className="text-sm text-red-500 py-2">Fehler beim Laden der Backups</p>
+  }
+  if (!liste || liste.length === 0) {
+    return (
+      <p className="text-sm text-slate-500 dark:text-slate-400 py-2">
+        Noch keine lokalen Backups vorhanden. Backups werden automatisch beim Beenden der App erstellt.
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="divide-y divide-slate-100 dark:divide-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+        {liste.map(eintrag => (
+          <div key={eintrag.dateiname}
+            className={`flex items-center justify-between px-4 py-3 text-sm transition-colors ${
+              selected?.dateiname === eintrag.dateiname
+                ? 'bg-orange-50 dark:bg-orange-950'
+                : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750'
+            }`}>
+            <div className="space-y-0.5 min-w-0">
+              <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
+                {formatTimestamp(eintrag.timestamp)}
+              </p>
+              <p className="text-xs text-slate-400 font-mono">{eintrag.dateiname} · {formatBytes(eintrag.groesse)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelected(selected?.dateiname === eintrag.dateiname ? null : eintrag)}
+              className="ml-3 shrink-0 px-3 py-1.5 text-xs border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors">
+              Auswählen
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {selected && (
+        <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-4 space-y-3">
+          <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+            Backup vom {formatTimestamp(selected.timestamp)} wiederherstellen?
+          </p>
+          <p className="text-xs text-orange-700 dark:text-orange-300">
+            Nur die Datenbank wird wiederhergestellt – hochgeladene Belege bleiben unverändert.
+            Die aktuellen Daten werden vor der Wiederherstellung automatisch gesichert.
+          </p>
+          {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { setSelected(null); setFehler(null); setStatus('idle') }}
+              className="px-3 py-1.5 text-xs border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+              Abbrechen
+            </button>
+            <button type="button" onClick={() => wiederherstellen(selected)} disabled={status === 'loading'}
+              className="px-3 py-1.5 text-xs bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg">
+              {status === 'loading' ? 'Wird vorbereitet…' : 'Ja, wiederherstellen'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Wiederherstellung-Tab
 // ---------------------------------------------------------------------------
 
@@ -307,13 +421,49 @@ function WiederherstellungTab() {
     }
   }
 
+  const neustartBereit = status === 'bereit'
+
   return (
     <div className="space-y-6">
+
+      {/* Lokale Backups */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
         <div className="bg-orange-600 px-6 py-4">
-          <h2 className="text-white font-bold text-lg">Aus Backup wiederherstellen</h2>
+          <h2 className="text-white font-bold text-lg">Lokales Backup wiederherstellen</h2>
           <p className="text-orange-100 text-sm mt-0.5">
-            ZIP-Backup hochladen – RechnungsFee stellt beim Neustart Datenbank und Belege wieder her
+            Automatisch erstellte DB-Snapshots – direkt auswählen und einspielen
+          </p>
+        </div>
+        <div className="p-6 space-y-4">
+          {neustartBereit ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-300">
+                ✓ Backup bereit – RechnungsFee stellt die Daten beim Neustart wieder her.
+              </div>
+              {isTauri() ? (
+                <button onClick={neustart}
+                  className="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg">
+                  Jetzt neu starten und wiederherstellen
+                </button>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">Bitte starte RechnungsFee neu um die Wiederherstellung abzuschließen.</p>
+              )}
+            </div>
+          ) : (
+            <LokaleBackupListe onErfolg={() => setStatus('bereit')} />
+          )}
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Hinweis: Lokale Backups enthalten nur die Datenbank – hochgeladene Belege bleiben beim Wiederherstellen unverändert.
+          </p>
+        </div>
+      </div>
+
+      {/* Manuelles ZIP-Backup hochladen */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h2 className="font-semibold text-slate-800 dark:text-slate-100">ZIP-Backup hochladen</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+            Manuelles Backup (.zip) oder verschlüsseltes externes Backup (.zip.enc) einspielen
           </p>
         </div>
         <div className="p-6 space-y-5">
@@ -325,7 +475,7 @@ function WiederherstellungTab() {
             </p>
           </div>
 
-          {status === 'bereit' ? (
+          {neustartBereit ? (
             <div className="space-y-4">
               <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-sm text-green-700 dark:text-green-300">
                 ✓ Backup bereit – RechnungsFee stellt die Daten beim Neustart wieder her.
