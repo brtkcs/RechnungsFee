@@ -559,7 +559,6 @@ class Rechnung(Base):
     kategorie: Mapped["Kategorie | None"] = relationship(back_populates="rechnungen")
     beleg: Mapped["Beleg | None"] = relationship(foreign_keys=[beleg_id])
     positionen: Mapped[list["Rechnungsposition"]] = relationship(back_populates="rechnung", cascade="all, delete-orphan")
-    anlagegueter: Mapped[list["Anlagegut"]] = relationship(back_populates="rechnung")
     journaleintraege: Mapped[list["Journaleintrag"]] = relationship(back_populates="rechnung")
 
 
@@ -759,29 +758,6 @@ class AutoFilterRegel(Base):
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-
-# ---------------------------------------------------------------------------
-# Anlagevermögen / AfA
-# ---------------------------------------------------------------------------
-
-class Anlagegut(Base):
-    """Anlagevermögen für AfA-Berechnung."""
-    __tablename__ = "anlagegueter"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    bezeichnung: Mapped[str] = mapped_column(String(200), nullable=False)
-    anschaffungsdatum: Mapped[date] = mapped_column(Date, nullable=False)
-    anschaffungskosten_netto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    nutzungsdauer_jahre: Mapped[int] = mapped_column(Integer, nullable=False)
-    afa_methode: Mapped[str] = mapped_column(String(20), default="linear", nullable=False)  # linear|degressiv
-    afa_jahresbetrag: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    restbuchwert: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    vollstaendig_abgeschrieben: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))
-    notizen: Mapped[str | None] = mapped_column(Text)
-    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-
-    rechnung: Mapped["Rechnung | None"] = relationship(back_populates="anlagegueter")
 
 
 # ---------------------------------------------------------------------------
