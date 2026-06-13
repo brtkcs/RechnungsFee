@@ -349,7 +349,6 @@ export function AnlageverzeichnisPage() {
                 <div className="space-y-2">
                   {gruppe.map(g => {
                     const afa = afaFuerJahr(g)
-                    const preis = parseFloat(g.kaufpreis_netto)
                     const abgeschrieben = afa === 0 && new Date(g.kaufdatum).getFullYear() < jahr
                     return (
                       <div key={g.id}
