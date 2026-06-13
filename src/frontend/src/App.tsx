@@ -124,14 +124,22 @@ function AppRoutes() {
   )
 }
 
+type SchliessenPhase = 'fragen' | 'backup-laeuft' | 'extern-fehler'
+
 export default function App() {
   const [zeigSchliessen, setZeigSchliessen] = useState(false)
+  const [phase, setPhase] = useState<SchliessenPhase>('fragen')
+  const [externFehler, setExternFehler] = useState<string[]>([])
 
   useEffect(() => {
     if (!isTauri()) return
     let unlisten: (() => void) | undefined
     import('@tauri-apps/api/event').then(({ listen }) => {
-      listen('confirm-close', () => setZeigSchliessen(true)).then(fn => { unlisten = fn })
+      listen('confirm-close', () => {
+        setPhase('fragen')
+        setExternFehler([])
+        setZeigSchliessen(true)
+      }).then(fn => { unlisten = fn })
     })
     return () => { unlisten?.() }
   }, [])
@@ -155,15 +163,29 @@ export default function App() {
     return () => window.removeEventListener('wheel', handler)
   }, [])
 
-  async function handleBestaetigenSchliessen() {
-    setZeigSchliessen(false)
+  async function führeBackupUndSchliesseDurch() {
+    setPhase('backup-laeuft')
     try {
       const { getApiBase } = await import('./api/client')
       const base = await getApiBase()
-      await fetch(`${base}/api/backup/erstellen`, { method: 'POST' })
+      const res = await fetch(`${base}/api/backup/erstellen`, { method: 'POST' })
+      if (res.ok) {
+        const json = await res.json().catch(() => ({}))
+        const fehler: string[] = json.fehler ?? []
+        if (fehler.length > 0) {
+          setExternFehler(fehler)
+          setPhase('extern-fehler')
+          return
+        }
+      }
     } catch {
-      // Backup-Fehler blockiert das Schließen nicht
+      // Netzwerkfehler – lokal war OK, einfach schließen
     }
+    await schliessenOhneBackup()
+  }
+
+  async function schliessenOhneBackup() {
+    setZeigSchliessen(false)
     const { invoke } = await import('@tauri-apps/api/core')
     await invoke('confirm_close')
   }
@@ -173,23 +195,57 @@ export default function App() {
       <AppRoutes />
       {zeigSchliessen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-80 space-y-4">
-            <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">RechnungsFee beenden?</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Möchtest du RechnungsFee wirklich schließen?</p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setZeigSchliessen(false)}
-                className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={handleBestaetigenSchliessen}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Ja, beenden
-              </button>
-            </div>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-96 space-y-4">
+
+            {phase === 'fragen' && (
+              <>
+                <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">RechnungsFee beenden?</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Möchtest du RechnungsFee wirklich schließen?</p>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setZeigSchliessen(false)}
+                    className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    Abbrechen
+                  </button>
+                  <button onClick={führeBackupUndSchliesseDurch}
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Ja, beenden
+                  </button>
+                </div>
+              </>
+            )}
+
+            {phase === 'backup-laeuft' && (
+              <>
+                <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Backup wird erstellt…</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Bitte warten – Daten werden gesichert.</p>
+              </>
+            )}
+
+            {phase === 'extern-fehler' && (
+              <>
+                <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Externes Backup fehlgeschlagen</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Das lokale Backup wurde erstellt. Das externe Backup konnte nicht gespeichert werden:
+                </p>
+                <ul className="text-xs font-mono bg-slate-50 dark:bg-slate-900 rounded-lg p-3 space-y-1 text-red-600 dark:text-red-400">
+                  {externFehler.map((f, i) => <li key={i}>{f}</li>)}
+                </ul>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Laufwerk anstecken oder NAS starten und dann erneut versuchen.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={schliessenOhneBackup}
+                    className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    Trotzdem beenden
+                  </button>
+                  <button onClick={führeBackupUndSchliesseDurch}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Erneut versuchen
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}
