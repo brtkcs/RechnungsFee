@@ -3,6 +3,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 /// Globaler State: wurde das Schließen vom User bestätigt?
 struct CloseConfirmed(AtomicBool);
@@ -41,6 +45,7 @@ fn kill_backend_inner(child: CommandChild, port: u16, wait: bool) {
             // 1. Graceful: HTTP POST an /api/shutdown – curl.exe blockiert bis Antwort
             let status = std::process::Command::new("curl.exe")
                 .args(["-s", "-m", "3", "-X", "POST", &shutdown_url])
+                .creation_flags(CREATE_NO_WINDOW)
                 .output();
             match &status {
                 Ok(o) if o.status.success() => log::info!("Graceful shutdown OK"),
@@ -53,6 +58,7 @@ fn kill_backend_inner(child: CommandChild, port: u16, wait: bool) {
             // 3. Fallback: taskkill falls noch alive
             let _ = std::process::Command::new("taskkill")
                 .args(["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(CREATE_NO_WINDOW)
                 .output();
 
             log::info!("Backend (PID {}) beendet (wait=true)", pid);
@@ -60,9 +66,11 @@ fn kill_backend_inner(child: CommandChild, port: u16, wait: bool) {
             // Non-blocking: Shutdown-Request feuern und nicht warten
             let _ = std::process::Command::new("curl.exe")
                 .args(["-s", "-m", "2", "-X", "POST", &shutdown_url])
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn();
             let _ = std::process::Command::new("taskkill")
                 .args(["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn();
             log::info!("Backend (PID {}) beendet (wait=false)", pid);
         }
@@ -137,6 +145,7 @@ pub fn run() {
             {
                 let _ = std::process::Command::new("taskkill")
                     .args(["/F", "/IM", "backend.exe"])
+                    .creation_flags(CREATE_NO_WINDOW)
                     .output();
             }
             #[cfg(target_os = "linux")]
