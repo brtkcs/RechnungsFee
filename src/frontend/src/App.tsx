@@ -124,11 +124,11 @@ function AppRoutes() {
   )
 }
 
-type SchliessenPhase = 'fragen' | 'backup-laeuft' | 'extern-fehler'
+type SchliessenPhase = 'backup-laeuft' | 'extern-fehler'
 
 export default function App() {
   const [zeigSchliessen, setZeigSchliessen] = useState(false)
-  const [phase, setPhase] = useState<SchliessenPhase>('fragen')
+  const [phase, setPhase] = useState<SchliessenPhase>('backup-laeuft')
   const [externFehler, setExternFehler] = useState<string[]>([])
 
   useEffect(() => {
@@ -136,9 +136,9 @@ export default function App() {
     let unlisten: (() => void) | undefined
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('confirm-close', () => {
-        setPhase('fragen')
         setExternFehler([])
         setZeigSchliessen(true)
+        führeBackupUndSchliesseDurch()
       }).then(fn => { unlisten = fn })
     })
     return () => { unlisten?.() }
@@ -196,23 +196,6 @@ export default function App() {
       {zeigSchliessen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-96 space-y-4">
-
-            {phase === 'fragen' && (
-              <>
-                <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">RechnungsFee beenden?</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Möchtest du RechnungsFee wirklich schließen?</p>
-                <div className="flex gap-2 justify-end">
-                  <button onClick={() => setZeigSchliessen(false)}
-                    className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-                    Abbrechen
-                  </button>
-                  <button onClick={führeBackupUndSchliesseDurch}
-                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">
-                    Ja, beenden
-                  </button>
-                </div>
-              </>
-            )}
 
             {phase === 'backup-laeuft' && (
               <>
