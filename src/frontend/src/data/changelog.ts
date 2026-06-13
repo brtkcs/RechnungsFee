@@ -37,6 +37,8 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'UStVA / EÜR: Skonto-Buchungen haben USt-Konten nicht doppelt gemindert (KZ 81/83 und EÜR Zeile 17) – der Zahlungsbetrag enthielt Skonto bereits korrekt (Issue #155)' },
       { typ: 'fix', text: 'Kategorien: Fehlermeldung beim Löschen einer belegten Kategorie wird jetzt inline angezeigt statt als nativer alert()-Dialog (Issue #156)' },
       { typ: 'verbesserung', text: 'Buchungsvorlagen: Warndialog wenn „Jetzt buchen" für einen Zeitraum ausgelöst wird der noch nicht fällig ist – verhindert versehentliche Doppelbuchungen (Issue #158)' },
+      { typ: 'fix', text: 'Windows: Beim App-Ende erscheint kein Konsolen-Fenster mehr kurz auf dem Bildschirm (CREATE_NO_WINDOW für curl.exe + taskkill)' },
+      { typ: 'verbesserung', text: 'Beenden: kein Bestätigungsdialog mehr – App schließt sich direkt; nur wenn das externe Backup fehlschlägt erscheint ein Retry-Dialog' },
     ],
   },
   {
