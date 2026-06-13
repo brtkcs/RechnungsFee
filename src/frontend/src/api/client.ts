@@ -1552,6 +1552,7 @@ export type EUERErgebnis = {
   summe_ausgaben: string
   gewinn_verlust: string
   anlage_zugaenge: string
+  aveur_afa: string
   ist_kleinunternehmer: boolean
 }
 

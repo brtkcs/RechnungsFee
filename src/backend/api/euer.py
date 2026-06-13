@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Journaleintrag, Kategorie, Unternehmen
+from database.models import Anlagegut, Journaleintrag, Kategorie, Unternehmen
 
 router = APIRouter(prefix="/api/euer", tags=["EÜR"])
 
@@ -136,6 +136,13 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
         if e.vorsteuer_betrag and e.vorsteuer_betrag != 0:
             zeilen[57] = zeilen.get(57, ZERO) + e.vorsteuer_betrag
 
+    # AVEUR: AfA aus dem Anlagenverzeichnis automatisch in Zeile 36 eintragen
+    from api.anlageverzeichnis import _afa_fuer_jahr
+    gueter = db.query(Anlagegut).filter(Anlagegut.aktiv == True).all()
+    aveur_afa = sum(_afa_fuer_jahr(g, jahr) for g in gueter)
+    if aveur_afa:
+        zeilen[36] = zeilen.get(36, ZERO) + aveur_afa
+
     # Runden
     q = Decimal("0.01")
     zeilen = {z: v.quantize(q, ROUND_HALF_UP) for z, v in zeilen.items() if v != ZERO}
@@ -151,6 +158,7 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
         "summe_ausgaben":  summe_ausgaben.quantize(q, ROUND_HALF_UP),
         "gewinn_verlust":  gewinn_verlust,
         "anlage_zugaenge": anlage_summe.quantize(q, ROUND_HALF_UP),
+        "aveur_afa":       aveur_afa.quantize(q, ROUND_HALF_UP),
     }
 
 
@@ -377,6 +385,7 @@ class EUERErgebnis(BaseModel):
     summe_ausgaben: Decimal
     gewinn_verlust: Decimal
     anlage_zugaenge: Decimal
+    aveur_afa: Decimal
     ist_kleinunternehmer: bool
 
 class EUERKatSumme(BaseModel):
@@ -427,6 +436,7 @@ def euer_berechnen(
         summe_ausgaben=daten["summe_ausgaben"],
         gewinn_verlust=daten["gewinn_verlust"],
         anlage_zugaenge=daten["anlage_zugaenge"],
+        aveur_afa=daten["aveur_afa"],
         ist_kleinunternehmer=bool(unt.ist_kleinunternehmer),
     )
 
