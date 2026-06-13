@@ -23,6 +23,19 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.13',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Backup – Ebene 1: Beim Beenden der App wird automatisch ein lokaler WAL-sicherer DB-Snapshot erstellt (max. 5 Kopien, älteste werden automatisch gelöscht)' },
+      { typ: 'neu', text: 'Backup – Ebene 2: Externes Backup auf NAS, USB oder Netzlaufwerk beim App-Ende – immer AES-256-GCM-verschlüsselt (DSGVO Art. 32); bis zu 2 Ziele konfigurierbar; enthält Datenbank und alle hochgeladenen Belege' },
+      { typ: 'neu', text: 'Backup – Retry-Dialog: Wenn das externe Backup beim Beenden fehlschlägt, kann das Laufwerk angesteckt oder das NAS gestartet werden und direkt erneut versucht werden' },
+      { typ: 'neu', text: 'Backup – Manuelles ZIP: Manuelles Backup jetzt als vollständiges ZIP-Archiv (Datenbank + alle Belege) statt nur als .db-Datei; Hinweis auf fehlende Verschlüsselung' },
+      { typ: 'neu', text: 'Wiederherstellung – Lokale Snapshots: Aus dem automatisch erstellten lokalen DB-Snapshot direkt über die Backup-Seite wiederherstellen – Backup auswählen, bestätigen, Neustart; kein manuelles Dateikopieren nötig' },
+      { typ: 'neu', text: 'Wiederherstellung – ZIP-Upload: Manuelles Backup (.zip) oder verschlüsseltes externes Backup (.zip.enc) hochladen; Passwortfeld erscheint automatisch bei .zip.enc; Datenbank und Belege werden beim Neustart vollständig wiederhergestellt' },
+      { typ: 'verbesserung', text: 'Backup-Seite: zwei Karteireiter „Backup" und „Wiederherstellung" mit klarer Trennung der drei Backup-Ebenen (Lokal-Snapshot, Manuell-ZIP, Extern-verschlüsselt)' },
+    ],
+  },
+  {
     version: 'v0.3.12',
     datum: 'Juni 2026',
     eintraege: [
