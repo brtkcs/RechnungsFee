@@ -84,6 +84,21 @@ def _run_migrations():
 2. `SCHEMA_VERSION = N` erhöhen
 3. Pro Tabelle nur **1×** `PRAGMA table_info` – alle neuen Spalten in einem Loop
 
+### Kategorien ändern oder hinzufügen – Pflicht-Checkliste
+
+Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
+
+| Was | Wo | Wirkung |
+|-----|----|---------|
+| Neue Kategorie anlegen | `seed.py` → `STANDARD_KATEGORIEN` | Neuinstallation |
+| Neue Kategorie anlegen | `main.py` → `_migrate_kategorien()` → `neue`-Liste | Bestehende DBs |
+| Wert korrigieren (z. B. `euer_zeile`) | `seed.py` → `STANDARD_KATEGORIEN` | Neuinstallation |
+| Wert korrigieren | `main.py` → neuer `if version < N:` Block in `_run_migrations()` | Bestehende DBs |
+
+**Wichtig:** Die `neue`-Liste in `_migrate_kategorien()` wird bei **jedem Start** geprüft (nicht versioniert) – sie repariert bestehende DBs ohne Migration. `_migrate_signaturen()` läuft danach und kann dort angelegte Kategorien bereits nutzen (Datenfix kategorie_id=NULL).
+
+**Faustregel:** Immer fragen – „Wirkt das auch bei einer leeren Datenbank?" und „Wirkt das auch bei einer DB die seit v0.1.0 lebt?"
+
 ### Versionsverlauf (Kurzfassung – Details in main.py)
 | Version | Inhalt |
 |---------|--------|
