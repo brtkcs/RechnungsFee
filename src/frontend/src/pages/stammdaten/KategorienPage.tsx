@@ -320,6 +320,7 @@ export function KategorienPage() {
   const [neuDialog, setNeuDialog] = useState(false)
   const [bearbeitenKat, setBearbeitenKat] = useState<Kategorie | null>(null)
   const [loeschenId, setLoeschenId] = useState<number | null>(null)
+  const [loeschFehler, setLoeschFehler] = useState<{ id: number; msg: string } | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const qc = useQueryClient()
 
@@ -353,8 +354,8 @@ export function KategorienPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteKategorie(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
-    onError: (e: Error) => alert(e.message),
+    onSuccess: () => { setLoeschFehler(null); qc.invalidateQueries({ queryKey: ['kategorien'] }) },
+    onError: (e: Error, id: number) => setLoeschFehler({ id, msg: e.message }),
   })
 
   const beschreibungMutation = useMutation({
@@ -614,16 +615,26 @@ export function KategorienPage() {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => setLoeschenId(null)}
+                                      onClick={() => { setLoeschenId(null); setLoeschFehler(null) }}
                                       className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
                                     >
                                       Nein
                                     </button>
                                   </div>
+                                ) : loeschFehler?.id === k.id ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-red-600 dark:text-red-400 max-w-xs">{loeschFehler.msg}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setLoeschFehler(null)}
+                                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                      title="Schließen"
+                                    >✕</button>
+                                  </div>
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => setLoeschenId(k.id)}
+                                    onClick={() => { setLoeschenId(k.id); setLoeschFehler(null) }}
                                     className="text-xs px-2 py-1 rounded border border-red-200 text-red-400 hover:border-red-400 hover:text-red-600 dark:border-red-800 dark:text-red-500 dark:hover:text-red-400"
                                   >
                                     Löschen
