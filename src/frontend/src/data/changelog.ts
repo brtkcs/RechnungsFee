@@ -39,6 +39,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Buchungsvorlagen: Warndialog wenn „Jetzt buchen" für einen Zeitraum ausgelöst wird der noch nicht fällig ist – verhindert versehentliche Doppelbuchungen (Issue #158)' },
       { typ: 'fix', text: 'Windows: Beim App-Ende erscheint kein Konsolen-Fenster mehr kurz auf dem Bildschirm (CREATE_NO_WINDOW für curl.exe + taskkill)' },
       { typ: 'verbesserung', text: 'Beenden: kein Bestätigungsdialog mehr – App schließt sich direkt; nur wenn das externe Backup fehlschlägt erscheint ein Retry-Dialog' },
+      { typ: 'fix', text: 'EÜR: Bei Neuinstallation fehlten die Kategorien „Betriebseinnahmen" (19%/7%/0%) – Rechnungszahlungen wurden ohne Kategorie gebucht und erschienen nicht in der EÜR; bestehende Buchungen werden beim nächsten Start automatisch repariert (Issue #155)' },
     ],
   },
   {
