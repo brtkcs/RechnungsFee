@@ -621,6 +621,26 @@ class Rechnungsvorlage(Base):
     beleg: Mapped["Beleg | None"] = relationship(foreign_keys=[beleg_id])
 
 
+class Anlagegut(Base):
+    """Wirtschaftsgut im Anlagevermögen (Anlage AVEUR – Abschreibungsplan)."""
+    __tablename__ = "anlageverzeichnis"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bezeichnung: Mapped[str] = mapped_column(String(200), nullable=False)
+    typ: Mapped[str] = mapped_column(String(20), default="sonstig", nullable=False)  # kfz | edv | sonstig
+    kaufdatum: Mapped[date] = mapped_column(Date, nullable=False)
+    kaufpreis_netto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    nutzungsdauer_jahre: Mapped[int] = mapped_column(Integer, nullable=False)
+    afa_methode: Mapped[str] = mapped_column(String(20), default="linear", nullable=False)
+    kennzeichen: Mapped[str | None] = mapped_column(String(20))          # KFZ
+    privat_anteil_prozent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0, nullable=False)
+    verkauft_am: Mapped[date | None] = mapped_column(Date)
+    notizen: Mapped[str | None] = mapped_column(Text)
+    aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class Buchungsvorlage(Base):
     """Vorlage für wiederkehrende Journal-Buchungen (Miete, Leasing, Abonnements)."""
     __tablename__ = "buchungsvorlagen"

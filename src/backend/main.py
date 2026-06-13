@@ -31,9 +31,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis
 
-SCHEMA_VERSION = 77
+SCHEMA_VERSION = 78
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -69,6 +69,7 @@ app.include_router(dokumentenpakete.router)
 app.include_router(mail.router)
 app.include_router(wiederkehrend.router)
 app.include_router(buchungsvorlagen.router)
+app.include_router(anlageverzeichnis.router)
 
 
 @app.post("/api/shutdown")
@@ -1822,6 +1823,29 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 77"))
             conn.commit()
             print("[Migration] Schema auf Version 77 (buchungsvorlagen.art: Einnahme/Ausgabe)")
+
+        if version < 78:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS anlageverzeichnis (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bezeichnung TEXT NOT NULL,
+                    typ TEXT NOT NULL DEFAULT 'sonstig',
+                    kaufdatum DATE NOT NULL,
+                    kaufpreis_netto NUMERIC(12,2) NOT NULL,
+                    nutzungsdauer_jahre INTEGER NOT NULL,
+                    afa_methode TEXT NOT NULL DEFAULT 'linear',
+                    kennzeichen TEXT,
+                    privat_anteil_prozent NUMERIC(5,2) NOT NULL DEFAULT 0,
+                    verkauft_am DATE,
+                    notizen TEXT,
+                    aktiv BOOLEAN NOT NULL DEFAULT 1,
+                    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    aktualisiert_am DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("PRAGMA user_version = 78"))
+            conn.commit()
+            print("[Migration] Schema auf Version 78 (anlageverzeichnis: Anlage AVEUR)")
 
 
 def _migrate_kategorien() -> None:

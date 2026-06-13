@@ -42,6 +42,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'EÜR: Bei Neuinstallation fehlten die Kategorien „Betriebseinnahmen" (19%/7%/0%) – Rechnungszahlungen wurden ohne Kategorie gebucht und erschienen nicht in der EÜR; bestehende Buchungen werden beim nächsten Start automatisch repariert (Issue #155)' },
       { typ: 'fix', text: 'Journal: Nach CSV-Export erscheint jetzt eine Erfolgsmeldung mit Hinweis dass die Datei in Downloads gespeichert wurde (Issue #136)' },
       { typ: 'fix', text: 'Buchungsvorlagen: Bestätigungsdialog beim Buchen wurde in Tauri/Windows nicht angezeigt (window.confirm() funktioniert in WebView nicht) – ersetzt durch React-Modal mit Abbrechen/Buchen; Warnhinweis bei nicht fälliger Vorlage jetzt sichtbar (Issue #158)' },
+      { typ: 'neu', text: 'Anlage AVEUR – Anlagenverzeichnis: Wirtschaftsgüter (KFZ, EDV, Sonstiges) erfassen; lineare AfA mit Monatsprinzip im Kaufjahr; Privatanteil für KFZ; Abschreibungsplan je Gut; Gesamt-AfA je Jahr (→ EÜR Zeile 36); PDF-Export als Anlage AVEUR' },
     ],
   },
   {

@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 77` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 78` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -179,6 +179,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 75 | Datenfix Issue #132: kategorien „Betriebseinnahmen (19%)" + „Betriebseinnahmen (7%)" → euer_zeile=12 (ältere DBs wo Umbenennung in Migration 69 nicht griff → Rechnungseinnahmen fehlten in EÜR trotz korrekter UStVA) |
 | 76 | unternehmen: backup_extern_pfad_1/2, backup_extern_passwort – externes AES-256-GCM-verschlüsseltes Backup auf NAS/USB |
 | 77 | buchungsvorlagen.art TEXT DEFAULT 'Ausgabe' – Buchungsvorlagen können jetzt als Einnahme (z. B. Eigenverbrauch) oder Ausgabe angelegt werden; buche_vorlage() verwendet art-korrekte USt-Konten |
+| 78 | anlageverzeichnis-Tabelle (id, bezeichnung, typ kfz/edv/sonstig, kaufdatum, kaufpreis_netto, nutzungsdauer_jahre, afa_methode linear, kennzeichen, privat_anteil_prozent, verkauft_am, notizen, aktiv) – Anlage AVEUR Abschreibungsplan |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

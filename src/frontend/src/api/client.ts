@@ -1756,3 +1756,49 @@ export const deleteBuchungsvorlageBeleg = (id: number) =>
 export const erledigtVorlage = (id: number) =>
   request<unknown>(`/buchungsvorlagen/${id}/erledigt`, { method: 'POST' })
 
+// --- Anlageverzeichnis (AVEUR) ---
+export type AnlagegutTyp = 'kfz' | 'edv' | 'sonstig'
+
+export type Anlagegut = {
+  id: number
+  bezeichnung: string
+  typ: AnlagegutTyp
+  kaufdatum: string
+  kaufpreis_netto: string
+  nutzungsdauer_jahre: number
+  afa_methode: string
+  kennzeichen: string | null
+  privat_anteil_prozent: string
+  verkauft_am: string | null
+  notizen: string | null
+  aktiv: boolean
+  erstellt_am: string
+  aktualisiert_am: string
+}
+
+export type AnlagegutCreate = Omit<Anlagegut, 'id' | 'erstellt_am' | 'aktualisiert_am'>
+
+export type AfaPlanZeile = {
+  jahr: number
+  afa_brutto: number
+  afa_abziehbar: number
+  restbuchwert_ende: number
+}
+
+export const getAnlagegueter = () => request<Anlagegut[]>('/anlageverzeichnis')
+export const createAnlagegut = (data: AnlagegutCreate) =>
+  request<Anlagegut>('/anlageverzeichnis', { method: 'POST', body: JSON.stringify(data) })
+export const updateAnlagegut = (id: number, data: AnlagegutCreate) =>
+  request<Anlagegut>(`/anlageverzeichnis/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteAnlagegut = (id: number) =>
+  request<void>(`/anlageverzeichnis/${id}`, { method: 'DELETE' })
+export const getAfaPlan = (id: number) => request<AfaPlanZeile[]>(`/anlageverzeichnis/${id}/plan`)
+export const getAveurZusammenfassung = (jahr: number) =>
+  request<{ jahr: number; gesamt_afa: number; einzel: { id: number; bezeichnung: string; typ: string; afa_abziehbar: number }[] }>(
+    `/anlageverzeichnis/zusammenfassung?jahr=${jahr}`
+  )
+export async function getAveurPdfUrl(jahr: number): Promise<string> {
+  const base = await getBaseUrl()
+  return `${base}/anlageverzeichnis/pdf?jahr=${jahr}`
+}
+
