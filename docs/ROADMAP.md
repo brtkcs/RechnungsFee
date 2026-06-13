@@ -101,6 +101,7 @@
 ### Exporte & Auswertungen
 - [ ] DATEV-Export (CSV nach DATEV-Format für Steuerberater)
 - [ ] Jahresumsatzsteuererklärung (USt 2 / Anlage UR): Anzeigehilfe mit allen KZ-Werten aus den UStVA-Voranmeldungen; PDF-Zusammenfassung für ELSTER oder Steuerberater
+- [ ] Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe mit Gewinn/Verlust (aus EÜR), Steuernummer, Finanzamt, Berufsbezeichnung und KFZ-Privatanteil; zeigt welche Zeile in ELSTER wohin gehört
 - [x] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung (🔍 Aufschlüsselung-Toggle in der EÜR)
 - [x] Anlage AVEUR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
 - [x] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ (neue Spalte „Vorsteuer-Betrag")
