@@ -430,9 +430,18 @@ function ZahlungsDialog({
 
   // Eingangsrechnung: Kategorie bei Zahlung (Schritt 6+7)
   // rechnung.kategorie_id ist nach erster Teilzahlung gesetzt → Vorausfüllung (Schritt 7)
-  const [kategorieId, setKategorieId] = useState<string>(String(rechnung.kategorie_id ?? ''))
+  const alleKategorienGesetzt = rechnung.positionen.every(p => p.kategorie_id != null)
+  const irgendwelcheKategorienGesetzt = rechnung.positionen.some(p => p.kategorie_id != null)
+  const [kategorieId, setKategorieId] = useState<string>(() => {
+    if (rechnung.kategorie_id) return String(rechnung.kategorie_id)
+    if (rechnung.positionen.length === 1 && rechnung.positionen[0].kategorie_id != null)
+      return String(rechnung.positionen[0].kategorie_id)
+    return ''
+  })
   const [showNeuKategorie, setShowNeuKategorie] = useState(false)
-  const [splitModus, setSplitModus] = useState(false)
+  const [splitModus, setSplitModus] = useState(
+    rechnung.positionen.length > 1 && irgendwelcheKategorienGesetzt
+  )
   const [splitZeilen, setSplitZeilen] = useState<SplitZeile[]>(() =>
     rechnung.positionen.map((pos) => ({
       beschreibung: pos.beschreibung,
@@ -497,8 +506,9 @@ function ZahlungsDialog({
           setFehler(`Split-Summe (${splitSumme.toFixed(2)} €) stimmt nicht mit Zahlungsbetrag (${betragDecimal.toFixed(2)} €) überein.`)
           return
         }
-        if (splitZeilen.some((z) => !z.kategorie_id)) {
-          setFehler('Bitte für jede Position eine Kategorie wählen.')
+        const ohneKategorie = splitZeilen.map((z, i) => (!z.kategorie_id ? rechnung.positionen[i]?.beschreibung || `Position ${i + 1}` : null)).filter(Boolean)
+        if (ohneKategorie.length > 0) {
+          setFehler(`Fehlende Kategorie bei: ${ohneKategorie.join(', ')}`)
           return
         }
         payload.split = splitZeilen.map((z): ZahlungSplitPosition => ({
@@ -670,6 +680,13 @@ function ZahlungsDialog({
                   </button>
                 )}
               </div>
+              {/* Alle Kategorien aus Positionen gesetzt: Warnung bei fehlendem Split */}
+              {!splitModus && !alleKategorienGesetzt && irgendwelcheKategorienGesetzt && rechnung.positionen.length > 1 && (
+                <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                  <span className="shrink-0">⚠</span>
+                  <span>Einzelne Positionen haben bereits eine Kategorie. Wechsle zu Splitbuchung um alle zu übernehmen.</span>
+                </div>
+              )}
 
               {splitModus ? (
                 <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
@@ -683,7 +700,7 @@ function ZahlungsDialog({
                     </thead>
                     <tbody>
                       {splitZeilen.map((z, i) => (
-                        <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                        <tr key={i} className={`border-t border-slate-100 dark:border-slate-700 ${!z.kategorie_id ? 'bg-amber-50 dark:bg-amber-950/50' : ''}`}>
                           <td className="px-3 py-1.5 text-slate-700 dark:text-slate-200">{z.beschreibung}</td>
                           <td className="px-2 py-1.5">
                             <input
@@ -725,6 +742,13 @@ function ZahlungsDialog({
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+              ) : rechnung.positionen.length === 1 && alleKategorienGesetzt ? (
+                <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
+                  <span className="shrink-0">✓</span>
+                  <span>
+                    Aus Rechnung: <strong>{(kategorien ?? []).find(k => String(k.id) === kategorieId)?.name ?? '–'}</strong>
+                  </span>
                 </div>
               ) : (
                 <div className="flex gap-1">

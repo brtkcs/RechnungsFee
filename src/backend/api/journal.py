@@ -59,15 +59,21 @@ def _naechste_belegnr(db: Session, datum: date) -> str:
         count = db.query(Journaleintrag).count()
         return f"{str(datum.year)[-2:]}{count + 1:04d}"
 
-    # Jahreswechsel-Reset
-    if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != datum.year:
+    # Jahreswechsel-Reset nur vorwärts (Rückdatierung in älteres Jahr darf Counter nicht zurücksetzen)
+    if nk.reset_jaehrlich and nk.letztes_jahr and datum.year > nk.letztes_jahr:
         nk.naechste_nr = 1
-    nk.letztes_jahr = datum.year
+    if not nk.letztes_jahr or datum.year > nk.letztes_jahr:
+        nk.letztes_jahr = datum.year
 
     nr = nk.naechste_nr
     nk.naechste_nr += 1
-    # Wird im selben db.commit() des Eintrags gespeichert
-    return _belegnr_aus_format(nk.format, datum, nr)
+    candidate = _belegnr_aus_format(nk.format, datum, nr)
+    # Kollisions-Schutz: belegnr überspringen wenn sie durch Rückdatierung bereits vergeben wurde
+    while db.query(Journaleintrag).filter(Journaleintrag.belegnr == candidate).first():
+        nr = nk.naechste_nr
+        nk.naechste_nr += 1
+        candidate = _belegnr_aus_format(nk.format, datum, nr)
+    return candidate
 
 
 def _berechne_ust(brutto: Decimal, ust_satz: Decimal) -> tuple[Decimal, Decimal]:

@@ -165,9 +165,9 @@ def _berechne_kz(von: date, bis: date, db: Session) -> dict[str, Decimal]:
         if e.art == "Einnahme" and e.ust_betrag and e.ust_betrag != 0:
             mapping = _KONTO_EINNAHME.get(ust_konto)
             if mapping:
-                # §25a: Bemessungsgrundlage = Brutto-Marge, nicht Netto-VK
+                # §25a: Bemessungsgrundlage = Netto-Marge (Brutto-Marge − USt), nicht Netto-VK
                 marge = getattr(e, "marge_25a_brutto", None)
-                kz[mapping[0]] += marge if marge else e.netto_betrag
+                kz[mapping[0]] += (marge - e.ust_betrag) if marge is not None else e.netto_betrag
                 kz[mapping[1]] += e.ust_betrag
 
         # Storno einer Einnahme: art ist "Ausgabe" (umgekehrt), konto_ust_skr ist Einnahme-Konto.

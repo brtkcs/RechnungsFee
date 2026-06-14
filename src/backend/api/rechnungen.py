@@ -76,12 +76,20 @@ def _naechste_belegnr_journal(db: Session, datum: date) -> str:
     if not nk:
         count = db.query(Journaleintrag).count()
         return f"{str(datum.year)[-2:]}{count + 1:04d}"
-    if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != datum.year:
+    # Jahreswechsel-Reset nur vorwärts (Rückdatierung darf Counter nicht zurücksetzen)
+    if nk.reset_jaehrlich and nk.letztes_jahr and datum.year > nk.letztes_jahr:
         nk.naechste_nr = 1
-    nk.letztes_jahr = datum.year
+    if not nk.letztes_jahr or datum.year > nk.letztes_jahr:
+        nk.letztes_jahr = datum.year
     nr = nk.naechste_nr
     nk.naechste_nr += 1
-    return _belegnr_aus_format(nk.format, datum, nr)
+    candidate = _belegnr_aus_format(nk.format, datum, nr)
+    # Kollisions-Schutz: belegnr überspringen wenn durch Rückdatierung bereits vergeben
+    while db.query(Journaleintrag).filter(Journaleintrag.belegnr == candidate).first():
+        nr = nk.naechste_nr
+        nk.naechste_nr += 1
+        candidate = _belegnr_aus_format(nk.format, datum, nr)
+    return candidate
 
 
 def _erloes_kategorie(db: Session, rechnung: "Rechnung") -> tuple[int | None, "Kategorie | None"]:

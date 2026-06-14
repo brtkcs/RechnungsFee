@@ -206,6 +206,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
 
   const gewaehlteKat = (kategorien ?? []).find((k) => String(k.id) === kategorie_id)
   const istPrivatKategorie = gewaehlteKat?.kontenart === 'Privat'
+  const ist25aAnkauf = gewaehlteKat?.name?.includes('§25a')
   const istFahrtkostenKat = gewaehlteKat?.eks_kategorie === 'B6_5'
   const istIgLieferung = gewaehlteKat?.konto_skr03 === '8125' || gewaehlteKat?.konto_skr04 === '3125'
   const kunde_id = watch('kunde_id')
@@ -579,6 +580,19 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
               </div>
             )}
 
+            {/* §25a-Hinweis */}
+            {ist25aAnkauf && (
+              <div className="flex items-start gap-2 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg px-3 py-2 text-xs text-orange-800 dark:text-orange-300">
+                <span className="mt-0.5 shrink-0">§</span>
+                <span>
+                  <strong>Differenzbesteuerung §25a</strong> – Ankauf von Privatperson.
+                  Kein Vorsteuerabzug, USt 0 %. Den Ankaufspreis beim Verkauf als EK-Preis
+                  in der Ausgangsrechnung eintragen – die App berechnet die Marge
+                  automatisch.
+                </span>
+              </div>
+            )}
+
             {/* Kunde (nur Einnahmen) */}
             {art === 'Einnahme' && (
               <div>
@@ -672,11 +686,13 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
                 </label>
                 <select
                   {...register('ust_satz')}
-                  disabled={istKleinunternehmer || istPrivatKategorie}
+                  disabled={istKleinunternehmer || istPrivatKategorie || ist25aAnkauf}
                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
-                  {istKleinunternehmer || istPrivatKategorie ? (
-                    <option value="0">{istKleinunternehmer ? '0 % (§19 UStG)' : '0 % (Privat)'}</option>
+                  {istKleinunternehmer || istPrivatKategorie || ist25aAnkauf ? (
+                    <option value="0">
+                      {istKleinunternehmer ? '0 % (§19 UStG)' : istPrivatKategorie ? '0 % (Privat)' : '0 % (§25a – kein VSt-Abzug)'}
+                    </option>
                   ) : (
                     aktiveSaetze.map((s) => {
                       const val = String(parseFloat(s.satz))
@@ -708,7 +724,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
             )}
 
             {/* Vorsteuerabzug */}
-            {art === 'Ausgabe' && !istKleinunternehmer && !istPrivatKategorie && (
+            {art === 'Ausgabe' && !istKleinunternehmer && !istPrivatKategorie && !ist25aAnkauf && (
               <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
                 <input type="checkbox" {...register('vorsteuerabzug')} className="rounded" />
                 <span className="flex items-center gap-1">
@@ -719,7 +735,7 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
             )}
 
             {/* Reverse Charge / Sonderfall */}
-            {art === 'Ausgabe' && !istKleinunternehmer && !istPrivatKategorie && (
+            {art === 'Ausgabe' && !istKleinunternehmer && !istPrivatKategorie && !ist25aAnkauf && (
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1">
                   Steuerlicher Sonderfall (Reverse Charge)
