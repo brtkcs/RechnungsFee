@@ -28,6 +28,9 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'neu', text: 'DATEV-Export: Buchungsstapel im DATEV EXTF-Format (v700/9) für den Steuerberater – Quartal, Halbjahr, Jahr oder freier Zeitraum; BU-Schlüssel für 19 %/7 %, ig. Erwerb (§1a), §13b und §25a Differenzbesteuerung; Gegenkonto-Konfiguration (Bar/Bank/Karte/PayPal) direkt auf der Exporte-Seite' },
       { typ: 'neu', text: 'Buchhalter-CSV: einfacher Journal-Export für Excel / LibreOffice / andere Buchhaltungsprogramme ohne DATEV – Datum, Belegnr, Beschreibung, Kategorie, Zahlungsart, Netto/USt/Brutto; gleiche Zeitraumauswahl wie DATEV' },
+      { typ: 'verbesserung', text: 'Anlage AVEÜR: korrekte amtliche Schreibweise durchgehend (war: AVEUR); Navigation, PDF-Titel und Handbuch angepasst' },
+      { typ: 'verbesserung', text: 'Anlage AVEÜR: Privatanteil-Feld erklärt Nettomethode und grenzt die 1%-Regelung ab – bei 1%-Regelung Feld auf 0 % lassen, private Nutzung monatlich als Einnahme im Journal buchen' },
+      { typ: 'fix', text: 'App beenden: Backup läuft jetzt vollständig im Hintergrund – Backup-Fenster erscheint nicht mehr kurz und verschwindet sofort, sondern öffnet sich nur noch bei einem tatsächlichen Fehler beim externen Backup' },
     ],
   },
   {
