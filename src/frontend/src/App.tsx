@@ -139,6 +139,8 @@ export default function App() {
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('confirm-close', () => {
         setExternFehler([])
+        setPhase('backup-laeuft')
+        setZeigSchliessen(true)
         führeBackupUndSchliesseDurch()
       }).then(fn => { unlisten = fn })
     })
