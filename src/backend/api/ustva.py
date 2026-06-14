@@ -848,7 +848,7 @@ def jahresumsatzsteuer_pdf(
         .all()
     )
     q = Decimal("0.01")
-    summe_voa = sum(Decimal(str(v.zahllast)) for v in voranmeldungen).quantize(q, ROUND_HALF_UP)
+    summe_voa = sum((Decimal(str(v.zahllast)) for v in voranmeldungen), Decimal("0")).quantize(q, ROUND_HALF_UP)
     jahressteuer = kz["zahllast"]
 
     hat_ig = any(
