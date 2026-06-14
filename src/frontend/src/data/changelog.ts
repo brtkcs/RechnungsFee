@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.16',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'DATEV-Export: Buchungsstapel im DATEV EXTF-Format (v700/9) für den Steuerberater – Quartal, Halbjahr, Jahr oder freier Zeitraum; BU-Schlüssel für 19 %/7 %, ig. Erwerb (§1a), §13b und §25a Differenzbesteuerung; Gegenkonto-Konfiguration (Bar/Bank/Karte/PayPal) direkt auf der Exporte-Seite' },
+    ],
+  },
+  {
     version: 'v0.3.15',
     datum: 'Juni 2026',
     eintraege: [

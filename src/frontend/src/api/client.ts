@@ -207,6 +207,12 @@ export type Unternehmen = {
   backup_extern_pfad_1?: string | null
   backup_extern_pfad_2?: string | null
   backup_extern_passwort?: string | null
+  datev_beraternummer?: string | null
+  datev_mandantennummer?: string | null
+  datev_konto_bar?: string | null
+  datev_konto_bank?: string | null
+  datev_konto_karte?: string | null
+  datev_konto_paypal?: string | null
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -684,6 +690,23 @@ export async function downloadGobdExport(jahr: number): Promise<string> {
   const filename = `gobd_export_${jahr}.zip`
   _triggerBlobDownload(blob, filename)
   return filename
+}
+
+export async function downloadDatevBuchungsstapel(
+  von: string,
+  bis: string,
+): Promise<{ filename: string; eintraege: number; uebersprungen: number }> {
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/datev/buchungsstapel?von=${von}&bis=${bis}`)
+  if (!res.ok) throw new Error('DATEV-Export fehlgeschlagen')
+  const eintraege = Number(res.headers.get('X-Datev-Eintraege') ?? '0')
+  const uebersprungen = Number(res.headers.get('X-Datev-Uebersprungen') ?? '0')
+  const blob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') ?? ''
+  const match = cd.match(/filename="?([^"]+)"?/)
+  const filename = match?.[1] ?? `DATEV_Buchungsstapel_${von}_${bis}.csv`
+  _triggerBlobDownload(blob, filename)
+  return { filename, eintraege, uebersprungen }
 }
 
 // --- Backup ---

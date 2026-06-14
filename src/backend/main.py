@@ -31,9 +31,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev
 
-SCHEMA_VERSION = 78
+SCHEMA_VERSION = 79
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -70,6 +70,7 @@ app.include_router(mail.router)
 app.include_router(wiederkehrend.router)
 app.include_router(buchungsvorlagen.router)
 app.include_router(anlageverzeichnis.router)
+app.include_router(datev.router)
 
 
 @app.post("/api/shutdown")
@@ -1846,6 +1847,22 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 78"))
             conn.commit()
             print("[Migration] Schema auf Version 78 (anlageverzeichnis: Anlage AVEÜR)")
+
+        if version < 79:
+            cols79 = {c[1] for c in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            for col, typ in [
+                ("datev_beraternummer",  "TEXT"),
+                ("datev_mandantennummer", "TEXT"),
+                ("datev_konto_bar",      "TEXT"),
+                ("datev_konto_bank",     "TEXT"),
+                ("datev_konto_karte",    "TEXT"),
+                ("datev_konto_paypal",   "TEXT"),
+            ]:
+                if col not in cols79:
+                    conn.execute(text(f"ALTER TABLE unternehmen ADD COLUMN {col} {typ}"))
+            conn.execute(text("PRAGMA user_version = 79"))
+            conn.commit()
+            print("[Migration] Schema auf Version 79 (DATEV-Konfiguration in unternehmen)")
 
 
 def _migrate_kategorien() -> None:

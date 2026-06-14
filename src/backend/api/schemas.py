@@ -83,6 +83,12 @@ class UnternehmenBase(BaseModel):
     backup_extern_pfad_1:   Optional[str] = None
     backup_extern_pfad_2:   Optional[str] = None
     backup_extern_passwort: Optional[str] = None
+    datev_beraternummer:    Optional[str] = None
+    datev_mandantennummer:  Optional[str] = None
+    datev_konto_bar:        Optional[str] = None
+    datev_konto_bank:       Optional[str] = None
+    datev_konto_karte:      Optional[str] = None
+    datev_konto_paypal:     Optional[str] = None
 
     @field_validator("versteuerungsart")
     @classmethod
