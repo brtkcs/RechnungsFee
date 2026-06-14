@@ -562,7 +562,7 @@ export function KundenPage() {
 
       {/* ── Rechte Spalte (Rechnungen oder Formular) ─────────────────── */}
       {!showForm && (
-        <div className="w-80 shrink-0">
+        <div className="w-96 shrink-0">
           {selected ? (
             <KundeRechnungen key={selected.id} kunde={selected} />
           ) : (

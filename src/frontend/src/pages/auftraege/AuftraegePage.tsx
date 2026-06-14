@@ -1054,7 +1054,7 @@ export function AuftraegePage() {
       )}
 
       {selAuftrag && !zeigFormular && (
-        <div className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+        <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
           <AuftragDetail
             auftrag={selAuftrag}
             onEdit={() => handleEdit(selAuftrag)}

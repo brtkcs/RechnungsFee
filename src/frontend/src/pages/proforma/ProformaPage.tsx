@@ -1001,7 +1001,7 @@ export function ProformaPage() {
 
       {/* Detail-Panel */}
       {!formModus && selected && (
-        <div className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-y-auto">
+        <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-y-auto">
           <ProformaDetail
             proforma={selected}
             onEdit={() => setFormModus('bearbeiten')}

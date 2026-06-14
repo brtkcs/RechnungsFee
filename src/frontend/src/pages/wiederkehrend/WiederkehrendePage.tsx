@@ -1005,7 +1005,7 @@ export function WiederkehrendePage() {
 
       {/* Rechts: Detail-Panel */}
       {selVorlage && formModus === null && (
-        <div className="w-96 shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+        <div className="w-[28rem] shrink-0 border-l border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
           <VorlageDetail
             vorlage={selVorlage}
             onClose={() => setSelId(null)}

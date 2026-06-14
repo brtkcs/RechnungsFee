@@ -1443,6 +1443,7 @@ function RechnungDetail({
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Menge</th>
                       <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Einheit</th>
                     </> : <>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Menge</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Netto</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Brutto</th>
@@ -1457,14 +1458,21 @@ function RechnungDetail({
                         <td className="px-3 py-2 text-right dark:text-slate-200">{formatMenge(pos.menge)}</td>
                         <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{pos.einheit}</td>
                       </> : <>
-                        <td className="px-3 py-2 text-right dark:text-slate-200">{formatEuro(pos.netto)}</td>
+                        <td className="px-3 py-2 text-right text-slate-500 dark:text-slate-400">
+                          {formatMenge(pos.menge)}{pos.einheit ? ` ${pos.einheit}` : ''}
+                        </td>
+                        <td className="px-3 py-2 text-right dark:text-slate-200">
+                          {formatEuro((parseFloat(pos.netto) * parseFloat(pos.menge)).toFixed(2))}
+                        </td>
                         <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500">
                           {pos.differenzbesteuerung
                             ? <span className="text-xs font-medium text-amber-600 dark:text-amber-400">§25a</span>
                             : `${pos.ust_satz}%`
                           }
                         </td>
-                        <td className="px-3 py-2 text-right font-medium dark:text-slate-200">{formatEuro(pos.brutto)}</td>
+                        <td className="px-3 py-2 text-right font-medium dark:text-slate-200">
+                          {formatEuro((parseFloat(pos.brutto) * parseFloat(pos.menge)).toFixed(2))}
+                        </td>
                       </>}
                     </tr>
                   ))}
@@ -1472,7 +1480,7 @@ function RechnungDetail({
                 {rechnung.dokument_typ !== 'Lieferschein' && (
                   <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
                     <tr>
-                      <td colSpan={3} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</td>
+                      <td colSpan={4} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</td>
                       <td className="px-3 py-2 text-right font-bold text-slate-800 dark:text-slate-100">{formatEuro(rechnung.brutto_gesamt)}</td>
                     </tr>
                   </tfoot>
@@ -3970,7 +3978,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
       )}
 
       {!formModus && (
-        <div className="w-96 shrink-0 h-full overflow-hidden">
+        <div className="w-[28rem] shrink-0 h-full overflow-hidden">
           {selectedRechnung ? (
             <RechnungDetail
               key={`${selectedId ?? 0}-${detailVersion}`}
