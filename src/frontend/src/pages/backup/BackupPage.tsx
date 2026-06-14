@@ -582,7 +582,7 @@ export function BackupPage() {
   const [activeTab, setActiveTab] = useState<TabId>('backup')
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-6 max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Backup & Wiederherstellung</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Deine Daten sichern und im Notfall wiederherstellen.</p>
