@@ -117,9 +117,11 @@ function AnlagegutFormular({
             <input className={inputCls} value={form.kennzeichen ?? ''} onChange={e => set('kennzeichen', e.target.value || null)} placeholder="z. B. M-AB 1234" />
           </div>
           <div>
-            <label className={labelCls}>Privatanteil (%)</label>
+            <label className={labelCls}>Privatanteil % <span className="font-normal text-slate-400">(Nettomethode)</span></label>
             <input type="number" min="0" max="100" step="1" className={inputCls} value={form.privat_anteil_prozent} onChange={e => set('privat_anteil_prozent', e.target.value)} />
-            <p className="text-xs text-slate-400 mt-1">Anteil der privaten Nutzung – mindert die abziehbare AfA</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Kürzt die absetzbare AfA um den privaten Anteil (Nettomethode). <strong className="text-slate-500">Nicht</strong> für die 1%-Regelung – bei der 1%-Regelung bleibt dieses Feld 0, die private Nutzung wird stattdessen monatlich als Einnahme im Journal gebucht.
+            </p>
           </div>
         </div>
       )}
