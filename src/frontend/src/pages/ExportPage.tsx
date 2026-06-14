@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   downloadGobdExport,
   downloadDatevBuchungsstapel,
+  downloadBuchhalterCsv,
   getUnternehmen,
   updateUnternehmen,
 } from '../api/client'
@@ -44,6 +45,15 @@ export function ExportPage() {
     filename: string; eintraege: number; uebersprungen: number
   } | null>(null)
   const [datevFehler, setDatevFehler] = useState<string | null>(null)
+
+  // Buchhalter-CSV
+  const [csvJahr, setCsvJahr] = useState(AKTUELLES_JAHR)
+  const [csvZeitraum, setCsvZeitraum] = useState<Zeitraum>('jahr')
+  const [csvVonCustom, setCsvVonCustom] = useState('')
+  const [csvBisCustom, setCsvBisCustom] = useState('')
+  const [csvLaedt, setCsvLaedt] = useState(false)
+  const [csvErgebnis, setCsvErgebnis] = useState<{ filename: string; eintraege: number } | null>(null)
+  const [csvFehler, setCsvFehler] = useState<string | null>(null)
 
   // DATEV-Konfiguration
   const [konfigOffen, setKonfigOffen] = useState(false)
@@ -129,6 +139,26 @@ export function ExportPage() {
       setDatevFehler(e?.message ?? 'Unbekannter Fehler')
     } finally {
       setDatevLaedt(false)
+    }
+  }
+
+  async function handleCsv() {
+    setCsvLaedt(true)
+    setCsvErgebnis(null)
+    setCsvFehler(null)
+    const [von, bis] = zeitraumZuDaten(csvZeitraum, csvJahr, csvVonCustom, csvBisCustom)
+    if (!von || !bis) {
+      setCsvFehler('Bitte Von- und Bis-Datum angeben')
+      setCsvLaedt(false)
+      return
+    }
+    try {
+      const result = await downloadBuchhalterCsv(von, bis)
+      setCsvErgebnis(result)
+    } catch (e: any) {
+      setCsvFehler(e?.message ?? 'Unbekannter Fehler')
+    } finally {
+      setCsvLaedt(false)
     }
   }
 
@@ -419,6 +449,96 @@ export function ExportPage() {
               Wir bitten um Rückmeldung – Fehler gerne als{' '}
               <a href="https://github.com/nicolettas-muggelbude/RechnungsFee/issues" target="_blank" rel="noreferrer"
                 className="underline">GitHub-Issue</a> melden.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Buchhalter-CSV ───────────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-violet-600 px-6 py-4">
+          <h2 className="text-white font-bold text-lg">Buchhalter-CSV</h2>
+          <p className="text-violet-100 text-sm mt-0.5">
+            Einfaches Journal-CSV für Excel, LibreOffice oder andere Buchhaltungsprogramme ohne DATEV-Import
+          </p>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Jahr</label>
+              <select
+                value={csvJahr}
+                onChange={(e) => setCsvJahr(Number(e.target.value))}
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
+              >
+                {JAHRE.map((j) => <option key={j} value={j}>{j}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Zeitraum</label>
+              <select
+                value={csvZeitraum}
+                onChange={(e) => setCsvZeitraum(e.target.value as Zeitraum)}
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
+              >
+                <option value="q1">Q1 (Jan–Mär)</option>
+                <option value="q2">Q2 (Apr–Jun)</option>
+                <option value="q3">Q3 (Jul–Sep)</option>
+                <option value="q4">Q4 (Okt–Dez)</option>
+                <option value="h1">Halbjahr 1 (Jan–Jun)</option>
+                <option value="h2">Halbjahr 2 (Jul–Dez)</option>
+                <option value="jahr">Ganzes Jahr</option>
+                <option value="custom">Benutzerdefiniert</option>
+              </select>
+            </div>
+            {csvZeitraum === 'custom' && (
+              <>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Von</label>
+                  <input type="date" value={csvVonCustom} onChange={(e) => setCsvVonCustom(e.target.value)}
+                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Bis</label>
+                  <input type="date" value={csvBisCustom} onChange={(e) => setCsvBisCustom(e.target.value)}
+                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                </div>
+              </>
+            )}
+            <button
+              onClick={handleCsv}
+              disabled={csvLaedt}
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white font-medium text-sm px-5 py-2 rounded-lg transition-colors"
+            >
+              {csvLaedt ? <><span className="animate-spin">⏳</span>Wird erstellt…</> : <><span>📋</span>CSV exportieren</>}
+            </button>
+          </div>
+
+          {csvErgebnis && (
+            <div className="flex items-start gap-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3">
+              <span className="text-green-600 dark:text-green-400 shrink-0 mt-0.5">✓</span>
+              <div className="text-sm text-green-800 dark:text-green-300">
+                <p className="font-medium">CSV exportiert</p>
+                <p className="mt-0.5 font-mono text-xs">{csvErgebnis.filename}</p>
+                <p className="mt-1 text-xs">{csvErgebnis.eintraege} Buchung{csvErgebnis.eintraege !== 1 ? 'en' : ''}</p>
+              </div>
+            </div>
+          )}
+          {csvFehler && (
+            <div className="flex items-start gap-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+              <span className="text-red-600 dark:text-red-400 shrink-0 mt-0.5">✗</span>
+              <p className="text-sm text-red-800 dark:text-red-300">{csvFehler}</p>
+            </div>
+          )}
+
+          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 space-y-1.5">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">Spalten:</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              Datum · Belegnr · Externe Belegnr · Beschreibung · Kategorie · Zahlungsart · Art · Netto · USt-Satz % · USt-Betrag · Brutto
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              UTF-8 mit BOM · Semikolon-getrennt · Dezimalkomma · Datum TT.MM.JJJJ · direkt in Excel / LibreOffice öffenbar
             </p>
           </div>
         </div>

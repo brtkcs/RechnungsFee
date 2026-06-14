@@ -692,6 +692,22 @@ export async function downloadGobdExport(jahr: number): Promise<string> {
   return filename
 }
 
+export async function downloadBuchhalterCsv(
+  von: string,
+  bis: string,
+): Promise<{ filename: string; eintraege: number }> {
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/export/buchhalter-csv?von=${von}&bis=${bis}`)
+  if (!res.ok) throw new Error('CSV-Export fehlgeschlagen')
+  const eintraege = Number(res.headers.get('X-Buchhalter-Eintraege') ?? '0')
+  const blob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') ?? ''
+  const match = cd.match(/filename="?([^"]+)"?/)
+  const filename = match?.[1] ?? `Buchhalter_CSV_${von}_${bis}.csv`
+  _triggerBlobDownload(blob, filename)
+  return { filename, eintraege }
+}
+
 export async function downloadDatevBuchungsstapel(
   von: string,
   bis: string,
