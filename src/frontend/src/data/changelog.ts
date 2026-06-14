@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.17',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Jahresumsatzsteuererklärung (USt 2A): Anzeigehilfe unter Auswertungen → Jahres-USt – berechnet alle KZ-Werte (81/83/86/88/41/89/93/66/61/67 etc.) direkt aus den Journalbuchungen des gesamten Wirtschaftsjahres; Kleinunternehmer erhalten KZ 48 (§19 Gesamtumsatz); Vorauszahlungsanrechnung aus gespeicherten Voranmeldungen (KZ 76); Hinweis wenn Anlage UR ausgefüllt werden muss (ig. Umsätze); PDF-Export' },
+      { typ: 'verbesserung', text: 'Exporte-Seite: drei Tabs GoBD-Export / DATEV-Export / Buchhalter-CSV – übersichtlichere Navigation statt langer Scrollseite' },
+    ],
+  },
+  {
     version: 'v0.3.16',
     datum: 'Juni 2026',
     eintraege: [
