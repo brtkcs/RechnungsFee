@@ -139,7 +139,7 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
     # AVEUR: AfA aus dem Anlagenverzeichnis automatisch in Zeile 36 eintragen
     from api.anlageverzeichnis import _afa_fuer_jahr
     gueter = db.query(Anlagegut).filter(Anlagegut.aktiv == True).all()
-    aveur_afa = sum(_afa_fuer_jahr(g, jahr) for g in gueter)
+    aveur_afa = sum((_afa_fuer_jahr(g, jahr) for g in gueter), ZERO)
     if aveur_afa:
         zeilen[36] = zeilen.get(36, ZERO) + aveur_afa
 
