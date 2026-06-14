@@ -34,7 +34,7 @@ const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: Zeig
   { to: '/ustva',   label: 'UStVA',       icon: '🏛️', zeigen: ({ unt }) => !unt?.ist_kleinunternehmer },
   { to: '/zm',      label: 'ZM',          icon: '🌍', zeigen: ({ zm }) => !!zm?.hat_ig_eintraege },
   { to: '/eks',     label: 'EKS',         icon: '📋', zeigen: ({ unt }) => !!unt?.bezieht_transferleistungen },
-  { to: '/exporte', label: 'GoBD-Export', icon: '📦', zeigen: () => true },
+  { to: '/exporte', label: 'Exporte', icon: '📦', zeigen: () => true },
 ]
 
 const stammdatenNav = [
