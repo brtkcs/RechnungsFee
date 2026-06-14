@@ -93,7 +93,7 @@ export function JahresUStPage() {
       const [abschnitt, nr] = meta
       const wert = parseFloat(String((data as any)[`kz_${nr}`] ?? '0'))
       if (wert === 0) continue
-      const eff = abschnitt || aktGruppe?.abschnitt || ''
+      const eff: string = abschnitt || aktGruppe?.abschnitt || ''
       if (!aktGruppe || (abschnitt && abschnitt !== aktGruppe.abschnitt)) {
         aktGruppe = { abschnitt: eff, zeilen: [] }
         result.push(aktGruppe)
