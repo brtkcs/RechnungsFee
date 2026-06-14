@@ -139,7 +139,6 @@ export default function App() {
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen('confirm-close', () => {
         setExternFehler([])
-        setZeigSchliessen(true)
         führeBackupUndSchliesseDurch()
       }).then(fn => { unlisten = fn })
     })
@@ -166,7 +165,6 @@ export default function App() {
   }, [])
 
   async function führeBackupUndSchliesseDurch() {
-    setPhase('backup-laeuft')
     try {
       const { getApiBase } = await import('./api/client')
       const base = await getApiBase()
@@ -177,6 +175,7 @@ export default function App() {
         if (fehler.length > 0) {
           setExternFehler(fehler)
           setPhase('extern-fehler')
+          setZeigSchliessen(true)
           return
         }
       }
