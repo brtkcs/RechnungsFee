@@ -5,7 +5,6 @@ type FormData = {
   rechtsform: string
   taetigkeitsart: string
   ist_kleinunternehmer: boolean
-  versteuerungsart: 'ist' | 'soll'
   kontenrahmen: 'SKR03' | 'SKR04' | 'SKR49'
   bezieht_transferleistungen: boolean
   ust_idnr: string
@@ -23,7 +22,6 @@ export function StepSteuern({ onNext, onBack, defaultValues }: Props) {
       rechtsform: defaultValues?.rechtsform ?? 'Einzelunternehmer',
       taetigkeitsart: defaultValues?.taetigkeitsart ?? 'freiberuflich',
       ist_kleinunternehmer: defaultValues?.ist_kleinunternehmer ?? false,
-      versteuerungsart: defaultValues?.versteuerungsart ?? 'ist',
       kontenrahmen: defaultValues?.kontenrahmen ?? 'SKR03',
       bezieht_transferleistungen: defaultValues?.bezieht_transferleistungen ?? false,
       ust_idnr: defaultValues?.ust_idnr ?? '',
@@ -96,27 +94,6 @@ export function StepSteuern({ onNext, onBack, defaultValues }: Props) {
               {errors.ust_idnr && <p className="text-red-500 text-xs mt-1">{errors.ust_idnr.message}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Versteuerungsart</label>
-              <div className="space-y-2">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="radio" {...register('versteuerungsart')} value="ist"
-                    className="mt-0.5 h-4 w-4 border-slate-300 text-blue-600" />
-                  <div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Ist-Versteuerung</span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">USt wird fällig wenn das Geld eingeht/ausgeht. Empfohlen für Freiberufler.</p>
-                  </div>
-                </label>
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="radio" {...register('versteuerungsart')} value="soll"
-                    className="mt-0.5 h-4 w-4 border-slate-300 text-blue-600" />
-                  <div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Soll-Versteuerung</span>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">USt wird mit Rechnungsdatum fällig, unabhängig vom Zahlungseingang.</p>
-                  </div>
-                </label>
-              </div>
-            </div>
           </>
         )}
       </div>

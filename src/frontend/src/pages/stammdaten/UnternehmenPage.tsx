@@ -430,28 +430,16 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
 
         <hr className="border-slate-100 dark:border-slate-700" />
 
-        <div className="grid grid-cols-2 gap-4">
-          <Field label={<>Versteuerungsart <InfoTooltip text="Ist-Versteuerung: USt wird fällig wenn der Kunde zahlt. Soll-Versteuerung: USt ist bereits bei Rechnungsstellung fällig." /></>}>
-            <select
-              value={form.versteuerungsart ?? 'ist'}
-              onChange={ev => set('versteuerungsart', ev.target.value)}
-              className={selectCls}
-            >
-              <option value="ist">Ist-Versteuerung</option>
-              <option value="soll">Soll-Versteuerung</option>
-            </select>
-          </Field>
-          <Field label={<>Voranmeldungsrhythmus <InfoTooltip text="Monatlich: wenn deine Jahres-USt-Zahllast im Vorjahr über 7.500 € lag. Vierteljährlich: bei Zahllast ≤ 7.500 €. Kleinunternehmer §19 sind von der UStVA befreit." /></>}>
-            <select
-              value={form.voranmeldungsrhythmus ?? 'quartal'}
-              onChange={ev => set('voranmeldungsrhythmus', ev.target.value)}
-              className={selectCls}
-            >
-              <option value="quartal">Vierteljährlich</option>
-              <option value="monat">Monatlich</option>
-            </select>
-          </Field>
-        </div>
+        <Field label={<>Voranmeldungsrhythmus <InfoTooltip text="Monatlich: wenn deine Jahres-USt-Zahllast im Vorjahr über 7.500 € lag. Vierteljährlich: bei Zahllast ≤ 7.500 €. Kleinunternehmer §19 sind von der UStVA befreit." /></>}>
+          <select
+            value={form.voranmeldungsrhythmus ?? 'quartal'}
+            onChange={ev => set('voranmeldungsrhythmus', ev.target.value)}
+            className={selectCls}
+          >
+            <option value="quartal">Vierteljährlich</option>
+            <option value="monat">Monatlich</option>
+          </select>
+        </Field>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label={<>Kontenrahmen <InfoTooltip text="SKR03: Standard für Dienstleister und Freiberufler. SKR04: Standard für Handel und produzierende Betriebe. SKR49: Für Vereine und Non-Profits." /></>}>

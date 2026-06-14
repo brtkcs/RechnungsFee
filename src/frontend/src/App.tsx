@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { getSetupStatus, isTauri } from './api/client'
 import { SetupWizard } from './pages/setup/SetupWizard'
 import { AppLayout } from './components/AppLayout'
@@ -128,22 +128,27 @@ function AppRoutes() {
   )
 }
 
-type SchliessenPhase = 'backup-laeuft' | 'extern-fehler'
+type SchliessenPhase = 'backup-laeuft' | 'backup-ok' | 'extern-fehler'
 
 export default function App() {
   const [zeigSchliessen, setZeigSchliessen] = useState(false)
   const [phase, setPhase] = useState<SchliessenPhase>('backup-laeuft')
   const [externFehler, setExternFehler] = useState<string[]>([])
+  const [externKonfiguriert, setExternKonfiguriert] = useState(false)
+  const closingRef = useRef(false)
 
   useEffect(() => {
     if (!isTauri()) return
     let unlisten: (() => void) | undefined
-    import('@tauri-apps/api/event').then(({ listen }) => {
-      listen('confirm-close', () => {
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      getCurrentWindow().onCloseRequested(async (event) => {
+        if (closingRef.current) return  // zweiter Close nach confirm_close – durchlassen
+        event.preventDefault()
         setExternFehler([])
+        setExternKonfiguriert(false)
         setPhase('backup-laeuft')
         setZeigSchliessen(true)
-        führeBackupUndSchliesseDurch()
+        await führeBackupUndSchliesseDurch()
       }).then(fn => { unlisten = fn })
     })
     return () => { unlisten?.() }
@@ -172,9 +177,10 @@ export default function App() {
     try {
       const { getApiBase } = await import('./api/client')
       const base = await getApiBase()
-      const res = await fetch(`${base}/api/backup/erstellen`, { method: 'POST' })
+      const res = await fetch(`${base}/backup/erstellen`, { method: 'POST' })
       if (res.ok) {
         const json = await res.json().catch(() => ({}))
+        setExternKonfiguriert(json.extern_konfiguriert ?? false)
         const fehler: string[] = json.fehler ?? []
         if (fehler.length > 0) {
           setExternFehler(fehler)
@@ -186,13 +192,16 @@ export default function App() {
     } catch {
       // Netzwerkfehler – lokal war OK, einfach schließen
     }
-    await schliessenOhneBackup()
+    setPhase('backup-ok')
   }
 
   async function schliessenOhneBackup() {
     setZeigSchliessen(false)
+    closingRef.current = true
     const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('confirm_close')
+    await invoke('confirm_close')  // tötet Backend
+    const { exit } = await import('@tauri-apps/plugin-process')
+    await exit(0)
   }
 
   return (
@@ -206,6 +215,41 @@ export default function App() {
               <>
                 <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">Backup wird erstellt…</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Bitte warten – Daten werden gesichert.</p>
+              </>
+            )}
+
+            {phase === 'backup-ok' && (
+              <>
+                <h2 className="text-base font-semibold text-emerald-700 dark:text-emerald-400">
+                  {externKonfiguriert ? 'Lokales & externes Backup erstellt' : 'Lokales Backup erstellt'}
+                </h2>
+                {externKonfiguriert ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Daten wurden lokal und verschlüsselt auf dem externen Ziel gesichert.
+                  </p>
+                ) : (
+                  <div className="rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 p-3 space-y-2">
+                    <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+                      Kein externes Backup eingerichtet
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      Deine Daten liegen nur lokal. Richte ein verschlüsseltes Backup auf NAS oder USB ein – bei Festplattenausfall sind sie sonst verloren.
+                    </p>
+                    <Link
+                      to="/backup"
+                      onClick={() => setZeigSchliessen(false)}
+                      className="text-xs text-amber-700 dark:text-amber-400 underline hover:text-amber-900 dark:hover:text-amber-200"
+                    >
+                      Externes Backup einrichten →
+                    </Link>
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <button onClick={schliessenOhneBackup}
+                    className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                    App beenden
+                  </button>
+                </div>
               </>
             )}
 

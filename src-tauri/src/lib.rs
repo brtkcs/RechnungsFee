@@ -1,5 +1,4 @@
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -7,9 +6,6 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use std::os::windows::process::CommandExt;
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-/// Globaler State: wurde das Schließen vom User bestätigt?
-struct CloseConfirmed(AtomicBool);
 
 /// Globaler State: der vom Sidecar belegte Port
 struct BackendPort(Mutex<u16>);
@@ -105,19 +101,14 @@ fn write_bytes_to_path(path: String, data: Vec<u8>) -> Result<(), String> {
 
 #[tauri::command]
 fn confirm_close(
-    app: tauri::AppHandle,
     child_state: tauri::State<BackendChild>,
     port_state: tauri::State<BackendPort>,
-    close_confirmed: tauri::State<CloseConfirmed>,
 ) {
-    close_confirmed.0.store(true, Ordering::Relaxed);
     let port = *port_state.0.lock().unwrap();
     if let Some(child) = child_state.0.lock().unwrap().take() {
         kill_backend_inner(child, port, false);
     }
-    if let Some(win) = app.get_webview_window("main") {
-        let _ = win.close();
-    }
+    // Fenster wird von JS nach diesem Return geschlossen
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -199,7 +190,7 @@ pub fn run() {
             });
 
             app.manage(BackendChild(Mutex::new(Some(child))));
-            app.manage(CloseConfirmed(AtomicBool::new(false)));
+
             log::info!("Backend-Sidecar gestartet auf Port {}", port);
 
             // Linux: Sandbox + EGL deaktivieren BEVOR das Fenster erstellt wird.
@@ -267,25 +258,7 @@ pub fn run() {
                 });
             }
 
-            // Schließen des Hauptfensters: erst Rückfrage ans Frontend, dann Backend beenden.
-            let ah = app.handle().clone();
-            let win_for_event = main_window.clone();
-            main_window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    let confirmed = ah.state::<CloseConfirmed>().0.load(Ordering::Relaxed);
-                    if confirmed {
-                        // Bestätigt: Backend beenden, Fenster schließen lassen
-                        let port = *ah.state::<BackendPort>().0.lock().unwrap();
-                        if let Some(child) = ah.state::<BackendChild>().0.lock().unwrap().take() {
-                            kill_backend_inner(child, port, false);
-                        }
-                    } else {
-                        // Noch nicht bestätigt: Schließen verhindern, Frontend fragen
-                        api.prevent_close();
-                        let _ = win_for_event.emit("confirm-close", ());
-                    }
-                }
-            });
+            // Schließen wird vollständig vom JS-seitigen onCloseRequested behandelt.
 
             Ok(())
         })

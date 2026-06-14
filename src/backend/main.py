@@ -172,11 +172,12 @@ def backup_erstellen():
         return {"ok": True}
 
     pfad1, pfad2, passwort = row
+    extern_konfiguriert = bool(passwort and (pfad1 or pfad2))
     fehler = []
-    if not passwort:
-        # Kein Passwort → keine externe Kopie (DSGVO Art. 32 – personenbezogene Daten)
+    if not extern_konfiguriert:
+        # Kein Passwort oder kein Pfad → keine externe Kopie
         print("[Backup] Externe Ziele übersprungen: kein Verschlüsselungs-Passwort gesetzt")
-        return {"ok": True}
+        return {"ok": True, "extern_konfiguriert": False}
 
     # Vollbackup (DB + Uploads) als ZIP erstellen und verschlüsseln
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -197,7 +198,7 @@ def backup_erstellen():
             fehler.append(f"{pfad}: {e}")
             print(f"[Backup] Externer Backup-Fehler ({pfad}): {e}")
 
-    return {"ok": True, "fehler": fehler or None}
+    return {"ok": True, "extern_konfiguriert": True, "fehler": fehler or None}
 
 
 @app.post("/api/backup/wiederherstellen")
