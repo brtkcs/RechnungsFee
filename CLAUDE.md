@@ -142,7 +142,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 38 | artikel.differenzbesteuerung BOOLEAN DEFAULT 0; rechnungspositionen.differenzbesteuerung BOOLEAN DEFAULT 0 (§25a UStG) |
 | 39 | kategorien: „Bewirtungskosten (nicht abzugsfähig)" eks_kategorie B14_5 → NULL (kein anerkannter Aufwand beim Jobcenter) |
 | 40 | journal.vorsteuer_betrag NUMERIC(12,2) DEFAULT 0 – tatsächlich abziehbarer Vorsteuer-Anteil (berücksichtigt vorsteuer_prozent der Kategorie, z.B. 70% Bewirtungskosten); Storno-Einträge erhalten negativen Wert |
-| 41 | kategorien: Privatentnahme euer_zeile → 106, Privateinlage → 107 (Anlage EÜR 2025 Hinweiszeilen); neue Kategorie „KFZ (Kauf)" SKR03 0320/SKR04 0540 (Anlage AVEUR) |
+| 41 | kategorien: Privatentnahme euer_zeile → 106, Privateinlage → 107 (Anlage EÜR 2025 Hinweiszeilen); neue Kategorie „KFZ (Kauf)" SKR03 0320/SKR04 0540 (Anlage AVEÜR) |
 | 42 | kategorien: „EDV / Software (Sofortabschreibung)" Aufwand→Anlage (SKR03 0650/SKR04 0490), eks_kategorie B10→B8, euer_zeile NULL; BMF 2021 ist Nutzungsdauer-Wahlrecht (§7 Abs. 1 EStG), KEIN GWG |
 | 43 | journal.km_anzahl NUMERIC(10,1) – km-Anzahl für Fahrtkosten Privat-PKW; EÜR: km×0,30 in brutto_betrag, EKS B6_5: km×0,10; EKS_FELDER_META 5. Element negativ; B6_4_priv (Abzug privat gefahrene km Betriebs-KFZ) neu |
 | 44 | EDV / Software (Sofortabschreibung): SKR03 0650→0490 (Sonstige BGA), SKR04 0490→0650 (Büroeinrichtung) – SKR03 0650 war Verbindlichkeitenkonto (Issue #111) |
@@ -179,7 +179,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 75 | Datenfix Issue #132: kategorien „Betriebseinnahmen (19%)" + „Betriebseinnahmen (7%)" → euer_zeile=12 (ältere DBs wo Umbenennung in Migration 69 nicht griff → Rechnungseinnahmen fehlten in EÜR trotz korrekter UStVA) |
 | 76 | unternehmen: backup_extern_pfad_1/2, backup_extern_passwort – externes AES-256-GCM-verschlüsseltes Backup auf NAS/USB |
 | 77 | buchungsvorlagen.art TEXT DEFAULT 'Ausgabe' – Buchungsvorlagen können jetzt als Einnahme (z. B. Eigenverbrauch) oder Ausgabe angelegt werden; buche_vorlage() verwendet art-korrekte USt-Konten |
-| 78 | anlageverzeichnis-Tabelle (id, bezeichnung, typ kfz/edv/sonstig, kaufdatum, kaufpreis_netto, nutzungsdauer_jahre, afa_methode linear, kennzeichen, privat_anteil_prozent, verkauft_am, notizen, aktiv) – Anlage AVEUR Abschreibungsplan |
+| 78 | anlageverzeichnis-Tabelle (id, bezeichnung, typ kfz/edv/sonstig, kaufdatum, kaufpreis_netto, nutzungsdauer_jahre, afa_methode linear, kennzeichen, privat_anteil_prozent, verkauft_am, notizen, aktiv) – Anlage AVEÜR Abschreibungsplan |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

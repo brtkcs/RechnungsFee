@@ -301,7 +301,7 @@ export function AnlageverzeichnisPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Anlagenverzeichnis</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Anlage AVEUR – Abschreibungsplan</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Anlage AVEÜR – Abschreibungsplan</p>
             </div>
             <div className="flex gap-2 items-center">
               <select value={jahr} onChange={e => setJahr(parseInt(e.target.value))}

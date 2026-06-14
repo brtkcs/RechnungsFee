@@ -1,5 +1,5 @@
 """
-Anlage AVEUR – Abschreibungsplan für Anlagegüter (KFZ, EDV, Sonstiges)
+Anlage AVEÜR – Abschreibungsplan für Anlagegüter (KFZ, EDV, Sonstiges)
 
 Ermöglicht:
 - CRUD für Wirtschaftsgüter im Anlagevermögen
@@ -217,7 +217,7 @@ def _fonts() -> Path:
 
 @router.get("/pdf")
 def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
-    """PDF-Abschreibungsplan (Anlage AVEUR) für ein Wirtschaftsjahr."""
+    """PDF-Abschreibungsplan (Anlage AVEÜR) für ein Wirtschaftsjahr."""
     gueter = db.query(Anlagegut).order_by(Anlagegut.kaufdatum).all()
     unt = db.query(Unternehmen).first()
 
@@ -243,7 +243,7 @@ def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
     pdf.set_font("DejaVu", "B", 11)
     pdf.set_text_color(255, 255, 255)
     pdf.set_xy(15, 5)
-    pdf.cell(0, 8, f"Anlagenverzeichnis / Anlage AVEUR – Wirtschaftsjahr {jahr}", ln=True)
+    pdf.cell(0, 8, f"Anlagenverzeichnis / Anlage AVEÜR – Wirtschaftsjahr {jahr}", ln=True)
 
     name = (unt.firmenname or f"{unt.vorname or ''} {unt.nachname or ''}".strip()) if unt else "—"
     pdf.set_xy(15, 24)
@@ -389,7 +389,7 @@ def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
     pdf.set_font("DejaVu", "", 8)
     pdf.set_text_color(120, 80, 0)
     pdf.multi_cell(267, 5,
-        "Hinweis: Anzeigehilfe auf Basis des Anlagenverzeichnisses. Bitte Werte in ELSTER (Anlage AVEUR) oder mit dem "
+        "Hinweis: Anzeigehilfe auf Basis des Anlagenverzeichnisses. Bitte Werte in ELSTER (Anlage AVEÜR) oder mit dem "
         "Steuerberater übertragen. Nutzungsdauer nach AfA-Tabellen des BMF. Nur lineare AfA. "
         "Halbjahres-AfA im Kaufjahr nach Monatsprinzip (ab Kaufmonat).", fill=True)
 

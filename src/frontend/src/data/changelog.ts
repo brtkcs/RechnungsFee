@@ -26,7 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.3.15',
     datum: 'Juni 2026',
     eintraege: [
-      { typ: 'fix', text: 'EÜR: Seite konnte nicht geladen werden wenn kein Anlagenverzeichnis vorhanden ist (Fehler trat bei allen Nutzern ohne AVEUR-Einträge auf)' },
+      { typ: 'fix', text: 'EÜR: Seite konnte nicht geladen werden wenn kein Anlagenverzeichnis vorhanden ist (Fehler trat bei allen Nutzern ohne AVEÜR-Einträge auf)' },
       { typ: 'neu', text: 'Journal: Toggle „Nur bebuchte" neben dem Kategorie-Dropdown – zeigt nur Kategorien mit mindestens einer Buchung; erleichtert Prüf- und Abstimmarbeiten vor UStVA und EÜR' },
     ],
   },
@@ -34,7 +34,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.3.14',
     datum: 'Juni 2026',
     eintraege: [
-      { typ: 'neu', text: 'Anlage AVEUR – Anlagenverzeichnis: Wirtschaftsgüter (KFZ, EDV, Sonstiges) erfassen; lineare AfA mit Monatsprinzip im Kaufjahr; Privatanteil für KFZ; Abschreibungsplan je Gut; PDF-Export als Anlage AVEUR' },
+      { typ: 'neu', text: 'Anlage AVEÜR – Anlagenverzeichnis: Wirtschaftsgüter (KFZ, EDV, Sonstiges) erfassen; lineare AfA mit Monatsprinzip im Kaufjahr; Privatanteil für KFZ; Abschreibungsplan je Gut; PDF-Export als Anlage AVEÜR' },
       { typ: 'verbesserung', text: 'EÜR: AfA aus dem Anlagenverzeichnis fließt automatisch in Zeile 36 ein – kein manueller Journaleintrag mehr nötig; blaue Info-Box zeigt den übernommenen Betrag; amber-Hinweis wenn Anlagezugänge existieren aber kein Gut im Anlagenverzeichnis erfasst ist' },
       { typ: 'neu', text: 'Buchungsvorlagen: Vorlagen können jetzt auch als Einnahme angelegt werden (z. B. Eigenverbrauch Telefon, Sachentnahmen) – Art-Umschalter im Formular, Kategorienliste zeigt passende Erlös-Kategorien (Issue #157)' },
       { typ: 'neu', text: 'Backup – Ebene 1: Beim Beenden der App wird automatisch ein lokaler WAL-sicherer DB-Snapshot erstellt (max. 5 Kopien, älteste werden automatisch gelöscht)' },
@@ -219,7 +219,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'neu', text: 'EÜR – Einnahmen-Überschuss-Rechnung: Berechnung nach Anlage EÜR 2025 aus Journalbuchungen (Ist-Versteuerung); Zeilen A (Einnahmen), B (Ausgaben), Gewinn/Verlust; PDF-Anzeigehilfe für ELSTER oder Steuerberater' },
       { typ: 'neu', text: 'EÜR: Zeile 15 (vereinnahmte USt) und Zeile 48 (abziehbare Vorsteuer) werden automatisch aus den Journal-USt-Feldern berechnet – kein manueller Eintrag nötig' },
-      { typ: 'neu', text: 'EÜR: Hinweis auf Anlage AVEUR wenn Anlagezugänge (KFZ, EDV etc.) im Journal vorhanden sind' },
+      { typ: 'neu', text: 'EÜR: Hinweis auf Anlage AVEÜR wenn Anlagezugänge (KFZ, EDV etc.) im Journal vorhanden sind' },
       { typ: 'neu', text: 'UStVA-Anzeigehilfe: Berechnung startet automatisch beim Öffnen der Seite und bei jedem Zeitraumwechsel – kein separater „Berechnen"-Klick mehr nötig' },
       { typ: 'neu', text: 'Rechnungsimport (#119): Button „∑ Nach Steuersatz zusammenfassen" – reduziert OCR-erkannte Einzelpositionen auf eine Zeile je Steuersatz (z.B. alle 7%-Positionen → „Waren (7%)")' },
     ],
@@ -326,7 +326,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'neu',          text: 'Buchungen ohne Geldfluss – neue Checkbox „Kein Geldfluss" im Buchungsformular für AfA, Sachentnahmen, Eigenverbrauch; kein Kassenstand-Einfluss, kein Tagesabschluss (Issue #55)' },
       { typ: 'neu',          text: 'Forderungsausfall – Rechnungen als uneinbringlich ausbuchen: Status-Badge, Filter, eigener Eintrag im Journal; für USt-Pflichtige automatisch §17-UStG-Korrekturbuchung (Issue #61)' },
-      { typ: 'neu',          text: 'Neue Kategorie „KFZ (Kauf)" SKR03 0320 / SKR04 0540 – separates Anlagekonto für Fahrzeuge, fließt korrekt in Anlage AVEUR ein' },
+      { typ: 'neu',          text: 'Neue Kategorie „KFZ (Kauf)" SKR03 0320 / SKR04 0540 – separates Anlagekonto für Fahrzeuge, fließt korrekt in Anlage AVEÜR ein' },
       { typ: 'neu',          text: 'Neue Kategorie „EDV / Software (Sofortabschreibung)" SKR03 0490 / SKR04 0650 – Anlagekonto nach BMF 26.02.2021 (Nutzungsdauer 1 Jahr, § 7 Abs. 1 EStG); zweistufiger Buchungsweg mit separater AfA erklärt' },
       { typ: 'neu',          text: 'Neue Kategorie „Bewirtungskosten (nicht abzugsfähig)" SKR03 4654 – für den steuerlich nicht abziehbaren 30 %-Anteil nach § 4 Abs. 5 Nr. 2 EStG' },
       { typ: 'neu',          text: 'Neue Kategorien „Gewährte Skonti" (SKR03 8736) und „Erhaltene Skonti" (SKR03 3736) – werden bei Skonto-Zahlung automatisch zugewiesen und ermöglichen spätere EÜR-Auswertung' },

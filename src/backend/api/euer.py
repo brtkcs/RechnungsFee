@@ -9,7 +9,7 @@ Besonderheiten:
   - Alle anderen Zeilen: netto_betrag aus kategorie.euer_zeile, vorzeichenkorrigiert nach art
   - Storno-Gegenbuchungen: art wird gespiegelt, netto bleibt positiv →
     Einnahmen-Zeile + art=Ausgabe = subtrahieren; Ausgaben-Zeile + art=Einnahme = subtrahieren
-  - Anlage-Buchungen (kontenart=Anlage, euer_zeile=None) → AVEUR-Hinweis
+  - Anlage-Buchungen (kontenart=Anlage, euer_zeile=None) → AVEÜR-Hinweis
   - km-Pauschale: brutto_betrag enthält bereits km×0,30 €
 """
 
@@ -105,7 +105,7 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
         euer_zeile = kat.euer_zeile if kat else None
         ust_konto = e.konto_ust_skr03 or e.konto_ust_skr04 or ""
 
-        # Anlage-Buchungen (KFZ-Kauf, EDV etc.) → AVEUR-Hinweis
+        # Anlage-Buchungen (KFZ-Kauf, EDV etc.) → AVEÜR-Hinweis
         if kat and kat.kontenart == "Anlage":
             anlage_summe += (e.brutto_betrag or ZERO)
             continue
@@ -136,7 +136,7 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
         if e.vorsteuer_betrag and e.vorsteuer_betrag != 0:
             zeilen[57] = zeilen.get(57, ZERO) + e.vorsteuer_betrag
 
-    # AVEUR: AfA aus dem Anlagenverzeichnis automatisch in Zeile 36 eintragen
+    # AVEÜR: AfA aus dem Anlagenverzeichnis automatisch in Zeile 36 eintragen
     from api.anlageverzeichnis import _afa_fuer_jahr
     gueter = db.query(Anlagegut).filter(Anlagegut.aktiv == True).all()
     aveur_afa = sum((_afa_fuer_jahr(g, jahr) for g in gueter), ZERO)
@@ -288,7 +288,7 @@ def _generate_pdf(daten: dict, unt: Unternehmen) -> bytes:
         pdf.set_text_color(120, 80, 0)
         pdf.multi_cell(170, 5,
             f"Anlagezugänge {daten['jahr']}: {euro(daten['anlage_zugaenge'])} (KFZ, EDV etc.) sind nicht enthalten. "
-            "Bitte Anlage AVEUR (Abschreibungsplan) separat ausfüllen.", fill=True)
+            "Bitte Anlage AVEÜR (Abschreibungsplan) separat ausfüllen.", fill=True)
         pdf.ln(4)
 
     pdf.set_fill_color(254, 243, 199)

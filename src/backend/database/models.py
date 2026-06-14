@@ -621,7 +621,7 @@ class Rechnungsvorlage(Base):
 
 
 class Anlagegut(Base):
-    """Wirtschaftsgut im Anlagevermögen (Anlage AVEUR – Abschreibungsplan)."""
+    """Wirtschaftsgut im Anlagevermögen (Anlage AVEÜR – Abschreibungsplan)."""
     __tablename__ = "anlageverzeichnis"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

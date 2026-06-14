@@ -261,20 +261,20 @@ Phase 3 – UStVA
 
 ---
 
-## Anlage AVEUR (Anlagenverzeichnis)
+## Anlage AVEÜR (Anlagenverzeichnis)
 
-Wer Anlagevermögen hat, muss die **Anlage AVEUR** zur EÜR einreichen. Sie listet alle
+Wer Anlagevermögen hat, muss die **Anlage AVEÜR** zur EÜR einreichen. Sie listet alle
 Wirtschaftsgüter mit Anschaffungskosten, jährlicher AfA und Restbuchwert – getrennt nach:
 
-| AVEUR-Kategorie | Unsere Kategorie |
+| AVEÜR-Kategorie | Unsere Kategorie |
 |-----------------|-----------------|
 | Kraftfahrzeuge | **KFZ (Kauf)** (SKR03 0320 / SKR04 0540) – neu ab Schema v41 |
 | Andere bewegliche WG | **Anlagevermögen (Kauf)** (SKR03 0400 / SKR04 0400) |
 | Immaterielle WG | *(kein eigenes Konto geplant – selten bei Freiberuflern)* |
 
 **Phase 2 EÜR-PDF** muss deshalb unterscheiden:
-- **Zeile 36** (AfA / Sofortabschreibung): summiert alle Einträge mit `euer_zeile=36` – das sind `Abschreibungen (AfA)`, `GWG`, `EDV / Software (Sofortabschreibung)` – alle `kontenart="Aufwand"`, kein AVEUR-Eintrag nötig
-- **Anlage AVEUR**: nur `kontenart="Anlage"` (KFZ (Kauf) + Anlagevermögen (Kauf)) – als separate Seite im PDF (tabellarische Auflistung der Buchungen mit Anschaffungskosten)
+- **Zeile 36** (AfA / Sofortabschreibung): summiert alle Einträge mit `euer_zeile=36` – das sind `Abschreibungen (AfA)`, `GWG`, `EDV / Software (Sofortabschreibung)` – alle `kontenart="Aufwand"`, kein AVEÜR-Eintrag nötig
+- **Anlage AVEÜR**: nur `kontenart="Anlage"` (KFZ (Kauf) + Anlagevermögen (Kauf)) – als separate Seite im PDF (tabellarische Auflistung der Buchungen mit Anschaffungskosten)
 - **Hinweiszeilen** Privatentnahme (Z106) + Privateinlage (Z107): ausweisen, nicht in Gewinnberechnung einbeziehen
 
 ---

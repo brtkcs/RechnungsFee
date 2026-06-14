@@ -1122,8 +1122,8 @@ def _run_migrations() -> None:
                 "Mitgliedsbeiträge":           "z. B. IHK-Beitrag, Berufsverbände, Wirtschaftsvereinigungen, Fachverbände",
                 "Spenden (betrieblich)":       "Betrieblich veranlasste Spenden (z. B. über Berufsverband). Achtung: Private Spenden sind keine Betriebsausgaben und gehören nicht hierher – sie werden in der Einkommensteuererklärung als Sonderausgaben abgesetzt.",
                 "Gewerbesteuer":               "z. B. vierteljährliche Gewerbesteuer-Vorauszahlungen oder Jahresausgleich",
-                "Anlagevermögen (Kauf)":       "z. B. Computer, Maschinen, Geräte über 800 € netto – für Fahrzeuge bitte 'KFZ (Kauf)' verwenden (Anlage AVEUR)",
-                "KFZ (Kauf)":                  "Kauf eines Kraftfahrzeugs über 800 € netto (Anlage AVEUR: Kategorie Kraftfahrzeuge) – laufende KFZ-Kosten separat unter KFZ-Kosten / KFZ-Versicherung etc. buchen",
+                "Anlagevermögen (Kauf)":       "z. B. Computer, Maschinen, Geräte über 800 € netto – für Fahrzeuge bitte 'KFZ (Kauf)' verwenden (Anlage AVEÜR)",
+                "KFZ (Kauf)":                  "Kauf eines Kraftfahrzeugs über 800 € netto (Anlage AVEÜR: Kategorie Kraftfahrzeuge) – laufende KFZ-Kosten separat unter KFZ-Kosten / KFZ-Versicherung etc. buchen",
                 "EDV / Software (Sofortabschreibung)": "Hardware (PC, Laptop, Tablet, Smartphone, Drucker) und Software. Zweistufig buchen: 1. Kauf hier als Anlage (SKR03 0490), 2. im selben Jahr volle AfA über 'Abschreibungen (AfA)'. Wahlrecht auf Nutzungsdauer 1 Jahr nach BMF 26.02.2021 (§ 7 Abs. 1 EStG) – muss ins Bestandsverzeichnis, KEIN GWG!",
                 "Forderungsausfall":           "Uneinbringliche Forderungen (Kundeninsolvenz, endgültige Zahlungsverweigerung). Nur für USt-Pflichtige: Korrekturbuchung nach §17 UStG wird automatisch erstellt.",
                 "Abschreibungen (AfA)":        "z. B. Jahres-AfA für Wirtschaftsgüter des Anlagevermögens (vom Steuerberater berechnet)",
@@ -1845,7 +1845,7 @@ def _run_migrations() -> None:
             """))
             conn.execute(text("PRAGMA user_version = 78"))
             conn.commit()
-            print("[Migration] Schema auf Version 78 (anlageverzeichnis: Anlage AVEUR)")
+            print("[Migration] Schema auf Version 78 (anlageverzeichnis: Anlage AVEÜR)")
 
 
 def _migrate_kategorien() -> None:
@@ -2002,7 +2002,7 @@ def _migrate_kategorien() -> None:
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Bewirtungskosten nicht abzugsfähiger Anteil
             {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
-            # Anlagevermögen KFZ (Anlage AVEUR: eigene Kategorie „Kraftfahrzeuge")
+            # Anlagevermögen KFZ (Anlage AVEÜR: eigene Kategorie „Kraftfahrzeuge")
             {"name": "KFZ (Kauf)",                           "kontenart": "Anlage",  "konto_skr03": "0320", "konto_skr04": "0540", "eks_kategorie": "B8",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Digitale Wirtschaftsgüter: Wahlrecht Nutzungsdauer 1 Jahr (BMF 26.02.2021, § 7 Abs. 1 EStG)
             # KEIN GWG – muss ins Bestandsverzeichnis! Buchung: 1. Kauf hier (Anlage 0650), 2. volle AfA

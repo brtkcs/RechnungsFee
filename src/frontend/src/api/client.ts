@@ -1762,7 +1762,7 @@ export const deleteBuchungsvorlageBeleg = (id: number) =>
 export const erledigtVorlage = (id: number) =>
   request<unknown>(`/buchungsvorlagen/${id}/erledigt`, { method: 'POST' })
 
-// --- Anlageverzeichnis (AVEUR) ---
+// --- Anlageverzeichnis (AVEÜR) ---
 export type AnlagegutTyp = 'kfz' | 'edv' | 'sonstig'
 
 export type Anlagegut = {

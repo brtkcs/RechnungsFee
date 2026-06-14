@@ -19,7 +19,7 @@
 | Kategorie-Verknüpfung `journal.kategorie_id → kategorien.euer_zeile` | |
 
 **Nicht in Scope (separates Feature):**  
-Anlage AVEUR (Abschreibungsplan für Anlagegüter – KFZ, EDV, Maschinen).  
+Anlage AVEÜR (Abschreibungsplan für Anlagegüter – KFZ, EDV, Maschinen).  
 Buchungen der Kontenart `Anlage` haben `euer_zeile = None` und werden im EÜR-Bericht
 als gesonderter Hinweis ausgewiesen.
 
@@ -101,7 +101,7 @@ Für Kleinunternehmer: immer 0.
   "summe_einnahmen": 18349.80,  # Zeile 22 (inkl. USt)
   "summe_ausgaben": 8421.50,    # Zeile 74
   "gewinn_verlust": 9928.30,    # Zeile 75 = Einnahmen − Ausgaben
-  "anlage_zugaenge": 3400.00,   # Summe Anlage-Buchungen (→ Hinweis AVEUR)
+  "anlage_zugaenge": 3400.00,   # Summe Anlage-Buchungen (→ Hinweis AVEÜR)
   "ist_kleinunternehmer": False,
 }
 ```
@@ -145,7 +145,7 @@ B – Betriebsausgaben
   Gewinn / Verlust (Z.75)            9.928,30 €
 
 ⚠ Anlagezugänge (3.400,00 €) sind nicht enthalten –
-  bitte Anlage AVEUR (Abschreibungsplan) separat ausfüllen.
+  bitte Anlage AVEÜR (Abschreibungsplan) separat ausfüllen.
 
 [ PDF erstellen ]
 ```
@@ -161,12 +161,12 @@ Strukturierter PDF-Bericht (kein amtliches Formular, wie UStVA-Anzeigehilfe):
 - Abschnitt A (Einnahmen) mit Zeilennummern
 - Abschnitt B (Ausgaben) mit Zeilennummern
 - Summen und Gewinn/Verlust
-- Hinweis auf Anlage AVEUR wenn Anlagezugänge vorhanden
+- Hinweis auf Anlage AVEÜR wenn Anlagezugänge vorhanden
 - Hinweiszeile: „Dieses Dokument ist eine Anzeigehilfe – bitte in ELSTER/Steuerberater übertragen"
 
 ---
 
-## Stufe 4 (spätere Version) – Anlage AVEUR
+## Stufe 4 (spätere Version) – Anlage AVEÜR
 
 Für Anlagegüter (EDV, KFZ, Maschinen) wird eine separate Abschreibungstabelle benötigt:
 
@@ -201,4 +201,4 @@ Erfordert neue Tabelle `anlagevermoegen` und eigene Verwaltungsseite.
 4. `EUERPage.tsx` – Seite mit Jahresauswahl + Tabelle
 5. `App.tsx` – Route `/euer`
 6. `ExportPage.tsx` – Kachel (automatische Berechnung bei Jahreswechsel)
-7. Anlage AVEUR – separate Issue / spätere Version
+7. Anlage AVEÜR – separate Issue / spätere Version
