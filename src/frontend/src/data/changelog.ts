@@ -23,6 +23,24 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.18',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Einleitungstext auf Rechnungen: Freitext vor der Positionstabelle – global für alle Rechnungen (Einstellungen → Unternehmen) oder individuell pro Rechnung überschreibbar; Markdown-Formatierung: **fett** und *kursiv*' },
+      { typ: 'neu', text: 'Rabatt auf Positionsebene und Rechnungsebene (je als %): Positionsrabatt zieht direkt vom Einzelpreis ab und erscheint als Unterzeile im PDF; Rechnungsrabatt auf die Gesamtsumme mit Zwischensumme im Summenblock' },
+      { typ: 'verbesserung', text: 'Rechnungsdetail-Panel: „Stückpreis" → „Einzelpreis"; Summenblock zeigt korrekt Netto, USt und Gesamt (Brutto) – bei Netto-Rechnungen ohne USt entfällt die USt-Zeile' },
+      { typ: 'verbesserung', text: 'Rechnungsdetail-Panel breiter (28 rem statt 20 rem); Positionstabelle zeigt Menge × Einzelpreis = Zeilengesamt statt nur Stückpreis' },
+      { typ: 'verbesserung', text: 'Beenden-Dialog: Externer Backup-Status direkt sichtbar; Hinweis auf Soll-Versteuerung entfernt (war irreführend für Kleinunternehmer und EÜR-Nutzer)' },
+      { typ: 'fix', text: 'DATEV-Export: Verwaltungssatz auf korrektes 31-Felder-Format gebracht; BU-Schlüssel für 7 % Vorsteuer (Eingangsrechnungen) von 2 auf 8 korrigiert; PayPal-Standardkonto SKR03 auf 1361 geändert (1360 ist ein internes Transitkonto)' },
+      { typ: 'fix', text: 'GWG-Kontonummern korrigiert: SKR03 4855 → 0480, SKR04 6845 → 0670 (laut offiziellem DATEV-Kontenrahmen; Hinweis von Peter1061 via Issue #165)' },
+      { typ: 'fix', text: 'EÜR Zeile 17 (vereinnahmte USt): §25a-Margensteuer und ig. Erwerb werden nicht mehr doppelt gezählt; Gutschriften reduzieren Z17 jetzt korrekt' },
+      { typ: 'fix', text: 'Jahres-USt: PDF-Export schlug fehl wenn keine UStVA-Voranmeldungen gespeichert waren' },
+      { typ: 'fix', text: '§25a Storno: marge_25a_brutto wird korrekt subtrahiert (war: netto_betrag)' },
+      { typ: 'fix', text: 'Gutschrift: Bezug zur Originalrechnung im Detail-Panel sichtbar' },
+      { typ: 'fix', text: '§25a, Belegnr-Kollision und Kategorie-Vorausfüllung im Zahlungsdialog korrigiert' },
+    ],
+  },
+  {
     version: 'v0.3.17',
     datum: 'Juni 2026',
     eintraege: [
