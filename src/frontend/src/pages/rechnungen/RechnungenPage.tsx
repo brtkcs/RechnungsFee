@@ -875,11 +875,6 @@ function RechnungDetail({
   const [pdfLaeuft, setPdfLaeuft] = useState(false)
   const [pdfHinweis, setPdfHinweis] = useState(false)
   const [belegFehler, setBelegFehler] = useState<string | null>(null)
-  // Ref statt State: _fetchPdfBlob liest immer den aktuellen Wert,
-  // unabhängig vom Closure-Zeitpunkt des letzten Renders.
-  const ausgegebenRef = useRef(rechnung.ausgegeben)
-  // State nur für Button-Text / InfoTooltip (braucht Re-Render)
-  const [lokalAusgegeben, setLokalAusgegeben] = useState(rechnung.ausgegeben)
   const qc = useQueryClient()
 
   const belegUploadMutation = useMutation({
@@ -974,10 +969,6 @@ function RechnungDetail({
     const base = await getApiBase()
     const resp = await fetch(`${base}/rechnungen/${rechnung.id}/pdf`)
     const blob = await resp.blob()
-    if (!ausgegebenRef.current) {
-      ausgegebenRef.current = true
-      setLokalAusgegeben(true)
-    }
     return URL.createObjectURL(blob)
   }
 
@@ -1095,9 +1086,9 @@ function RechnungDetail({
                 onClick={handleDrucken}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
               >
-                🖨️ {lokalAusgegeben ? 'Kopie drucken' : 'Drucken'}
+                🖨️ {rechnung.ausgegeben ? 'Kopie drucken' : 'Drucken'}
               </button>
-              {lokalAusgegeben && (
+              {rechnung.ausgegeben && (
                 <InfoTooltip text="Das Original wurde gespeichert. Alle weiteren Ausdrucke sind Kopien des Originals – mit gleichem Inhalt und KOPIE-Wasserzeichen." side="bottom" align="right" />
               )}
               {!rechnung.storniert && (
