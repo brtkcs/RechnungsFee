@@ -28,7 +28,8 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'neu', text: 'Einleitungstext auf Rechnungen: Freitext vor der Positionstabelle – global für alle Rechnungen (Einstellungen → Unternehmen) oder individuell pro Rechnung überschreibbar; Markdown-Formatierung: **fett** und *kursiv*' },
       { typ: 'neu', text: 'Rabatt auf Positionsebene und Rechnungsebene (je als %): Positionsrabatt zieht direkt vom Einzelpreis ab und erscheint als Unterzeile im PDF; Rechnungsrabatt auf die Gesamtsumme mit Zwischensumme im Summenblock' },
-      { typ: 'verbesserung', text: 'Rechnungsdetail-Panel: „Stückpreis" → „Einzelpreis"; Summenblock zeigt korrekt Netto, USt und Gesamt (Brutto) – bei Netto-Rechnungen ohne USt entfällt die USt-Zeile; Panel breiter (28 rem); Positionstabelle zeigt Menge × Einzelpreis = Zeilengesamt' },
+      { typ: 'verbesserung', text: 'Rechnungsdetail-Panel: Spaltenstruktur überarbeitet – „Stückpreis" → „Einzelpreis"; Positionstabelle zeigt Menge × Einzelpreis = Zeilengesamt; Panel breiter (28 rem)' },
+      { typ: 'verbesserung', text: 'Rechnungsdetail-Panel: Summenblock zeigt korrekt Netto, USt und Gesamt (Brutto) – bei Netto-Rechnungen (§19 UStG) entfällt die USt-Zeile' },
       { typ: 'verbesserung', text: 'Beenden-Dialog: Externer Backup-Status direkt sichtbar; Hinweis auf Soll-Versteuerung entfernt (war irreführend für Kleinunternehmer und EÜR-Nutzer)' },
       { typ: 'fix', text: 'DATEV-Export: Verwaltungssatz auf korrektes 31-Felder-Format gebracht; BU-Schlüssel für 7 % Vorsteuer (Eingangsrechnungen) von 2 auf 8 korrigiert; PayPal-Standardkonto SKR03 auf 1361 geändert (1360 ist ein internes Transitkonto)' },
       { typ: 'fix', text: 'GWG-Kontonummern korrigiert: SKR03 4855 → 0480, SKR04 6845 → 0670 (laut offiziellem DATEV-Kontenrahmen; Hinweis von Peter1061 via Issue #165)' },
