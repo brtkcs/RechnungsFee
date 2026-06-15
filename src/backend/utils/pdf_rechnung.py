@@ -84,7 +84,7 @@ class RechnungPDF(RechnungPDFBase):
                             new_x="LMARGIN", new_y="NEXT")
             # Rabatt-Unterzeile
             if pos_rabatt > 0:
-                self.set_font("DejaVu", "I", 7.5)
+                self.set_font("DejaVu", "", 7.5)
                 self.set_text_color(*TEXT_GRAU)
                 pre_total_w = col_w[0] + col_w[1] + col_w[2] + col_w[3] + col_w[4]
                 if self._ist_netto:
