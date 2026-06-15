@@ -78,7 +78,7 @@ _COLS = [
 
 # Standard-Gegenkonten wenn datev_konto_* nicht konfiguriert
 _DEFAULTS: dict[str, dict[str, str]] = {
-    "SKR03": {"Bar": "1000", "Bank": "1200", "Karte": "1200", "PayPal": "1360"},
+    "SKR03": {"Bar": "1000", "Bank": "1200", "Karte": "1200", "PayPal": "1361"},
     "SKR04": {"Bar": "1000", "Bank": "1800", "Karte": "1800", "PayPal": "1460"},
     "SKR49": {"Bar": "1000", "Bank": "1800", "Karte": "1800", "PayPal": "1460"},
 }
@@ -104,10 +104,11 @@ def _bu(j: Journaleintrag) -> str:
         if satz == 7:
             return "2"
     else:
+        # Vorsteuer-BU: 9=19% VSt, 8=7% VSt (BU=2 gilt nur für Ausgangsrechnungen!)
         if j.vorsteuerabzug and satz == 19:
             return "9"
         if j.vorsteuerabzug and satz == 7:
-            return "2"
+            return "8"
     return ""
 
 
@@ -132,19 +133,42 @@ def _sachkonto(j: Journaleintrag, skr: str) -> Optional[str]:
 
 
 def _zeile1(unt: Unternehmen, von: date, bis: date) -> str:
-    """EXTF-Kopfzeile (Zeile 1)."""
-    jetzt = datetime.now().strftime("%Y%m%d%H%M%S")
+    """EXTF-Verwaltungssatz (Zeile 1) – 31 Felder gemäß DATEV EXTF-Spezifikation v700."""
+    ts = datetime.now()
+    jetzt = ts.strftime("%Y%m%d%H%M%S") + f"{ts.microsecond // 1000:03d}"  # 17 Stellen
     wj_start = date(von.year, unt.geschaeftsjahr_beginn, 1)
     teile = [
-        '"EXTF"', "700", "21", '"Buchungsstapel"', "9",
-        jetzt, "", '"RE"', "",
-        unt.datev_beraternummer or "1001",
-        unt.datev_mandantennummer or "1",
-        wj_start.strftime("%Y%m%d"),
-        "4",
-        von.strftime("%Y%m%d"),
-        bis.strftime("%Y%m%d"),
-        '""', '""', "1", "0", "0",
+        '"EXTF"',                               # 1:  Kennzeichen
+        "700",                                  # 2:  Versionsnummer
+        "21",                                   # 3:  Datenkategorie (21 = Buchungsstapel)
+        '"Buchungsstapel"',                     # 4:  Formatname
+        "9",                                    # 5:  Formatversion
+        jetzt,                                  # 6:  Erzeugt am (17 Stellen YYYYMMDDHHmmssSSS)
+        "",                                     # 7:  Importiert am (leer, wird von DATEV gefüllt)
+        '"RE"',                                 # 8:  Herkunft (2 Zeichen)
+        "",                                     # 9:  Exportiert von
+        "",                                     # 10: Importiert von (leer beim Export)
+        unt.datev_beraternummer or "1001",      # 11: Beraternummer
+        unt.datev_mandantennummer or "1",       # 12: Mandantennummer
+        wj_start.strftime("%Y%m%d"),            # 13: WJ-Beginn (YYYYMMDD)
+        "4",                                    # 14: Sachkontonummernlänge
+        von.strftime("%Y%m%d"),                 # 15: Datum von
+        bis.strftime("%Y%m%d"),                 # 16: Datum bis
+        "",                                     # 17: Bezeichnung (max 30 Zeichen)
+        "",                                     # 18: Diktat-Kürzel (max 2 Zeichen)
+        "1",                                    # 19: Buchungstyp (1 = Finanzbuchhaltung)
+        "",                                     # 20: Rechnungslegungszweck (leer)
+        "0",                                    # 21: Festschreibung (0 = nicht festschreiben)
+        '"EUR"',                                # 22: WKZ (ISO 4217)
+        "",                                     # 23: Reserviert
+        "",                                     # 24: Derivatskennzeichen
+        "",                                     # 25: Reserviert
+        "",                                     # 26: Reserviert
+        "",                                     # 27: SKR (optional)
+        "",                                     # 28: Branchenlösungs-ID
+        "",                                     # 29: Reserviert
+        "",                                     # 30: Reserviert
+        "",                                     # 31: Anwendungsinformation
     ]
     return ";".join(teile)
 
@@ -168,7 +192,7 @@ def datev_buchungsstapel(
     )
 
     skr = unt.kontenrahmen
-    zeilen: list[str] = [_zeile1(unt, von, bis), ";".join(_COLS)]
+    zeilen: list[str] = [_zeile1(unt, von, bis)]
     uebersprungen = 0
 
     for j in eintraege:
