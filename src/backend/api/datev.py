@@ -78,7 +78,7 @@ _COLS = [
 
 # Standard-Gegenkonten wenn datev_konto_* nicht konfiguriert
 _DEFAULTS: dict[str, dict[str, str]] = {
-    "SKR03": {"Bar": "1000", "Bank": "1200", "Karte": "1200", "PayPal": "1361"},
+    "SKR03": {"Bar": "1000", "Bank": "1200", "Karte": "1200", "PayPal": "1360"},
     "SKR04": {"Bar": "1000", "Bank": "1800", "Karte": "1800", "PayPal": "1460"},
     "SKR49": {"Bar": "1000", "Bank": "1800", "Karte": "1800", "PayPal": "1460"},
 }

@@ -356,7 +356,7 @@ export function ExportPage() {
                     <div><label className={labelCls}>Karte (EC / Kredit)</label>
                       <input type="text" value={kontoKarte} onChange={(e) => setKontoKarte(e.target.value)} placeholder={skr === 'SKR03' ? '1200' : '1800'} className={inputCls} /></div>
                     <div><label className={labelCls}>PayPal</label>
-                      <input type="text" value={kontoPaypal} onChange={(e) => setKontoPaypal(e.target.value)} placeholder={skr === 'SKR03' ? '1361' : '1460'} className={inputCls} /></div>
+                      <input type="text" value={kontoPaypal} onChange={(e) => setKontoPaypal(e.target.value)} placeholder={skr === 'SKR03' ? '1360' : '1460'} className={inputCls} /></div>
                   </div>
                   <div className="flex items-center gap-3 pt-1">
                     <button onClick={() => speicherMut.mutate()} disabled={speicherMut.isPending}
