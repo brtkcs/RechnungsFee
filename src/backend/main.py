@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev
 
-SCHEMA_VERSION = 81
+SCHEMA_VERSION = 82
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1886,6 +1886,25 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 81"))
             conn.commit()
             print("[Migration] Schema auf Version 81 (Einleitungstext auf Rechnung)")
+
+        if version < 82:
+            # GWG-Kontonummern korrigieren: SKR03 4855→0480, SKR04 6845→0670
+            # Quelle: DATEV Kontenrahmen SKR03/04 (offiziell, bestätigt Issue #165)
+            conn.execute(text("""
+                UPDATE kategorien
+                SET konto_skr03_default = '0480',
+                    konto_skr03 = CASE WHEN user_modified_skr03 = 0 THEN '0480' ELSE konto_skr03 END
+                WHERE name = 'Geringwertige Wirtschaftsgüter (GWG)'
+            """))
+            conn.execute(text("""
+                UPDATE kategorien
+                SET konto_skr04_default = '0670',
+                    konto_skr04 = CASE WHEN user_modified_skr04 = 0 THEN '0670' ELSE konto_skr04 END
+                WHERE name = 'Geringwertige Wirtschaftsgüter (GWG)'
+            """))
+            conn.execute(text("PRAGMA user_version = 82"))
+            conn.commit()
+            print("[Migration] Schema auf Version 82 (GWG-Konten korrigiert: SKR03 0480, SKR04 0670)")
 
 
 def _migrate_kategorien() -> None:
