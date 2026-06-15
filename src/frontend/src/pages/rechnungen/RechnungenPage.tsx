@@ -1444,7 +1444,7 @@ function RechnungDetail({
                       <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Einheit</th>
                     </> : <>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Menge</th>
-                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Stückpreis</th>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Einzelpreis</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</th>
                     </>}
@@ -1501,19 +1501,31 @@ function RechnungDetail({
                 </tbody>
                 {rechnung.dokument_typ !== 'Lieferschein' && (() => {
                   const reRabatt = parseFloat(String(rechnung.rabatt_prozent ?? '0')) || 0
-                  const posSum = rechnung.positionen.reduce((s, p) => s + parseFloat(p.brutto) * parseFloat(p.menge), 0)
+                  const posSumNetto = rechnung.positionen.reduce((s, p) => s + parseFloat(p.netto) * parseFloat(p.menge), 0)
+                  const rabattNetto = posSumNetto * reRabatt / 100
+                  const ustGesamt = parseFloat(rechnung.ust_gesamt)
                   return (
                   <tfoot className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
                     {reRabatt > 0 && (
                       <tr>
-                        <td colSpan={4} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">Zwischensumme</td>
-                        <td className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">{formatEuro(posSum.toFixed(2))}</td>
+                        <td colSpan={4} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">Zwischensumme Netto</td>
+                        <td className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">{formatEuro(posSumNetto.toFixed(2))}</td>
                       </tr>
                     )}
                     {reRabatt > 0 && (
                       <tr>
                         <td colSpan={4} className="px-3 py-2 text-right text-slate-400 dark:text-slate-500 text-xs">Rabatt {reRabatt} %</td>
-                        <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500 text-xs">− {formatEuro((posSum * reRabatt / 100).toFixed(2))}</td>
+                        <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500 text-xs">− {formatEuro(rabattNetto.toFixed(2))}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td colSpan={4} className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">Netto</td>
+                      <td className="px-3 py-2 text-right text-slate-600 dark:text-slate-300">{formatEuro(rechnung.netto_gesamt)}</td>
+                    </tr>
+                    {ustGesamt !== 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-2 text-right text-slate-400 dark:text-slate-500 text-xs">USt</td>
+                        <td className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 text-xs">{formatEuro(rechnung.ust_gesamt)}</td>
                       </tr>
                     )}
                     <tr>
