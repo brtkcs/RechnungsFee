@@ -22,6 +22,7 @@
 - Skonto (Standard, Kunden, Rechnung; Zahlungshinweis + Giro-Code)
 - Leistungszeitraum Von–Bis
 - Original-PDF-Archivierung: erstes Drucken/Mailen speichert das Original; alle weiteren Ausgaben sind Kopien mit rotem KOPIE-Wasserzeichen (Entwurf: nur Vorschau)
+- Versand-Zeitstempel (`ausgegeben_am`): Detail-Panel zeigt Datum + Uhrzeit des ersten Versands als Nachweis
 
 **Lieferscheine**
 - Lieferschein-PDF ohne Preise, mit Lieferadresse und Empfangsbestätigung

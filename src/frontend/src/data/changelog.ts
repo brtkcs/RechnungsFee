@@ -29,6 +29,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'PDF-Versand: Original wird beim ersten Drucken oder Mailen gespeichert; alle weiteren Ausgaben sind Kopien des Originals (gleicher Inhalt + KOPIE-Wasserzeichen) – kein wechselnder Status mehr auf Kopien' },
       { typ: 'verbesserung', text: 'Entwurf: Vorschau-Button bleibt; nach Finalisierung nur noch „Drucken" und „Mail senden" – verhindert versehentliche Mehrfach-Ausgabe als Original' },
       { typ: 'verbesserung', text: 'Detail-Panel: Buttons zeigen nach erstem Versand „Kopie drucken" bzw. „Kopie senden"' },
+      { typ: 'verbesserung', text: 'Detail-Panel: Zeigt Datum und Uhrzeit des ersten Versands unter „Original versandt" – praktisch als Nachweis wenn ein Kunde behauptet, die Rechnung nicht erhalten zu haben' },
     ],
   },
   {
