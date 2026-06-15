@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.19',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'verbesserung', text: 'PDF-Versand: Original wird beim ersten Drucken oder Mailen gespeichert; alle weiteren Ausgaben sind Kopien des Originals (gleicher Inhalt + KOPIE-Wasserzeichen) – kein wechselnder Status mehr auf Kopien' },
+      { typ: 'verbesserung', text: 'Entwurf: Vorschau-Button bleibt; nach Finalisierung nur noch „Drucken" und „Mail senden" – verhindert versehentliche Mehrfach-Ausgabe als Original' },
+      { typ: 'verbesserung', text: 'Detail-Panel: Buttons zeigen nach erstem Versand „Kopie drucken" bzw. „Kopie senden"' },
+    ],
+  },
+  {
     version: 'v0.3.18',
     datum: 'Juni 2026',
     eintraege: [
