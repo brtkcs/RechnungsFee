@@ -229,6 +229,7 @@ class RechnungResponse(BaseModel):
     skonto_tage: Optional[int] = None
     ist_entwurf: bool
     ausgegeben: bool
+    ausgegeben_am: Optional[datetime] = None
     positionen: List[RechnungspositionResponse] = []
     zahlungen: List[ZahlungKompakt] = []
     beleg: Optional[BelegResponse] = None

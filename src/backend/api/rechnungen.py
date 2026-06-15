@@ -890,6 +890,8 @@ def markiere_ausgegeben(rechnung_id: int, db: Session = Depends(get_db)):
     if rechnung.ist_entwurf:
         raise HTTPException(status_code=409, detail="Entwürfe werden nicht als ausgegeben markiert.")
     rechnung.ausgegeben = True
+    if not rechnung.ausgegeben_am:
+        rechnung.ausgegeben_am = datetime.now()
     db.commit()
     db.refresh(rechnung)
     return RechnungResponse.from_orm_extended(rechnung)
@@ -1114,6 +1116,7 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         rel_pfad = speichere_original_pdf(APP_DATA_DIR, rechnung.id, pdf_bytes)
         rechnung.original_pdf_pfad = rel_pfad
         rechnung.ausgegeben = True
+        rechnung.ausgegeben_am = datetime.now()
         db.commit()
 
     _dt_datei = getattr(rechnung, "dokument_typ", "Rechnung") or "Rechnung"

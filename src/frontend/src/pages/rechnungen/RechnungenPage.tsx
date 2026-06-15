@@ -1393,6 +1393,14 @@ function RechnungDetail({
                   ? <LieferscheinStatusBadge r={rechnung} />
                   : <StatusBadge status={rechnung.zahlungsstatus as 'offen' | 'teilweise' | 'bezahlt' | 'uneinbringlich'} />}
           </div>
+          {rechnung.ausgegeben_am && !rechnung.ist_entwurf && (
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Original versandt</span>
+              <span className="text-xs text-blue-700 dark:text-blue-300">
+                {new Date(rechnung.ausgegeben_am).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          )}
           {rechnung.typ === 'ausgang' && rechnung.kunde_zugferd_aktiv && !rechnung.ist_entwurf && (
             <div className="flex justify-between">
               <span className="text-slate-500 dark:text-slate-400">E-Rechnung</span>

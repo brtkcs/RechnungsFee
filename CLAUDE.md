@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 83` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 84` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -185,6 +185,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 81 | unternehmen.einleitungstext TEXT + rechnungen.einleitungstext TEXT – Freitext vor Positionstabelle im PDF; global oder pro Rechnung; Markdown **fett** *kursiv* |
 | 82 | GWG-Kontonummern korrigiert: SKR03 4855→0480, SKR04 6845→0670 (DATEV Kontenrahmen, Issue #165) |
 | 83 | rechnungen.original_pdf_pfad VARCHAR(500) – gespeichertes Original-PDF; Kopien laden das Original + KOPIE-Wasserzeichen |
+| 84 | rechnungen.ausgegeben_am DATETIME – Zeitstempel erstes Drucken/Mailen; im Detail-Panel als „Original versandt" sichtbar |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

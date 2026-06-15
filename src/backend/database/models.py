@@ -541,6 +541,7 @@ class Rechnung(Base):
     storniert: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     storno_grund: Mapped[str | None] = mapped_column(String(500))
     ausgegeben: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ausgegeben_am: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     original_pdf_pfad: Mapped[str | None] = mapped_column(String(500))
     # Gutschrift / Lieferschein
     dokument_typ: Mapped[str] = mapped_column(String(20), default="Rechnung", nullable=False, server_default="Rechnung")

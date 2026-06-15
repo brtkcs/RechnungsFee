@@ -998,6 +998,7 @@ export type Rechnung = {
   skonto_tage: number | null
   ist_entwurf: boolean
   ausgegeben: boolean
+  ausgegeben_am: string | null
   immutable: boolean
   storniert: boolean
   storno_grund: string | null

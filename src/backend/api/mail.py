@@ -4,6 +4,7 @@ Mail-Versand via SMTP – Rechnungen, Angebote, Proforma, Aufträge.
 import ssl
 import smtplib
 import logging
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
@@ -116,6 +117,7 @@ def _pdf_bytes_fuer(rechnung_id: int, db: Session) -> tuple[bytes, str]:
         rel_pfad = speichere_original_pdf(APP_DATA_DIR, r.id, pdf_bytes)
         r.original_pdf_pfad = rel_pfad
         r.ausgegeben = True
+        r.ausgegeben_am = datetime.now()
         db.commit()
 
     nr = (r.rechnungsnummer or str(r.id)).replace("/", "-").replace(" ", "_")

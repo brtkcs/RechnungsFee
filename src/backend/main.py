@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev
 
-SCHEMA_VERSION = 83
+SCHEMA_VERSION = 84
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1913,6 +1913,14 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 83"))
             conn.commit()
             print("[Migration] Schema auf Version 83 (rechnungen.original_pdf_pfad für Original-PDF-Archivierung)")
+
+        if version < 84:
+            cols_re = {c[1] for c in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "ausgegeben_am" not in cols_re:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN ausgegeben_am DATETIME"))
+            conn.execute(text("PRAGMA user_version = 84"))
+            conn.commit()
+            print("[Migration] Schema auf Version 84 (rechnungen.ausgegeben_am – Zeitstempel erstes Drucken/Mailen)")
 
 
 def _migrate_kategorien() -> None:
