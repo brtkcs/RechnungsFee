@@ -104,6 +104,7 @@ class RechnungCreate(BaseModel):
     partner_freitext: Optional[str] = None
     kategorie_id: Optional[int] = None
     notizen: Optional[str] = None
+    einleitungstext: Optional[str] = None
     externe_belegnr: Optional[str] = None
     ist_entwurf: bool = True
     rabatt_prozent: Decimal = Decimal("0")
@@ -219,6 +220,7 @@ class RechnungResponse(BaseModel):
     zahlungsstatus: str
     zahlungsdatum: Optional[date]
     notizen: Optional[str]
+    einleitungstext: Optional[str] = None
     externe_belegnr: Optional[str]
     leistung_von: Optional[date]
     leistung_bis: Optional[date]

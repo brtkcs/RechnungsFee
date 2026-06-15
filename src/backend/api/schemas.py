@@ -51,6 +51,7 @@ class UnternehmenBase(BaseModel):
     kammer_mitgliedschaft: Optional[str] = None
     zahlungshinweis_aktiv: bool = True
     pdf_vorlage: int = 0
+    einleitungstext: Optional[str] = None
     logo_pfad: Optional[str] = None
     mail_betreff_vorlage: Optional[str] = None
     mail_text_vorlage: Optional[str] = None

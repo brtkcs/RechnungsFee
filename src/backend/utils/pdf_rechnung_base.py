@@ -442,8 +442,17 @@ class RechnungPDFBase(FPDF):
             self.cell(0, 5, "– Kopie –", new_x="LMARGIN", new_y="NEXT")
 
     def _render_nach_titel(self):
-        """Hook zwischen Titel und Positionen. Standard: ln(4)."""
-        self.ln(4)
+        """Hook zwischen Titel und Positionen: Einleitungstext, dann Abstand."""
+        text = (getattr(self._r, "einleitungstext", None) or
+                self._unt.get("einleitungstext") or "").strip()
+        if text:
+            self.set_font("DejaVu", "", 9)
+            self.set_text_color(*TEXT_DUNKEL)
+            self.set_x(L_MARGIN)
+            self.multi_cell(NUTZ_W, 5, text)
+            self.ln(2)
+        else:
+            self.ln(4)
 
     def _render_positionen(self):
         """Positionstabelle. Muss self._sum_x, self._sum_lbl_w, self._sum_val_w setzen."""

@@ -213,6 +213,7 @@ export type Unternehmen = {
   datev_konto_bank?: string | null
   datev_konto_karte?: string | null
   datev_konto_paypal?: string | null
+  einleitungstext?: string | null
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -1046,6 +1047,7 @@ export type Rechnung = {
   erstellt_am: string
   aktualisiert_am: string
   rabatt_prozent: string
+  einleitungstext: string | null
 }
 
 export type RechnungCreate = {
@@ -1060,6 +1062,7 @@ export type RechnungCreate = {
   partner_freitext?: string
   kategorie_id?: number
   notizen?: string
+  einleitungstext?: string | null
   externe_belegnr?: string
   ist_entwurf?: boolean
   skonto_prozent?: number | null

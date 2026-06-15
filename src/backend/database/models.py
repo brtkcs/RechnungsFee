@@ -93,6 +93,7 @@ class Unternehmen(Base):
     # Rechnungs-PDF-Einstellungen
     zahlungshinweis_aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     pdf_vorlage: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    einleitungstext: Mapped[str | None] = mapped_column(Text)
     # Logo & Mail-Vorlagen
     logo_pfad: Mapped[str | None] = mapped_column(String(500))
     mail_betreff_vorlage: Mapped[str | None] = mapped_column(String(500))
@@ -527,6 +528,8 @@ class Rechnung(Base):
     externe_belegnr: Mapped[str | None] = mapped_column(String(100))  # Lieferanten-Rechnungsnr. (nur Eingang)
     leistung_von: Mapped[date | None] = mapped_column(Date)
     leistung_bis: Mapped[date | None] = mapped_column(Date)
+    # Einleitungstext (überschreibt globalen Text aus unternehmen.einleitungstext)
+    einleitungstext: Mapped[str | None] = mapped_column(Text)
     # Rabatt
     rabatt_prozent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"), nullable=False, server_default="0")
     # Skonto

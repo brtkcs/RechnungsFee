@@ -48,16 +48,24 @@ class RechnungPDFVorlage1(RechnungPDFBase):
         vorname_kunde = getattr(partner_obj, "vorname", None) or ""
         anrede = f"Hallo {vorname_kunde}," if vorname_kunde else "Hallo,"
 
+        einleitungstext = (getattr(r, "einleitungstext", None) or
+                           self._unt.get("einleitungstext") or "").strip()
+
         self.ln(5)
         self.set_font("DejaVu", "", 9.5)
         self.set_text_color(*TEXT_DUNKEL)
         self.cell(0, 6, anrede, new_x="LMARGIN", new_y="NEXT")
         self.ln(1)
         self.set_font("DejaVu", "", 9)
-        self.set_text_color(*TEXT_GRAU)
-        self.cell(0, 5.5,
-                  "Vielen Dank für Dein Vertrauen. Wir stellen hiermit folgende Leistungen in Rechnung:",
-                  new_x="LMARGIN", new_y="NEXT")
+        if einleitungstext:
+            self.set_text_color(*TEXT_DUNKEL)
+            self.set_x(L_MARGIN)
+            self.multi_cell(NUTZ_W, 5, einleitungstext)
+        else:
+            self.set_text_color(*TEXT_GRAU)
+            self.cell(0, 5.5,
+                      "Vielen Dank für Dein Vertrauen. Wir stellen hiermit folgende Leistungen in Rechnung:",
+                      new_x="LMARGIN", new_y="NEXT")
         self.ln(4)
 
     # -------------------------------------------------------------------------

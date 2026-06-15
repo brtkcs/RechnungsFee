@@ -680,6 +680,22 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
               </p>
             </div>
           </label>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block">
+              Einleitungstext auf Rechnungen
+            </label>
+            <textarea
+              value={form.einleitungstext ?? ''}
+              onChange={ev => set('einleitungstext', ev.target.value || null)}
+              rows={4}
+              placeholder="Dieser Text erscheint auf allen Rechnungen vor der Positionstabelle. Er kann pro Rechnung individuell überschrieben werden."
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 resize-y"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Leer lassen wenn kein Standardtext gewünscht. Pro Rechnung überschreibbar.
+            </p>
+          </div>
         </div>
 
         <hr className="border-slate-100 dark:border-slate-700" />

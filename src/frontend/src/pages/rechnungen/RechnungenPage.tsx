@@ -1600,6 +1600,13 @@ function RechnungDetail({
           </div>
         )}
 
+        {rechnung.einleitungstext && (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Einleitungstext</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-2 whitespace-pre-wrap">{rechnung.einleitungstext}</p>
+          </div>
+        )}
+
         {rechnung.notizen && (
           <div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notizen</p>
@@ -2042,6 +2049,7 @@ function RechnungForm({
   const [showNeuKunde, setShowNeuKunde] = useState(false)
   const [showNeuArtikel, setShowNeuArtikel] = useState(false)
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
+  const [einleitungstext, setEinleitungstext] = useState(initial?.einleitungstext ?? '')
   const [externeBelegnr, setExterneBelegnr] = useState(pf?.externe_belegnr ?? initial?.externe_belegnr ?? '')
   const [positionen, setPositionen] = useState<Positionszeile[]>(() => {
     if (prefillFromAnalyse?.positionen?.length) {
@@ -2333,6 +2341,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
       partner_freitext: partnerFreitext || undefined,
       kategorie_id: kategorieId ? parseInt(kategorieId) : undefined,
       notizen: notizen || undefined,
+      einleitungstext: einleitungstext || undefined,
       externe_belegnr: typ === 'eingang' ? (externeBelegnr || undefined) : undefined,
       ist_entwurf: istEntwurf,
       skonto_prozent: dokumentTyp === 'Lieferschein' ? undefined : (skontoProzent ? parseFloat(skontoProzent) : undefined),
@@ -3011,6 +3020,19 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
             })
           }}
         />
+      )}
+
+      {typ === 'ausgang' && dokumentTyp !== 'Lieferschein' && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Einleitungstext</label>
+          <textarea
+            value={einleitungstext}
+            onChange={(e) => setEinleitungstext(e.target.value)}
+            rows={3}
+            className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
+            placeholder="Erscheint vor der Positionstabelle. Leer = globaler Standard aus Einstellungen."
+          />
+        </div>
       )}
 
       <div>

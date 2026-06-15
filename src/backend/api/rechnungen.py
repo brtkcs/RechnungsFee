@@ -635,6 +635,7 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
         partner_freitext=data.partner_freitext,
         kategorie_id=data.kategorie_id,
         notizen=data.notizen,
+        einleitungstext=data.einleitungstext,
         externe_belegnr=data.externe_belegnr,
         ist_entwurf=data.ist_entwurf,
         skonto_prozent=None if data.dokument_typ == "Proforma" else data.skonto_prozent,
@@ -934,6 +935,7 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
             "unterschrift_bild":          unternehmen.unterschrift_bild or "",
             "unterschrift_auf_rechnung":  unternehmen.unterschrift_auf_rechnung or False,
             "qr_zahlung_aktiv":           unternehmen.qr_zahlung_aktiv or False,
+            "einleitungstext":            unternehmen.einleitungstext or "",
         }
 
     # Gutschrift: Originalrechnungsnummer am Objekt hinterlegen (für PDF-Titel)
@@ -1169,6 +1171,7 @@ def rechnung_als_zugferd(rechnung_id: int, db: Session = Depends(get_db)):
         "unterschrift_bild":       unternehmen.unterschrift_bild or "",
         "unterschrift_auf_rechnung": unternehmen.unterschrift_auf_rechnung or False,
         "qr_zahlung_aktiv":        unternehmen.qr_zahlung_aktiv or False,
+        "einleitungstext":         unternehmen.einleitungstext or "",
     }
 
     try:
