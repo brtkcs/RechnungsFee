@@ -449,7 +449,7 @@ class RechnungPDFBase(FPDF):
             self.set_font("DejaVu", "", 9)
             self.set_text_color(*TEXT_DUNKEL)
             self.set_x(L_MARGIN)
-            self.multi_cell(NUTZ_W, 5, text)
+            self.multi_cell(NUTZ_W, 5, text, markdown=True)
             self.ln(2)
         else:
             self.ln(4)

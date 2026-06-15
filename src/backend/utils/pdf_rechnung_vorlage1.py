@@ -60,7 +60,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
         if einleitungstext:
             self.set_text_color(*TEXT_DUNKEL)
             self.set_x(L_MARGIN)
-            self.multi_cell(NUTZ_W, 5, einleitungstext)
+            self.multi_cell(NUTZ_W, 5, einleitungstext, markdown=True)
         else:
             self.set_text_color(*TEXT_GRAU)
             self.cell(0, 5.5,
