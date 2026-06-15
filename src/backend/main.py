@@ -1907,9 +1907,9 @@ def _run_migrations() -> None:
             print("[Migration] Schema auf Version 82 (GWG-Konten korrigiert: SKR03 0480, SKR04 0670)")
 
         if version < 83:
-            conn.execute(text("""
-                ALTER TABLE rechnungen ADD COLUMN original_pdf_pfad VARCHAR(500)
-            """))
+            cols_re = {c[1] for c in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "original_pdf_pfad" not in cols_re:
+                conn.execute(text("ALTER TABLE rechnungen ADD COLUMN original_pdf_pfad VARCHAR(500)"))
             conn.execute(text("PRAGMA user_version = 83"))
             conn.commit()
             print("[Migration] Schema auf Version 83 (rechnungen.original_pdf_pfad für Original-PDF-Archivierung)")
