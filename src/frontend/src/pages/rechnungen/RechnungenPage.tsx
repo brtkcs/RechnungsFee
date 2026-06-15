@@ -1097,7 +1097,7 @@ function RechnungDetail({
                   disabled={pdfLaeuft}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50"
                 >
-                  {pdfLaeuft ? '⏳ PDF…' : `✉️ Mail senden${!partnerEmail ? ' …' : ''}`}
+                  {pdfLaeuft ? '⏳ PDF…' : rechnung.ausgegeben ? `✉️ Kopie senden${!partnerEmail ? ' …' : ''}` : `✉️ Mail senden${!partnerEmail ? ' …' : ''}`}
                 </button>
               )}
             </>
