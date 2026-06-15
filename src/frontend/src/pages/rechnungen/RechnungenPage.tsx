@@ -1444,25 +1444,25 @@ function RechnungDetail({
                       <th className="px-3 py-2 text-left text-slate-500 dark:text-slate-400 font-medium">Einheit</th>
                     </> : <>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Menge</th>
-                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Netto</th>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Stückpreis</th>
                       <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">USt</th>
-                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Brutto</th>
+                      <th className="px-3 py-2 text-right text-slate-500 dark:text-slate-400 font-medium">Gesamt</th>
                     </>}
                   </tr>
                 </thead>
                 <tbody>
                   {rechnung.positionen.map((pos) => {
                     const posRabatt = parseFloat(pos.rabatt_prozent ?? '0') || 0
-                    const effNetto = (parseFloat(pos.brutto) - parseFloat(pos.ust_betrag)) * parseFloat(pos.menge)
-                    const effBrutto = parseFloat(pos.brutto) * parseFloat(pos.menge)
+                    const menge = parseFloat(pos.menge)
+                    const nettoEP = parseFloat(pos.netto)           // Stückpreis original (netto)
+                    const effBrutto = parseFloat(pos.brutto) * menge // Gesamt nach Rabatt
+                    const rabattAbsNetto = posRabatt > 0
+                      ? (nettoEP - (parseFloat(pos.brutto) - parseFloat(pos.ust_betrag))) * menge
+                      : 0
                     return (
+                    <>
                     <tr key={pos.id} className="border-t border-slate-100 dark:border-slate-700">
-                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
-                        {pos.beschreibung}
-                        {posRabatt > 0 && (
-                          <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">(−{posRabatt} %)</span>
-                        )}
-                      </td>
+                      <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{pos.beschreibung}</td>
                       {rechnung.dokument_typ === 'Lieferschein' ? <>
                         <td className="px-3 py-2 text-right dark:text-slate-200">{formatMenge(pos.menge)}</td>
                         <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{pos.einheit}</td>
@@ -1471,7 +1471,7 @@ function RechnungDetail({
                           {formatMenge(pos.menge)}{pos.einheit ? ` ${pos.einheit}` : ''}
                         </td>
                         <td className="px-3 py-2 text-right dark:text-slate-200">
-                          {formatEuro(effNetto.toFixed(2))}
+                          {formatEuro(nettoEP.toFixed(2))}
                         </td>
                         <td className="px-3 py-2 text-right text-slate-400 dark:text-slate-500">
                           {pos.differenzbesteuerung
@@ -1484,6 +1484,18 @@ function RechnungDetail({
                         </td>
                       </>}
                     </tr>
+                    {posRabatt > 0 && rechnung.dokument_typ !== 'Lieferschein' && (
+                      <tr key={`${pos.id}-rabatt`} className="bg-slate-50 dark:bg-slate-900/50">
+                        <td colSpan={2} className="px-3 pb-1.5 pt-0 text-xs text-slate-400 dark:text-slate-500 italic pl-5">
+                          {posRabatt} % Rabatt
+                        </td>
+                        <td className="px-3 pb-1.5 pt-0 text-right text-xs text-slate-400 dark:text-slate-500 italic" colSpan={2}></td>
+                        <td className="px-3 pb-1.5 pt-0 text-right text-xs text-slate-400 dark:text-slate-500 italic">
+                          − {formatEuro(rabattAbsNetto.toFixed(2))}
+                        </td>
+                      </tr>
+                    )}
+                    </>
                     )
                   })}
                 </tbody>
