@@ -68,17 +68,19 @@ class RechnungPDF(RechnungPDFBase):
                                 new_x="LMARGIN", new_y="NEXT")
                 continue
             if self._ist_netto:
-                netto_ges = (float(str(pos.brutto)) - float(str(pos.ust_betrag))) * menge
+                netto_ges_vor = float(str(pos.netto)) * menge          # vor Rabatt
+                netto_ges_eff = (float(str(pos.brutto)) - float(str(pos.ust_betrag))) * menge
                 self.cell(col_w[3], 6, _fmt_euro(pos.netto), align="R")
                 self.cell(col_w[4], 6, ust_label, align="R")
-                self.cell(col_w[5], 6, _fmt_euro(netto_ges), align="R")
+                self.cell(col_w[5], 6, _fmt_euro(netto_ges_vor), align="R")
             else:
                 ust_satz = float(str(pos.ust_satz))
                 ep_brutto = float(str(pos.netto)) * (1 + ust_satz / 100)
-                brutto_ges = float(str(pos.brutto)) * menge
+                brutto_ges_vor = ep_brutto * menge                      # vor Rabatt
+                brutto_ges_eff = float(str(pos.brutto)) * menge
                 self.cell(col_w[3], 6, _fmt_euro(ep_brutto), align="R")
                 self.cell(col_w[4], 6, ust_label,            align="R")
-                self.cell(col_w[5], 6, _fmt_euro(brutto_ges), align="R")
+                self.cell(col_w[5], 6, _fmt_euro(brutto_ges_vor), align="R")
             self.set_xy(L_MARGIN, row_y)
             self.multi_cell(col_w[0], 6, pos.beschreibung or "",
                             new_x="LMARGIN", new_y="NEXT")
@@ -88,11 +90,9 @@ class RechnungPDF(RechnungPDFBase):
                 self.set_text_color(*TEXT_GRAU)
                 pre_total_w = col_w[0] + col_w[1] + col_w[2] + col_w[3] + col_w[4]
                 if self._ist_netto:
-                    rabatt_abs = (float(str(pos.netto)) - (float(str(pos.brutto)) - float(str(pos.ust_betrag)))) * menge
+                    rabatt_abs = netto_ges_vor - netto_ges_eff
                 else:
-                    ust_satz = float(str(pos.ust_satz))
-                    ep_brutto = float(str(pos.netto)) * (1 + ust_satz / 100)
-                    rabatt_abs = (ep_brutto - float(str(pos.brutto))) * menge
+                    rabatt_abs = brutto_ges_vor - brutto_ges_eff
                 self.set_x(L_MARGIN)
                 self.cell(pre_total_w, 5, f"  {pos_rabatt:.4g} % Rabatt", align="L")
                 self.cell(col_w[-1], 5, f"− {_fmt_euro(rabatt_abs)}", align="R",

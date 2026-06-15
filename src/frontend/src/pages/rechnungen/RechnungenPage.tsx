@@ -1454,8 +1454,8 @@ function RechnungDetail({
                   {rechnung.positionen.map((pos) => {
                     const posRabatt = parseFloat(pos.rabatt_prozent ?? '0') || 0
                     const menge = parseFloat(pos.menge)
-                    const nettoEP = parseFloat(pos.netto)           // Stückpreis original (netto)
-                    const effBrutto = parseFloat(pos.brutto) * menge // Gesamt nach Rabatt
+                    const nettoEP = parseFloat(pos.netto)            // Stückpreis original (netto)
+                    const gesamtVorRabatt = nettoEP * menge           // Gesamtpreis vor Rabatt
                     const rabattAbsNetto = posRabatt > 0
                       ? (nettoEP - (parseFloat(pos.brutto) - parseFloat(pos.ust_betrag))) * menge
                       : 0
@@ -1480,7 +1480,7 @@ function RechnungDetail({
                           }
                         </td>
                         <td className="px-3 py-2 text-right font-medium dark:text-slate-200">
-                          {formatEuro(effBrutto.toFixed(2))}
+                          {formatEuro(gesamtVorRabatt.toFixed(2))}
                         </td>
                       </>}
                     </tr>
