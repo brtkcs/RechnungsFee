@@ -309,8 +309,18 @@ class RechnungResponse(BaseModel):
         ]
         if obj.beleg_id and hasattr(obj, "beleg") and obj.beleg:
             data.beleg = BelegResponse.from_beleg(obj.beleg)
-        if obj.gutschrift_zu_rechnung_id and hasattr(obj, "_gutschrift_original_nr"):
-            data.gutschrift_zu_rechnung_nr = obj._gutschrift_original_nr
+        if obj.gutschrift_zu_rechnung_id:
+            if hasattr(obj, "_gutschrift_original_nr"):
+                data.gutschrift_zu_rechnung_nr = obj._gutschrift_original_nr
+            else:
+                try:
+                    from sqlalchemy import inspect as _sa_inspect
+                    session = _sa_inspect(obj).session
+                    if session:
+                        original = session.get(obj.__class__, obj.gutschrift_zu_rechnung_id)
+                        data.gutschrift_zu_rechnung_nr = original.rechnungsnummer if original else None
+                except Exception:
+                    pass
         if obj.lieferadresse_id and hasattr(obj, "_lieferadresse"):
             la = obj._lieferadresse
             if la:
