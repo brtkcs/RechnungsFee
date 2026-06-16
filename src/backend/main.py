@@ -42,6 +42,14 @@ app.add_middleware(
     allow_origins=["http://localhost:5173", "tauri://localhost", "http://tauri.localhost"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "Content-Disposition",
+        "X-Datev-Eintraege",
+        "X-Datev-Uebersprungen",
+        "X-Buchhalter-Eintraege",
+        "X-GoBD-Buchungen",
+        "X-GoBD-Belege",
+    ],
 )
 
 app.include_router(setup.router)

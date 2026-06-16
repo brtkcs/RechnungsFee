@@ -323,6 +323,7 @@ export function ExportPage() {
                     </span>
                   )}
                 </p>
+                <p className="mt-0.5 text-xs opacity-70">Datei gespeichert im Downloads-Ordner</p>
               </Erfolg>
             )}
             {datevFehler && <Fehler text={datevFehler} />}
@@ -412,6 +413,7 @@ export function ExportPage() {
                 <p className="font-medium">CSV exportiert</p>
                 <p className="mt-0.5 font-mono text-xs">{csvErgebnis.filename}</p>
                 <p className="mt-1 text-xs">{csvErgebnis.eintraege} Buchung{csvErgebnis.eintraege !== 1 ? 'en' : ''}</p>
+                <p className="mt-0.5 text-xs opacity-70">Datei gespeichert im Downloads-Ordner</p>
               </Erfolg>
             )}
             {csvFehler && <Fehler text={csvFehler} />}
