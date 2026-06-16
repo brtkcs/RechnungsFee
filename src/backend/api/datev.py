@@ -99,12 +99,12 @@ def _bu(j: Journaleintrag) -> str:
         return "57"
     satz = int(j.ust_satz or 0)
     if j.art == "Einnahme":
-        if satz == 19:
-            return "9"
-        if satz == 7:
-            return "2"
+        # Erlöskonten (SKR03/04 Klasse 8) sind DATEV-Automatikkonten – kennen ihren
+        # Steuersatz eingebaut. BU-Schlüssel wäre doppelt und wird mit REW00305/REW00306
+        # abgelehnt (Zusatzfunktionen-Konflikt).
+        return ""
     else:
-        # Vorsteuer-BU: 9=19% VSt, 8=7% VSt (BU=2 gilt nur für Ausgangsrechnungen!)
+        # Aufwandskonten sind keine Automatikkonten → BU-Schlüssel nötig
         if j.vorsteuerabzug and satz == 19:
             return "9"
         if j.vorsteuerabzug and satz == 7:
