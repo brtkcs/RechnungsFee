@@ -83,13 +83,20 @@ _DEFAULTS: dict[str, dict[str, str]] = {
     "SKR49": {"Bar": "1000", "Bank": "1800", "Karte": "1800", "PayPal": "1460"},
 }
 
+# DATEV-Automatikkonten (Zusatzfunktion AM): kennen ihren Steuersatz eingebaut.
+# BU-Schlüssel wäre doppelt → REW00306. Alle anderen Erlöskonten brauchen BU 3/2.
+_AM_KONTEN: dict[str, set[str]] = {
+    "SKR03": {"8100", "8300", "8301", "8400", "8401", "8850", "8851", "8852"},
+    "SKR04": {"4100", "4300", "4301", "4400", "4401"},
+}
+
 
 def _fmt(betrag: Decimal) -> str:
     """Betrag im deutschen Format: '1234,56' (Komma, kein Tausender)."""
     return str(abs(betrag).quantize(Decimal("0.01"))).replace(".", ",")
 
 
-def _bu(j: Journaleintrag) -> str:
+def _bu(j: Journaleintrag, skr: str, konto: Optional[str]) -> str:
     sf = j.ust_sonderfall
     if sf == "ig_erwerb":
         return "89" if int(j.ust_satz or 0) >= 19 else "93"
@@ -99,12 +106,17 @@ def _bu(j: Journaleintrag) -> str:
         return "57"
     satz = int(j.ust_satz or 0)
     if j.art == "Einnahme":
-        # Erlöskonten (SKR03/04 Klasse 8) sind DATEV-Automatikkonten – kennen ihren
-        # Steuersatz eingebaut. BU-Schlüssel wäre doppelt und wird mit REW00305/REW00306
-        # abgelehnt (Zusatzfunktionen-Konflikt).
-        return ""
+        if konto in _AM_KONTEN.get(skr, set()):
+            # Automatikkonto (AM): Steuersatz eingebaut – BU wäre REW00306
+            return ""
+        # Kein AM-Konto (z. B. 8910 Eigenverbrauch, 8736 Skonti, 8900 Wertabgaben):
+        # USt muss explizit per BU-Schlüssel gesetzt werden (BU 3 = 19 %, BU 2 = 7 %).
+        if satz == 19:
+            return "3"
+        if satz == 7:
+            return "2"
     else:
-        # Aufwandskonten sind keine Automatikkonten → BU-Schlüssel nötig
+        # Aufwandskonten: Vorsteuer-Schlüssel (BU 9 = 19 %, BU 8 = 7 %)
         if j.vorsteuerabzug and satz == 19:
             return "9"
         if j.vorsteuerabzug and satz == 7:
@@ -220,7 +232,7 @@ def datev_buchungsstapel(
             "", "", "",          # 4-6: leer
             konto,               # 7: Konto
             gegenkonto,          # 8: Gegenkonto
-            _bu(j),              # 9: BU-Schlüssel
+            _bu(j, skr, konto),  # 9: BU-Schlüssel
             j.datum.strftime("%d%m"),  # 10: Belegdatum DDMM
             belegfeld1,          # 11: Belegfeld 1
             "",                  # 12: Belegfeld 2
