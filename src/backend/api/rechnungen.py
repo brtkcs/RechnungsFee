@@ -702,12 +702,19 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
 
     Q = Decimal("0.01")
     rechnung.rabatt_prozent = getattr(data, "rabatt_prozent", Decimal("0")) or Decimal("0")
+    rechnung.rabatt_betrag  = getattr(data, "rabatt_betrag", None) or None
     if data.netto_gesamt_override is not None:
         rechnung.netto_gesamt  = data.netto_gesamt_override.quantize(Q, ROUND_HALF_UP)
         rechnung.ust_gesamt    = (data.ust_gesamt_override or Decimal("0")).quantize(Q, ROUND_HALF_UP)
         rechnung.brutto_gesamt = (data.brutto_gesamt_override or rechnung.netto_gesamt + rechnung.ust_gesamt).quantize(Q, ROUND_HALF_UP)
     else:
-        if rechnung.rabatt_prozent:
+        if rechnung.rabatt_betrag:
+            # Festbetrag-Rabatt: proportional auf netto + ust verteilen
+            brutto_sum = netto_sum + ust_sum
+            faktor = (1 - rechnung.rabatt_betrag / brutto_sum) if brutto_sum else Decimal("1")
+            rechnung.netto_gesamt = (netto_sum * faktor).quantize(Q, ROUND_HALF_UP)
+            rechnung.ust_gesamt   = (ust_sum * faktor).quantize(Q, ROUND_HALF_UP)
+        elif rechnung.rabatt_prozent:
             faktor = 1 - rechnung.rabatt_prozent / 100
             rechnung.netto_gesamt = (netto_sum * faktor).quantize(Q, ROUND_HALF_UP)
             rechnung.ust_gesamt   = (ust_sum * faktor).quantize(Q, ROUND_HALF_UP)
@@ -777,7 +784,13 @@ def update_rechnung(rechnung_id: int, data: RechnungUpdate, db: Session = Depend
 
         Q2 = Decimal("0.01")
         rechnung.rabatt_prozent = getattr(data, "rabatt_prozent", Decimal("0")) or Decimal("0")
-        if rechnung.rabatt_prozent:
+        rechnung.rabatt_betrag  = getattr(data, "rabatt_betrag", None) or None
+        if rechnung.rabatt_betrag:
+            brutto_sum = netto_sum + ust_sum
+            faktor = (1 - rechnung.rabatt_betrag / brutto_sum) if brutto_sum else Decimal("1")
+            rechnung.netto_gesamt = (netto_sum * faktor).quantize(Q2, ROUND_HALF_UP)
+            rechnung.ust_gesamt   = (ust_sum * faktor).quantize(Q2, ROUND_HALF_UP)
+        elif rechnung.rabatt_prozent:
             faktor = 1 - rechnung.rabatt_prozent / 100
             rechnung.netto_gesamt = (netto_sum * faktor).quantize(Q2, ROUND_HALF_UP)
             rechnung.ust_gesamt   = (ust_sum * faktor).quantize(Q2, ROUND_HALF_UP)

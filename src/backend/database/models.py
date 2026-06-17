@@ -532,6 +532,7 @@ class Rechnung(Base):
     einleitungstext: Mapped[str | None] = mapped_column(Text)
     # Rabatt
     rabatt_prozent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"), nullable=False, server_default="0")
+    rabatt_betrag: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     # Skonto
     skonto_prozent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     skonto_tage: Mapped[int | None] = mapped_column(Integer)

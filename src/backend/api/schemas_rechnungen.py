@@ -108,6 +108,7 @@ class RechnungCreate(BaseModel):
     externe_belegnr: Optional[str] = None
     ist_entwurf: bool = True
     rabatt_prozent: Decimal = Decimal("0")
+    rabatt_betrag: Optional[Decimal] = None
     skonto_prozent: Optional[Decimal] = None
     skonto_tage: Optional[int] = None
     dokument_typ: str = "Rechnung"
@@ -225,6 +226,7 @@ class RechnungResponse(BaseModel):
     leistung_von: Optional[date]
     leistung_bis: Optional[date]
     rabatt_prozent: Decimal = Decimal("0")
+    rabatt_betrag: Optional[Decimal] = None
     skonto_prozent: Optional[Decimal] = None
     skonto_tage: Optional[int] = None
     ist_entwurf: bool

@@ -1048,6 +1048,7 @@ export type Rechnung = {
   erstellt_am: string
   aktualisiert_am: string
   rabatt_prozent: string
+  rabatt_betrag: string | null
   einleitungstext: string | null
 }
 
@@ -1074,6 +1075,7 @@ export type RechnungCreate = {
   lieferadresse_id?: number | null
   positionen: RechnungspositionCreate[]
   rabatt_prozent?: number
+  rabatt_betrag?: number
   netto_gesamt_override?: string
   ust_gesamt_override?: string
   brutto_gesamt_override?: string
