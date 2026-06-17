@@ -114,6 +114,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
 
         # desc_col: Index der Beschreibungs-Spalte (nach Pos., Datum, ggf. Art.-Nr.)
         desc_col = 3 if hat_artikelcode else 2
+        other_x  = L_MARGIN + sum(col_w[:desc_col + 1])  # X-Start der Spalten nach der Beschreibung
 
         tbl_x   = L_MARGIN
         tbl_top = self.get_y()
@@ -133,34 +134,39 @@ class RechnungPDFVorlage1(RechnungPDFBase):
             ist_diff = getattr(pos, "differenzbesteuerung", False)
             ust_label = "§25a" if ist_diff else f"{int(pos.ust_satz)} %"
             pos_rabatt = getattr(pos, "rabatt_prozent", Decimal("0")) or Decimal("0")
-            self.cell(col_w[0], 6.5, str(pos.position_nr), align="R")
-            self.cell(col_w[1], 6.5, pos_datum_str, align="L")
-            if hat_artikelcode:
-                ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
-                self.cell(col_w[2], 6.5, ac or "", align="L")
+            row_y = self.get_y()
+
+            # Spalten rechts der Beschreibung zuerst rendern (kein Y-Vorschub)
+            self.set_x(other_x)
             if ist_lieferschein:
                 einheit = (pos.einheit or "").strip()
-                self.cell(col_w[desc_col], 6.5, pos.beschreibung[:80])
                 self.cell(col_w[desc_col + 1], 6.5, f"{menge:g}", align="R")
-                self.cell(col_w[desc_col + 2], 6.5, einheit, new_x="LMARGIN", new_y="NEXT")
+                self.cell(col_w[desc_col + 2], 6.5, einheit)
             elif self._ist_netto:
                 netto_ges_vor = float(str(pos.netto)) * menge
                 netto_ges_eff = (float(str(pos.brutto)) - float(str(pos.ust_betrag))) * menge
-                self.cell(col_w[desc_col], 6.5, pos.beschreibung[:60])
                 self.cell(col_w[desc_col + 1], 6.5, _fmt_euro(pos.netto), align="R")
                 self.cell(col_w[desc_col + 2], 6.5, ust_label, align="R")
-                self.cell(col_w[desc_col + 3], 6.5, _fmt_euro(netto_ges_vor), align="R",
-                          new_x="LMARGIN", new_y="NEXT")
+                self.cell(col_w[desc_col + 3], 6.5, _fmt_euro(netto_ges_vor), align="R")
             else:
                 ust_satz = float(str(pos.ust_satz))
                 ep_brutto = float(str(pos.netto)) * (1 + ust_satz / 100)
                 brutto_ges_vor = ep_brutto * menge
                 brutto_ges_eff = float(str(pos.brutto)) * menge
-                self.cell(col_w[desc_col], 6.5, pos.beschreibung[:70])
                 self.cell(col_w[desc_col + 1], 6.5, _fmt_euro(ep_brutto), align="R")
                 self.cell(col_w[desc_col + 2], 6.5, ust_label, align="R")
-                self.cell(col_w[desc_col + 3], 6.5, _fmt_euro(brutto_ges_vor), align="R",
-                          new_x="LMARGIN", new_y="NEXT")
+                self.cell(col_w[desc_col + 3], 6.5, _fmt_euro(brutto_ges_vor), align="R")
+
+            # Zurück zum Zeilenanfang: Pos., Datum, Art.-Nr., dann Beschreibung mit multi_cell
+            self.set_xy(L_MARGIN, row_y)
+            self.cell(col_w[0], 6.5, str(pos.position_nr), align="R")
+            self.cell(col_w[1], 6.5, pos_datum_str, align="L")
+            if hat_artikelcode:
+                ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
+                self.cell(col_w[2], 6.5, ac or "", align="L")
+            self.multi_cell(col_w[desc_col], 3.5, pos.beschreibung or "",
+                            new_x="LMARGIN", new_y="NEXT")
+
             # Rabatt-Unterzeile
             if pos_rabatt > 0 and not ist_lieferschein:
                 self.set_font("DejaVu", "", 7.5)

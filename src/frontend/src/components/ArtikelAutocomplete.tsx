@@ -14,7 +14,7 @@ interface Props {
 
 export function ArtikelAutocomplete({ value, onChange, onArtikelWahl, placeholder = 'Beschreibung', className = '', inputClassName }: Props) {
   const [offen, setOffen] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
 
@@ -49,18 +49,26 @@ export function ArtikelAutocomplete({ value, onChange, onArtikelWahl, placeholde
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Textarea auto-resize
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+
   const zeigeDropdown = offen && !!treffer?.length && dropdownPos !== null
 
   return (
     <div className={`relative ${className}`}>
-      <input
+      <textarea
         ref={inputRef}
-        type="text"
+        rows={1}
         value={value}
         onChange={e => { onChange(e.target.value); setOffen(true) }}
         onFocus={() => value.length >= 2 && setOffen(true)}
         placeholder={placeholder}
-        className={inputClassName ?? "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"}
+        className={`${inputClassName ?? "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"} resize-none overflow-hidden leading-snug`}
       />
       {zeigeDropdown && createPortal(
         <div

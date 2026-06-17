@@ -92,7 +92,7 @@ class RechnungPDF(RechnungPDFBase):
                 if hat_artikelcode:
                     ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
                     self.cell(col_w[0], 6, ac or "")
-                self.multi_cell(col_w[desc_idx], 6, pos.beschreibung or "",
+                self.multi_cell(col_w[desc_idx], 3.5, pos.beschreibung or "",
                                 new_x="LMARGIN", new_y="NEXT")
                 continue
             if self._ist_netto:
@@ -113,7 +113,7 @@ class RechnungPDF(RechnungPDFBase):
             if hat_artikelcode:
                 ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
                 self.cell(col_w[0], 6, ac or "")
-            self.multi_cell(col_w[desc_idx], 6, pos.beschreibung or "",
+            self.multi_cell(col_w[desc_idx], 3.5, pos.beschreibung or "",
                             new_x="LMARGIN", new_y="NEXT")
             # Rabatt-Unterzeile
             if pos_rabatt > 0:

@@ -22,6 +22,7 @@
 - Skonto (Standard, Kunden, Rechnung; Zahlungshinweis + Giro-Code)
 - Rechnungsrabatt als Festbetrag (€): Toggle % / € im Formular, immer Bruttobetrag, PDF zeigt „Abzug"
 - Artikelcode (SKU/EAN) auf Rechnung: optionale „Art.-Nr."-Spalte im PDF wenn Artikel einen Code haben; Detail-Panel zeigt Code unter Positionsbeschreibung
+- Mehrzeilige Positionsbeschreibung: Textarea im Formular wächst automatisch mit; Zeilenumbrüche (Enter) erscheinen im PDF (beide Vorlagen, Lieferschein, Angebot, Auftrag, Proforma)
 - Leistungszeitraum Von–Bis
 - Original-PDF-Archivierung: erstes Drucken/Mailen speichert das Original; alle weiteren Ausgaben sind Kopien mit rotem KOPIE-Wasserzeichen (Entwurf: nur Vorschau)
 - Versand-Zeitstempel (`ausgegeben_am`): Detail-Panel zeigt Datum + Uhrzeit des ersten Versands als Nachweis
@@ -150,6 +151,8 @@
 ---
 
 ## 💡 Ideen (ohne Zeitplan)
+
+- **Artikel-Varianten** – Varianten eines Artikels (z. B. Größe, Farbe) mit eigenem Preis und Bestand; Auswahl direkt in der Rechnungsposition (Issue #171)
 
 - **Rich-Text-Editor für Einleitungstext** – WYSIWYG-Editor (z. B. TipTap oder Quill) statt Markdown-Textarea für den Einleitungstext auf Rechnungen; aktuell: Markdown mit `**fett**`-Unterstützung im PDF
 

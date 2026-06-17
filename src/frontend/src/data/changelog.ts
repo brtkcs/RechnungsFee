@@ -34,6 +34,8 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Artikel-Detailpanel: Lagerinformationen als drei Karten nebeneinander (Bestand / Schwellwert / Minusbestand) – gleiche Optik wie die Preiskarten; Bestand und Schwellwert inline bearbeitbar (✎ direkt in der Karte, keine Seite öffnen nötig)' },
       { typ: 'fix', text: 'Fehlermeldung bei unzureichendem Bestand: Einheit wird jetzt aus dem Artikel ausgelesen (nicht immer „Stück"); Mengenangabe als ganze Zahl (5 statt 5.000) oder mit deutschem Komma als Dezimaltrennzeichen' },
       { typ: 'fix', text: '„Minusbestand erlaubt" ist jetzt standardmäßig deaktiviert (war fälschlicherweise beim Anlegen neuer Artikel aktiviert)' },
+      { typ: 'verbesserung', text: 'Positionsbeschreibung im Rechnungsformular: Textarea wächst automatisch mit – Zeilenumbrüche (Enter) werden im Eingabefeld direkt sichtbar und erscheinen auch im PDF (beide Vorlagen, Lieferschein, Angebot, Auftrag, Proforma)' },
+      { typ: 'verbesserung', text: 'PDF: Zeilenabstand in mehrzeiligen Positionsbeschreibungen deutlich reduziert – kompaktere Darstellung bei mehreren Zeilen pro Position' },
     ],
   },
   {
