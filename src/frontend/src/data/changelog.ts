@@ -23,23 +23,17 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
-    version: 'v0.3.21',
+    version: 'v0.3.20',
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'neu', text: 'Lagerführung-Light (Issue #173): Bestandsführung für Artikel – global aktivierbar (Einstellungen → Unternehmen → Artikel), dann pro Artikel einschalten; Anfangsbestand, Mindestbestand und „Minusbestand erlaubt"-Schalter im Artikelformular' },
       { typ: 'neu', text: 'Automatische Bestandsbuchung: Finalisieren einer Rechnung reduziert den Bestand aller Positionen mit Lager-Artikel; Storno bucht den vollen Bestand zurück; Gutschriften (negative Menge) erhöhen den Bestand automatisch' },
       { typ: 'neu', text: 'Lagerwarnung-Widget auf dem Dashboard: listet alle Artikel bei denen der Bestand den Schwellwert (Mindestbestand) erreicht oder unterschritten hat – mit direktem Link zur Artikelseite' },
       { typ: 'neu', text: 'Bestandswarnung im Rechnungsformular: roter Hinweisbalken wenn die eingetragene Menge den verfügbaren Lagerbestand übersteigt und Minusbestand für den Artikel nicht erlaubt ist' },
+      { typ: 'neu', text: 'Artikelcode (SKU/EAN) auf Rechnungs-PDF: Wenn Artikel einen Artikelcode hinterlegt haben, erscheint auf dem PDF automatisch eine eigene „Art.-Nr."-Spalte ganz links in der Positionstabelle – für beide PDF-Vorlagen und im Lieferschein; im Detail-Panel wird der Code unter der Positionsbeschreibung angezeigt' },
       { typ: 'verbesserung', text: 'Artikel-Detailpanel: Lagerinformationen als drei Karten nebeneinander (Bestand / Schwellwert / Minusbestand) – gleiche Optik wie die Preiskarten; Bestand und Schwellwert inline bearbeitbar (✎ direkt in der Karte, keine Seite öffnen nötig)' },
       { typ: 'fix', text: 'Fehlermeldung bei unzureichendem Bestand: Einheit wird jetzt aus dem Artikel ausgelesen (nicht immer „Stück"); Mengenangabe als ganze Zahl (5 statt 5.000) oder mit deutschem Komma als Dezimaltrennzeichen' },
       { typ: 'fix', text: '„Minusbestand erlaubt" ist jetzt standardmäßig deaktiviert (war fälschlicherweise beim Anlegen neuer Artikel aktiviert)' },
-    ],
-  },
-  {
-    version: 'v0.3.20',
-    datum: 'Juni 2026',
-    eintraege: [
-      { typ: 'neu', text: 'Artikelcode (SKU/EAN) auf Rechnungs-PDF: Wenn Artikel einen Artikelcode hinterlegt haben, erscheint auf dem PDF automatisch eine eigene „Art.-Nr."-Spalte ganz links in der Positionstabelle – für beide PDF-Vorlagen und im Lieferschein; im Detail-Panel wird der Code unter der Positionsbeschreibung angezeigt' },
     ],
   },
   {
