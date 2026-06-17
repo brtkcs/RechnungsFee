@@ -86,8 +86,8 @@ _DEFAULTS: dict[str, dict[str, str]] = {
 # DATEV-Automatikkonten (Zusatzfunktion AM): kennen ihren Steuersatz eingebaut.
 # BU-Schlüssel wäre doppelt → REW00306. Alle anderen Erlöskonten brauchen BU 3/2.
 _AM_KONTEN: dict[str, set[str]] = {
-    "SKR03": {"8100", "8300", "8301", "8400", "8401", "8850", "8851", "8852"},
-    "SKR04": {"4100", "4300", "4301", "4400", "4401"},
+    "SKR03": {"8100", "8300", "8301", "8400", "8401", "8736", "8850", "8851", "8852"},
+    "SKR04": {"4100", "4300", "4301", "4400", "4401", "4736"},
 }
 
 
@@ -109,7 +109,7 @@ def _bu(j: Journaleintrag, skr: str, konto: Optional[str]) -> str:
         if konto in _AM_KONTEN.get(skr, set()):
             # Automatikkonto (AM): Steuersatz eingebaut – BU wäre REW00306
             return ""
-        # Kein AM-Konto (z. B. 8910 Eigenverbrauch, 8736 Skonti, 8900 Wertabgaben):
+        # Kein AM-Konto (z. B. 8910 Eigenverbrauch, 8900 Wertabgaben):
         # USt muss explizit per BU-Schlüssel gesetzt werden (BU 3 = 19 %, BU 2 = 7 %).
         if satz == 19:
             return "3"
