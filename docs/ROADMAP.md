@@ -80,6 +80,7 @@
 
 **Stammdaten & Einstellungen**
 - Kunden, Lieferanten, Artikel, Artikelgruppen
+- Lagerführung-Light: Bestandsführung pro Artikel (global + pro Artikel aktivierbar, Mindestbestand-Schwellwert, automatische Buchung bei Finalisierung/Storno, Inline-Bearbeitung im Detailpanel)
 - Kategorien (SKR03/04, EÜR-Zeile, EKS-Kategorie, Beschreibung, editierbar)
 - Buchungsanzeige: Kontonummer (SKR03/04) optional in Kategorie-Dropdowns einblenden
 - Steuersätze, Konten, Nummernkreise, Unternehmensprofil
@@ -91,6 +92,7 @@
 
 **Dashboard**
 - Zufluss-Monitor (§11b SGB II): Stufenfreibetrag, anrechenbar; Toggle Monat / Leistungszeitraum (6 Monate rollierend)
+- Lagerwarnung-Widget: Artikel am oder unter Mindestbestand (direkt verlinkt zur Artikelseite)
 
 **Infrastruktur**
 - Tauri 2 Desktop-App (Windows, Linux AppImage, macOS DMG)
