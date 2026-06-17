@@ -1492,7 +1492,7 @@ function RechnungDetail({
                 </tbody>
                 {rechnung.dokument_typ !== 'Lieferschein' && (() => {
                   const reRabatt = parseFloat(String(rechnung.rabatt_prozent ?? '0')) || 0
-                  const posSumNetto = rechnung.positionen.reduce((s, p) => s + parseFloat(p.netto) * parseFloat(p.menge), 0)
+                  const posSumNetto = rechnung.positionen.reduce((s, p) => s + (parseFloat(p.brutto) - parseFloat(p.ust_betrag)) * parseFloat(p.menge), 0)
                   const rabattNetto = posSumNetto * reRabatt / 100
                   const ustGesamt = parseFloat(rechnung.ust_gesamt)
                   return (
