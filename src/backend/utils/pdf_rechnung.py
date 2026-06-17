@@ -28,18 +28,43 @@ class RechnungPDF(RechnungPDFBase):
         r = self._r
         ist_lieferschein = getattr(r, "dokument_typ", "Rechnung") == "Lieferschein"
 
+        hat_artikelcode = any(
+            getattr(pos, "artikel", None) and pos.artikel.artikelcode
+            for pos in r.positionen
+        )
+        CODE_W = 20
+
         if ist_lieferschein:
-            col_w   = [103, 16, 17, 44]
-            headers = ["Beschreibung", "Menge", "Einheit", ""]
-            aligns  = ["L",            "R",     "L",       "L"]
+            if hat_artikelcode:
+                col_w   = [CODE_W, 103 - CODE_W, 16, 17, 44]
+                headers = ["Art.-Nr.", "Beschreibung", "Menge", "Einheit", ""]
+                aligns  = ["L",        "L",             "R",     "L",       "L"]
+            else:
+                col_w   = [103, 16, 17, 44]
+                headers = ["Beschreibung", "Menge", "Einheit", ""]
+                aligns  = ["L",            "R",     "L",       "L"]
         elif self._ist_netto:
-            col_w   = [82, 16, 17, 27, 14, 24]
-            headers = ["Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Netto"]
-            aligns  = ["L",            "R",     "L",       "R",           "R",     "R"]
+            if hat_artikelcode:
+                col_w   = [CODE_W, 82 - CODE_W, 16, 17, 27, 14, 24]
+                headers = ["Art.-Nr.", "Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Netto"]
+                aligns  = ["L",        "L",             "R",     "L",       "R",           "R",     "R"]
+            else:
+                col_w   = [82, 16, 17, 27, 14, 24]
+                headers = ["Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Netto"]
+                aligns  = ["L",            "R",     "L",       "R",           "R",     "R"]
         else:
-            col_w   = [72, 16, 17, 27, 14, 34]
-            headers = ["Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Brutto"]
-            aligns  = ["L",            "R",     "L",       "R",           "R",     "R"]
+            if hat_artikelcode:
+                col_w   = [CODE_W, 72 - CODE_W, 16, 17, 27, 14, 34]
+                headers = ["Art.-Nr.", "Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Brutto"]
+                aligns  = ["L",        "L",             "R",     "L",       "R",           "R",     "R"]
+            else:
+                col_w   = [72, 16, 17, 27, 14, 34]
+                headers = ["Beschreibung", "Menge", "Einheit", "Einzelpreis", "USt %", "Brutto"]
+                aligns  = ["L",            "R",     "L",       "R",           "R",     "R"]
+
+        # desc_idx: Index der Beschreibungs-Spalte; other_x: X-Start der Mengenspalte
+        desc_idx = 1 if hat_artikelcode else 0
+        other_x  = L_MARGIN + sum(col_w[:desc_idx + 1])
 
         self.set_font("DejaVu", "B", 8)
         self.set_fill_color(*GRAU_HELL)
@@ -58,46 +83,43 @@ class RechnungPDF(RechnungPDFBase):
             ust_label = "§25a" if ist_diff else f"{int(pos.ust_satz)} %"
             pos_rabatt = getattr(pos, "rabatt_prozent", Decimal("0")) or Decimal("0")
             row_y = self.get_y()
-            self.set_x(L_MARGIN + col_w[0])
-            self.cell(col_w[1], 6, menge_str, align="R")
-            self.cell(col_w[2], 6, pos.einheit[:12])
+            self.set_x(other_x)
+            self.cell(col_w[desc_idx + 1], 6, menge_str, align="R")
+            self.cell(col_w[desc_idx + 2], 6, pos.einheit[:12])
             if ist_lieferschein:
-                self.cell(col_w[3], 6, "", new_x="LMARGIN", new_y="NEXT")
+                self.cell(col_w[desc_idx + 3], 6, "", new_x="LMARGIN", new_y="NEXT")
                 self.set_xy(L_MARGIN, row_y)
-                self.multi_cell(col_w[0], 6, pos.beschreibung or "",
+                if hat_artikelcode:
+                    ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
+                    self.cell(col_w[0], 6, ac or "")
+                self.multi_cell(col_w[desc_idx], 6, pos.beschreibung or "",
                                 new_x="LMARGIN", new_y="NEXT")
                 continue
             if self._ist_netto:
                 netto_ges_vor = float(str(pos.netto)) * menge          # vor Rabatt
                 netto_ges_eff = (float(str(pos.brutto)) - float(str(pos.ust_betrag))) * menge
-                self.cell(col_w[3], 6, _fmt_euro(pos.netto), align="R")
-                self.cell(col_w[4], 6, ust_label, align="R")
-                self.cell(col_w[5], 6, _fmt_euro(netto_ges_vor), align="R")
+                self.cell(col_w[desc_idx + 3], 6, _fmt_euro(pos.netto), align="R")
+                self.cell(col_w[desc_idx + 4], 6, ust_label, align="R")
+                self.cell(col_w[desc_idx + 5], 6, _fmt_euro(netto_ges_vor), align="R")
             else:
                 ust_satz = float(str(pos.ust_satz))
                 ep_brutto = float(str(pos.netto)) * (1 + ust_satz / 100)
                 brutto_ges_vor = ep_brutto * menge                      # vor Rabatt
                 brutto_ges_eff = float(str(pos.brutto)) * menge
-                self.cell(col_w[3], 6, _fmt_euro(ep_brutto), align="R")
-                self.cell(col_w[4], 6, ust_label,            align="R")
-                self.cell(col_w[5], 6, _fmt_euro(brutto_ges_vor), align="R")
+                self.cell(col_w[desc_idx + 3], 6, _fmt_euro(ep_brutto), align="R")
+                self.cell(col_w[desc_idx + 4], 6, ust_label,            align="R")
+                self.cell(col_w[desc_idx + 5], 6, _fmt_euro(brutto_ges_vor), align="R")
             self.set_xy(L_MARGIN, row_y)
-            self.multi_cell(col_w[0], 6, pos.beschreibung or "",
+            if hat_artikelcode:
+                ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
+                self.cell(col_w[0], 6, ac or "")
+            self.multi_cell(col_w[desc_idx], 6, pos.beschreibung or "",
                             new_x="LMARGIN", new_y="NEXT")
-            # Artikelcode-Unterzeile
-            ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
-            if ac:
-                self.set_font("DejaVu", "I", 7)
-                self.set_text_color(*TEXT_GRAU)
-                self.set_x(L_MARGIN)
-                self.cell(col_w[0], 4.5, f"  Art.-Nr.: {ac}", new_x="LMARGIN", new_y="NEXT")
-                self.set_font("DejaVu", "", 8.5)
-                self.set_text_color(*TEXT_DUNKEL)
             # Rabatt-Unterzeile
             if pos_rabatt > 0:
                 self.set_font("DejaVu", "", 7.5)
                 self.set_text_color(*TEXT_GRAU)
-                pre_total_w = col_w[0] + col_w[1] + col_w[2] + col_w[3] + col_w[4]
+                pre_total_w = sum(col_w[:-1])
                 if self._ist_netto:
                     rabatt_abs = netto_ges_vor - netto_ges_eff
                 else:
@@ -109,8 +131,8 @@ class RechnungPDF(RechnungPDFBase):
                 self.set_font("DejaVu", "", 8.5)
                 self.set_text_color(*TEXT_DUNKEL)
 
-        # Summenblock-Geometrie: rechtsbündig ab Ende der ersten drei Spalten
-        sum_offset = col_w[0] + col_w[1] + col_w[2]
+        # Summenblock-Geometrie: rechtsbündig ab Ende von (code+)beschr+menge+einheit
+        sum_offset = sum(col_w[:3 + int(hat_artikelcode)])
         self._sum_x     = L_MARGIN + sum_offset
         self._sum_val_w = col_w[-1]
         self._sum_lbl_w = sum(col_w) - sum_offset - self._sum_val_w
