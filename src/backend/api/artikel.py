@@ -91,6 +91,9 @@ def suche_artikel(
             ek_brutto=a.ek_brutto,
             differenzbesteuerung=a.differenzbesteuerung,
             lieferant_name=a.lieferant.firmenname if a.lieferant else None,
+            lager_aktiv=a.lager_aktiv,
+            bestand_aktuell=a.bestand_aktuell,
+            minusbestand_erlaubt=a.minusbestand_erlaubt,
         ))
     return result
 
@@ -143,6 +146,10 @@ def create_artikel(data: ArtikelCreate, db: Session = Depends(get_db)):
         beschreibung=data.beschreibung,
         gruppe_id=data.gruppe_id,
         differenzbesteuerung=data.differenzbesteuerung,
+        lager_aktiv=data.lager_aktiv,
+        bestand_aktuell=data.bestand_aktuell if data.bestand_aktuell is not None else Decimal("0"),
+        mindestbestand=data.mindestbestand,
+        minusbestand_erlaubt=data.minusbestand_erlaubt,
     )
     db.add(artikel)
     db.commit()
@@ -216,3 +223,18 @@ def get_artikel_rechnungen(artikel_id: int, db: Session = Depends(get_db)):
             kunde_name=" ".join(p for p in [kunde.firmenname, kunde.vorname, kunde.nachname] if p) or None if kunde else None,
         ))
     return result
+
+
+@router.get("/lagerwarnung/liste", response_model=list[ArtikelResponse])
+def get_lagerwarnung(db: Session = Depends(get_db)):
+    """Artikel mit aktivierter Lagerführung deren Bestand den Mindestbestand erreicht oder unterschreitet."""
+    return (
+        db.query(Artikel)
+        .filter(
+            Artikel.lager_aktiv == True,   # noqa: E712
+            Artikel.aktiv == True,          # noqa: E712
+            Artikel.bestand_aktuell <= Artikel.mindestbestand,
+        )
+        .order_by(Artikel.bezeichnung)
+        .all()
+    )

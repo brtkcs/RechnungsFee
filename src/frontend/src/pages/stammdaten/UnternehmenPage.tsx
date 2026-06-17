@@ -28,12 +28,13 @@ const selectCls = `${inputCls} bg-white dark:bg-slate-700`
 // Tab-Navigation
 // ---------------------------------------------------------------------------
 
-type TabId = 'firma' | 'steuer' | 'rechnungen' | 'email' | 'unterschrift'
+type TabId = 'firma' | 'steuer' | 'rechnungen' | 'artikel' | 'email' | 'unterschrift'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'firma',        label: 'Firma' },
   { id: 'steuer',       label: 'Steuer & Recht' },
   { id: 'rechnungen',   label: 'Rechnungen' },
+  { id: 'artikel',      label: 'Artikel' },
   { id: 'email',        label: 'E-Mail' },
   { id: 'unterschrift', label: 'Unterschrift' },
 ]
@@ -270,7 +271,8 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
   const isFirmTab       = activeTab === 'firma'
   const isSteuerTab     = activeTab === 'steuer'
   const isRechnungTab   = activeTab === 'rechnungen'
-  const isFormTab       = isFirmTab || isSteuerTab || isRechnungTab
+  const isArtikelTab    = activeTab === 'artikel'
+  const isFormTab       = isFirmTab || isSteuerTab || isRechnungTab || isArtikelTab
 
   return (
     <form onSubmit={handleSpeichern} className="space-y-6">
@@ -731,7 +733,31 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
         </div>
       </div>
 
-      {/* Fehler + Speichern-Button (nur für Firma/Steuer/Rechnungen-Tabs) */}
+      {/* ── Tab: Artikel ──────────────────────────────────────────────── */}
+      <div className={isArtikelTab ? 'space-y-6' : 'hidden'}>
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Lagerführung</h3>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.lagerführung_aktiv}
+              onChange={ev => set('lagerführung_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Lagerführung aktivieren
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Bestand pro Artikel verwalten. Bei Finalisierung einer Rechnung sinkt der Bestand automatisch, bei Storno wird er zurückgebucht. Pro Artikel konfigurierbar: Anfangsbestand, Mindestbestand (Warngrenze) und ob Minusbestand erlaubt ist.
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Fehler + Speichern-Button (nur für Firma/Steuer/Rechnungen/Artikel-Tabs) */}
       {isFormTab && (
         <>
           {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
@@ -1455,7 +1481,7 @@ export function UnternehmenPage() {
     )
   }
 
-  const isFormTab = activeTab === 'firma' || activeTab === 'steuer' || activeTab === 'rechnungen'
+  const isFormTab = activeTab === 'firma' || activeTab === 'steuer' || activeTab === 'rechnungen' || activeTab === 'artikel'
 
   return (
     <div className="p-6 max-w-4xl space-y-0">

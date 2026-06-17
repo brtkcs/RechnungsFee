@@ -69,6 +69,7 @@ class Unternehmen(Base):
     auftraege_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     wiederkehrend_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     buchungsvorlagen_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
+    lagerführung_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     # Buchführung
     versteuerungsart: Mapped[str] = mapped_column(String(4), default="ist", nullable=False)  # ist|soll
     kontenrahmen: Mapped[str] = mapped_column(String(10), default="SKR03", nullable=False)  # SKR03|SKR04|SKR49
@@ -417,6 +418,11 @@ class Artikel(Base):
     beschreibung: Mapped[str | None] = mapped_column(Text)
     gruppe_id: Mapped[int | None] = mapped_column(ForeignKey("artikel_gruppen.id"))
     differenzbesteuerung: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Lagerführung-Light
+    lager_aktiv: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
+    bestand_aktuell: Mapped[Decimal] = mapped_column(Numeric(10, 3), default=0, server_default="0", nullable=False)
+    mindestbestand: Mapped[Decimal] = mapped_column(Numeric(10, 3), default=0, server_default="0", nullable=False)
+    minusbestand_erlaubt: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     aktualisiert_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

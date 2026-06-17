@@ -1994,6 +1994,9 @@ type Positionszeile = {
   artikel_id?: number
   kategorie_id?: string  // nur Eingang, per-Position-Kategorie
   differenzbesteuerung?: boolean
+  art_lager_aktiv?: boolean
+  art_bestand?: string
+  art_minusbestand_erlaubt?: boolean
 }
 
 const leerPosition = (defaultUst = '19'): Positionszeile => ({
@@ -2375,7 +2378,18 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
     const preis = istDiff ? a.vk_brutto : (eingabeModus === 'netto' ? a.vk_netto : a.vk_brutto)
     setPositionen((prev) => prev.map((p, idx) =>
       idx === i
-        ? { ...p, beschreibung: a.bezeichnung, einheit: a.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: a.id, differenzbesteuerung: istDiff }
+        ? {
+            ...p,
+            beschreibung: a.bezeichnung,
+            einheit: a.einheit,
+            ust_satz,
+            netto: preis.replace('.', ','),
+            artikel_id: a.id,
+            differenzbesteuerung: istDiff,
+            art_lager_aktiv: a.lager_aktiv,
+            art_bestand: a.bestand_aktuell,
+            art_minusbestand_erlaubt: a.minusbestand_erlaubt,
+          }
         : p
     ))
   }
@@ -3067,6 +3081,24 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
         )}
       </div>
 
+      {/* Lager-Warnungen */}
+      {(() => {
+        const warnungen = positionen.filter(p =>
+          p.art_lager_aktiv && p.art_minusbestand_erlaubt === false &&
+          parseFloat(p.menge || '1') > parseFloat(p.art_bestand || '0')
+        )
+        if (warnungen.length === 0) return null
+        return (
+          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300 space-y-1">
+            <p className="font-semibold">Bestand nicht ausreichend – Finalisierung wird blockiert:</p>
+            {warnungen.map((p, i) => (
+              <p key={i}>• {p.beschreibung}: benötigt {p.menge} {p.einheit}, verfügbar {parseFloat(p.art_bestand || '0').toLocaleString('de-DE', { maximumFractionDigits: 3 })} {p.einheit}</p>
+            ))}
+            <p className="text-red-500 dark:text-red-400 pt-0.5">Bestand anpassen oder Minusbestand im Artikelstamm erlauben.</p>
+          </div>
+        )
+      })()}
+
       {showNeuArtikel && (
         <ArtikelFormModal
           onClose={() => setShowNeuArtikel(false)}
@@ -3078,12 +3110,13 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
             const preis = istDiff ? neu.vk_brutto : (eingabeModus === 'netto' ? neu.vk_netto : neu.vk_brutto)
             setPositionen(prev => {
               const letzteIdx = prev.length - 1
+              const lagerFelder = { art_lager_aktiv: neu.lager_aktiv, art_bestand: neu.bestand_aktuell, art_minusbestand_erlaubt: neu.minusbestand_erlaubt }
               if (letzteIdx >= 0 && !prev[letzteIdx].beschreibung) {
                 return prev.map((p, idx) => idx === letzteIdx
-                  ? { ...p, beschreibung: neu.bezeichnung, einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff }
+                  ? { ...p, beschreibung: neu.bezeichnung, einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff, ...lagerFelder }
                   : p)
               }
-              return [...prev, { beschreibung: neu.bezeichnung, menge: '1', einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff }]
+              return [...prev, { beschreibung: neu.bezeichnung, menge: '1', einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff, ...lagerFelder }]
             })
           }}
         />

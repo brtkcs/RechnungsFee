@@ -204,6 +204,7 @@ export type Unternehmen = {
   auftraege_aktiv?: boolean
   wiederkehrend_aktiv?: boolean
   buchungsvorlagen_aktiv?: boolean
+  lagerführung_aktiv?: boolean
   backup_extern_pfad_1?: string | null
   backup_extern_pfad_2?: string | null
   backup_extern_passwort?: string | null
@@ -1336,6 +1337,10 @@ export type Artikel = {
   gruppe_id: number | null
   gruppe_obj: { id: number; name: string } | null
   differenzbesteuerung: boolean
+  lager_aktiv: boolean
+  bestand_aktuell: string
+  mindestbestand: string
+  minusbestand_erlaubt: boolean
   aktiv: boolean
   erstellt_am: string
   aktualisiert_am: string
@@ -1353,6 +1358,9 @@ export type ArtikelSuche = {
   ek_brutto: string | null
   differenzbesteuerung: boolean
   lieferant_name: string | null
+  lager_aktiv: boolean
+  bestand_aktuell: string
+  minusbestand_erlaubt: boolean
 }
 
 export type ArtikelRechnungKurz = {
@@ -1380,9 +1388,16 @@ export type ArtikelCreate = {
   beschreibung?: string
   gruppe_id?: number
   differenzbesteuerung?: boolean
+  lager_aktiv?: boolean
+  bestand_aktuell?: string
+  mindestbestand?: string
+  minusbestand_erlaubt?: boolean
 }
 
 export type ArtikelUpdate = Partial<ArtikelCreate> & { aktiv?: boolean }
+
+export const getLagerwarnungListe = () =>
+  request<Artikel[]>('/artikel/lagerwarnung/liste')
 
 export const getArtikel = (params?: { aktiv?: boolean; typ?: string }) => {
   const q: Record<string, string | number | undefined> = {}

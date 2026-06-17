@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from database.connection import get_db, APP_DATA_DIR
 from database.models import (
     Beleg, Kunde, Lieferant, Rechnung, Rechnungsposition, Journaleintrag,
-    Kategorie, Unternehmen, Nummernkreis,
+    Kategorie, Unternehmen, Nummernkreis, Artikel,
 )
 from utils.signatur import signatur_journaleintrag
 from utils.pdf_rechnung import generate_rechnung_pdf
@@ -69,6 +69,42 @@ def _belegnr_aus_format(format_str: str, datum: date, nr: int) -> str:
     result = _re.sub(r"#+", _pad, result)
     result = _re.sub(r"N+", _pad, result)  # dt. Alias: Nummer
     return result
+
+
+def _fmt_menge(n: Decimal) -> str:
+    """Dezimal als ganze Zahl oder mit Komma (deutsch) formatieren."""
+    d = Decimal(str(n)).normalize()
+    if d == d.to_integral_value():
+        return str(int(d))
+    return str(d).replace(".", ",")
+
+
+def _lager_buchen(rechnung: "Rechnung", db: Session, faktor: Decimal) -> None:
+    """Bestand aller Artikel in den Rechnungspositionen anpassen.
+
+    faktor=-1: Finalisierung (Abgang), faktor=+1: Storno/Rückbuchung.
+    pos.menge ist bei Gutschriften bereits negativ → Rückbuchung automatisch.
+    Minusbestand-Prüfung nur beim Abgang (faktor=-1) und nur wenn nicht erlaubt.
+    """
+    for pos in rechnung.positionen:
+        if not pos.artikel_id:
+            continue
+        art = db.query(Artikel).filter(Artikel.id == pos.artikel_id).first()
+        if not art or not art.lager_aktiv:
+            continue
+        delta = faktor * pos.menge
+        neuer_bestand = art.bestand_aktuell + delta
+        if faktor < 0 and not art.minusbestand_erlaubt and neuer_bestand < 0:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f'Artikel "{art.bezeichnung}" hat nicht genug Bestand '
+                    f"(verfügbar: {_fmt_menge(art.bestand_aktuell)} {art.einheit}, "
+                    f"benötigt: {_fmt_menge(pos.menge)} {art.einheit}). "
+                    f"Minusbestand ist für diesen Artikel nicht erlaubt."
+                ),
+            )
+        art.bestand_aktuell = neuer_bestand
 
 
 def _naechste_belegnr_journal(db: Session, datum: date) -> str:
@@ -887,6 +923,9 @@ def finalisiere_rechnung(rechnung_id: int, db: Session = Depends(get_db)):
         ).first()
         if _auftrag and _auftrag.auftrag_status not in ("abgeschlossen", "storniert"):
             _auftrag.auftrag_status = "rechnung_gestellt"
+
+    # Lagerführung: Bestand pro Position anpassen (pos.menge < 0 bei Gutschriften → Rückbuchung)
+    _lager_buchen(rechnung, db, faktor=Decimal("-1"))
 
     db.commit()
     db.refresh(rechnung)
@@ -1711,6 +1750,10 @@ def storno_rechnung(rechnung_id: int, data: StornoRequest, db: Session = Depends
     rechnung.storniert = True
     rechnung.storno_grund = data.grund.strip()
     rechnung.immutable = True
+
+    # Lagerführung: Bestand zurückbuchen (Storno kehrt Finalisierungs-Buchung um)
+    _lager_buchen(rechnung, db, faktor=Decimal("1"))
+
     # Verknüpfte Lieferscheine wieder auf "Nicht abgerechnet" setzen
     db.query(Rechnung).filter(Rechnung.lieferschein_zu_rechnung_id == rechnung_id).update(
         {"lieferschein_zu_rechnung_id": None}

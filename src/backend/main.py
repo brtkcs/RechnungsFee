@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev
 
-SCHEMA_VERSION = 85
+SCHEMA_VERSION = 87
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1937,6 +1937,30 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 85"))
             conn.commit()
             print("[Migration] Schema auf Version 85 (rechnungen.rabatt_betrag – Festbetrag-Rabatt als Alternative zu rabatt_prozent)")
+
+        if version < 86:
+            cols_unt = {c[1] for c in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            if "lagerführung_aktiv" not in cols_unt:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN lagerführung_aktiv BOOLEAN DEFAULT 0"))
+            cols_art = {c[1] for c in conn.execute(text("PRAGMA table_info(artikel)")).fetchall()}
+            for col, typ in [
+                ("lager_aktiv",          "BOOLEAN DEFAULT 0"),
+                ("bestand_aktuell",      "NUMERIC(10,3) DEFAULT 0"),
+                ("mindestbestand",       "NUMERIC(10,3) DEFAULT 0"),
+                ("minusbestand_erlaubt", "BOOLEAN DEFAULT 0"),
+            ]:
+                if col not in cols_art:
+                    conn.execute(text(f"ALTER TABLE artikel ADD COLUMN {col} {typ}"))
+            conn.execute(text("PRAGMA user_version = 86"))
+            conn.commit()
+            print("[Migration] Schema auf Version 86 (Lagerführung-Light: unternehmen.lagerführung_aktiv, artikel: lager_aktiv/bestand_aktuell/mindestbestand/minusbestand_erlaubt)")
+
+        if version < 87:
+            # Datenfix: minusbestand_erlaubt war fälschlich DEFAULT 1 – auf 0 korrigieren
+            conn.execute(text("UPDATE artikel SET minusbestand_erlaubt = 0 WHERE minusbestand_erlaubt = 1"))
+            conn.execute(text("PRAGMA user_version = 87"))
+            conn.commit()
+            print("[Migration] Schema auf Version 87 (Datenfix: minusbestand_erlaubt DEFAULT 0)")
 
 
 def _migrate_kategorien() -> None:

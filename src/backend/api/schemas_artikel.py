@@ -23,6 +23,11 @@ class ArtikelCreate(BaseModel):
     beschreibung: Optional[str] = None
     gruppe_id: Optional[int] = None
     differenzbesteuerung: bool = False
+    # Lagerführung
+    lager_aktiv: bool = False
+    bestand_aktuell: Optional[Decimal] = None
+    mindestbestand: Decimal = Decimal("0")
+    minusbestand_erlaubt: bool = False
 
     @field_validator("typ")
     @classmethod
@@ -60,6 +65,11 @@ class ArtikelUpdate(BaseModel):
     gruppe_id: Optional[int] = None
     aktiv: Optional[bool] = None
     differenzbesteuerung: Optional[bool] = None
+    # Lagerführung
+    lager_aktiv: Optional[bool] = None
+    bestand_aktuell: Optional[Decimal] = None
+    mindestbestand: Optional[Decimal] = None
+    minusbestand_erlaubt: Optional[bool] = None  # None = nicht geändert
 
     @field_validator("typ")
     @classmethod
@@ -102,6 +112,11 @@ class ArtikelResponse(BaseModel):
     gruppe_id: Optional[int] = None
     gruppe_obj: Optional[ArtikelGruppeKurz] = None
     differenzbesteuerung: bool = False
+    # Lagerführung
+    lager_aktiv: bool = False
+    bestand_aktuell: Decimal = Decimal("0")
+    mindestbestand: Decimal = Decimal("0")
+    minusbestand_erlaubt: bool = False
     aktiv: bool
     erstellt_am: datetime
     aktualisiert_am: datetime
@@ -121,6 +136,10 @@ class ArtikelSucheResponse(BaseModel):
     ek_brutto: Optional[Decimal] = None
     differenzbesteuerung: bool = False
     lieferant_name: Optional[str] = None
+    # Lagerführung – für Bestandswarnung im Rechnungsformular
+    lager_aktiv: bool = False
+    bestand_aktuell: Decimal = Decimal("0")
+    minusbestand_erlaubt: bool = True
     model_config = {"from_attributes": True}
 
 

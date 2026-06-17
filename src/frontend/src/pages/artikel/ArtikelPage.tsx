@@ -8,7 +8,7 @@ import {
   getArtikel, createArtikel, updateArtikel, getArtikelRechnungen,
   getLieferanten, getUstSaetze, type Artikel, type ArtikelTyp,
   getArtikelGruppen, createArtikelGruppe, updateArtikelGruppe,
-  toggleArtikelGruppeAktiv, deleteArtikelGruppe,
+  toggleArtikelGruppeAktiv, deleteArtikelGruppe, getUnternehmen,
 } from '../../api/client'
 
 // ---------------------------------------------------------------------------
@@ -268,6 +268,11 @@ const schema = z.object({
   beschreibung: z.string().optional(),
   gruppe_id: z.string().optional(),
   differenzbesteuerung: z.boolean(),
+  // Lagerführung
+  lager_aktiv: z.boolean(),
+  bestand_aktuell: z.string().optional(),
+  mindestbestand: z.string().optional(),
+  minusbestand_erlaubt: z.boolean(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -294,6 +299,7 @@ export function ArtikelFormModal({
   const { data: lieferanten } = useQuery({ queryKey: ['lieferanten'], queryFn: getLieferanten })
   const [showNeuLieferant, setShowNeuLieferant] = useState(false)
   const { data: ustSaetze = [] } = useQuery({ queryKey: ['ust-saetze'], queryFn: getUstSaetze, staleTime: 1000 * 60 * 10 })
+  const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
   const aktiveSaetze = ustSaetze.filter((s) => s.ist_aktiv)
   const defaultSatz = ustSaetze.find((s) => s.ist_default)?.satz
     ? String(parseFloat(ustSaetze.find((s) => s.ist_default)!.satz))
@@ -315,17 +321,26 @@ export function ArtikelFormModal({
       beschreibung: initial.beschreibung ?? '',
       gruppe_id: initial.gruppe_id ? String(initial.gruppe_id) : '',
       differenzbesteuerung: initial.differenzbesteuerung ?? false,
+      lager_aktiv: initial.lager_aktiv ?? false,
+      bestand_aktuell: String(parseFloat(String(initial.bestand_aktuell ?? '0'))),
+      mindestbestand: String(parseFloat(String(initial.mindestbestand ?? '0'))),
+      minusbestand_erlaubt: initial.minusbestand_erlaubt ?? false,
     } : {
       typ: 'artikel',
       steuersatz: defaultSatz,
       einheit: 'Stück',
       differenzbesteuerung: false,
+      lager_aktiv: false,
+      bestand_aktuell: '0',
+      mindestbestand: '0',
+      minusbestand_erlaubt: false,
     },
   })
 
   const typ = watch('typ') as ArtikelTyp
   const differenzbesteuerung = watch('differenzbesteuerung')
   const steuersatz = differenzbesteuerung ? 0 : parseFloat(watch('steuersatz') || '0')
+  const lager_aktiv = watch('lager_aktiv')
 
   const { data: gruppen = [] } = useQuery({
     queryKey: ['artikel-gruppen', typ],
@@ -399,6 +414,10 @@ export function ArtikelFormModal({
         beschreibung: v.beschreibung || undefined,
         gruppe_id: v.gruppe_id ? Number(v.gruppe_id) : undefined,
         differenzbesteuerung: v.differenzbesteuerung,
+        lager_aktiv: v.lager_aktiv,
+        ...(v.lager_aktiv ? { bestand_aktuell: v.bestand_aktuell || '0' } : {}),
+        mindestbestand: v.mindestbestand || '0',
+        minusbestand_erlaubt: v.minusbestand_erlaubt,
       }
       return initial ? updateArtikel(initial.id, payload) : createArtikel(payload)
     },
@@ -638,6 +657,49 @@ export function ArtikelFormModal({
             )}
           </div>
 
+          {/* Lagerführung – nur wenn global aktiviert */}
+          {unt?.lagerführung_aktiv && (
+            <div className="space-y-3 pt-1 border-t border-slate-200 dark:border-slate-700">
+              <label className="flex items-start gap-3 cursor-pointer pt-1">
+                <input type="checkbox" {...register('lager_aktiv')} className="mt-0.5 w-4 h-4 rounded accent-blue-600" />
+                <div>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Lagerführung aktivieren</span>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Bestand verfolgen, Mindestbestand überwachen</p>
+                </div>
+              </label>
+              {lager_aktiv && (
+                <div className="space-y-3 ps-7">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                      {initial ? 'Lagerbestand' : 'Anfangsbestand'}
+                    </label>
+                    <input
+                      type="number" step="0.001" min="0" placeholder="0"
+                      {...register('bestand_aktuell')}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Mindestbestand</label>
+                      <input
+                        type="number" step="0.001" min="0" placeholder="0"
+                        {...register('mindestbestand')}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100"
+                      />
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" {...register('minusbestand_erlaubt')} className="w-4 h-4 rounded accent-blue-600" />
+                        <span className="text-sm text-slate-700 dark:text-slate-200">Minusbestand erlaubt</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Beschreibung */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Beschreibung</label>
@@ -686,10 +748,23 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
     queryKey: ['artikel-rechnungen', artikel.id],
     queryFn: () => getArtikelRechnungen(artikel.id),
   })
+  const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
 
   const toggleAktiv = useMutation({
     mutationFn: () => updateArtikel(artikel.id, { aktiv: !artikel.aktiv }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['artikel'] }),
+  })
+
+  const [bestandEdit, setBestandEdit] = useState<string | null>(null)
+  const bestandMut = useMutation({
+    mutationFn: (wert: string) => updateArtikel(artikel.id, { bestand_aktuell: wert }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['artikel'] }); setBestandEdit(null) },
+  })
+
+  const [mindestEdit, setMindestEdit] = useState<string | null>(null)
+  const mindestMut = useMutation({
+    mutationFn: (wert: string) => updateArtikel(artikel.id, { mindestbestand: wert }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['artikel'] }); setMindestEdit(null) },
   })
 
   return (
@@ -820,6 +895,85 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
           </div>
         </div>
 
+        {/* Lager – sichtbar wenn global aktiv und Artikel tracked */}
+        {unt?.lagerführung_aktiv && artikel.lager_aktiv && (() => {
+          const bestand = parseFloat(String(artikel.bestand_aktuell))
+          const mindest = parseFloat(String(artikel.mindestbestand))
+          const unterschritten = bestand <= mindest
+          return (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Lager</p>
+              <div className="grid grid-cols-3 gap-2">
+                {/* Bestand */}
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Bestand</p>
+                    <button onClick={() => setBestandEdit(String(bestand))} className="text-xs text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 leading-none">✎</button>
+                  </div>
+                  {bestandEdit === null ? (
+                    <p className={`text-sm font-semibold ${unterschritten ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                      {bestand.toLocaleString('de-DE', { maximumFractionDigits: 3 })} {artikel.einheit}
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <input
+                        type="number" step="0.001"
+                        value={bestandEdit}
+                        onChange={e => setBestandEdit(e.target.value)}
+                        autoFocus
+                        onKeyDown={e => { if (e.key === 'Enter') bestandMut.mutate(bestandEdit); if (e.key === 'Escape') setBestandEdit(null) }}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 text-xs dark:bg-slate-700 dark:text-slate-100 text-right"
+                      />
+                      <button onClick={() => bestandMut.mutate(bestandEdit)} disabled={bestandMut.isPending} className="text-xs px-1.5 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">✓</button>
+                      <button onClick={() => setBestandEdit(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">×</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Schwellwert */}
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Schwellwert</p>
+                    <button onClick={() => setMindestEdit(String(mindest))} className="text-xs text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 leading-none">✎</button>
+                  </div>
+                  {mindestEdit === null ? (
+                    <p className="text-sm text-slate-700 dark:text-slate-200">
+                      {mindest.toLocaleString('de-DE', { maximumFractionDigits: 3 })} {artikel.einheit}
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <input
+                        type="number" step="0.001" min="0"
+                        value={mindestEdit}
+                        onChange={e => setMindestEdit(e.target.value)}
+                        autoFocus
+                        onKeyDown={e => { if (e.key === 'Enter') mindestMut.mutate(mindestEdit); if (e.key === 'Escape') setMindestEdit(null) }}
+                        className="w-full border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 text-xs dark:bg-slate-700 dark:text-slate-100 text-right"
+                      />
+                      <button onClick={() => mindestMut.mutate(mindestEdit)} disabled={mindestMut.isPending} className="text-xs px-1.5 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">✓</button>
+                      <button onClick={() => setMindestEdit(null)} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">×</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Minusbestand */}
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Minusbestand</p>
+                  <p className={`text-sm ${artikel.minusbestand_erlaubt ? 'text-slate-700 dark:text-slate-200' : 'text-amber-700 dark:text-amber-400'}`}>
+                    {artikel.minusbestand_erlaubt ? 'Erlaubt' : 'Nicht erlaubt'}
+                  </p>
+                </div>
+              </div>
+
+              {unterschritten && (
+                <div className="mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+                  Bestand hat den Schwellwert erreicht oder unterschritten.
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
         {/* Beschreibung */}
         {artikel.beschreibung && (
           <div>
@@ -884,6 +1038,13 @@ export function ArtikelPage() {
     queryKey: ['artikel', aktiv, typFilter],
     queryFn: () => getArtikel({ aktiv, typ: typFilter || undefined }),
   })
+
+  // selected mit aktuellem Listeneintrag synchronisieren (z. B. nach Toggle-Mutationen)
+  useEffect(() => {
+    if (!selected || !artikel) return
+    const aktuell = artikel.find(a => a.id === selected.id)
+    if (aktuell) setSelected(aktuell)
+  }, [artikel])
 
   const gefiltert = (artikel ?? []).filter(a => {
     if (!suche) return true

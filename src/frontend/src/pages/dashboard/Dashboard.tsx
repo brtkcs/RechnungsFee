@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, type Rechnung } from '../../api/client'
+import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, type Rechnung } from '../../api/client'
 import { guardedDateChange } from '../../utils/dateInput'
 import { dashboardFilter } from '../../store/filterStore'
 
@@ -210,6 +210,51 @@ function ZuflussMonitor({
 
 // ---------------------------------------------------------------------------
 // Kleinunternehmer-Umsatzwarnung (§19 UStG)
+// ---------------------------------------------------------------------------
+
+function LagerwarnungWidget() {
+  const navigate = useNavigate()
+  const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
+  const { data: artikel } = useQuery({
+    queryKey: ['lagerwarnung'],
+    queryFn: getLagerwarnungListe,
+    staleTime: 1000 * 60 * 5,
+    enabled: !!unt?.lagerführung_aktiv,
+  })
+
+  if (!unt?.lagerführung_aktiv || !artikel || artikel.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+          Lager: {artikel.length} Artikel unter Mindestbestand
+        </p>
+        <button
+          onClick={() => navigate('/artikel')}
+          className="text-xs text-amber-700 dark:text-amber-400 hover:underline"
+        >
+          Zum Artikelstamm →
+        </button>
+      </div>
+      <div className="space-y-1">
+        {artikel.map(a => {
+          const bestand = parseFloat(a.bestand_aktuell)
+          const mindest = parseFloat(a.mindestbestand)
+          return (
+            <div key={a.id} className="flex items-center justify-between text-xs">
+              <span className="text-amber-800 dark:text-amber-300 truncate max-w-[60%]">{a.bezeichnung}</span>
+              <span className={`font-medium tabular-nums ${bestand < 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                {bestand.toLocaleString('de-DE', { maximumFractionDigits: 3 })} / {mindest.toLocaleString('de-DE', { maximumFractionDigits: 3 })} {a.einheit}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 
 function KleinunternehmerWarnung() {
@@ -445,6 +490,7 @@ export function Dashboard() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <KleinunternehmerWarnung />
+      <LagerwarnungWidget />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Dashboard</h2>
 
