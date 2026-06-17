@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.20',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Artikelcode (SKU/EAN) auf Rechnungs-PDF: Wenn Artikel einen Artikelcode hinterlegt haben, erscheint auf dem PDF automatisch eine eigene „Art.-Nr."-Spalte ganz links in der Positionstabelle – für beide PDF-Vorlagen und im Lieferschein; im Detail-Panel wird der Code unter der Positionsbeschreibung angezeigt' },
+    ],
+  },
+  {
     version: 'v0.3.19',
     datum: 'Juni 2026',
     eintraege: [

@@ -21,6 +21,7 @@
 - Storno mit Pflichtbegründung und GoBD-Gegenbuchung
 - Skonto (Standard, Kunden, Rechnung; Zahlungshinweis + Giro-Code)
 - Rechnungsrabatt als Festbetrag (€): Toggle % / € im Formular, immer Bruttobetrag, PDF zeigt „Abzug"
+- Artikelcode (SKU/EAN) auf Rechnung: optionale „Art.-Nr."-Spalte im PDF wenn Artikel einen Code haben; Detail-Panel zeigt Code unter Positionsbeschreibung
 - Leistungszeitraum Von–Bis
 - Original-PDF-Archivierung: erstes Drucken/Mailen speichert das Original; alle weiteren Ausgaben sind Kopien mit rotem KOPIE-Wasserzeichen (Entwurf: nur Vorschau)
 - Versand-Zeitstempel (`ausgegeben_am`): Detail-Panel zeigt Datum + Uhrzeit des ersten Versands als Nachweis
