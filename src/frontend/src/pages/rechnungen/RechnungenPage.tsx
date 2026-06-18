@@ -1101,20 +1101,18 @@ function RechnungDetail({
                 onClick={handleDrucken}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
               >
-                🖨️ {rechnung.ausgegeben ? 'Kopie drucken' : 'Drucken'}
+                🖨️ {rechnung.storniert ? 'Stornorechnung drucken' : rechnung.ausgegeben ? 'Kopie drucken' : 'Drucken'}
               </button>
-              {rechnung.ausgegeben && (
+              {!rechnung.storniert && rechnung.ausgegeben && (
                 <InfoTooltip text="Das Original wurde gespeichert. Alle weiteren Ausdrucke sind Kopien des Originals – mit gleichem Inhalt und KOPIE-Wasserzeichen." side="bottom" align="right" />
               )}
-              {!rechnung.storniert && (
-                <button
-                  onClick={handleMail}
-                  disabled={pdfLaeuft}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50"
-                >
-                  {pdfLaeuft ? '⏳ PDF…' : rechnung.ausgegeben ? `✉️ Kopie senden${!partnerEmail ? ' …' : ''}` : `✉️ Mail senden${!partnerEmail ? ' …' : ''}`}
-                </button>
-              )}
+              <button
+                onClick={handleMail}
+                disabled={pdfLaeuft}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 disabled:opacity-50"
+              >
+                {pdfLaeuft ? '⏳ PDF…' : rechnung.storniert ? `✉️ Stornorechnung senden${!partnerEmail ? ' …' : ''}` : rechnung.ausgegeben ? `✉️ Kopie senden${!partnerEmail ? ' …' : ''}` : `✉️ Mail senden${!partnerEmail ? ' …' : ''}`}
+              </button>
             </>
           )}
           {rechnung.dokument_typ === 'Lieferschein' && !rechnung.lieferschein_zu_rechnung_id && onRechnungAusLs && (

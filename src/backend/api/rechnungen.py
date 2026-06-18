@@ -1123,6 +1123,20 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
     if nur_ansehen:
         darf_archiviert = False  # kein Archiv, kein Kopie-Stempel, kein Status-Touch
 
+    # Stornierte Rechnung: "Ansehen" zeigt das gespeicherte Original vor dem Storno
+    if nur_ansehen and _ist_storno_pdf and rechnung.original_pdf_pfad:
+        orig_pfad = APP_DATA_DIR / rechnung.original_pdf_pfad
+        if orig_pfad.exists():
+            nr = (rechnung.rechnungsnummer or str(rechnung_id)).replace("/", "-").replace(" ", "_")
+            return Response(
+                content=orig_pfad.read_bytes(),
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'inline; filename="Rechnung_{nr}_Original.pdf"',
+                    "Cache-Control": "no-store",
+                },
+            )
+
     # Kopie: Original bereits gespeichert → gespeichertes PDF + Wasserzeichen zurückgeben
     if darf_archiviert and rechnung.original_pdf_pfad:
         kopie_bytes = lade_original_mit_kopie_stempel(APP_DATA_DIR, rechnung.original_pdf_pfad)
