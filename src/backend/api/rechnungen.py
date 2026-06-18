@@ -1906,17 +1906,17 @@ def create_gutschrift(rechnung_id: int, db: Session = Depends(get_db)):
 
     heute = date.today()
 
-    # Rechnungsnummer aus Nummernkreis
-    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "rechnung_ausgang").first()
+    # Rechnungsnummer aus eigenem Gutschrift-Nummernkreis
+    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "gutschrift").first()
     if nk:
         if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != heute.year:
             nk.naechste_nr = 1
         nk.letztes_jahr = heute.year
         nr = nk.naechste_nr
         nk.naechste_nr += 1
-        rechnungsnummer = f"GS-{_belegnr_aus_format(nk.format, heute, nr)}"
+        rechnungsnummer = _belegnr_aus_format(nk.format, heute, nr)
     else:
-        count = db.query(Rechnung).filter(Rechnung.typ == "ausgang").count()
+        count = db.query(Rechnung).filter(Rechnung.dokument_typ == "Gutschrift").count()
         rechnungsnummer = f"GS-{str(heute.year)[-2:]}{count + 1:04d}"
 
     orig_nr = original.rechnungsnummer or f"#{original.id}"

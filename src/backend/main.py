@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s
 
-SCHEMA_VERSION = 90
+SCHEMA_VERSION = 91
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2062,6 +2062,19 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 90"))
             conn.commit()
             print("[Migration] Schema auf Version 90 (storno_rechnungsnummer + Nummernkreis Stornorechnungen)")
+
+        if version < 91:
+            # Gutschrift-Nummernkreis: naechste_nr aus vorhandenen Gutschriften ableiten
+            existing_gs = conn.execute(text(
+                "SELECT COUNT(*) FROM rechnungen WHERE dokument_typ='Gutschrift'"
+            )).scalar() or 0
+            conn.execute(text("""
+                INSERT OR IGNORE INTO nummernkreise (typ, bezeichnung, format, naechste_nr, reset_jaehrlich, letztes_jahr)
+                VALUES ('gutschrift', 'Gutschriften', 'GS-YY####', :nr, 1, NULL)
+            """), {"nr": existing_gs + 1})
+            conn.execute(text("PRAGMA user_version = 91"))
+            conn.commit()
+            print("[Migration] Schema auf Version 91 (Nummernkreis Gutschriften)")
 
 
 def _migrate_kategorien() -> None:
