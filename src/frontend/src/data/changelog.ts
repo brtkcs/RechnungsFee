@@ -28,7 +28,10 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'neu', text: 'Backup: SMB-Unterstützung – Backup-Ziel kann jetzt ein SMB-Netzwerkpfad sein (smb://server/freigabe/pfad); Benutzername und Passwort werden separat gespeichert; kein System-Mount nötig (Issue #176)' },
       { typ: 'verbesserung', text: 'Backup: Pfade auf Systemlaufwerken (C:\\, /home, /root, /Users, …) werden beim automatischen Backup übersprungen – ein Backup auf derselben Platte schützt nicht vor Festplattenausfall; das Formular zeigt einen Hinweis beim Eintippen' },
-      { typ: 'verbesserung', text: 'Stornorechnung: Stornierte Rechnungen werden beim Drucken und Mailen als vollständige Stornorechnung ausgegeben – Titel „Stornorechnung", Stornodatum, Bezug zur Originalrechnung, Stornobegründung, alle Positionen mit negativen Beträgen, kein Zahlungsblock (Issue #178)' },
+      { typ: 'neu', text: 'Stornorechnung: eigener Nummernkreis STORNO-JJNNNN – jede Stornierung bekommt eine eindeutige Stornorechnung-Nummer, sichtbar im PDF-Titel und Kopfzeile; Format über Einstellungen → Nummernkreise anpassbar (Issue #178)' },
+      { typ: 'neu', text: 'Gutschrift: eigener Nummernkreis GS-YY#### – Gutschriften haben jetzt einen separaten Zähler statt den Ausgangsrechnungs-Zähler zu teilen; Format über Einstellungen → Nummernkreise anpassbar' },
+      { typ: 'verbesserung', text: 'Stornierte Rechnungen: Ansehen zeigt die Original-Rechnung (vor dem Storno); neuer Button „Stornorechnung drucken" für das Stornorechnung-PDF; Mail-Versand als „Stornorechnung senden" jetzt verfügbar (Issue #178)' },
+      { typ: 'fix', text: 'Nummernkreis-Format: einzelne Buchstaben N in Präfixen (z. B. STORNO) wurden fälschlich als Nummern-Platzhalter interpretiert – Ausgabe war STOR10 statt STORNO-260001' },
     ],
   },
   {
