@@ -17,8 +17,8 @@
 
 **Rechnungen**
 - Eingangs- und Ausgangsrechnungen mit Positionen, Zahlungsstatus, Teilzahlungen
-- Gutschriften (negativierte Positionen, GoBD-Gegenbuchung, Betragslimit)
-- Storno mit Pflichtbegründung und GoBD-Gegenbuchung
+- Gutschriften (negativierte Positionen, GoBD-Gegenbuchung, Betragslimit, eigener Nummernkreis GS-YY####)
+- Storno mit Pflichtbegründung, GoBD-Gegenbuchung und eigener Stornorechnung-Nummer (STORNO-JJNNNN); Stornorechnung-PDF mit negativen Beträgen, Stornodatum, Bezugszeile; Detail-Panel: Ansehen = Original-Rechnung, Stornorechnung drucken / senden (Issue #178)
 - Skonto (Standard, Kunden, Rechnung; Zahlungshinweis + Giro-Code)
 - Rechnungsrabatt als Festbetrag (€): Toggle % / € im Formular, immer Bruttobetrag, PDF zeigt „Abzug"
 - Artikelcode (SKU/EAN) auf Rechnung: optionale „Art.-Nr."-Spalte im PDF wenn Artikel einen Code haben; Detail-Panel zeigt Code unter Positionsbeschreibung
