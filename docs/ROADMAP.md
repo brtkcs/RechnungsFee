@@ -81,7 +81,7 @@
 
 **Stammdaten & Einstellungen**
 - Kunden, Lieferanten, Artikel, Artikelgruppen
-- Lagerführung-Light: Bestandsführung pro Artikel (global + pro Artikel aktivierbar, Mindestbestand-Schwellwert, automatische Buchung bei Finalisierung/Storno, Inline-Bearbeitung im Detailpanel)
+- Lagerführung-Light: Bestandsführung pro Artikel (global + pro Artikel aktivierbar, Mindestbestand-Schwellwert, automatische Buchung bei Finalisierung/Storno, Inline-Bearbeitung im Detailpanel); Bestandshinweis im Auftragsformular (gelb, nicht blockierend); Angebot ohne Lagerprüfung (Issue #177)
 - Kategorien (SKR03/04, EÜR-Zeile, EKS-Kategorie, Beschreibung, editierbar)
 - Buchungsanzeige: Kontonummer (SKR03/04) optional in Kategorie-Dropdowns einblenden
 - Steuersätze, Konten, Nummernkreise, Unternehmensprofil
@@ -106,7 +106,7 @@
 ## 🚧 v0.3.x – In Arbeit
 
 ### Exporte & Auswertungen
-- [x] DATEV-Export: Buchungsstapel EXTF v700/9 mit BU-Schlüsseln (19%/7%/ig.Erwerb/§13b/§25a), konfigurierbaren Gegenkonten und Quartal-/Halbjahr-/Jahres-/Freizeitraumauswahl; Fallback-Sachkonto für RE-Zahlungen; Skonto als Bank-Buchung; AM-Konten 8920–8925 ohne BU-Schlüssel (Issues #165, #167)
+- [x] DATEV-Export: Buchungsstapel EXTF v700/9 mit BU-Schlüsseln (19%/7%/ig.Erwerb/§13b/§25a), konfigurierbaren Gegenkonten und Quartal-/Halbjahr-/Jahres-/Freizeitraumauswahl; Fallback-Sachkonto für RE-Zahlungen; Skonto als Bank-Buchung; AM-Konten 8920–8925 ohne BU-Schlüssel (Issues #165, #167); Stornobuchungen übernehmen BU-Schlüssel der Originalbuchung; Buchungen ohne Sachkonto mit leerem Konto exportiert statt übersprungen (Issue #163)
 - [x] Buchhalter-CSV-Export: Journal als Semikolon-CSV (UTF-8 mit BOM) für Excel/LibreOffice und Buchhaltungsprogramme ohne DATEV-Import; Zeitraumauswahl wie DATEV
 - [x] Jahresumsatzsteuererklärung (USt 2A / Anlage UR): Anzeigehilfe mit allen KZ-Werten aus den Journalbuchungen des Wirtschaftsjahres; Kleinunternehmer: KZ 48 (§19 Gesamtumsatz); Vorauszahlungsanrechnung aus gespeicherten Voranmeldungen (KZ 76); PDF-Export; Anlage-UR-Hinweis bei ig. Umsätzen
 - [x] Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe mit Gewinn/Verlust (aus EÜR), Steuernummer, Finanzamt, Berufsbezeichnung und KFZ-Privatanteil; zeigt welche Zeile in ELSTER wohin gehört
