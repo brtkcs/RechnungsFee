@@ -1386,7 +1386,7 @@ export type ArtikelCreate = {
   lieferanten_artikelnr?: string
   hersteller?: string
   artikelcode?: string
-  beschreibung?: string
+  beschreibung?: string | null
   gruppe_id?: number
   differenzbesteuerung?: boolean
   lager_aktiv?: boolean
