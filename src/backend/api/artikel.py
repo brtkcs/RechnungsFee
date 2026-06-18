@@ -91,6 +91,7 @@ def suche_artikel(
             ek_brutto=a.ek_brutto,
             differenzbesteuerung=a.differenzbesteuerung,
             lieferant_name=a.lieferant.firmenname if a.lieferant else None,
+            beschreibung=a.beschreibung,
             lager_aktiv=a.lager_aktiv,
             bestand_aktuell=a.bestand_aktuell,
             minusbestand_erlaubt=a.minusbestand_erlaubt,
@@ -171,7 +172,7 @@ def update_artikel(artikel_id: int, data: ArtikelUpdate, db: Session = Depends(g
     if not artikel:
         raise HTTPException(status_code=404, detail="Artikel nicht gefunden.")
 
-    update = data.model_dump(exclude_none=True)
+    update = data.model_dump(exclude_unset=True)
 
     differenzbesteuerung = update.get("differenzbesteuerung", artikel.differenzbesteuerung)
 

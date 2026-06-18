@@ -2395,7 +2395,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
       idx === i
         ? {
             ...p,
-            beschreibung: a.bezeichnung,
+            beschreibung: a.beschreibung ? `${a.bezeichnung}\n${a.beschreibung}` : a.bezeichnung,
             einheit: a.einheit,
             ust_satz,
             netto: preis.replace('.', ','),
@@ -3128,10 +3128,10 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
               const lagerFelder = { art_lager_aktiv: neu.lager_aktiv, art_bestand: neu.bestand_aktuell, art_minusbestand_erlaubt: neu.minusbestand_erlaubt }
               if (letzteIdx >= 0 && !prev[letzteIdx].beschreibung) {
                 return prev.map((p, idx) => idx === letzteIdx
-                  ? { ...p, beschreibung: neu.bezeichnung, einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff, ...lagerFelder }
+                  ? { ...p, beschreibung: neu.beschreibung ? `${neu.bezeichnung}\n${neu.beschreibung}` : neu.bezeichnung, einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff, ...lagerFelder }
                   : p)
               }
-              return [...prev, { beschreibung: neu.bezeichnung, menge: '1', einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff, ...lagerFelder }]
+              return [...prev, { beschreibung: neu.beschreibung ? `${neu.bezeichnung}\n${neu.beschreibung}` : neu.bezeichnung, menge: '1', einheit: neu.einheit, ust_satz, netto: preis.replace('.', ','), artikel_id: neu.id, differenzbesteuerung: istDiff, ...lagerFelder }]
             })
           }}
         />

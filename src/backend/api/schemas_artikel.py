@@ -137,6 +137,7 @@ class ArtikelSucheResponse(BaseModel):
     differenzbesteuerung: bool = False
     lieferant_name: Optional[str] = None
     # Lagerführung – für Bestandswarnung im Rechnungsformular
+    beschreibung: Optional[str] = None
     lager_aktiv: bool = False
     bestand_aktuell: Decimal = Decimal("0")
     minusbestand_erlaubt: bool = True
