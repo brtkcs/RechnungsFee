@@ -7,6 +7,15 @@ type TabId = 'backup' | 'wiederherstellung'
 
 const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
 
+function istSystemlaufwerk(pfad: string): boolean {
+  if (!pfad || pfad.startsWith('smb://')) return false
+  const p = pfad.replace(/\\/g, '/').toLowerCase().replace(/\/+$/, '')
+  if (p === 'c:' || p.startsWith('c:/')) return true
+  if (p === '/' || p === '/home' || p === '/root' || p.startsWith('/home/') || p.startsWith('/root/')) return true
+  if (p.startsWith('/users/') || p.startsWith('/system/') || p.startsWith('/library/')) return true
+  return false
+}
+
 // ---------------------------------------------------------------------------
 // Tab-Navigation
 // ---------------------------------------------------------------------------
@@ -110,6 +119,11 @@ function ExterneBackupEinstellungen() {
                 </button>
               )}
             </div>
+            {istSystemlaufwerk(pfad1) && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Systemlaufwerk – Backup wird beim Beenden übersprungen. Bitte ein externes Laufwerk, NAS oder SMB-Pfad verwenden.
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -126,6 +140,11 @@ function ExterneBackupEinstellungen() {
                 </button>
               )}
             </div>
+            {istSystemlaufwerk(pfad2) && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Systemlaufwerk – Backup wird beim Beenden übersprungen. Bitte ein externes Laufwerk, NAS oder SMB-Pfad verwenden.
+              </p>
+            )}
           </div>
         </div>
 

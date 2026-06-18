@@ -231,7 +231,6 @@ def backup_erstellen():
 
     pfad1, pfad2, passwort, smb_benutzer, smb_passwort = row
     extern_konfiguriert = bool(passwort and (pfad1 or pfad2))
-    fehler = []
     if not extern_konfiguriert:
         print("[Backup] Externe Ziele übersprungen: kein Verschlüsselungs-Passwort gesetzt")
         return {"ok": True, "extern_konfiguriert": False}
@@ -245,7 +244,13 @@ def backup_erstellen():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backup-ZIP-Erstellung fehlgeschlagen: {e}")
 
+    fehler = []
+    uebersprungen = []
     for pfad in filter(None, [pfad1, pfad2]):
+        if _ist_systemlaufwerk(pfad):
+            uebersprungen.append(pfad)
+            print(f"[Backup] Systemlaufwerk übersprungen: {pfad}")
+            continue
         try:
             if pfad.startswith("smb://"):
                 _backup_smb(pfad, dateiname, enc_bytes, smb_benutzer, smb_passwort)
@@ -258,7 +263,7 @@ def backup_erstellen():
             fehler.append(f"{pfad}: {e}")
             print(f"[Backup] Externer Backup-Fehler ({pfad}): {e}")
 
-    return {"ok": True, "extern_konfiguriert": True, "fehler": fehler or None}
+    return {"ok": True, "extern_konfiguriert": True, "fehler": fehler or None, "uebersprungen": uebersprungen or None}
 
 
 @app.post("/api/backup/wiederherstellen")
@@ -291,6 +296,23 @@ async def backup_wiederherstellen(
 
     RESTORE_MARKER.write_bytes(content)
     return {"ok": True, "neustart_erforderlich": True}
+
+
+def _ist_systemlaufwerk(pfad: str) -> bool:
+    """Gibt True zurück wenn pfad auf einem Systemlaufwerk liegt (kein sinnvoller Backup-Ort)."""
+    if pfad.startswith("smb://"):
+        return False
+    p = pfad.replace("\\", "/").lower().rstrip("/")
+    # Windows C:
+    if p == "c:" or p.startswith("c:/"):
+        return True
+    # Linux /home, /root, /
+    if p in ("/", "/home", "/root") or p.startswith("/home/") or p.startswith("/root/"):
+        return True
+    # macOS /Users, /System, /Library
+    if p.startswith("/users/") or p.startswith("/system/") or p.startswith("/library/"):
+        return True
+    return False
 
 
 def _backup_datenbank() -> None:
