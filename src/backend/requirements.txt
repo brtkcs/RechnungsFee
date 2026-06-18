@@ -17,3 +17,4 @@ pytesseract
 ocrmypdf
 markdown
 cryptography
+smbprotocol

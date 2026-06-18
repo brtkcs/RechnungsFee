@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 87` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 88` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -189,6 +189,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 85 | rechnungen.rabatt_betrag NUMERIC(12,2) – Festbetrag-Rabatt (€) als Alternative zu rabatt_prozent (%); Toggle im Formular; „Abzug" statt „Rabatt X %" im PDF |
 | 86 | Lagerführung-Light (Issue #173): unternehmen.lagerführung_aktiv; artikel: lager_aktiv, bestand_aktuell NUMERIC(10,3), mindestbestand NUMERIC(10,3), minusbestand_erlaubt; Bestandsbuchung bei Finalisierung/Storno/_lager_buchen(); Dashboard-Lagerwarnung-Widget; Bestandswarnung im Rechnungsformular |
 | 87 | Datenfix: artikel.minusbestand_erlaubt DEFAULT 0 (war fälschlich 1) |
+| 88 | unternehmen: backup_smb_benutzer TEXT + backup_smb_passwort TEXT – SMB-Zugangsdaten für smb://-Backup-Pfade (smbprotocol, kein System-Mount nötig) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

@@ -123,6 +123,8 @@ class Unternehmen(Base):
     backup_extern_pfad_1:  Mapped[str | None] = mapped_column(Text)
     backup_extern_pfad_2:  Mapped[str | None] = mapped_column(Text)
     backup_extern_passwort: Mapped[str | None] = mapped_column(Text)
+    backup_smb_benutzer:   Mapped[str | None] = mapped_column(Text)
+    backup_smb_passwort:   Mapped[str | None] = mapped_column(Text)
     # DATEV-Konfiguration
     datev_beraternummer:   Mapped[str | None] = mapped_column(String(10))
     datev_mandantennummer: Mapped[str | None] = mapped_column(String(10))

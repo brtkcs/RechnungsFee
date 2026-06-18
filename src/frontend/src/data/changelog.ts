@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.22',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Backup: SMB-Unterstützung – Backup-Ziel kann jetzt ein SMB-Netzwerkpfad sein (smb://server/freigabe/pfad); Benutzername und Passwort werden separat gespeichert; kein System-Mount nötig (Issue #176)' },
+    ],
+  },
+  {
     version: 'v0.3.21',
     datum: 'Juni 2026',
     eintraege: [

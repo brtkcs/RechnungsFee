@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s
 
-SCHEMA_VERSION = 87
+SCHEMA_VERSION = 88
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -154,6 +154,54 @@ def _erstelle_vollbackup_zip() -> bytes:
     return buf.getvalue()
 
 
+def _backup_smb(smb_url: str, dateiname: str, daten: bytes,
+                benutzer: str | None, passwort: str | None) -> None:
+    """Schreibt Backup-Bytes direkt per SMB-Protokoll auf eine Netzwerkfreigabe.
+
+    smb_url-Format: smb://server/share/optionaler/pfad
+    Erfordert smbprotocol (pip install smbprotocol).
+    """
+    try:
+        import smbclient  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError(
+            "smbprotocol ist nicht installiert. "
+            "Bitte 'pip install smbprotocol' ausführen."
+        ) from exc
+
+    # smb://server/share/pfad → server, share, pfad
+    ohne_schema = smb_url[6:]  # entfernt "smb://"
+    teile = ohne_schema.split("/", 2)
+    server = teile[0]
+    share  = teile[1] if len(teile) > 1 else ""
+    unterordner = teile[2] if len(teile) > 2 else ""
+
+    if not server or not share:
+        raise ValueError(f"Ungültige SMB-URL: {smb_url!r} – Format: smb://server/share/pfad")
+
+    smbclient.register_session(server, username=benutzer or "", password=passwort or "")
+
+    # Zielordner sicherstellen (rekursiv)
+    unc_basis = f"\\\\{server}\\{share}"
+    if unterordner:
+        teile_ordner = unterordner.strip("/").split("/")
+        aktuell = unc_basis
+        for teil in teile_ordner:
+            aktuell = f"{aktuell}\\{teil}"
+            try:
+                smbclient.mkdir(aktuell)
+            except Exception:
+                pass  # existiert bereits
+
+    unc_ziel = f"{unc_basis}\\{unterordner.replace('/', '\\')}\\{dateiname}".replace("\\\\", "\\").replace("\\", "\\")
+    # saubereres UNC aufbauen
+    pfad_teile = [p for p in [unterordner.strip("/").replace("/", "\\"), dateiname] if p]
+    unc_datei = f"\\\\{server}\\{share}\\" + "\\".join(pfad_teile)
+
+    with smbclient.open_file(unc_datei, mode="wb") as f:
+        f.write(daten)
+
+
 @app.post("/api/backup/erstellen")
 def backup_erstellen():
     """Backup bei App-Ende – WAL-sicher lokal (max. 5), optional AES-256-GCM auf externen Pfaden."""
@@ -171,7 +219,8 @@ def backup_erstellen():
     try:
         with engine.connect() as conn:
             row = conn.execute(text(
-                "SELECT backup_extern_pfad_1, backup_extern_pfad_2, backup_extern_passwort "
+                "SELECT backup_extern_pfad_1, backup_extern_pfad_2, backup_extern_passwort, "
+                "backup_smb_benutzer, backup_smb_passwort "
                 "FROM unternehmen WHERE id=1"
             )).fetchone()
     except Exception:
@@ -180,11 +229,10 @@ def backup_erstellen():
     if not row:
         return {"ok": True}
 
-    pfad1, pfad2, passwort = row
+    pfad1, pfad2, passwort, smb_benutzer, smb_passwort = row
     extern_konfiguriert = bool(passwort and (pfad1 or pfad2))
     fehler = []
     if not extern_konfiguriert:
-        # Kein Passwort oder kein Pfad → keine externe Kopie
         print("[Backup] Externe Ziele übersprungen: kein Verschlüsselungs-Passwort gesetzt")
         return {"ok": True, "extern_konfiguriert": False}
 
@@ -199,10 +247,13 @@ def backup_erstellen():
 
     for pfad in filter(None, [pfad1, pfad2]):
         try:
-            ziel_dir = Path(pfad)
-            ziel_dir.mkdir(parents=True, exist_ok=True)
-            (ziel_dir / dateiname).write_bytes(enc_bytes)
-            print(f"[Backup] Extern gesichert: {ziel_dir / dateiname}")
+            if pfad.startswith("smb://"):
+                _backup_smb(pfad, dateiname, enc_bytes, smb_benutzer, smb_passwort)
+            else:
+                ziel_dir = Path(pfad)
+                ziel_dir.mkdir(parents=True, exist_ok=True)
+                (ziel_dir / dateiname).write_bytes(enc_bytes)
+            print(f"[Backup] Extern gesichert: {pfad}/{dateiname}")
         except Exception as e:
             fehler.append(f"{pfad}: {e}")
             print(f"[Backup] Externer Backup-Fehler ({pfad}): {e}")
@@ -1962,6 +2013,15 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 87"))
             conn.commit()
             print("[Migration] Schema auf Version 87 (Datenfix: minusbestand_erlaubt DEFAULT 0)")
+
+        if version < 88:
+            cols88 = {c[1] for c in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            for col in ("backup_smb_benutzer", "backup_smb_passwort"):
+                if col not in cols88:
+                    conn.execute(text(f"ALTER TABLE unternehmen ADD COLUMN {col} TEXT"))
+            conn.execute(text("PRAGMA user_version = 88"))
+            conn.commit()
+            print("[Migration] Schema auf Version 88 (Backup: SMB-Zugangsdaten)")
 
 
 def _migrate_kategorien() -> None:

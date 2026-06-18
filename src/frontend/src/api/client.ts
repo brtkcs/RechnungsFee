@@ -208,6 +208,8 @@ export type Unternehmen = {
   backup_extern_pfad_1?: string | null
   backup_extern_pfad_2?: string | null
   backup_extern_passwort?: string | null
+  backup_smb_benutzer?: string | null
+  backup_smb_passwort?: string | null
   datev_beraternummer?: string | null
   datev_mandantennummer?: string | null
   datev_konto_bar?: string | null

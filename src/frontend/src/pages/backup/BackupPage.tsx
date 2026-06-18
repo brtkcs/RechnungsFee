@@ -44,6 +44,9 @@ function ExterneBackupEinstellungen() {
   const [pfad2, setPfad2] = useState<string>('')
   const [passwort, setPasswort] = useState<string>('')
   const [zeigPasswort, setZeigPasswort] = useState(false)
+  const [smbBenutzer, setSmbBenutzer] = useState<string>('')
+  const [smbPasswort, setSmbPasswort] = useState<string>('')
+  const [zeigSmbPasswort, setZeigSmbPasswort] = useState(false)
   const [status, setStatus] = useState<'idle' | 'saving' | 'ok' | 'err'>('idle')
 
   useEffect(() => {
@@ -51,6 +54,8 @@ function ExterneBackupEinstellungen() {
     setPfad1(data.backup_extern_pfad_1 ?? '')
     setPfad2(data.backup_extern_pfad_2 ?? '')
     setPasswort(data.backup_extern_passwort ?? '')
+    setSmbBenutzer(data.backup_smb_benutzer ?? '')
+    setSmbPasswort(data.backup_smb_passwort ?? '')
   }, [data])
 
   const mutation = useMutation({
@@ -79,7 +84,7 @@ function ExterneBackupEinstellungen() {
   function speichern() {
     if (!kannSpeichern) return
     setStatus('saving')
-    mutation.mutate({ ...data!, backup_extern_pfad_1: pfad1 || null, backup_extern_pfad_2: pfad2 || null, backup_extern_passwort: passwort || null })
+    mutation.mutate({ ...data!, backup_extern_pfad_1: pfad1 || null, backup_extern_pfad_2: pfad2 || null, backup_extern_passwort: passwort || null, backup_smb_benutzer: smbBenutzer || null, backup_smb_passwort: smbPasswort || null })
   }
 
   return (
@@ -96,7 +101,7 @@ function ExterneBackupEinstellungen() {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Ziel 1</label>
             <div className="flex gap-2">
               <input type="text" value={pfad1} onChange={e => setPfad1(e.target.value)}
-                placeholder="z.B. /mnt/nas/backup oder \\NAS\backup"
+                placeholder="z.B. /mnt/nas/backup, \\NAS\backup oder smb://server/freigabe/backup"
                 className={`${inputCls} flex-1`} />
               {isTauri() && (
                 <button type="button" onClick={() => waehlePfad(setPfad1)}
@@ -123,6 +128,39 @@ function ExterneBackupEinstellungen() {
             </div>
           </div>
         </div>
+
+        {/* SMB-Zugangsdaten – erscheinen nur wenn mindestens ein smb://-Pfad eingetragen ist */}
+        {(pfad1.startsWith('smb://') || pfad2.startsWith('smb://')) && (
+          <>
+            <hr className="border-slate-100 dark:border-slate-700" />
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">SMB-Zugangsdaten</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs text-slate-500 dark:text-slate-400">Benutzername</label>
+                  <input type="text" value={smbBenutzer} onChange={e => setSmbBenutzer(e.target.value)}
+                    placeholder="z.B. backup-user"
+                    className={inputCls} />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs text-slate-500 dark:text-slate-400">Passwort</label>
+                  <div className="relative">
+                    <input type={zeigSmbPasswort ? 'text' : 'password'} value={smbPasswort} onChange={e => setSmbPasswort(e.target.value)}
+                      placeholder="SMB-Passwort"
+                      className={`${inputCls} pr-20`} />
+                    <button type="button" onClick={() => setZeigSmbPasswort(z => !z)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 px-2 py-1">
+                      {zeigSmbPasswort ? 'Verbergen' : 'Anzeigen'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Wird nur für smb://-Pfade verwendet. Leer lassen wenn die Freigabe ohne Passwort erreichbar ist.
+              </p>
+            </div>
+          </>
+        )}
 
         <hr className="border-slate-100 dark:border-slate-700" />
 
