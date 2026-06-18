@@ -67,7 +67,7 @@ def _belegnr_aus_format(format_str: str, datum: date, nr: int) -> str:
         return str(nr).zfill(len(m.group()))
 
     result = _re.sub(r"#+", _pad, result)
-    result = _re.sub(r"N+", _pad, result)  # dt. Alias: Nummer
+    result = _re.sub(r"NN+", _pad, result)  # dt. Alias: Nummer (mind. 2 N, damit einzelne Buchstaben in Präfixen nicht ersetzt werden)
     return result
 
 
