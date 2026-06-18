@@ -36,6 +36,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Artikel: Beschreibung löschen wurde nicht gespeichert; Beschreibung wurde beim Einfügen in eine Rechnungsposition nicht übernommen (Issue #172)' },
       { typ: 'fix', text: 'Lagerführung: Bestand wurde nicht reduziert wenn direkt aus dem Formular finalisiert wurde (nur der Entwurf→Finalisieren-Weg buchte korrekt); Storno erhöhte den Bestand dadurch fälschlich (Issue #173)' },
       { typ: 'fix', text: 'Lagerführung: Finalisierungssperre bei Bestandsunterschreitung wirkte nur im Entwurf→Finalisieren-Pfad, nicht beim direkten Finalisieren aus dem Formular (Issue #173)' },
+      { typ: 'verbesserung', text: 'Lagerführung: Bestandshinweis jetzt auch im Auftragsformular – gelbe Warnung wenn die bestellte Menge den verfügbaren Bestand übersteigt (ohne Blockierung, da der Bestand erst beim Rechnungs-Finalisieren gebucht wird) (Issue #177)' },
     ],
   },
   {

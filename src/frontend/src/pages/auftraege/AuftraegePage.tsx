@@ -58,6 +58,9 @@ interface Pos {
   einzelpreis: string
   ust_satz: string
   artikel_id?: number
+  art_lager_aktiv?: boolean
+  art_bestand?: string
+  art_minusbestand_erlaubt?: boolean
 }
 
 function leerePos(): Pos {
@@ -253,11 +256,14 @@ function AuftragFormular({
     setPositionen(prev => prev.map((p, idx) =>
       idx !== i ? p : {
         ...p,
-        beschreibung: a.bezeichnung,
+        beschreibung: a.beschreibung ? `${a.bezeichnung}\n${a.beschreibung}` : a.bezeichnung,
         einheit: a.einheit,
         einzelpreis: preis,
         ust_satz,
         artikel_id: a.id,
+        art_lager_aktiv: a.lager_aktiv,
+        art_bestand: a.bestand_aktuell,
+        art_minusbestand_erlaubt: a.minusbestand_erlaubt,
       }
     ))
   }
@@ -359,6 +365,22 @@ function AuftragFormular({
           onArtikelWahl={fillPositionFromArtikel}
           eingabeModus={eingabeModus}
         />
+        {(() => {
+          const warnungen = positionen.filter(p =>
+            p.art_lager_aktiv && p.art_minusbestand_erlaubt === false &&
+            parseFloat(p.menge || '1') > parseFloat(p.art_bestand || '0')
+          )
+          if (warnungen.length === 0) return null
+          return (
+            <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-700 dark:text-amber-300 space-y-1">
+              <p className="font-semibold">Bestand möglicherweise nicht ausreichend:</p>
+              {warnungen.map((p, i) => (
+                <p key={i}>• {p.beschreibung}: benötigt {p.menge} {p.einheit}, verfügbar {parseFloat(p.art_bestand || '0').toLocaleString('de-DE', { maximumFractionDigits: 3 })} {p.einheit}</p>
+              ))}
+              <p className="pt-0.5 opacity-80">Bestand wird erst beim Finalisieren der Rechnung gebucht.</p>
+            </div>
+          )
+        })()}
       </div>
 
       <div>
