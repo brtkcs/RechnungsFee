@@ -73,7 +73,7 @@ export function EUERPage() {
     : {}
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8">
+    <div className="max-w-2xl px-6 py-8">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
         EÜR – Einnahmen-Überschuss-Rechnung
       </h1>

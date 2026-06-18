@@ -1,49 +1,61 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { berechneAnlageS, type AnlageSErgebnis } from '../../api/client'
+import { berechneAnlageS, getAnlageSPdfUrl, openUrl, type AnlageSErgebnis } from '../../api/client'
 
 function euroFmt(v: string | number): string {
   const n = typeof v === 'string' ? parseFloat(v) : v
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(Math.abs(n))
 }
 
-function Zeile({ zeile, feld, wert, hinweis, leer }: {
-  zeile?: string
-  feld: string
-  wert?: string
-  hinweis?: string
-  leer?: boolean
-}) {
+function Abschnitt({ titel, children }: { titel: string; children: React.ReactNode }) {
   return (
-    <div className={`flex items-start gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 last:border-0 ${leer ? 'opacity-40' : ''}`}>
-      {zeile && (
-        <span className="shrink-0 w-16 text-xs font-mono text-slate-400 dark:text-slate-500 pt-0.5">
-          Zeile {zeile}
-        </span>
-      )}
-      {!zeile && <span className="shrink-0 w-16" />}
-      <span className="flex-1 text-sm text-slate-600 dark:text-slate-300">{feld}</span>
-      <span className={`text-sm font-medium tabular-nums ${
-        leer
-          ? 'text-slate-400 dark:text-slate-500'
-          : 'text-slate-800 dark:text-slate-100'
-      }`}>
-        {wert ?? '—'}
-      </span>
-      {hinweis && (
-        <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{hinweis}</span>
-      )}
+    <div className="mb-4">
+      <div className="bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-t text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+        {titel}
+      </div>
+      <div className="bg-white dark:bg-slate-800 rounded-b border border-t-0 border-slate-200 dark:border-slate-700 px-4 divide-y divide-slate-100 dark:divide-slate-700">
+        {children}
+      </div>
     </div>
   )
 }
 
-function Abschnitt({ titel, kinder }: { titel: string; kinder: ReactNode }) {
+function ZeileNr({ zeile, label, wert, leer = false }: {
+  zeile: string; label: string; wert?: string; leer?: boolean
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden mb-5">
-      <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 border-b border-slate-200 dark:border-slate-700">
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{titel}</h2>
-      </div>
-      {kinder}
+    <div className="flex items-center gap-3 py-2">
+      <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-blue-600 dark:bg-blue-700">
+        Z. {zeile}
+      </span>
+      <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{label}</span>
+      <span className={`tabular-nums text-sm font-medium ${leer ? 'text-slate-300 dark:text-slate-600' : 'text-slate-800 dark:text-slate-100'}`}>
+        {wert ?? <span className="text-slate-300 dark:text-slate-600">—</span>}
+      </span>
+    </div>
+  )
+}
+
+function ZeileText({ label, wert }: { label: string; wert?: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <span className="shrink-0 w-11" />
+      <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">{label}</span>
+      <span className={`text-sm font-medium ${wert ? 'text-slate-800 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'}`}>
+        {wert || '—'}
+      </span>
+    </div>
+  )
+}
+
+function SummenZeile({ label, betrag }: { label: string; betrag: number }) {
+  const negativ = betrag < 0
+  return (
+    <div className="bg-slate-800 dark:bg-slate-900 text-white font-bold text-base flex items-center justify-between px-4 py-2.5 rounded-xl">
+      <span>{label}</span>
+      <span className={`tabular-nums ${negativ ? 'text-red-400' : ''}`}>
+        {euroFmt(betrag)}
+      </span>
     </div>
   )
 }
@@ -53,6 +65,16 @@ export function AnlageSPage() {
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
 
+  const [pdfLaedt, setPdfLaedt] = useState(false)
+  const [pdfFehler, setPdfFehler] = useState<string | null>(null)
+
+  async function handlePdf() {
+    setPdfLaedt(true); setPdfFehler(null)
+    try { await openUrl(await getAnlageSPdfUrl(jahr)) }
+    catch (e: any) { setPdfFehler(e?.message ?? 'PDF-Export fehlgeschlagen') }
+    finally { setPdfLaedt(false) }
+  }
+
   const { data, isLoading, error } = useQuery<AnlageSErgebnis>({
     queryKey: ['anlage-s', jahr],
     queryFn: () => berechneAnlageS(jahr),
@@ -60,122 +82,111 @@ export function AnlageSPage() {
 
   const gv = data ? parseFloat(data.gewinn_verlust) : 0
   const istGewinn = gv >= 0
+  const stammdatenUnvollstaendig = data && (!data.steuernummer || !data.finanzamt || !data.berufsbezeichnung)
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-8">
+    <div className="max-w-2xl px-6 py-8">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
         Anlage S – Einkünfte aus selbstständiger Arbeit
       </h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-        Anzeigehilfe für die Einkommensteuererklärung (§18 EStG) · Werte aus EÜR und Stammdaten
+        Anzeigehilfe für die Einkommensteuererklärung (§18 EStG) · Gewinn/Verlust aus der EÜR.
+        Übertrage die Werte in{' '}
+        <span className="text-blue-600 dark:text-blue-400">ELSTER</span>{' '}
+        oder gib sie an deinen Steuerberater.
       </p>
 
-      {/* Jahr-Auswahl */}
-      <div className="flex items-center gap-3 mb-6">
-        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Steuerjahr</label>
-        <select
-          value={jahr}
-          onChange={e => setJahr(Number(e.target.value))}
-          className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-        >
-          {jahre.map(j => <option key={j} value={j}>{j}</option>)}
-        </select>
+      {/* Jahresauswahl */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex items-center gap-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Wirtschaftsjahr</label>
+          <select
+            value={jahr}
+            onChange={e => setJahr(Number(e.target.value))}
+            className="border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+          >
+            {jahre.map(j => <option key={j} value={j}>{j}</option>)}
+          </select>
+        </div>
+        {isLoading && <span className="text-sm text-slate-500 dark:text-slate-400">Berechne…</span>}
+        {data && !isLoading && (
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={handlePdf} disabled={pdfLaedt}
+              className="px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
+              {pdfLaedt ? '…' : '📄 PDF'}
+            </button>
+            {pdfFehler && <span className="text-xs text-red-600 dark:text-red-400">{pdfFehler}</span>}
+          </div>
+        )}
       </div>
 
-      {isLoading && (
-        <p className="text-sm text-slate-400">Berechne…</p>
-      )}
       {error && (
-        <p className="text-sm text-red-500">Fehler beim Laden der Daten.</p>
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 text-sm text-red-700 dark:text-red-300">
+          {(error as Error).message}
+        </div>
       )}
 
       {data && (
-        <>
+        <div className="space-y-0">
+
           {/* Persönliche Angaben */}
           <Abschnitt titel="Persönliche Angaben">
-            <Zeile
-              zeile="1"
-              feld="Name, Vorname"
-              wert={[data.nachname, data.vorname].filter(Boolean).join(', ') || undefined}
-              leer={!data.nachname && !data.vorname}
-            />
-            <Zeile
-              zeile="2"
-              feld="Steuernummer"
-              wert={data.steuernummer || undefined}
-              leer={!data.steuernummer}
-            />
-            <Zeile
-              zeile="3"
-              feld="Art der Tätigkeit (Berufsbezeichnung)"
-              wert={data.berufsbezeichnung || undefined}
-              leer={!data.berufsbezeichnung}
-            />
-            <Zeile
-              feld="Finanzamt"
-              wert={data.finanzamt || undefined}
-              leer={!data.finanzamt}
-            />
+            <ZeileNr zeile="1" label="Name, Vorname"
+              wert={[data.nachname, data.vorname].filter(Boolean).join(', ') || undefined} />
+            <ZeileText label="Finanzamt" wert={data.finanzamt || undefined} />
+            <ZeileNr zeile="2" label="Steuernummer" wert={data.steuernummer || undefined} />
+            <ZeileNr zeile="3" label="Art der Tätigkeit (Berufsbezeichnung)" wert={data.berufsbezeichnung || undefined} />
           </Abschnitt>
 
           {/* Laufende Einkünfte */}
           <Abschnitt titel="Laufende Einkünfte (aus EÜR)">
-            {istGewinn ? (
-              <Zeile
-                zeile="4"
-                feld="Gewinn"
-                wert={euroFmt(gv)}
-              />
-            ) : (
-              <Zeile
-                zeile="5"
-                feld="Verlust"
-                wert={euroFmt(gv)}
-              />
-            )}
-            <Zeile
-              zeile={istGewinn ? '5' : '4'}
-              feld={istGewinn ? 'Verlust' : 'Gewinn'}
-              wert="0,00 €"
-              leer
-            />
+            <ZeileNr zeile="4" label="Gewinn"
+              wert={istGewinn ? euroFmt(gv) : undefined}
+              leer={!istGewinn} />
+            <ZeileNr zeile="5" label="Verlust"
+              wert={!istGewinn ? euroFmt(gv) : undefined}
+              leer={istGewinn} />
           </Abschnitt>
 
-          {/* KFZ mit Privatanteil */}
+          {/* KFZ */}
           {data.kfz_hinweise.length > 0 && (
-            <Abschnitt titel="KFZ – Privatnutzung (Zeile 18 prüfen)">
-              <div className="px-4 py-2.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 border-b border-slate-100 dark:border-slate-700">
-                Du hast KFZ-Anlagegüter mit Privatanteil. Wenn du die <strong>1%-Methode</strong> nutzt, ist der Privatnutzungsanteil in Zeile 18 einzutragen. Bei der <strong>Fahrtenbuchmethode</strong> oder der <strong>km-Pauschale</strong> (Privatfahrzeug) entfällt Zeile 18.
-              </div>
+            <Abschnitt titel="KFZ – Privatnutzung">
               {data.kfz_hinweise.map((k, i) => (
-                <Zeile
-                  key={i}
-                  feld={`${k.bezeichnung}${k.kennzeichen ? ` (${k.kennzeichen})` : ''}`}
-                  wert={`${parseFloat(k.privat_anteil_prozent).toFixed(0)} % Privatanteil`}
+                <ZeileNr key={i} zeile="18"
+                  label={`${k.bezeichnung}${k.kennzeichen ? ` (${k.kennzeichen})` : ''} – ${parseFloat(k.privat_anteil_prozent).toFixed(0)} % Privatanteil`}
+                  wert="→ Betrag manuell ermitteln"
                 />
               ))}
             </Abschnitt>
           )}
 
-          {/* Fehlende Stammdaten */}
-          {(!data.steuernummer || !data.finanzamt || !data.berufsbezeichnung) && (
-            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-sm text-blue-800 dark:text-blue-300 mb-5">
-              <span className="shrink-0 mt-0.5">ℹ️</span>
-              <span>
-                Einige Felder sind leer.{' '}
-                <a href="/unternehmen" className="underline font-medium">
-                  Unter Einstellungen → Unternehmen
-                </a>{' '}
-                kannst du Steuernummer, Finanzamt und Berufsbezeichnung hinterlegen.
-              </span>
+          {/* Ergebnis */}
+          <SummenZeile
+            label={istGewinn ? `Gewinn ${jahr} (Zeile 4)` : `Verlust ${jahr} (Zeile 5)`}
+            betrag={gv}
+          />
+
+          {/* KFZ-Hinweis */}
+          {data.kfz_hinweise.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-200 mt-4">
+              <strong>Zeile 18 – KFZ-Privatnutzung:</strong> Bei der <strong>1 %-Methode</strong> ist der geldwerte Vorteil in Zeile 18 einzutragen. Bei der <strong>Fahrtenbuchmethode</strong> oder der <strong>km-Pauschale</strong> (Privatfahrzeug) entfällt Zeile 18.
             </div>
           )}
 
-          {/* Disclaimer */}
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-            Diese Anzeigehilfe ersetzt keine Steuerberatung. Zeilennummern beziehen sich auf das amtliche Formular Anlage S {jahr}. Bei Unsicherheiten wende dich an eine Steuerberaterin oder das Finanzamt.
+          {/* Fehlende Stammdaten */}
+          {stammdatenUnvollstaendig && (
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-sm text-blue-800 dark:text-blue-300 mt-4">
+              Einige Felder sind leer.{' '}
+              <a href="/unternehmen" className="underline font-medium">Einstellungen → Unternehmen</a>{' '}
+              → Steuernummer, Finanzamt und Berufsbezeichnung hinterlegen.
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">
+            Grundlage: EÜR {jahr} (Ist-Versteuerung / Zuflussprinzip) · Zeilennummern nach Anlage S {jahr}.
+            Diese Anzeigehilfe ersetzt keine Steuerberatung.
           </p>
-        </>
+        </div>
       )}
     </div>
   )

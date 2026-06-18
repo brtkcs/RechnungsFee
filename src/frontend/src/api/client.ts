@@ -1358,6 +1358,7 @@ export type ArtikelSuche = {
   ek_brutto: string | null
   differenzbesteuerung: boolean
   lieferant_name: string | null
+  beschreibung: string | null
   lager_aktiv: boolean
   bestand_aktuell: string
   minusbestand_erlaubt: boolean
@@ -1704,6 +1705,11 @@ export type AnlageSErgebnis = {
 
 export const berechneAnlageS = (jahr: number) =>
   request<AnlageSErgebnis>(`/anlage-s/berechnen?jahr=${jahr}`)
+
+export const getAnlageSPdfUrl = async (jahr: number): Promise<string> => {
+  const base = await getBaseUrl()
+  return `${base}/anlage-s/pdf?jahr=${jahr}`
+}
 
 
 // ---------------------------------------------------------------------------

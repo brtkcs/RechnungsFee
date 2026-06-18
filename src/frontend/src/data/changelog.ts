@@ -26,8 +26,9 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.3.21',
     datum: 'Juni 2026',
     eintraege: [
-      { typ: 'neu', text: 'Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe für die Einkommensteuererklärung (§18 EStG); zeigt Gewinn/Verlust aus der EÜR, Berufsbezeichnung, Steuernummer und Finanzamt mit den zugehörigen ELSTER-Zeilen; KFZ-Hinweis wenn Anlagegüter mit Privatanteil vorhanden' },
+      { typ: 'neu', text: 'Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe für die Einkommensteuererklärung (§18 EStG); zeigt Gewinn/Verlust aus der EÜR, Berufsbezeichnung, Steuernummer und Finanzamt mit den zugehörigen ELSTER-Zeilen; KFZ-Hinweis wenn Anlagegüter mit Privatanteil vorhanden; PDF-Export' },
       { typ: 'neu', text: '„Ansehen"-Button für finalisierte Rechnungen: öffnet das aktuelle PDF in einem eigenen Fenster ohne Druckdialog und ohne Statusänderung – setzt weder ausgegeben noch speichert es ein Original' },
+      { typ: 'verbesserung', text: 'Anlage S: Oberfläche im gleichen Stil wie EÜR und Jahres-USt (blaue Zeilen-Badges, grauer Abschnittsheader, PDF-Button in der Jahresauswahlleiste)' },
       { typ: 'verbesserung', text: 'Art.-Nr.-Spalte im Rechnungs-PDF: Automatischer Zeilenumbruch bei langen Artikelcodes (SKU/EAN) – vorher wurde Text abgeschnitten; gilt für beide PDF-Vorlagen und den Lieferschein' },
     ],
   },
