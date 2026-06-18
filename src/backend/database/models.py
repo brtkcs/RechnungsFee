@@ -550,6 +550,7 @@ class Rechnung(Base):
     storniert: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     storno_grund: Mapped[str | None] = mapped_column(String(500))
     storno_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
+    storno_rechnungsnummer: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ausgegeben: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ausgegeben_am: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     original_pdf_pfad: Mapped[str | None] = mapped_column(String(500))

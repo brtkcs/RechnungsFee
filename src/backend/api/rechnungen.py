@@ -1774,9 +1774,24 @@ def storno_rechnung(rechnung_id: int, data: StornoRequest, db: Session = Depends
         gegenbuchung.signatur = signatur_journaleintrag(gegenbuchung)
         db.add(gegenbuchung)
 
+    # Storno-Nummer aus eigenem Nummernkreis
+    nk_storno = db.query(Nummernkreis).filter(Nummernkreis.typ == "stornorechnung").first()
+    if nk_storno:
+        if nk_storno.reset_jaehrlich and nk_storno.letztes_jahr and heute.year > nk_storno.letztes_jahr:
+            nk_storno.naechste_nr = 1
+        if not nk_storno.letztes_jahr or heute.year > nk_storno.letztes_jahr:
+            nk_storno.letztes_jahr = heute.year
+        _snr = nk_storno.naechste_nr
+        nk_storno.naechste_nr += 1
+        storno_nr = _belegnr_aus_format(nk_storno.format, heute, _snr)
+    else:
+        _cnt = db.query(Rechnung).filter(Rechnung.storniert == True).count()  # noqa: E712
+        storno_nr = f"STORNO-{str(heute.year)[-2:]}{_cnt + 1:04d}"
+
     rechnung.storniert = True
     rechnung.storno_grund = data.grund.strip()
     rechnung.storno_datum = heute
+    rechnung.storno_rechnungsnummer = storno_nr
     rechnung.immutable = True
 
     # Lagerführung: Bestand zurückbuchen (Storno kehrt Finalisierungs-Buchung um)

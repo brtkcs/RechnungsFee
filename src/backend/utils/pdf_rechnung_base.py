@@ -390,7 +390,8 @@ class RechnungPDFBase(FPDF):
                 "Auftrag":      "Auftragsnr.",
                 "Gutschrift":   "Gutschriftnr.",
             }.get(_dok_meta, "Rechnungsnummer" if r.typ == "ausgang" else "Eingangsrechn.-Nr.")
-        _meta(_nr_label, r.rechnungsnummer or "—")
+        _storno_nr = getattr(r, "storno_rechnungsnummer", None) if _ist_storno else None
+        _meta(_nr_label, _storno_nr or r.rechnungsnummer or "—")
         if _ist_storno:
             storno_datum = getattr(r, "storno_datum", None)
             if storno_datum:
@@ -430,7 +431,8 @@ class RechnungPDFBase(FPDF):
         dokument_typ = getattr(r, "dokument_typ", "Rechnung") or "Rechnung"
         ist_storno = getattr(r, "storniert", False) and dokument_typ == "Rechnung"
         if ist_storno:
-            titel = f"Stornorechnung {r.rechnungsnummer or ''}".strip()
+            _snr = getattr(r, "storno_rechnungsnummer", None) or r.rechnungsnummer or ""
+            titel = f"Stornorechnung {_snr}".strip()
         elif dokument_typ == "Gutschrift":
             titel = f"Gutschrift {r.rechnungsnummer or ''}".strip()
         elif dokument_typ == "Lieferschein":

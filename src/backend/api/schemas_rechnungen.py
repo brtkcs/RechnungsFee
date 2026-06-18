@@ -240,6 +240,7 @@ class RechnungResponse(BaseModel):
     storniert: bool
     storno_grund: Optional[str] = None
     storno_datum: Optional[date] = None
+    storno_rechnungsnummer: Optional[str] = None
     dokument_typ: str = "Rechnung"
     gutschrift_zu_rechnung_id: Optional[int] = None
     gutschrift_zu_rechnung_nr: Optional[str] = None  # wird in from_orm_extended befüllt

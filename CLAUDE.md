@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 89` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 90` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -191,6 +191,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 87 | Datenfix: artikel.minusbestand_erlaubt DEFAULT 0 (war fälschlich 1) |
 | 88 | unternehmen: backup_smb_benutzer TEXT + backup_smb_passwort TEXT – SMB-Zugangsdaten für smb://-Backup-Pfade (smbprotocol, kein System-Mount nötig) |
 | 89 | rechnungen.storno_datum DATE – Datum des Storno-Vorgangs; Stornorechnung-PDF zeigt Titel „Stornorechnung", Stornodatum, Originaldatum, negative Beträge, keinen Zahlungsblock (Issue #178) |
+| 90 | rechnungen.storno_rechnungsnummer VARCHAR(50) – eigene Nummer aus Nummernkreis STORNO-JJNNNN; Nummernkreis-Seed stornorechnung; PDF-Titel und Kopfzeile zeigen Stornorechnung-Nr. statt Original-Nr. |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
