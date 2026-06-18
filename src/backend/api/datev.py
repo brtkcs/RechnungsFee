@@ -8,6 +8,8 @@ Sonderfälle:
   ust_sonderfall=13b_abs1/abs2 → BU 94
   marge_25a_brutto != NULL     → BU 57, Umsatz = Marge (§25a)
   zahlungsart='Keine'          → übersprungen (kein Gegenkonto)
+  fehlendes Sachkonto          → wird exportiert (leer) → DATEV-Importfehler gewollt
+  Stornobuchung (STORNO-Prefix) → BU-Schlüssel des Originals (art invertiert, vorsteuerabzug erhalten)
 """
 
 from datetime import date, datetime
@@ -109,7 +111,11 @@ def _bu(j: Journaleintrag, skr: str, konto: Optional[str]) -> str:
     if j.marge_25a_brutto is not None:
         return "57"
     satz = int(j.ust_satz or 0)
-    if j.art == "Einnahme":
+    # Stornobuchungen haben art=Gegenteil des Originals (art invertiert).
+    # BU-Schlüssel richtet sich nach dem Original → art für BU-Berechnung zurückdrehen.
+    is_storno = j.beschreibung.startswith("STORNO ")
+    art = ("Ausgabe" if j.art == "Einnahme" else "Einnahme") if is_storno else j.art
+    if art == "Einnahme":
         if konto in _AM_KONTEN.get(skr, set()):
             # Automatikkonto (AM): Steuersatz eingebaut – BU wäre REW00306
             return ""
@@ -246,9 +252,15 @@ def datev_buchungsstapel(
         konto = _sachkonto(j, skr, db)
         gegenkonto = _gegenkonto(j, unt)
 
-        if not konto or not gegenkonto:
+        if not gegenkonto:
+            # zahlungsart='Keine' → kein Zahlungskonto, Buchung nicht exportierbar
             uebersprungen += 1
             continue
+        if not konto:
+            # Kein Sachkonto ermittelbar → leeres Konto exportieren.
+            # DATEV gibt einen Importfehler, der Steuerberater kann die Buchung sehen und korrigieren.
+            konto = ""
+            uebersprungen += 1
 
         betrag = j.marge_25a_brutto if j.marge_25a_brutto is not None else j.netto_betrag
         sh = "H" if j.art == "Einnahme" else "S"

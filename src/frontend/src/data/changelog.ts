@@ -30,6 +30,10 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: '„Ansehen"-Button für finalisierte Rechnungen: öffnet das aktuelle PDF in einem eigenen Fenster ohne Druckdialog und ohne Statusänderung – setzt weder ausgegeben noch speichert es ein Original' },
       { typ: 'verbesserung', text: 'Anlage S: Oberfläche im gleichen Stil wie EÜR und Jahres-USt (blaue Zeilen-Badges, grauer Abschnittsheader, PDF-Button in der Jahresauswahlleiste)' },
       { typ: 'verbesserung', text: 'Art.-Nr.-Spalte im Rechnungs-PDF: Automatischer Zeilenumbruch bei langen Artikelcodes (SKU/EAN) – vorher wurde Text abgeschnitten; gilt für beide PDF-Vorlagen und den Lieferschein' },
+      { typ: 'fix', text: 'DATEV-Export: Stornobuchungen hatten einen falschen BU-Schlüssel – Storno einer Ausgabe (z. B. Miete VoSt 19%) bekam BU 3 (USt) statt BU 9 (VoSt); jetzt korrekt: Storno übernimmt immer den BU-Schlüssel der Originalbuchung (Issue #163)' },
+      { typ: 'fix', text: 'DATEV-Export: Buchungen ohne Sachkonto (z. B. Kassenanfangsbestand) wurden lautlos übersprungen; jetzt werden sie mit leerem Konto exportiert – DATEV zeigt einen Importfehler den der Steuerberater sieht und korrigieren kann (Issue #163)' },
+      { typ: 'fix', text: 'Rechnungsrabatt: Formular zeigte Festbetrag (€) fälschlich als Prozentwert an; PDF berechnete die USt auf den Bruttobetrag vor Rabatt statt nach Rabatt (Issue #170)' },
+      { typ: 'fix', text: 'Artikel: Beschreibung löschen wurde nicht gespeichert; Beschreibung wurde beim Einfügen in eine Rechnungsposition nicht übernommen (Issue #172)' },
     ],
   },
   {

@@ -778,7 +778,7 @@ def storno_eintrag(eintrag_id: int, data: StornoRequest, db: Session = Depends(g
         vorsteuer_betrag=-original.vorsteuer_betrag,
         brutto_betrag=s_brutto,
         marge_25a_brutto=original.marge_25a_brutto,
-        vorsteuerabzug=False,
+        vorsteuerabzug=original.vorsteuerabzug,
         steuerbefreiung_grund=None,
         immutable=True,
     )
