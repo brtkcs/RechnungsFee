@@ -117,6 +117,8 @@
 ### Backup & Wiederherstellung
 - [x] Backup bei App-Ende (automatisch, WAL-sicher, max. 5 Kopien lokal)
 - [x] Backup auf externes Laufwerk/Freigabe bei App-Ende (AES-256-GCM, DSGVO Art. 32, bis zu 2 Ziele, NAS/USB/Netzlaufwerk; Retry-Dialog bei Fehler)
+- [x] SMB-Backup: Backup direkt auf SMB-Netzlaufwerk (smb://server/freigabe/pfad) ohne OS-Mount; separate SMB-Zugangsdaten (Issue #176)
+- [x] Systemlaufwerk-Sperre: Backup-Pfade auf C:\, /home, /root, /Users etc. werden automatisch übersprungen; Frontend zeigt sofortigen Hinweis
 - [x] Wiederherstellung aus Backup: lokale DB-Snapshots direkt auswählen; ZIP-Backup (unverschlüsselt) oder .zip.enc (verschlüsselt) hochladen → Pending-Marker → Neustart stellt DB + Uploads wieder her
 
 ### Wiederkehrende Ausgangsrechnungen (Abo)

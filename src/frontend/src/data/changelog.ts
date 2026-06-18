@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'neu', text: 'Backup: SMB-Unterstützung – Backup-Ziel kann jetzt ein SMB-Netzwerkpfad sein (smb://server/freigabe/pfad); Benutzername und Passwort werden separat gespeichert; kein System-Mount nötig (Issue #176)' },
+      { typ: 'verbesserung', text: 'Backup: Pfade auf Systemlaufwerken (C:\\, /home, /root, /Users, …) werden beim automatischen Backup übersprungen – ein Backup auf derselben Platte schützt nicht vor Festplattenausfall; das Formular zeigt einen Hinweis beim Eintippen' },
     ],
   },
   {
