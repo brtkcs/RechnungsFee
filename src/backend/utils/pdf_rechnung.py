@@ -91,7 +91,7 @@ class RechnungPDF(RechnungPDFBase):
                 self.set_xy(L_MARGIN, row_y)
                 if hat_artikelcode:
                     ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
-                    self.cell(col_w[0], 6, ac or "")
+                    self.multi_cell(col_w[0], 3.5, ac or "", new_x="RIGHT", new_y="TOP")
                 self.multi_cell(col_w[desc_idx], 3.5, pos.beschreibung or "",
                                 new_x="LMARGIN", new_y="NEXT")
                 continue
@@ -112,7 +112,7 @@ class RechnungPDF(RechnungPDFBase):
             self.set_xy(L_MARGIN, row_y)
             if hat_artikelcode:
                 ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
-                self.cell(col_w[0], 6, ac or "")
+                self.multi_cell(col_w[0], 3.5, ac or "", new_x="RIGHT", new_y="TOP")
             self.multi_cell(col_w[desc_idx], 3.5, pos.beschreibung or "",
                             new_x="LMARGIN", new_y="NEXT")
             # Rabatt-Unterzeile

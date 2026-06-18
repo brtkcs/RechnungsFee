@@ -109,7 +109,7 @@
 - [x] DATEV-Export: Buchungsstapel EXTF v700/9 mit BU-Schlüsseln (19%/7%/ig.Erwerb/§13b/§25a), konfigurierbaren Gegenkonten und Quartal-/Halbjahr-/Jahres-/Freizeitraumauswahl; Fallback-Sachkonto für RE-Zahlungen; Skonto als Bank-Buchung; AM-Konten 8920–8925 ohne BU-Schlüssel (Issues #165, #167)
 - [x] Buchhalter-CSV-Export: Journal als Semikolon-CSV (UTF-8 mit BOM) für Excel/LibreOffice und Buchhaltungsprogramme ohne DATEV-Import; Zeitraumauswahl wie DATEV
 - [x] Jahresumsatzsteuererklärung (USt 2A / Anlage UR): Anzeigehilfe mit allen KZ-Werten aus den Journalbuchungen des Wirtschaftsjahres; Kleinunternehmer: KZ 48 (§19 Gesamtumsatz); Vorauszahlungsanrechnung aus gespeicherten Voranmeldungen (KZ 76); PDF-Export; Anlage-UR-Hinweis bei ig. Umsätzen
-- [ ] Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe mit Gewinn/Verlust (aus EÜR), Steuernummer, Finanzamt, Berufsbezeichnung und KFZ-Privatanteil; zeigt welche Zeile in ELSTER wohin gehört
+- [x] Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe mit Gewinn/Verlust (aus EÜR), Steuernummer, Finanzamt, Berufsbezeichnung und KFZ-Privatanteil; zeigt welche Zeile in ELSTER wohin gehört
 - [x] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung (🔍 Aufschlüsselung-Toggle in der EÜR)
 - [x] Anlage AVEÜR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
 - [x] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ (neue Spalte „Vorsteuer-Betrag")

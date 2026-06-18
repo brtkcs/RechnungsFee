@@ -163,7 +163,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
             self.cell(col_w[1], 6.5, pos_datum_str, align="L")
             if hat_artikelcode:
                 ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
-                self.cell(col_w[2], 6.5, ac or "", align="L")
+                self.multi_cell(col_w[2], 3.5, ac or "", new_x="RIGHT", new_y="TOP", align="L")
             self.multi_cell(col_w[desc_col], 3.5, pos.beschreibung or "",
                             new_x="LMARGIN", new_y="NEXT")
 

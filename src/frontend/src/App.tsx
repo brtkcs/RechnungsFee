@@ -28,6 +28,7 @@ import { JahresUStPage } from './pages/ustva/JahresUStPage'
 import { ZMPage } from './pages/zm/ZMPage'
 import { EUERPage } from './pages/euer/EUERPage'
 import { AnlageverzeichnisPage } from './pages/anlageverzeichnis/AnlageverzeichnisPage'
+import { AnlageSPage } from './pages/anlage-s/AnlageSPage'
 import { RechnungenPage } from './pages/rechnungen/RechnungenPage'
 import { WiederkehrendePage } from './pages/wiederkehrend/WiederkehrendePage'
 import BuchungsvorlagenPage from './pages/buchungsvorlagen/BuchungsvorlagenPage'
@@ -117,6 +118,7 @@ function AppRoutes() {
           <Route path="/zm" element={<ZMPage />} />
           <Route path="/euer" element={<EUERPage />} />
           <Route path="/anlageverzeichnis" element={<AnlageverzeichnisPage />} />
+          <Route path="/anlage-s" element={<AnlageSPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/info" element={<InfoPage />} />
         </Route>

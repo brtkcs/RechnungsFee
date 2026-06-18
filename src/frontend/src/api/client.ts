@@ -1682,6 +1682,31 @@ export const berechneEUERDetail = (jahr: number) =>
 
 
 // ---------------------------------------------------------------------------
+// Anlage S – Einkünfte aus selbstständiger Arbeit
+// ---------------------------------------------------------------------------
+
+export type AnlageSKfzHinweis = {
+  bezeichnung: string
+  kennzeichen: string
+  privat_anteil_prozent: string
+}
+
+export type AnlageSErgebnis = {
+  jahr: number
+  vorname: string
+  nachname: string
+  steuernummer: string
+  finanzamt: string
+  berufsbezeichnung: string
+  gewinn_verlust: string
+  kfz_hinweise: AnlageSKfzHinweis[]
+}
+
+export const berechneAnlageS = (jahr: number) =>
+  request<AnlageSErgebnis>(`/anlage-s/berechnen?jahr=${jahr}`)
+
+
+// ---------------------------------------------------------------------------
 // Mail – SMTP-Versand
 // ---------------------------------------------------------------------------
 

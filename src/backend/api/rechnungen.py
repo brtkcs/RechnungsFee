@@ -950,11 +950,12 @@ def markiere_ausgegeben(rechnung_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{rechnung_id}/pdf")
-def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False, kopie: bool = False, db: Session = Depends(get_db)):
+def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False, kopie: bool = False, nur_ansehen: bool = False, db: Session = Depends(get_db)):
     """PDF der Rechnung generieren und zurückgeben.
     Beim ersten Abruf wird die Rechnung automatisch als 'ausgegeben' markiert.
     Folge-Abrufe erhalten ein KOPIE-Banner.
-    kopie=true: Frontend erzwingt Kopie-Markierung unabhängig vom DB-Zustand."""
+    kopie=true: Frontend erzwingt Kopie-Markierung unabhängig vom DB-Zustand.
+    nur_ansehen=true: Frisches PDF ohne Archivierung und ohne Status-Änderung."""
     rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
     if not rechnung:
         raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
@@ -1112,6 +1113,8 @@ def rechnung_als_pdf(rechnung_id: int, vorlage: int = -1, download: bool = False
         and not _kein_archiv
         and (not ist_gutschrift_pdf or gutschrift_erstattet)
     )
+    if nur_ansehen:
+        darf_archiviert = False  # kein Archiv, kein Kopie-Stempel, kein Status-Touch
 
     # Kopie: Original bereits gespeichert → gespeichertes PDF + Wasserzeichen zurückgeben
     if darf_archiviert and rechnung.original_pdf_pfad:

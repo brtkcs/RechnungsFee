@@ -1000,6 +1000,15 @@ function RechnungDetail({
     _zeigeBlob(blobUrl)
   }
 
+  async function handleAnsehen() {
+    const base = await getApiBase()
+    const resp = await fetch(`${base}/rechnungen/${rechnung.id}/pdf?nur_ansehen=true`)
+    const blob = await resp.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    _zeigeBlob(blobUrl)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+  }
+
   async function handleMail() {
     if (unternehmen?.smtp_aktiv) { setZeigMailDialog(true); return }
     const email = partnerEmail || mailAdresse.trim()
@@ -1082,6 +1091,12 @@ function RechnungDetail({
             </button>
           ) : (
             <>
+              <button
+                onClick={handleAnsehen}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+              >
+                👁 Ansehen
+              </button>
               <button
                 onClick={handleDrucken}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
