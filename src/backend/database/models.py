@@ -598,7 +598,7 @@ class Rechnungsposition(Base):
     beschreibung: Mapped[str] = mapped_column(String(500), nullable=False)
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 3), default=1, nullable=False)
     einheit: Mapped[str] = mapped_column(String(20), default="Stück", nullable=False)
-    netto: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    netto: Mapped[Decimal] = mapped_column(Numeric(12, 4), nullable=False)
     rabatt_prozent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"), nullable=False, server_default="0")
     ust_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0, nullable=False)
     ust_betrag: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, nullable=False)
