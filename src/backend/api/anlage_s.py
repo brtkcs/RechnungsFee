@@ -238,5 +238,5 @@ def anlage_s_pdf(
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="AnlageS_{jahr}.pdf"'},
+        headers={"Content-Disposition": f'inline; filename="AnlageS_{jahr}.pdf"'},
     )
