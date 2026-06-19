@@ -863,6 +863,8 @@ def update_rechnung(rechnung_id: int, data: RechnungUpdate, db: Session = Depend
         rechnung.ist_entwurf = data.ist_entwurf
         # Lagerführung: Entwurf → Finalisiert (nur über diesen Pfad; /finalisieren bucht eigenständig)
         if war_entwurf and not data.ist_entwurf:
+            db.flush()  # neue Positionen in DB schreiben bevor Relationship-Cache geleert wird
+            db.expire(rechnung, ["positionen"])  # SQLAlchemy-Cache war [] nach delete+flush; fresh load erzwingen
             _lager_buchen(rechnung, db, faktor=Decimal("-1"))
 
     db.commit()
