@@ -1772,6 +1772,7 @@ export type AnlageSErgebnis = {
   berufsbezeichnung: string
   gewinn_verlust: string
   kfz_hinweise: AnlageSKfzHinweis[]
+  taetigkeitsart: string
 }
 
 export const berechneAnlageS = (jahr: number) =>

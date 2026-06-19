@@ -34,6 +34,7 @@ class AnlageSErgebnis(BaseModel):
     berufsbezeichnung: str
     gewinn_verlust: Decimal   # positiv = Gewinn, negativ = Verlust
     kfz_hinweise: list[AnlageSKfzHinweis]
+    taetigkeitsart: str
 
 
 @router.get("/berechnen", response_model=AnlageSErgebnis)
@@ -74,6 +75,7 @@ def anlage_s_berechnen(
             )
             for k in kfz_list
         ],
+        taetigkeitsart=unt.taetigkeitsart or "freiberuflich",
     )
 
 

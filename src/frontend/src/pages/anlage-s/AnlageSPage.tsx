@@ -89,12 +89,17 @@ export function AnlageSPage() {
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
         Anlage S – Einkünfte aus selbstständiger Arbeit
       </h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
         Anzeigehilfe für die Einkommensteuererklärung (§18 EStG) · Gewinn/Verlust aus der EÜR.
         Übertrage die Werte in{' '}
         <span className="text-blue-600 dark:text-blue-400">ELSTER</span>{' '}
         oder gib sie an deinen Steuerberater.
       </p>
+      {data?.taetigkeitsart === 'gemischt' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <strong>Hinweis:</strong> Du hast gemischte Tätigkeit (freiberuflich + gewerblich) angegeben. Die Anlage S gilt nur für den freiberuflichen Anteil (§18 EStG). Für gewerbliche Einkünfte ist zusätzlich die <strong>Anlage G</strong> auszufüllen.
+        </div>
+      )}
 
       {/* Jahresauswahl */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex items-center gap-4">
