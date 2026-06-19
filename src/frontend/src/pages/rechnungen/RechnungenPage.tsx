@@ -7,7 +7,7 @@ import {
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
   getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen, lieferscheinAusRechnung,
   getLieferadressen,
-  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow, downloadPdfForMail,
+  getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow, openPdfReadOnly, downloadPdfForMail,
   getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
   getBuchungsvorlage, erledigtVorlage,
@@ -1005,8 +1005,12 @@ function RechnungDetail({
     const resp = await fetch(`${base}/rechnungen/${rechnung.id}/pdf?nur_ansehen=true`)
     const blob = await resp.blob()
     const blobUrl = URL.createObjectURL(blob)
-    _zeigeBlob(blobUrl)
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+    if (isTauri()) {
+      openPdfReadOnly(blobUrl, rechnung.rechnungsnummer ?? 'Dokument')
+    } else {
+      window.open(blobUrl, '_blank')
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+    }
   }
 
   async function handleMail() {
