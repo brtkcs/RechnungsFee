@@ -2129,7 +2129,14 @@ function RechnungForm({
         beschreibung: p.beschreibung,
         menge: String(parseFloat(p.menge)),
         einheit: p.einheit,
-        netto: Math.abs(parseFloat(p.netto)).toFixed(2).replace('.', ','),  // pos.netto = Original-Einzelpreis (vor Rabatt); abs() für alte Gutschrift-Einträge
+        netto: (() => {
+          // Form startet immer im Brutto-Modus → Brutto-Wert rekonstruieren.
+          // Differenzbesteuerung / 0%-USt: brutto = netto (keine USt-Aufschlag).
+          const n = Math.abs(parseFloat(p.netto))  // pos.netto = Original-EP vor Rabatt; abs() für alte Gutschrift-Einträge
+          const u = parseFloat(p.ust_satz) || 0
+          const showBrutto = !p.differenzbesteuerung && u > 0
+          return (showBrutto ? n * (1 + u / 100) : n).toFixed(2).replace('.', ',')
+        })(),
         ust_satz: String(parseFloat(p.ust_satz)),
         rabatt_prozent: p.rabatt_prozent && parseFloat(p.rabatt_prozent) > 0 ? String(parseFloat(p.rabatt_prozent)) : '',
         artikel_id: p.artikel_id ?? undefined,
