@@ -23,6 +23,16 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.23',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: '„Ansehen"-Button öffnet PDF in eigenem Fenster ohne Drucken- und Speichern-Optionen (Tauri: natives Fenster mit versteckter Toolbar); stornierte Rechnungen zeigen das Original-Dokument vor dem Storno' },
+      { typ: 'verbesserung', text: 'Detail-Panel (stornierte Rechnungen): Stornodatum und Stornorechnung-Nr. werden jetzt angezeigt; „Fällig am" wird ausgeblendet (Issue #178)' },
+      { typ: 'fix', text: 'Einzelpreis-Rundungsfehler: 7,99 € wurde nach dem Speichern als 7,98 € angezeigt – DB-Typ auf 4 Dezimalstellen erhöht, damit Zwischenwerte verlustfrei gespeichert werden' },
+      { typ: 'fix', text: 'Entwurf bearbeiten: Preisfeld zeigte Netto- statt Brutto-Wert – Brutto wird jetzt korrekt aus dem gespeicherten Netto-Wert zurückgerechnet' },
+    ],
+  },
+  {
     version: 'v0.3.22',
     datum: 'Juni 2026',
     eintraege: [
