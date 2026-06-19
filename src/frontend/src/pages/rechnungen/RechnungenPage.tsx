@@ -2279,17 +2279,20 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
       const menge = parseFloat(p.menge.replace(',', '.')) || 1
       const ust = parseFloat(p.ust_satz) || 0
       const posRabatt = parseFloat((p.rabatt_prozent ?? '').replace(',', '.')) || 0
+      const r4 = (v: number) => Math.round(v * 10000) / 10000  // 4-stellige Zwischenrundung (analog Backend _Q4)
       let netto: number, ustBetrag: number, brutto: number
       if (eingabeModus === 'brutto') {
         const nettoEinzel = ust > 0 ? (eingabe * 100) / (100 + ust) : eingabe
-        const nettoNachRabatt = nettoEinzel * (1 - posRabatt / 100)
+        const nettoNachRabatt = r4(nettoEinzel * (1 - posRabatt / 100))
         netto = nettoNachRabatt * menge
-        ustBetrag = netto * ust / 100
+        const ustPerEinheit = r4(nettoNachRabatt * ust / 100)
+        ustBetrag = ustPerEinheit * menge
         brutto = netto + ustBetrag
       } else {
-        const nettoNachRabatt = eingabe * (1 - posRabatt / 100)
+        const nettoNachRabatt = r4(eingabe * (1 - posRabatt / 100))
         netto = nettoNachRabatt * menge
-        ustBetrag = (netto * ust) / 100
+        const ustPerEinheit = r4(nettoNachRabatt * ust / 100)
+        ustBetrag = ustPerEinheit * menge
         brutto = netto + ustBetrag
       }
       return { netto: acc.netto + netto, ust: acc.ust + ustBetrag, brutto: acc.brutto + brutto }
