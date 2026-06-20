@@ -143,8 +143,8 @@ export function AnlageGPage() {
         </div>
       )}
 
-      {/* Jahresauswahl */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex items-center gap-4">
+      {/* Jahresauswahl + Hebesatz */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex items-center gap-4 flex-wrap">
         <div>
           <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Wirtschaftsjahr</label>
           <select
@@ -154,6 +154,19 @@ export function AnlageGPage() {
           >
             {jahre.map(j => <option key={j} value={j}>{j}</option>)}
           </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+            Hebesatz (%, aus GewSt-Bescheid)
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder="z. B. 400"
+            value={hebesatzInput}
+            onChange={e => setHebesatzInput(e.target.value)}
+            className="w-28 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+          />
         </div>
         {isLoading && <span className="text-sm text-slate-500 dark:text-slate-400">Berechne…</span>}
         {data && !isLoading && (
@@ -217,21 +230,6 @@ export function AnlageGPage() {
               label="Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)"
               wert={gewstGezahlt > 0 ? euroFmt(gewstGezahlt) : undefined}
             />
-            {/* Hebesatz-Input → berechnet Messbetrag automatisch */}
-            <div className="flex items-center gap-3 py-2">
-              <span className="shrink-0 w-11" />
-              <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
-                Hebesatz (aus Bescheid, in %)
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="z. B. 400"
-                value={hebesatzInput}
-                onChange={e => setHebesatzInput(e.target.value)}
-                className="w-28 text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-              />
-            </div>
             {data.gewst_pflichtig && (
               <ZeileText
                 label="Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)"
