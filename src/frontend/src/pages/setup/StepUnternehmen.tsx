@@ -46,8 +46,9 @@ const schema = z.object({
   telefon:               z.string().optional(),
   steuernummer:          z.string().min(1, 'Steuernummer ist erforderlich (§14 UStG – wird für Rechnungen benötigt)'),
   finanzamt:             z.string().optional(),
-  berufsbezeichnung:     z.string().optional(),
-  kammer_mitgliedschaft: z.string().optional(),
+  berufsbezeichnung:        z.string().optional(),
+  bezeichnung_des_gewerbes: z.string().optional(),
+  kammer_mitgliedschaft:    z.string().optional(),
 }).superRefine((data, ctx) => {
   const hatFirma = !!(data.firmenname?.trim())
   const hatName  = !!(data.vorname?.trim() || data.nachname?.trim())
@@ -70,8 +71,9 @@ export function StepUnternehmen({ onNext, defaultValues }: Props) {
     resolver: zodResolver(schema),
     defaultValues: {
       ...defaultValues,
-      berufsbezeichnung:     defaultValues?.berufsbezeichnung ?? '',
-      kammer_mitgliedschaft: defaultValues?.kammer_mitgliedschaft ?? '',
+      berufsbezeichnung:        defaultValues?.berufsbezeichnung ?? '',
+      bezeichnung_des_gewerbes: defaultValues?.bezeichnung_des_gewerbes ?? '',
+      kammer_mitgliedschaft:    defaultValues?.kammer_mitgliedschaft ?? '',
     },
   })
 
@@ -123,6 +125,18 @@ export function StepUnternehmen({ onNext, defaultValues }: Props) {
               className={inp}
             />
           </div>
+          {selectedBeruf.label === 'Handwerk / Gewerbe' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                Bezeichnung des Gewerbes <span className="text-slate-400 font-normal">(z.B. Tischlerei, Buchhandlung – Anlage G Z. 4)</span>
+              </label>
+              <input
+                {...register('bezeichnung_des_gewerbes')}
+                placeholder="z.B. Tischlerei, IT-Dienstleistungen, Buchhandlung"
+                className={inp}
+              />
+            </div>
+          )}
           {selectedBeruf.kammer && (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
