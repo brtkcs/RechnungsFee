@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { berechneAnlageG, getAnlageGPdfUrl, openUrl, type AnlageGErgebnis } from '../../api/client'
+import { berechneAnlageG, getAnlageGPdfUrl, isTauri, openInPdfWindow, openUrl, type AnlageGErgebnis } from '../../api/client'
 
 function euroFmt(v: string | number): string {
   const n = typeof v === 'string' ? parseFloat(v) : v
@@ -74,7 +74,19 @@ export function AnlageGPage() {
 
   async function handlePdf() {
     setPdfLaedt(true); setPdfFehler(null)
-    try { await openUrl(await getAnlageGPdfUrl(jahr, messbetrag)) }
+    try {
+      const url = await getAnlageGPdfUrl(jahr, messbetrag)
+      if (isTauri()) {
+        const resp = await fetch(url)
+        if (!resp.ok) throw new Error(`PDF-Fehler: ${resp.status}`)
+        const blob = await resp.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        await openInPdfWindow(blobUrl, `Anlage G ${jahr}`)
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+      } else {
+        await openUrl(url)
+      }
+    }
     catch (e: any) { setPdfFehler(e?.message ?? 'PDF-Export fehlgeschlagen') }
     finally { setPdfLaedt(false) }
   }

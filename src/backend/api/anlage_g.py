@@ -118,7 +118,8 @@ def _euro(v: Decimal) -> str:
     return ("− " if neg else "") + s
 
 
-def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: Decimal) -> bytes:
+def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> bytes:
+    messbetrag_d = Decimal(str(messbetrag)).quantize(Decimal("0.01"))
     from fpdf import FPDF
 
     BLAU = (22, 163, 74)    # Grün statt Blau – visuell von Anlage S unterscheidbar
@@ -217,10 +218,10 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: Decimal) -> by
     text_row(freibetrag_text, "")
     if ergebnis.gewst_pflichtig:
         zeile_row("57", "Gewerbesteuer-Messbetrag (lt. Bescheid)",
-                  _euro(messbetrag) if messbetrag > 0 else "→ aus Bescheid")
-        anrechnung = (messbetrag * ANRECHNUNGSFAKTOR).quantize(Decimal("0.01"))
+                  _euro(messbetrag_d) if messbetrag_d > 0 else "→ aus Bescheid")
+        anrechnung = (messbetrag_d * ANRECHNUNGSFAKTOR).quantize(Decimal("0.01"))
         text_row("Anrechenbarer Betrag (Messbetrag × 3,8, §35 EStG)",
-                 _euro(anrechnung) if messbetrag > 0 else "—")
+                 _euro(anrechnung) if messbetrag_d > 0 else "—")
         if ergebnis.gewst_messbetrag_approx > 0:
             text_row(f"Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)",
                      _euro(ergebnis.gewst_messbetrag_approx))
@@ -255,7 +256,7 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: Decimal) -> by
 @router.get("/pdf")
 def anlage_g_pdf(
     jahr: int = Query(..., ge=2020, le=2100),
-    messbetrag: Decimal = Query(default=Decimal("0"), ge=0),
+    messbetrag: float = Query(default=0.0, ge=0),
     db: Session = Depends(get_db),
 ):
     unt = db.query(Unternehmen).first()
