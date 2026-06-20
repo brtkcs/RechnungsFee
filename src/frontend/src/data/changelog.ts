@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'fix', text: 'Anlage G: Stammdaten-Feld „Bezeichnung des Gewerbes" (Z. 4) ließ sich nicht speichern – Feld fehlte im API-Schema; eigenes Feld statt Berufsbezeichnung, erscheint in Stammdaten bei gewerblicher/gemischter Tätigkeit' },
+      { typ: 'fix', text: 'DATEV-Export: Buchungen ohne Sachkonto (z. B. Kassenanfangsbestand) wurden fälschlich als „übersprungen" gezählt obwohl sie exportiert wurden; jetzt eigene amber-Meldung „ohne Sachkonto – im DATEV-Programm ergänzen" statt irreführender Übersprungen-Warnung (Issue #163)' },
     ],
   },
   {
