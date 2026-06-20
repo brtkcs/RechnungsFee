@@ -166,7 +166,7 @@ def _generate_anlage_s_pdf(ergebnis: AnlageSErgebnis) -> bytes:
     def text_row(bez: str, wert: str):
         y = pdf.get_y()
         h = 6.5
-        pdf.set_xy(36, y)
+        pdf.set_xy(38, y)
         pdf.set_font("DejaVu", "", 9)
         pdf.set_text_color(*DUNKEL)
         pdf.cell(110, h, bez, border=0, align="L")
