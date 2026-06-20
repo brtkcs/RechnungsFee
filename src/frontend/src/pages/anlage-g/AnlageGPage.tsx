@@ -64,13 +64,32 @@ export function AnlageGPage() {
   const now = new Date()
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
+  const [hebesatzInput, setHebesatzInput] = useState('')
   const [messbetragInput, setMessbetragInput] = useState('')
 
   const [pdfLaedt, setPdfLaedt] = useState(false)
   const [pdfFehler, setPdfFehler] = useState<string | null>(null)
 
-  const messbetrag = parseFloat(messbetragInput.replace(',', '.')) || 0
+  const { data, isLoading, error } = useQuery<AnlageGErgebnis>({
+    queryKey: ['anlage-g', jahr],
+    queryFn: () => berechneAnlageG(jahr),
+  })
+
+  const hebesatz = parseFloat(hebesatzInput.replace(',', '.')) || 0
+  const gewstGezahlt = data ? parseFloat(data.gewst_gezahlt) : 0
+
+  // Messbetrag: aus manuellem Input ODER berechnet aus gezahlter GewSt ÷ Hebesatz
+  const messbetragBerechnet = (gewstGezahlt > 0 && hebesatz > 0)
+    ? gewstGezahlt / (hebesatz / 100)
+    : 0
+  const messbetrag = messbetragInput
+    ? parseFloat(messbetragInput.replace(',', '.')) || 0
+    : messbetragBerechnet
   const anrechnungsbetrag = messbetrag * 3.8
+
+  const gv = data ? parseFloat(data.gewinn_verlust) : 0
+  const istGewinn = gv >= 0
+  const stammdatenUnvollstaendig = data && (!data.steuernummer || !data.finanzamt || !data.art_des_gewerbes)
 
   async function handlePdf() {
     setPdfLaedt(true); setPdfFehler(null)
@@ -90,15 +109,6 @@ export function AnlageGPage() {
     catch (e: any) { setPdfFehler(e?.message ?? 'PDF-Export fehlgeschlagen') }
     finally { setPdfLaedt(false) }
   }
-
-  const { data, isLoading, error } = useQuery<AnlageGErgebnis>({
-    queryKey: ['anlage-g', jahr],
-    queryFn: () => berechneAnlageG(jahr),
-  })
-
-  const gv = data ? parseFloat(data.gewinn_verlust) : 0
-  const istGewinn = gv >= 0
-  const stammdatenUnvollstaendig = data && (!data.steuernummer || !data.finanzamt || !data.art_des_gewerbes)
 
   return (
     <div className="max-w-2xl px-6 py-8">
@@ -186,21 +196,48 @@ export function AnlageGPage() {
             <ZeileText label="Freibetrag Einzelunternehmer" wert="24.500,00 €" />
             {data.gewst_pflichtig ? (
               <>
+                {gewstGezahlt > 0 && (
+                  <ZeileText
+                    label="Gezahlte Gewerbesteuer (lt. Journal)"
+                    wert={euroFmt(gewstGezahlt)}
+                  />
+                )}
+                {/* Hebesatz-Input → berechnet Messbetrag automatisch */}
+                <div className="flex items-center gap-3 py-2">
+                  <span className="shrink-0 w-11" />
+                  <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
+                    Hebesatz (aus Bescheid, in %)
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="z. B. 400"
+                    value={hebesatzInput}
+                    onChange={e => setHebesatzInput(e.target.value)}
+                    className="w-28 text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+                  />
+                </div>
                 <ZeileText
                   label="Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)"
                   wert={euroFmt(data.gewst_messbetrag_approx)}
                 />
+                {/* Messbetrag: auto-berechnet oder manuell */}
                 <div className="flex items-center gap-3 py-2">
                   <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-green-600 dark:bg-green-700">
                     Z. 57
                   </span>
                   <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
                     Gewerbesteuer-Messbetrag (lt. Bescheid)
+                    {messbetragBerechnet > 0 && !messbetragInput && (
+                      <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                        berechnet aus Hebesatz
+                      </span>
+                    )}
                   </span>
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="0,00"
+                    placeholder={messbetragBerechnet > 0 ? euroFmt(messbetragBerechnet) : '0,00'}
                     value={messbetragInput}
                     onChange={e => setMessbetragInput(e.target.value)}
                     className="w-28 text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"

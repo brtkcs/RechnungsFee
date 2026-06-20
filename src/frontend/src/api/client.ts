@@ -1800,6 +1800,7 @@ export type AnlageGErgebnis = {
   kfz_hinweise: AnlageGKfzHinweis[]
   taetigkeitsart: string
   gewst_pflichtig: boolean
+  gewst_gezahlt: string
   gewst_messbetrag_approx: string
 }
 

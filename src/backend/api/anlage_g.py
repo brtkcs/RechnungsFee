@@ -12,9 +12,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from sqlalchemy import extract, func
+
 from api.euer import _berechne_euer
 from database.connection import get_db
-from database.models import Anlagegut, Unternehmen
+from database.models import Anlagegut, Journaleintrag, Kategorie, Unternehmen
 
 router = APIRouter(prefix="/api/anlage-g", tags=["Anlage G"])
 
@@ -39,9 +41,10 @@ class AnlageGErgebnis(BaseModel):
     gewinn_verlust: Decimal
     kfz_hinweise: list[AnlageGKfzHinweis]
     taetigkeitsart: str
-    # Gewerbesteuer-Richtwerte (Schätzung ohne Hinzurechnungen/Kürzungen)
-    gewst_pflichtig: bool       # Gewinn > Freibetrag
-    gewst_messbetrag_approx: Decimal   # grobe Schätzung, Nutzer prüft Bescheid
+    # Gewerbesteuer
+    gewst_pflichtig: bool
+    gewst_gezahlt: Decimal      # Summe gebuchter Gewerbesteuer-Zahlungen im Jahr
+    gewst_messbetrag_approx: Decimal   # Schätzung ohne Hinzurechnungen/Kürzungen
 
 
 @router.get("/berechnen", response_model=AnlageGErgebnis)
@@ -67,6 +70,25 @@ def anlage_g_berechnen(
         .all()
     )
 
+    # Gezahlte Gewerbesteuer aus dem Journal summieren
+    gewst_kategorie = (
+        db.query(Kategorie)
+        .filter(Kategorie.name.ilike("%gewerbesteuer%"))
+        .first()
+    )
+    gewst_gezahlt = Decimal("0")
+    if gewst_kategorie:
+        row = (
+            db.query(func.sum(Journaleintrag.brutto_betrag))
+            .filter(
+                Journaleintrag.kategorie_id == gewst_kategorie.id,
+                extract("year", Journaleintrag.datum) == jahr,
+            )
+            .scalar()
+        )
+        if row:
+            gewst_gezahlt = Decimal(str(row)).quantize(Decimal("0.01"))
+
     # Grobe Gewerbeertrag-Schätzung (ohne Hinzurechnungen/Kürzungen)
     gewerbeertrag = max(gv - GEWST_FREIBETRAG, Decimal("0"))
     messbetrag_approx = (gewerbeertrag * STEUERMESSZAHL).quantize(Decimal("0.01"))
@@ -89,6 +111,7 @@ def anlage_g_berechnen(
         ],
         taetigkeitsart=unt.taetigkeitsart or "gewerbe",
         gewst_pflichtig=gv > GEWST_FREIBETRAG,
+        gewst_gezahlt=gewst_gezahlt,
         gewst_messbetrag_approx=messbetrag_approx,
     )
 
@@ -214,16 +237,19 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
         pdf.ln(2)
 
     section_header("Gewerbesteuer-Anrechnung §35 EStG")
-    freibetrag_text = f"Freibetrag: 24.500 € (Einzelunternehmer)"
-    text_row(freibetrag_text, "")
+    text_row("Freibetrag: 24.500 € (Einzelunternehmer)", "")
     if ergebnis.gewst_pflichtig:
+        if ergebnis.gewst_gezahlt > 0:
+            text_row("Gezahlte Gewerbesteuer (lt. Journal)", _euro(ergebnis.gewst_gezahlt))
+            if messbetrag_d > 0:
+                text_row("Hebesatz (aus Bescheid)", f"{round(float(ergebnis.gewst_gezahlt) / messbetrag_d * 100):.0f} %")
         zeile_row("57", "Gewerbesteuer-Messbetrag (lt. Bescheid)",
                   _euro(messbetrag_d) if messbetrag_d > 0 else "→ aus Bescheid")
         anrechnung = (messbetrag_d * ANRECHNUNGSFAKTOR).quantize(Decimal("0.01"))
         text_row("Anrechenbarer Betrag (Messbetrag × 3,8, §35 EStG)",
                  _euro(anrechnung) if messbetrag_d > 0 else "—")
         if ergebnis.gewst_messbetrag_approx > 0:
-            text_row(f"Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)",
+            text_row("Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)",
                      _euro(ergebnis.gewst_messbetrag_approx))
     else:
         text_row("Gewinn unter Freibetrag – voraussichtlich keine Gewerbesteuer", "")
