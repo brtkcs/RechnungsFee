@@ -35,6 +35,7 @@ const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: Zeig
   { to: '/jahres-ust', label: 'Jahres-USt',   icon: '📅', zeigen: () => true },
   { to: '/zm',         label: 'ZM',            icon: '🌍', zeigen: ({ zm }) => !!zm?.hat_ig_eintraege },
   { to: '/anlage-s', label: 'Anlage S',   icon: '📝', zeigen: ({ unt }) => unt?.taetigkeitsart !== 'gewerbe' },
+  { to: '/anlage-g', label: 'Anlage G',   icon: '🏭', zeigen: ({ unt }) => unt?.taetigkeitsart === 'gewerbe' || unt?.taetigkeitsart === 'gemischt' },
   { to: '/eks',     label: 'EKS',         icon: '📋', zeigen: ({ unt }) => !!unt?.bezieht_transferleistungen },
   { to: '/exporte', label: 'Exporte', icon: '📦', zeigen: () => true },
 ]

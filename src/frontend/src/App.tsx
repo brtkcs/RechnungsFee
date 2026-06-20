@@ -29,6 +29,7 @@ import { ZMPage } from './pages/zm/ZMPage'
 import { EUERPage } from './pages/euer/EUERPage'
 import { AnlageverzeichnisPage } from './pages/anlageverzeichnis/AnlageverzeichnisPage'
 import { AnlageSPage } from './pages/anlage-s/AnlageSPage'
+import { AnlageGPage } from './pages/anlage-g/AnlageGPage'
 import { RechnungenPage } from './pages/rechnungen/RechnungenPage'
 import { WiederkehrendePage } from './pages/wiederkehrend/WiederkehrendePage'
 import BuchungsvorlagenPage from './pages/buchungsvorlagen/BuchungsvorlagenPage'
@@ -119,6 +120,7 @@ function AppRoutes() {
           <Route path="/euer" element={<EUERPage />} />
           <Route path="/anlageverzeichnis" element={<AnlageverzeichnisPage />} />
           <Route path="/anlage-s" element={<AnlageSPage />} />
+          <Route path="/anlage-g" element={<AnlageGPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/info" element={<InfoPage />} />
         </Route>

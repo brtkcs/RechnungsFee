@@ -1783,6 +1783,34 @@ export const getAnlageSPdfUrl = async (jahr: number): Promise<string> => {
   return `${base}/anlage-s/pdf?jahr=${jahr}`
 }
 
+export type AnlageGKfzHinweis = {
+  bezeichnung: string
+  kennzeichen: string
+  privat_anteil_prozent: string
+}
+
+export type AnlageGErgebnis = {
+  jahr: number
+  vorname: string
+  nachname: string
+  steuernummer: string
+  finanzamt: string
+  art_des_gewerbes: string
+  gewinn_verlust: string
+  kfz_hinweise: AnlageGKfzHinweis[]
+  taetigkeitsart: string
+  gewst_pflichtig: boolean
+  gewst_messbetrag_approx: string
+}
+
+export const berechneAnlageG = (jahr: number) =>
+  request<AnlageGErgebnis>(`/anlage-g/berechnen?jahr=${jahr}`)
+
+export const getAnlageGPdfUrl = async (jahr: number, messbetrag = 0): Promise<string> => {
+  const base = await getBaseUrl()
+  return `${base}/anlage-g/pdf?jahr=${jahr}&messbetrag=${messbetrag.toFixed(2)}`
+}
+
 
 // ---------------------------------------------------------------------------
 // Mail – SMTP-Versand
