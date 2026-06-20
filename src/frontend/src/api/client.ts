@@ -783,18 +783,19 @@ export async function downloadBuchhalterCsv(
 export async function downloadDatevBuchungsstapel(
   von: string,
   bis: string,
-): Promise<{ filename: string; eintraege: number; uebersprungen: number }> {
+): Promise<{ filename: string; eintraege: number; uebersprungen: number; leer_konto: number }> {
   const base = await getBaseUrl()
   const res = await fetch(`${base}/datev/buchungsstapel?von=${von}&bis=${bis}`)
   if (!res.ok) throw new Error('DATEV-Export fehlgeschlagen')
   const eintraege = Number(res.headers.get('X-Datev-Eintraege') ?? '0')
   const uebersprungen = Number(res.headers.get('X-Datev-Uebersprungen') ?? '0')
+  const leer_konto = Number(res.headers.get('X-Datev-LeerKonto') ?? '0')
   const blob = await res.blob()
   const cd = res.headers.get('Content-Disposition') ?? ''
   const match = cd.match(/filename="?([^"]+)"?/)
   const filename = match?.[1] ?? `DATEV_Buchungsstapel_${von}_${bis}.csv`
   _triggerBlobDownload(blob, filename)
-  return { filename, eintraege, uebersprungen }
+  return { filename, eintraege, uebersprungen, leer_konto }
 }
 
 // --- Backup ---

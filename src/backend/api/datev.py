@@ -247,6 +247,7 @@ def datev_buchungsstapel(
     skr = unt.kontenrahmen
     zeilen: list[str] = [_zeile1(unt, von, bis)]
     uebersprungen = 0
+    leer_konto = 0
 
     for j in eintraege:
         konto = _sachkonto(j, skr, db)
@@ -260,7 +261,7 @@ def datev_buchungsstapel(
             # Kein Sachkonto ermittelbar → leeres Konto exportieren.
             # DATEV gibt einen Importfehler, der Steuerberater kann die Buchung sehen und korrigieren.
             konto = ""
-            uebersprungen += 1
+            leer_konto += 1
 
         betrag = j.marge_25a_brutto if j.marge_25a_brutto is not None else j.netto_betrag
         sh = "H" if j.art == "Einnahme" else "S"
@@ -293,5 +294,6 @@ def datev_buchungsstapel(
         "Content-Disposition": f'attachment; filename="{dateiname}"',
         "X-Datev-Eintraege": str(len(eintraege) - uebersprungen),
         "X-Datev-Uebersprungen": str(uebersprungen),
+        "X-Datev-LeerKonto": str(leer_konto),
     }
     return StreamingResponse(iter([data]), media_type="text/csv; charset=utf-8", headers=headers)

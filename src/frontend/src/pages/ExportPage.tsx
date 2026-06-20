@@ -110,7 +110,7 @@ export function ExportPage() {
   const [datevVon, setDatevVon] = useState('')
   const [datevBis, setDatevBis] = useState('')
   const [datevLaedt, setDatevLaedt] = useState(false)
-  const [datevErgebnis, setDatevErgebnis] = useState<{ filename: string; eintraege: number; uebersprungen: number } | null>(null)
+  const [datevErgebnis, setDatevErgebnis] = useState<{ filename: string; eintraege: number; uebersprungen: number; leer_konto: number } | null>(null)
   const [datevFehler, setDatevFehler] = useState<string | null>(null)
   const [konfigOffen, setKonfigOffen] = useState(false)
   const [konfigGespeichert, setKonfigGespeichert] = useState(false)
@@ -318,8 +318,13 @@ export function ExportPage() {
                 <p className="mt-1 text-xs">
                   {datevErgebnis.eintraege} Buchung{datevErgebnis.eintraege !== 1 ? 'en' : ''} exportiert
                   {datevErgebnis.uebersprungen > 0 && (
+                    <span className="text-red-600 dark:text-red-400 ml-2">
+                      · {datevErgebnis.uebersprungen} übersprungen (kein Zahlungskonto)
+                    </span>
+                  )}
+                  {datevErgebnis.leer_konto > 0 && (
                     <span className="text-amber-600 dark:text-amber-400 ml-2">
-                      · {datevErgebnis.uebersprungen} übersprungen (fehlende Kontonummern)
+                      · {datevErgebnis.leer_konto} ohne Sachkonto (DATEV meldet Importfehler – im Programm ergänzen)
                     </span>
                   )}
                 </p>
