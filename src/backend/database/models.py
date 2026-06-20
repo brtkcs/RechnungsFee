@@ -90,6 +90,7 @@ class Unternehmen(Base):
     bank_name: Mapped[str | None] = mapped_column(String(100))
     # Beruf & Kammer
     berufsbezeichnung: Mapped[str | None] = mapped_column(String(100))       # z.B. "Rechtsanwältin"
+    bezeichnung_des_gewerbes: Mapped[str | None] = mapped_column(String(200))  # Anlage G Z.4: "genaue Bezeichnung des Gewerbes"
     kammer_mitgliedschaft: Mapped[str | None] = mapped_column(String(200))   # z.B. "Rechtsanwaltskammer Berlin"
     # Rechnungs-PDF-Einstellungen
     zahlungshinweis_aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

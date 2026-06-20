@@ -239,6 +239,7 @@ export type Unternehmen = {
   bic?: string
   bank_name?: string
   berufsbezeichnung?: string | null
+  bezeichnung_des_gewerbes?: string | null
   kammer_mitgliedschaft?: string | null
   zahlungshinweis_aktiv?: boolean
   pdf_vorlage?: number

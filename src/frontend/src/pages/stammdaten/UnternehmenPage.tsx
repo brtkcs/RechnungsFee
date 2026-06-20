@@ -485,6 +485,9 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
             <option value="gemischt">Gemischt</option>
           </select>
         </Field>
+        {(form.taetigkeitsart === 'gewerbe' || form.taetigkeitsart === 'gemischt') && (
+          <Field label="Bezeichnung des Gewerbes (Anlage G Z.4)">{inp('bezeichnung_des_gewerbes', 'z.B. Tischlerei, Buchhandlung, IT-Dienstleistungen')}</Field>
+        )}
       </div>
 
       {/* ── Tab: Rechnungen ───────────────────────────────────────────── */}

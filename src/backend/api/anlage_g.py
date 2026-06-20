@@ -99,7 +99,7 @@ def anlage_g_berechnen(
         nachname=unt.nachname or "",
         steuernummer=unt.steuernummer or "",
         finanzamt=unt.finanzamt or "",
-        art_des_gewerbes=unt.berufsbezeichnung or "",
+        art_des_gewerbes=unt.bezeichnung_des_gewerbes or "",
         gewinn_verlust=gv,
         kfz_hinweise=[
             AnlageGKfzHinweis(
@@ -216,7 +216,7 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
     zeile_row("1", "Name, Vorname", name or "—")
     text_row("Finanzamt", ergebnis.finanzamt or "—")
     zeile_row("3", "Steuernummer", ergebnis.steuernummer or "—")
-    zeile_row("4", "Art des Gewerbebetriebs", ergebnis.art_des_gewerbes or "—")
+    zeile_row("4", "genaue Bezeichnung des Gewerbes", ergebnis.art_des_gewerbes or "—")
     pdf.ln(2)
 
     gv = ergebnis.gewinn_verlust

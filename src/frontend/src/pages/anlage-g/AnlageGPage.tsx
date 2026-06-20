@@ -197,7 +197,7 @@ export function AnlageGPage() {
               wert={[data.nachname, data.vorname].filter(Boolean).join(', ') || undefined} />
             <ZeileText label="Finanzamt" wert={data.finanzamt || undefined} />
             <ZeileNr zeile="3" label="Steuernummer" wert={data.steuernummer || undefined} />
-            <ZeileNr zeile="4" label="Art des Gewerbebetriebs" wert={data.art_des_gewerbes || undefined} />
+            <ZeileNr zeile="4" label="genaue Bezeichnung des Gewerbes" wert={data.art_des_gewerbes || undefined} />
           </Abschnitt>
 
           {/* Laufende Einkünfte */}
