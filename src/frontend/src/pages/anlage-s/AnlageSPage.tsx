@@ -139,18 +139,16 @@ export function AnlageSPage() {
             <ZeileNr zeile="1" label="Name, Vorname"
               wert={[data.nachname, data.vorname].filter(Boolean).join(', ') || undefined} />
             <ZeileText label="Finanzamt" wert={data.finanzamt || undefined} />
-            <ZeileNr zeile="2" label="Steuernummer" wert={data.steuernummer || undefined} />
-            <ZeileNr zeile="3" label="Art der Tätigkeit (Berufsbezeichnung)" wert={data.berufsbezeichnung || undefined} />
+            <ZeileNr zeile="3" label="Steuernummer" wert={data.steuernummer || undefined} />
+            <ZeileNr zeile="4" label="Art der Tätigkeit (Berufsbezeichnung)" wert={data.berufsbezeichnung || undefined} />
           </Abschnitt>
 
           {/* Laufende Einkünfte */}
-          <Abschnitt titel="Laufende Einkünfte (aus EÜR)">
-            <ZeileNr zeile="4" label="Gewinn"
-              wert={istGewinn ? euroFmt(gv) : undefined}
-              leer={!istGewinn} />
-            <ZeileNr zeile="5" label="Verlust"
-              wert={!istGewinn ? euroFmt(gv) : undefined}
-              leer={istGewinn} />
+          <Abschnitt titel="Laufende Einkünfte (aus EÜR, ELSTER KZ 100)">
+            <ZeileText label="Gewinn freiberufliche Tätigkeit"
+              wert={istGewinn ? euroFmt(gv) : undefined} />
+            <ZeileText label="Verlust freiberufliche Tätigkeit"
+              wert={!istGewinn ? euroFmt(gv) : undefined} />
           </Abschnitt>
 
           {/* KFZ */}
@@ -167,7 +165,7 @@ export function AnlageSPage() {
 
           {/* Ergebnis */}
           <SummenZeile
-            label={istGewinn ? `Gewinn ${jahr} (Zeile 4)` : `Verlust ${jahr} (Zeile 5)`}
+            label={istGewinn ? `Gewinn ${jahr} (ELSTER KZ 100)` : `Verlust ${jahr} (ELSTER KZ 100)`}
             betrag={gv}
           />
 
@@ -188,7 +186,7 @@ export function AnlageSPage() {
           )}
 
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">
-            Grundlage: EÜR {jahr} (Ist-Versteuerung / Zuflussprinzip) · Zeilennummern nach Anlage S {jahr}.
+            Grundlage: EÜR {jahr} (Ist-Versteuerung / Zuflussprinzip) · Zeilen- und KZ-Nummern nach Anlage S {jahr}.
             Diese Anzeigehilfe ersetzt keine Steuerberatung.
           </p>
         </div>

@@ -165,18 +165,16 @@ export function AnlageGPage() {
             <ZeileNr zeile="1" label="Name, Vorname"
               wert={[data.nachname, data.vorname].filter(Boolean).join(', ') || undefined} />
             <ZeileText label="Finanzamt" wert={data.finanzamt || undefined} />
-            <ZeileNr zeile="2" label="Steuernummer" wert={data.steuernummer || undefined} />
+            <ZeileNr zeile="3" label="Steuernummer" wert={data.steuernummer || undefined} />
             <ZeileNr zeile="4" label="Art des Gewerbebetriebs" wert={data.art_des_gewerbes || undefined} />
           </Abschnitt>
 
           {/* Laufende Einkünfte */}
-          <Abschnitt titel="Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG)">
-            <ZeileNr zeile="11" label="Gewinn"
-              wert={istGewinn ? euroFmt(gv) : undefined}
-              leer={!istGewinn} />
-            <ZeileNr zeile="12" label="Verlust"
-              wert={!istGewinn ? euroFmt(gv) : undefined}
-              leer={istGewinn} />
+          <Abschnitt titel="Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG, ELSTER KZ 10/11)">
+            <ZeileText label="Gewinn 1. Betrieb"
+              wert={istGewinn ? euroFmt(gv) : undefined} />
+            <ZeileText label="Verlust 1. Betrieb"
+              wert={!istGewinn ? euroFmt(gv) : undefined} />
           </Abschnitt>
 
           {/* KFZ */}
@@ -197,8 +195,8 @@ export function AnlageGPage() {
             {data.gewst_pflichtig ? (
               <>
                 {gewstGezahlt > 0 && (
-                  <ZeileText
-                    label="Gezahlte Gewerbesteuer (lt. Journal)"
+                  <ZeileNr zeile="52"
+                    label="Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)"
                     wert={euroFmt(gewstGezahlt)}
                   />
                 )}
@@ -224,7 +222,7 @@ export function AnlageGPage() {
                 {/* Messbetrag: auto-berechnet oder manuell */}
                 <div className="flex items-center gap-3 py-2">
                   <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-green-600 dark:bg-green-700">
-                    Z. 57
+                    Z. 51
                   </span>
                   <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
                     Gewerbesteuer-Messbetrag (lt. Bescheid)
@@ -257,7 +255,7 @@ export function AnlageGPage() {
 
           {/* Ergebnis */}
           <SummenZeile
-            label={istGewinn ? `Gewinn ${jahr} (Zeile 11)` : `Verlust ${jahr} (Zeile 12)`}
+            label={istGewinn ? `Gewinn ${jahr} (ELSTER KZ 10/11)` : `Verlust ${jahr} (ELSTER KZ 10/11)`}
             betrag={gv}
           />
 

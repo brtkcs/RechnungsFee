@@ -179,16 +179,16 @@ def _generate_anlage_s_pdf(ergebnis: AnlageSErgebnis) -> bytes:
     section_header("Persönliche Angaben")
     zeile_row("1", "Name, Vorname", name or "—")
     text_row("Finanzamt", ergebnis.finanzamt or "—")
-    zeile_row("2", "Steuernummer", ergebnis.steuernummer or "—")
-    zeile_row("3", "Art der Tätigkeit (Berufsbezeichnung)", ergebnis.berufsbezeichnung or "—")
+    zeile_row("3", "Steuernummer", ergebnis.steuernummer or "—")
+    zeile_row("4", "Art der Tätigkeit (Berufsbezeichnung)", ergebnis.berufsbezeichnung or "—")
     pdf.ln(2)
 
     # Laufende Einkünfte
     gv = ergebnis.gewinn_verlust
     ist_gewinn = gv >= 0
-    section_header("Laufende Einkünfte (aus EÜR)")
-    zeile_row("4", "Gewinn", _euro(gv) if ist_gewinn else "—")
-    zeile_row("5", "Verlust", _euro(gv) if not ist_gewinn else "—")
+    section_header("Laufende Einkünfte (aus EÜR, ELSTER KZ 100)")
+    text_row("Gewinn freiberufliche Tätigkeit", _euro(gv) if ist_gewinn else "—")
+    text_row("Verlust freiberufliche Tätigkeit", _euro(gv) if not ist_gewinn else "—")
     pdf.ln(2)
 
     # KFZ
@@ -207,7 +207,7 @@ def _generate_anlage_s_pdf(ergebnis: AnlageSErgebnis) -> bytes:
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("DejaVu", "B", 10)
     pdf.set_x(20)
-    label = f"Gewinn {ergebnis.jahr} (Zeile 4)" if ist_gewinn else f"Verlust {ergebnis.jahr} (Zeile 5)"
+    label = f"Gewinn {ergebnis.jahr} (ELSTER KZ 100)" if ist_gewinn else f"Verlust {ergebnis.jahr} (ELSTER KZ 100)"
     pdf.cell(100, 8, f"  {label}", fill=True, align="L")
     pdf.set_text_color(255, 100, 100) if not ist_gewinn else pdf.set_text_color(255, 255, 255)
     pdf.cell(70, 8, _euro(gv), fill=True, align="L")

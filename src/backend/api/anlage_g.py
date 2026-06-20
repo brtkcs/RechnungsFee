@@ -215,15 +215,15 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
     section_header("Persönliche Angaben")
     zeile_row("1", "Name, Vorname", name or "—")
     text_row("Finanzamt", ergebnis.finanzamt or "—")
-    zeile_row("2", "Steuernummer", ergebnis.steuernummer or "—")
+    zeile_row("3", "Steuernummer", ergebnis.steuernummer or "—")
     zeile_row("4", "Art des Gewerbebetriebs", ergebnis.art_des_gewerbes or "—")
     pdf.ln(2)
 
     gv = ergebnis.gewinn_verlust
     ist_gewinn = gv >= 0
-    section_header("Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG)")
-    zeile_row("11", "Gewinn", _euro(gv) if ist_gewinn else "—")
-    zeile_row("12", "Verlust", _euro(gv) if not ist_gewinn else "—")
+    section_header("Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG, ELSTER KZ 10/11)")
+    text_row("Gewinn 1. Betrieb", _euro(gv) if ist_gewinn else "—")
+    text_row("Verlust 1. Betrieb", _euro(gv) if not ist_gewinn else "—")
     pdf.ln(2)
 
     if ergebnis.kfz_hinweise:
@@ -240,10 +240,10 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
     text_row("Freibetrag: 24.500 € (Einzelunternehmer)", "")
     if ergebnis.gewst_pflichtig:
         if ergebnis.gewst_gezahlt > 0:
-            text_row("Gezahlte Gewerbesteuer (lt. Journal)", _euro(ergebnis.gewst_gezahlt))
+            zeile_row("52", "Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)", _euro(ergebnis.gewst_gezahlt))
             if messbetrag_d > 0:
                 text_row("Hebesatz (aus Bescheid)", f"{round(float(ergebnis.gewst_gezahlt) / messbetrag_d * 100):.0f} %")
-        zeile_row("57", "Gewerbesteuer-Messbetrag (lt. Bescheid)",
+        zeile_row("51", "Gewerbesteuer-Messbetrag (lt. Bescheid)",
                   _euro(messbetrag_d) if messbetrag_d > 0 else "→ aus Bescheid")
         anrechnung = (messbetrag_d * ANRECHNUNGSFAKTOR).quantize(Decimal("0.01"))
         text_row("Anrechenbarer Betrag (Messbetrag × 3,8, §35 EStG)",
@@ -259,7 +259,7 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("DejaVu", "B", 10)
     pdf.set_x(20)
-    label = f"Gewinn {ergebnis.jahr} (Zeile 11)" if ist_gewinn else f"Verlust {ergebnis.jahr} (Zeile 12)"
+    label = f"Gewinn {ergebnis.jahr} (ELSTER KZ 10/11)" if ist_gewinn else f"Verlust {ergebnis.jahr} (ELSTER KZ 10/11)"
     pdf.cell(100, 8, f"  {label}", fill=True, align="L")
     pdf.set_text_color(255, 100, 100) if not ist_gewinn else pdf.set_text_color(255, 255, 255)
     pdf.cell(70, 8, _euro(gv), fill=True, align="L")
