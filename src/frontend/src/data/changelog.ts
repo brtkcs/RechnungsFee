@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.26',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Anlage G: Stammdaten-Feld „Bezeichnung des Gewerbes" (Z. 4) ließ sich nicht speichern – Feld fehlte im API-Schema; eigenes Feld statt Berufsbezeichnung, erscheint in Stammdaten bei gewerblicher/gemischter Tätigkeit' },
+    ],
+  },
+  {
     version: 'v0.3.25',
     datum: 'Juni 2026',
     eintraege: [
