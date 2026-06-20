@@ -48,6 +48,7 @@ class UnternehmenBase(BaseModel):
     bic: Optional[str] = None
     bank_name: Optional[str] = None
     berufsbezeichnung: Optional[str] = None
+    bezeichnung_des_gewerbes: Optional[str] = None
     kammer_mitgliedschaft: Optional[str] = None
     zahlungshinweis_aktiv: bool = True
     pdf_vorlage: int = 0

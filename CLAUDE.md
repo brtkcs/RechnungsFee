@@ -84,6 +84,21 @@ def _run_migrations():
 2. `SCHEMA_VERSION = N` erhöhen
 3. Pro Tabelle nur **1×** `PRAGMA table_info` – alle neuen Spalten in einem Loop
 
+### Stammdaten (unternehmen) erweitern – Pflicht-Checkliste
+
+Jedes neue Feld in `unternehmen` muss an **5 Stellen** gleichzeitig ergänzt werden:
+
+| Was | Wo |
+|-----|----|
+| SQLAlchemy-Feld | `src/backend/database/models.py` → `Unternehmen` |
+| Pydantic-Schema | `src/backend/api/schemas.py` → `UnternehmenBase` |
+| Migration | `src/backend/main.py` → `if version < N:` + `SCHEMA_VERSION` erhöhen |
+| TypeScript-Typ | `src/frontend/src/api/client.ts` → `Unternehmen`-Interface |
+| Formular | `src/frontend/src/pages/stammdaten/UnternehmenPage.tsx` |
+
+**Fehlt `schemas.py`:** Feld wird vom API-Endpoint ignoriert (silent discard) → kann nicht gespeichert werden.  
+**Fehlt `client.ts`:** TypeScript-Fehler oder Feld unsichtbar im Frontend-State.
+
 ### Kategorien ändern oder hinzufügen – Pflicht-Checkliste
 
 Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
