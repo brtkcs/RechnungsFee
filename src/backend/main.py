@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g
 
-SCHEMA_VERSION = 92
+SCHEMA_VERSION = 93
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2084,6 +2084,50 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 92"))
             conn.commit()
             print("[Migration] Schema auf Version 92 (rechnungen.absender_snapshot – GoBD-Snapshot Absenderdaten)")
+
+        if version < 93:
+            import json as _json
+            unt93 = conn.execute(text("SELECT * FROM unternehmen WHERE id=1")).mappings().first()
+            if unt93:
+                snap93 = _json.dumps({
+                    "firmenname":              unt93.get("firmenname") or "",
+                    "vorname":                 unt93.get("vorname") or "",
+                    "nachname":                unt93.get("nachname") or "",
+                    "strasse":                 unt93.get("strasse") or "",
+                    "hausnummer":              unt93.get("hausnummer") or "",
+                    "plz":                     unt93.get("plz") or "",
+                    "ort":                     unt93.get("ort") or "",
+                    "land":                    unt93.get("land") or "DE",
+                    "steuernummer":            unt93.get("steuernummer") or "",
+                    "ust_idnr":                unt93.get("ust_idnr") or "",
+                    "finanzamt":               unt93.get("finanzamt") or "",
+                    "handelsregister_nr":      unt93.get("handelsregister_nr") or "",
+                    "handelsregister_gericht": unt93.get("handelsregister_gericht") or "",
+                    "telefon":                 unt93.get("telefon") or "",
+                    "email":                   unt93.get("email") or "",
+                    "webseite":                unt93.get("webseite") or "",
+                    "iban":                    unt93.get("iban") or "",
+                    "bic":                     unt93.get("bic") or "",
+                    "bank_name":               unt93.get("bank_name") or "",
+                    "logo_pfad":               unt93.get("logo_pfad") or "",
+                    "berufsbezeichnung":       unt93.get("berufsbezeichnung") or "",
+                    "kammer_mitgliedschaft":   unt93.get("kammer_mitgliedschaft") or "",
+                    "ist_kleinunternehmer":    bool(unt93.get("ist_kleinunternehmer")),
+                    "zahlungshinweis_aktiv":   bool(unt93.get("zahlungshinweis_aktiv", True)),
+                    "pdf_vorlage":             int(unt93.get("pdf_vorlage") or 0),
+                    "unterschrift_bild":       unt93.get("unterschrift_bild") or "",
+                    "unterschrift_auf_rechnung": bool(unt93.get("unterschrift_auf_rechnung")),
+                    "qr_zahlung_aktiv":        bool(unt93.get("qr_zahlung_aktiv")),
+                    "einleitungstext":         unt93.get("einleitungstext") or "",
+                }, ensure_ascii=False)
+                result = conn.execute(text(
+                    "UPDATE rechnungen SET absender_snapshot = :snap "
+                    "WHERE ist_entwurf = 0 AND (absender_snapshot IS NULL OR absender_snapshot = '')"
+                ), {"snap": snap93})
+                print(f"[Migration] {result.rowcount} finalisierte Dokumente mit Absender-Snapshot befüllt")
+            conn.execute(text("PRAGMA user_version = 93"))
+            conn.commit()
+            print("[Migration] Schema auf Version 93 (rechnungen.absender_snapshot Backfill für Bestandsdokumente)")
 
 
 def _migrate_kategorien() -> None:
