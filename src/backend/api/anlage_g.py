@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/anlage-g", tags=["Anlage G"])
 
 GEWST_FREIBETRAG = Decimal("24500")
 STEUERMESSZAHL = Decimal("0.035")   # 3,5 ‰ für Einzelunternehmer
-ANRECHNUNGSFAKTOR = Decimal("3.8")  # §35 EStG
+ANRECHNUNGSFAKTOR = Decimal("4.0")  # §35 EStG, seit VZ 2020 (JStG 2019)
 
 
 class AnlageGKfzHinweis(BaseModel):
@@ -90,8 +90,10 @@ def anlage_g_berechnen(
             gewst_gezahlt = Decimal(str(row)).quantize(Decimal("0.01"))
 
     # Grobe Gewerbeertrag-Schätzung (ohne Hinzurechnungen/Kürzungen)
+    # §11 Abs. 1 GewStG: Abrundung auf volle 100 € vor Messbetrag-Berechnung
     gewerbeertrag = max(gv - GEWST_FREIBETRAG, Decimal("0"))
-    messbetrag_approx = (gewerbeertrag * STEUERMESSZAHL).quantize(Decimal("0.01"))
+    gewerbeertrag_gerundet = (gewerbeertrag // 100) * 100
+    messbetrag_approx = (gewerbeertrag_gerundet * STEUERMESSZAHL).quantize(Decimal("0.01"))
 
     return AnlageGErgebnis(
         jahr=jahr,
@@ -240,13 +242,13 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
     text_row("Freibetrag: 24.500 € (Einzelunternehmer)", "")
     if ergebnis.gewst_pflichtig:
         if ergebnis.gewst_gezahlt > 0:
-            zeile_row("52", "Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)", _euro(ergebnis.gewst_gezahlt))
+            zeile_row("52", "Gewerbesteuer-Vorauszahlungen (lt. Journal)", _euro(ergebnis.gewst_gezahlt))
             if messbetrag_d > 0:
                 text_row("Hebesatz (aus Bescheid)", f"{round(float(ergebnis.gewst_gezahlt) / messbetrag_d * 100):.0f} %")
         zeile_row("51", "Gewerbesteuer-Messbetrag (lt. Bescheid)",
                   _euro(messbetrag_d) if messbetrag_d > 0 else "→ aus Bescheid")
         anrechnung = (messbetrag_d * ANRECHNUNGSFAKTOR).quantize(Decimal("0.01"))
-        text_row("Anrechenbarer Betrag (Messbetrag × 3,8, §35 EStG)",
+        text_row("Anrechenbarer Betrag (Messbetrag × 4,0, §35 EStG)",
                  _euro(anrechnung) if messbetrag_d > 0 else "—")
         if ergebnis.gewst_messbetrag_approx > 0:
             text_row("Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)",

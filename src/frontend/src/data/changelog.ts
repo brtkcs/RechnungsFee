@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.3.26',
     datum: 'Juni 2026',
     eintraege: [
+      { typ: 'fix', text: 'Anlage G: Gewerbeertrag wird jetzt vor der Messbetrag-Schätzung auf volle 100 € abgerundet (§11 Abs. 1 GewStG); Anrechnungsfaktor §35 EStG von 3,8 auf 4,0 korrigiert (gilt seit VZ 2020); Z. 52 umbenannt von „Tatsächlich zu zahlende Gewerbesteuer" in „Gewerbesteuer-Vorauszahlungen lt. Journal" (Issue #183)' },
       { typ: 'fix', text: 'EÜR: Betriebseinnahmen (19 % und 7 %) wurden fälschlich in Zeile 12 eingetragen – laut Anlage EÜR 2025 (BMF) ist Zeile 12 nur für Kleinunternehmer (§19 UStG); umsatzsteuerpflichtige Einnahmen (7 % und 19 % gemeinsam) gehören in Zeile 15, steuerfreie in Zeile 16; Betriebseinnahmen (0 %) = Kleinunternehmer korrekt auf Zeile 12 (Issue #185)' },
       { typ: 'fix', text: 'Anlage G: Stammdaten-Feld „Bezeichnung des Gewerbes" (Z. 4) ließ sich nicht speichern – Feld fehlte im API-Schema; eigenes Feld statt Berufsbezeichnung, erscheint in Stammdaten bei gewerblicher/gemischter Tätigkeit' },
       { typ: 'fix', text: 'DATEV-Export: Buchungen ohne Sachkonto (z. B. Kassenanfangsbestand) wurden fälschlich als „übersprungen" gezählt obwohl sie exportiert wurden; jetzt eigene amber-Meldung „ohne Sachkonto – im DATEV-Programm ergänzen" statt irreführender Übersprungen-Warnung (Issue #163)' },
