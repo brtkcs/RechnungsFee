@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 95` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 96` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -212,6 +212,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 93 | Backfill absender_snapshot für alle bestehenden finalisierten Dokumente ohne Snapshot (aktueller Stand der Stammdaten wird eingefroren) |
 | 94 | unternehmen.bezeichnung_des_gewerbes VARCHAR(200) – eigenes Feld für Anlage G Z.4 „genaue Bezeichnung des Gewerbes" (z.B. Tischlerei); bisher fälschlich berufsbezeichnung verwendet |
 | 95 | EÜR-Zeilenzuordnung korrigiert (Issue #185, Anlage EÜR 2025 BMF): Zeile 12=Kleinunternehmer §19, Zeile 15=umsatzsteuerpflichtige BE (7%+19% gemeinsam), Zeile 16=steuerfreie BE §4; Betriebseinnahmen (19%+7%) → Zeile 15, Betriebseinnahmen (0%) → Zeile 12 |
+| 96 | Gewerbesteuer SKR03-Kontonummer korrigiert: 7600 → 4320 (Im SKR03 gibt es kein Konto 7600; Issue #186); SKR04 7610 war bereits korrekt (SKR04 7600 = Körperschaftsteuer) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

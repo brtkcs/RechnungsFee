@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g
 
-SCHEMA_VERSION = 95
+SCHEMA_VERSION = 96
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2163,6 +2163,18 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 95 (EÜR: BE 19%/7% → Zeile 15, BE 0% → Zeile 12 Kleinunternehmer)")
 
+        if version < 96:
+            # SKR03-Kontonummer Gewerbesteuer korrigieren: 7600 → 4320
+            # Im SKR03 gibt es kein Konto 7600; Gewerbesteuer = 4320 (Issue #186)
+            # SKR04 7610 war bereits korrekt (SKR04 7600 = Körperschaftsteuer)
+            conn.execute(text(
+                "UPDATE kategorien SET konto_skr03='4320' "
+                "WHERE name='Gewerbesteuer' AND (konto_skr03 IS NULL OR konto_skr03 != '4320')"
+            ))
+            conn.execute(text("PRAGMA user_version = 96"))
+            conn.commit()
+            print("[Migration] Schema auf Version 96 (Gewerbesteuer SKR03: 7600 → 4320)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -2221,6 +2233,15 @@ def _migrate_kategorien() -> None:
             kat = db.query(Kategorie).filter(Kategorie.name == name).first()
             if kat and kat.eks_kategorie != eks:
                 kat.eks_kategorie = eks
+
+        # SKR03-Kontonummer-Korrekturen (Issue #186)
+        skr03_korrekturen = [
+            ("Gewerbesteuer", "4320"),  # SKR03 hat kein 7600; Gewerbesteuer = 4320
+        ]
+        for name, konto in skr03_korrekturen:
+            kat = db.query(Kategorie).filter(Kategorie.name == name).first()
+            if kat and kat.konto_skr03 != konto:
+                kat.konto_skr03 = konto
 
         # EÜR-Zeilen-Korrekturen
         euer_korrekturen = [

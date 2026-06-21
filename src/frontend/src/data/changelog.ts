@@ -30,6 +30,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'EÜR: Betriebseinnahmen (19 % und 7 %) wurden fälschlich in Zeile 12 eingetragen – laut Anlage EÜR 2025 (BMF) ist Zeile 12 nur für Kleinunternehmer (§19 UStG); umsatzsteuerpflichtige Einnahmen (7 % und 19 % gemeinsam) gehören in Zeile 15, steuerfreie in Zeile 16; Betriebseinnahmen (0 %) = Kleinunternehmer korrekt auf Zeile 12 (Issue #185)' },
       { typ: 'fix', text: 'Anlage G: Stammdaten-Feld „Bezeichnung des Gewerbes" (Z. 4) ließ sich nicht speichern – Feld fehlte im API-Schema; eigenes Feld statt Berufsbezeichnung, erscheint in Stammdaten bei gewerblicher/gemischter Tätigkeit' },
       { typ: 'fix', text: 'DATEV-Export: Buchungen ohne Sachkonto (z. B. Kassenanfangsbestand) wurden fälschlich als „übersprungen" gezählt obwohl sie exportiert wurden; jetzt eigene amber-Meldung „ohne Sachkonto – im DATEV-Programm ergänzen" statt irreführender Übersprungen-Warnung (Issue #163)' },
+      { typ: 'fix', text: 'Kategorien: Gewerbesteuer hatte im SKR03 das falsche Konto 7600 – im SKR03 gibt es kein Konto 7600; korrekt ist 4320 (Gewerbesteuer); SKR04 7610 war bereits korrekt (SKR04 7600 = Körperschaftsteuer) (Issue #186)' },
     ],
   },
   {
