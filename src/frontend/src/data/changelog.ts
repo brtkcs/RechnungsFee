@@ -31,6 +31,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Anlage G: Stammdaten-Feld „Bezeichnung des Gewerbes" (Z. 4) ließ sich nicht speichern – Feld fehlte im API-Schema; eigenes Feld statt Berufsbezeichnung, erscheint in Stammdaten bei gewerblicher/gemischter Tätigkeit' },
       { typ: 'fix', text: 'DATEV-Export: Buchungen ohne Sachkonto (z. B. Kassenanfangsbestand) wurden fälschlich als „übersprungen" gezählt obwohl sie exportiert wurden; jetzt eigene amber-Meldung „ohne Sachkonto – im DATEV-Programm ergänzen" statt irreführender Übersprungen-Warnung (Issue #163)' },
       { typ: 'fix', text: 'Kategorien: Gewerbesteuer hatte im SKR03 das falsche Konto 7600 – im SKR03 gibt es kein Konto 7600; korrekt ist 4320 (Gewerbesteuer); SKR04 7610 war bereits korrekt (SKR04 7600 = Körperschaftsteuer) (Issue #186)' },
+      { typ: 'verbesserung', text: 'Kategorien: Im Bearbeitungsmodus können jetzt auch Systemkategorien ihre EÜR-Zeile inline anpassen – kleines Zahlenfeld direkt in der Tabellenspalte, leer = kein EÜR-Eintrag; SKR03/04-Konten und Verwendungsbeispiele waren für Systemkategorien bereits editierbar (Issue #186)' },
     ],
   },
   {
