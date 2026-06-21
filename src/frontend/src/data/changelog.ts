@@ -32,6 +32,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'DATEV-Export: Buchungen ohne Sachkonto (z. B. Kassenanfangsbestand) wurden fälschlich als „übersprungen" gezählt obwohl sie exportiert wurden; jetzt eigene amber-Meldung „ohne Sachkonto – im DATEV-Programm ergänzen" statt irreführender Übersprungen-Warnung (Issue #163)' },
       { typ: 'fix', text: 'Kategorien: Gewerbesteuer hatte im SKR03 das falsche Konto 7600 – im SKR03 gibt es kein Konto 7600; korrekt ist 4320 (Gewerbesteuer); SKR04 7610 war bereits korrekt (SKR04 7600 = Körperschaftsteuer) (Issue #186)' },
       { typ: 'verbesserung', text: 'Kategorien: Im Bearbeitungsmodus können jetzt auch Systemkategorien ihre EÜR-Zeile inline anpassen – kleines Zahlenfeld direkt in der Tabellenspalte, leer = kein EÜR-Eintrag; SKR03/04-Konten und Verwendungsbeispiele waren für Systemkategorien bereits editierbar (Issue #186)' },
+      { typ: 'neu', text: 'Journal: Buchungen können innerhalb von 5 Minuten nach der Erstellung direkt bearbeitet werden – Bearbeiten-Button erscheint im Detailbereich; nach Ablauf des Fensters wird automatisch storniert und neu gebucht (GoBD-konform) (Issue #184)' },
     ],
   },
   {
