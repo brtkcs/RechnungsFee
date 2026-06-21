@@ -12,6 +12,7 @@ Sonderfälle:
   Stornobuchung (STORNO-Prefix) → BU-Schlüssel des Originals (art invertiert, vorsteuerabzug erhalten)
 """
 
+import re
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
@@ -102,7 +103,7 @@ def _fmt(betrag: Decimal) -> str:
     return str(abs(betrag).quantize(Decimal("0.01"))).replace(".", ",")
 
 
-def _bu(j: Journaleintrag, skr: str, konto: Optional[str]) -> str:
+def _bu(j: Journaleintrag, skr: str, konto: Optional[str], db: Optional[Session] = None) -> str:
     sf = j.ust_sonderfall
     if sf == "ig_erwerb":
         return "89" if int(j.ust_satz or 0) >= 19 else "93"
@@ -115,6 +116,16 @@ def _bu(j: Journaleintrag, skr: str, konto: Optional[str]) -> str:
     # BU-Schlüssel richtet sich nach dem Original → art für BU-Berechnung zurückdrehen.
     is_storno = j.beschreibung.startswith("STORNO ")
     art = ("Ausgabe" if j.art == "Einnahme" else "Einnahme") if is_storno else j.art
+    # vorsteuerabzug für BU-Berechnung bestimmen.
+    # Alte Stornos (vor v0.3.24) wurden mit vorsteuerabzug=False erstellt; in diesem Fall
+    # Original-Buchung per Belegnummer nachschlagen und dessen vorsteuerabzug übernehmen.
+    vorsteuerabzug = j.vorsteuerabzug
+    if is_storno and not vorsteuerabzug and art == "Ausgabe" and satz > 0 and db:
+        m = re.match(r"^STORNO ([^:]+):", j.beschreibung)
+        if m:
+            orig = db.query(Journaleintrag).filter(Journaleintrag.belegnr == m.group(1)).first()
+            if orig:
+                vorsteuerabzug = orig.vorsteuerabzug
     if art == "Einnahme":
         if konto in _AM_KONTEN.get(skr, set()):
             # Automatikkonto (AM): Steuersatz eingebaut – BU wäre REW00306
@@ -127,9 +138,9 @@ def _bu(j: Journaleintrag, skr: str, konto: Optional[str]) -> str:
             return "2"
     else:
         # Aufwandskonten: Vorsteuer-Schlüssel (BU 9 = 19 %, BU 8 = 7 %)
-        if j.vorsteuerabzug and satz == 19:
+        if vorsteuerabzug and satz == 19:
             return "9"
-        if j.vorsteuerabzug and satz == 7:
+        if vorsteuerabzug and satz == 7:
             return "8"
     return ""
 
@@ -275,7 +286,7 @@ def datev_buchungsstapel(
             "", "", "",          # 4-6: leer
             konto,               # 7: Konto
             gegenkonto,          # 8: Gegenkonto
-            _bu(j, skr, konto),  # 9: BU-Schlüssel
+            _bu(j, skr, konto, db),  # 9: BU-Schlüssel
             j.datum.strftime("%d%m"),  # 10: Belegdatum DDMM
             belegfeld1,          # 11: Belegfeld 1
             "",                  # 12: Belegfeld 2
