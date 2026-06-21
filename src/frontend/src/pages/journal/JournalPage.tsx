@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getJournal, getKategorien, getKassenbuchExportUrl, getJournalExportUrl, openUrl } from '../../api/client'
+import { getJournal, getKategorien, getKassenbuchExportUrl, getJournalExportUrl, openUrl, type JournalEintrag } from '../../api/client'
 import { BuchungForm } from './BuchungForm'
 import { TagesabschlussDialog } from './TagesabschlussDialog'
 import { BuchungDetail } from './BuchungDetail'
@@ -61,6 +61,7 @@ export function JournalPage() {
   const setNurBebuchte = (v: boolean) => { journalFilter.nurBebuchte = v; _setNurBebuchte(v) }
   const [showBuchung, setShowBuchung] = useState(false)
   const [showAbschluss, setShowAbschluss] = useState(false)
+  const [bearbeitenEintrag, setBearbeitenEintrag] = useState<JournalEintrag | null>(null)
   const [aktiverEintragId, setAktiverEintragId] = useState<number | null>(null)
   const [kassenbuchLaedt, setKassenbuchLaedt] = useState(false)
   const [exportLaedt, setExportLaedt] = useState(false)
@@ -485,6 +486,11 @@ export function JournalPage() {
                         eintrag={e}
                         bereitsStorniert={bereitsStorniert}
                         onClose={() => setAktiverEintragId(null)}
+                        onBearbeiten={(eintrag) => {
+                          setAktiverEintragId(null)
+                          setBearbeitenEintrag(eintrag)
+                          setShowBuchung(true)
+                        }}
                       />
                     )}
                   </>
@@ -498,8 +504,9 @@ export function JournalPage() {
 
       {showBuchung && (
         <BuchungForm
-          onClose={() => setShowBuchung(false)}
-          onSuccess={() => setShowBuchung(false)}
+          bearbeiten={bearbeitenEintrag ?? undefined}
+          onClose={() => { setShowBuchung(false); setBearbeitenEintrag(null) }}
+          onSuccess={() => { setShowBuchung(false); setBearbeitenEintrag(null) }}
         />
       )}
       {showAbschluss && (

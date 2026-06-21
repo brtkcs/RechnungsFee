@@ -474,6 +474,8 @@ export const getJournal = (filter?: {
 }) => request<JournalEintrag[]>(`/journal${toQuery(filter ?? {})}`)
 export const createJournaleintrag = (data: JournalEintragCreate) =>
   request<JournalEintrag>('/journal', { method: 'POST', body: JSON.stringify(data) })
+export const updateJournaleintrag = (id: number, data: JournalEintragCreate) =>
+  request<JournalEintrag>(`/journal/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const getJournaleintrag = (id: number) =>
   request<JournalEintrag>(`/journal/${id}`)
 export const stornoJournaleintrag = (id: number, grund: string) =>

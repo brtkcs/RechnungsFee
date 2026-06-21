@@ -39,6 +39,7 @@ interface Props {
   eintrag: JournalEintrag
   bereitsStorniert: boolean
   onClose: () => void
+  onBearbeiten?: (eintrag: JournalEintrag) => void
 }
 
 function formatEuro(val: string): string {
@@ -50,7 +51,11 @@ async function oeffneBelegFenster(id: number, drucken: boolean) {
   await openUrl(url)
 }
 
-export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose }: Props) {
+function istImKorrekturfenster(erstellt_am: string): boolean {
+  return (Date.now() - new Date(erstellt_am).getTime()) < 6 * 60 * 1000  // 6 Min. (Server: 5 Min.)
+}
+
+export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose, onBearbeiten }: Props) {
   const qc = useQueryClient()
   const [stornoGrund, setStornoGrund] = useState('')
   const [zeigStornoEingabe, setZeigStornoEingabe] = useState(false)
@@ -116,6 +121,14 @@ export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose }: Props) 
           </div>
         ) : (
           <div className="flex flex-wrap gap-2 mb-4">
+            {onBearbeiten && !istStorno && !bereitsStorniert && istImKorrekturfenster(e.erstellt_am) && (
+              <button
+                onClick={() => { onClose(); onBearbeiten(e) }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 text-blue-600 dark:text-blue-400"
+              >
+                ✏️ Bearbeiten
+              </button>
+            )}
             <button
               onClick={() => oeffneBelegFenster(e.id, true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"

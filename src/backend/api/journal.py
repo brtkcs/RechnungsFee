@@ -231,30 +231,28 @@ def list_eintraege(
     return [JournalEintragResponse.from_orm_with_kunde(e) for e in eintraege]
 
 
-@router.post("", response_model=JournalEintragResponse, status_code=201)
-def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
-    """Legt einen neuen unveränderlichen Journaleintrag an."""
-    # Kleinunternehmer-Check
+def _felder_aus_data(data: "JournalEintragCreate", db: Session) -> dict:
+    """Berechnet alle abgeleiteten Felder für einen Journaleintrag (shared by create + update)."""
     unternehmen = db.query(Unternehmen).first()
     ust_satz = data.ust_satz
     vorsteuerabzug = data.vorsteuerabzug
     steuerbefreiung_grund = None
+
     if unternehmen and unternehmen.ist_kleinunternehmer:
         ust_satz = Decimal("0")
         steuerbefreiung_grund = "§19 UStG"
 
-    # Privat-Kategorie: keine USt, kein Vorsteuerabzug
-    if data.kategorie_id:
-        kat = db.query(Kategorie).filter(Kategorie.id == data.kategorie_id).first()
-        if kat and kat.kontenart == "Privat":
+    kat = db.query(Kategorie).filter(Kategorie.id == data.kategorie_id).first() if data.kategorie_id else None
+
+    if kat:
+        if kat.kontenart == "Privat":
             ust_satz = Decimal("0")
             vorsteuerabzug = False
             if not steuerbefreiung_grund:
                 steuerbefreiung_grund = "Privatbuchung"
-        if kat and kat.konto_skr03 in ("8125", "3125") and not steuerbefreiung_grund:
+        if kat.konto_skr03 in ("8125", "3125") and not steuerbefreiung_grund:
             steuerbefreiung_grund = "§4 Nr. 1b UStG"
-        # ust_sonderfall aus Kategorie ableiten wenn nicht explizit gesetzt
-        if kat and not data.ust_sonderfall and not data.ist_ig_erwerb:
+        if not data.ust_sonderfall and not data.ist_ig_erwerb:
             if kat.konto_skr03 in ("3400", "5400"):
                 data = data.model_copy(update={"ust_sonderfall": "ig_erwerb"})
             elif kat.konto_skr03 in ("3300", "5300"):
@@ -262,34 +260,19 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
             elif kat.konto_skr03 in ("3610", "5600"):
                 data = data.model_copy(update={"ust_sonderfall": "13b_abs2"})
 
-    # Barkassen-Prüfung: Bar-Ausgabe darf den Kassenstand nicht übersteigen
-    if data.art == "Ausgabe" and data.zahlungsart == "Bar":
-        kassenstand = _get_bar_kassenstand(db)
-        if data.brutto_betrag > kassenstand:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Kassenstand nicht ausreichend. Aktueller Kassenstand: {kassenstand:.2f} €, Ausgabe: {data.brutto_betrag:.2f} €.",
-            )
-
-    # ust_sonderfall: bevorzuge expliziten Wert; Fallback auf ist_ig_erwerb (veraltet)
     ust_sonderfall = data.ust_sonderfall
     if not ust_sonderfall and data.ist_ig_erwerb:
         ust_sonderfall = "ig_erwerb"
 
-    # Reverse-Charge-Buchungen: Rechnungsbetrag = Netto; USt wird additiv berechnet
     if ust_sonderfall and ust_satz > 0:
         netto = data.brutto_betrag
         ust_betrag = (netto * ust_satz / 100).quantize(Decimal("0.01"), ROUND_HALF_UP)
-        brutto_stored = netto  # zahlt nur den Rechnungsbetrag
-        vorsteuerabzug = True  # Vorsteuer wird immer geltend gemacht
+        brutto_stored = netto
+        vorsteuerabzug = True
     else:
         netto, ust_betrag = _berechne_ust(data.brutto_betrag, ust_satz)
         brutto_stored = data.brutto_betrag
 
-    belegnr = _naechste_belegnr(db, data.datum)
-    kat = db.query(Kategorie).filter(Kategorie.id == data.kategorie_id).first() if data.kategorie_id else None
-
-    # USt-Konto basierend auf ust_sonderfall
     if ust_satz > 0:
         konto_ust_skr03, konto_ust_skr04 = _ust_konto(data.art, ust_satz)
         satz_i = int(ust_satz)
@@ -302,9 +285,8 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
     else:
         konto_ust_skr03, konto_ust_skr04 = None, None
 
-    journaleintrag = Journaleintrag(
+    return dict(
         datum=data.datum,
-        belegnr=belegnr,
         beschreibung=data.beschreibung,
         kategorie_id=data.kategorie_id,
         konto_skr03=kat.konto_skr03 if kat else None,
@@ -325,13 +307,109 @@ def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
         km_anzahl=data.km_anzahl,
         ist_ig_erwerb=(ust_sonderfall == "ig_erwerb"),
         ust_sonderfall=ust_sonderfall,
-        immutable=True,
     )
+
+
+@router.post("", response_model=JournalEintragResponse, status_code=201)
+def create_eintrag(data: JournalEintragCreate, db: Session = Depends(get_db)):
+    """Legt einen neuen Journaleintrag an (innerhalb von 5 Min. direkt korrigierbar)."""
+    # Barkassen-Prüfung: Bar-Ausgabe darf den Kassenstand nicht übersteigen
+    if data.art == "Ausgabe" and data.zahlungsart == "Bar":
+        kassenstand = _get_bar_kassenstand(db)
+        if data.brutto_betrag > kassenstand:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Kassenstand nicht ausreichend. Aktueller Kassenstand: {kassenstand:.2f} €, Ausgabe: {data.brutto_betrag:.2f} €.",
+            )
+
+    felder = _felder_aus_data(data, db)
+    belegnr = _naechste_belegnr(db, data.datum)
+
+    journaleintrag = Journaleintrag(belegnr=belegnr, immutable=False, **felder)
     journaleintrag.signatur = signatur_journaleintrag(journaleintrag)
     db.add(journaleintrag)
     db.commit()
     db.refresh(journaleintrag)
     return JournalEintragResponse.from_orm_with_kunde(journaleintrag)
+
+
+KORREKTUR_FENSTER_SEKUNDEN = 300  # 5 Minuten
+
+
+@router.put("/{eintrag_id}", response_model=JournalEintragResponse)
+def update_eintrag(eintrag_id: int, data: JournalEintragCreate, db: Session = Depends(get_db)):
+    """Korrigiert einen Journaleintrag.
+
+    Innerhalb von 5 Minuten nach Erstellung: direkte Korrektur (unsichtbar, GoBD-konform
+    da noch keine Festschreibung). Danach: automatische Stornobuchung + korrigierte Neubuchung.
+    """
+    original = db.query(Journaleintrag).filter(Journaleintrag.id == eintrag_id).first()
+    if not original:
+        raise HTTPException(404, "Journaleintrag nicht gefunden.")
+    if original.beschreibung.startswith("STORNO "):
+        raise HTTPException(409, "Storno-Einträge können nicht bearbeitet werden.")
+    if original.rechnung_id:
+        raise HTTPException(409, "Rechnungsbuchungen können nur über die Rechnung bearbeitet werden.")
+    bereits_storniert = db.query(Journaleintrag).filter(
+        Journaleintrag.beschreibung.like(f"STORNO {original.belegnr}:%")
+    ).first()
+    if bereits_storniert:
+        raise HTTPException(409, f"Diese Buchung wurde bereits storniert ({bereits_storniert.belegnr}).")
+
+    delta = datetime.now() - original.erstellt_am
+    within_window = not original.immutable and delta.total_seconds() < KORREKTUR_FENSTER_SEKUNDEN
+
+    felder = _felder_aus_data(data, db)
+
+    if within_window:
+        # Direkte Korrektur: Felder in-place aktualisieren, Signatur neu berechnen
+        for k, v in felder.items():
+            setattr(original, k, v)
+        original.signatur = signatur_journaleintrag(original)
+        db.commit()
+        db.refresh(original)
+        return JournalEintragResponse.from_orm_with_kunde(original)
+
+    # Nach Fristablauf: Original versiegeln (falls noch offen), dann Storno + Neubuchung
+    if not original.immutable:
+        original.immutable = True
+        original.signatur = signatur_journaleintrag(original)
+
+    storno_datum = date.today()
+    storno_belegnr = _naechste_belegnr(db, storno_datum)
+    if original.brutto_betrag >= 0:
+        s_art = "Ausgabe" if original.art == "Einnahme" else "Einnahme"
+        s_netto, s_ust, s_brutto = original.netto_betrag, original.ust_betrag, original.brutto_betrag
+    else:
+        s_art = original.art
+        s_netto = -original.netto_betrag
+        s_ust = -original.ust_betrag
+        s_brutto = -original.brutto_betrag
+
+    storno = Journaleintrag(
+        datum=storno_datum, belegnr=storno_belegnr,
+        beschreibung=f"STORNO {original.belegnr}: Korrektur",
+        kategorie_id=original.kategorie_id,
+        konto_skr03=original.konto_skr03, konto_skr04=original.konto_skr04,
+        konto_ust_skr03=original.konto_ust_skr03, konto_ust_skr04=original.konto_ust_skr04,
+        zahlungsart=original.zahlungsart, art=s_art,
+        netto_betrag=s_netto, ust_satz=original.ust_satz,
+        ust_betrag=s_ust, vorsteuer_betrag=-original.vorsteuer_betrag,
+        brutto_betrag=s_brutto, vorsteuerabzug=original.vorsteuerabzug,
+        ist_ig_erwerb=original.ist_ig_erwerb, ust_sonderfall=original.ust_sonderfall,
+        immutable=True,
+    )
+    storno.signatur = signatur_journaleintrag(storno)
+    db.add(storno)
+
+    neu_belegnr = _naechste_belegnr(db, felder["datum"])
+    neu = Journaleintrag(belegnr=neu_belegnr, immutable=True, **felder)
+    neu.signatur = signatur_journaleintrag(neu)
+    db.add(neu)
+
+    db.commit()
+    db.refresh(neu)
+    return JournalEintragResponse.from_orm_with_kunde(neu)
 
 
 @router.post("/split", response_model=list[JournalEintragResponse], status_code=201)

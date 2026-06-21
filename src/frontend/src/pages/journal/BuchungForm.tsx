@@ -8,12 +8,14 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createJournaleintrag,
+  updateJournaleintrag,
   createSplitBuchung,
   getKategorien,
   getKunden,
   getUnternehmen,
   getKassenstand,
   getUstSaetze,
+  type JournalEintrag,
 } from '../../api/client'
 
 // ---------------------------------------------------------------------------
@@ -61,6 +63,7 @@ type SplitValues = z.infer<typeof splitSchema>
 interface Props {
   onClose: () => void
   onSuccess: () => void
+  bearbeiten?: JournalEintrag
 }
 
 function heute(): string {
@@ -75,12 +78,12 @@ function formatEuro(n: number): string {
 // Komponente
 // ---------------------------------------------------------------------------
 
-export function BuchungForm({ onClose, onSuccess }: Props) {
+export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
   const qc = useQueryClient()
   const [isSplit, setIsSplit] = useState(false)
   const [eingabeModus, setEingabeModus] = useState<'brutto' | 'netto'>('brutto')
   const [keineGeldbewegung, setKeineGeldbewegung] = useState(false)
-  const [kmAnzahl, setKmAnzahl] = useState<string>('')
+  const [kmAnzahl, setKmAnzahl] = useState<string>(bearbeiten?.km_anzahl ? String(bearbeiten.km_anzahl) : '')
   const [showNeuKategorie, setShowNeuKategorie] = useState(false)
   const [katModus, setKatModus] = useState<KontorahmenModus>(getKontorahmenModus)
 
@@ -111,7 +114,19 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
     formState: { errors },
   } = useForm<SingleValues>({
     resolver: zodResolver(singleSchema),
-    defaultValues: {
+    defaultValues: bearbeiten ? {
+      datum: bearbeiten.datum,
+      beschreibung: bearbeiten.beschreibung,
+      art: bearbeiten.art,
+      brutto_betrag: bearbeiten.brutto_betrag,
+      ust_satz: bearbeiten.ust_satz,
+      zahlungsart: bearbeiten.zahlungsart,
+      kategorie_id: bearbeiten.kategorie_id ? String(bearbeiten.kategorie_id) : '',
+      kunde_id: bearbeiten.kunde_id ? String(bearbeiten.kunde_id) : '',
+      vorsteuerabzug: bearbeiten.vorsteuerabzug,
+      ust_sonderfall: bearbeiten.ust_sonderfall ?? '',
+      externe_belegnr: bearbeiten.externe_belegnr ?? '',
+    } : {
       datum: heute(),
       art: 'Einnahme',
       zahlungsart: 'Bar',
@@ -328,7 +343,9 @@ export function BuchungForm({ onClose, onSuccess }: Props) {
 
   // Mutations
   const singleMutation = useMutation({
-    mutationFn: createJournaleintrag,
+    mutationFn: bearbeiten
+      ? (data: Parameters<typeof createJournaleintrag>[0]) => updateJournaleintrag(bearbeiten.id, data)
+      : createJournaleintrag,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['journal'] })
       qc.invalidateQueries({ queryKey: ['monats-uebersicht'] })

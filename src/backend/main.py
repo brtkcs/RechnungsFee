@@ -2431,6 +2431,23 @@ def _migrate_signaturen() -> None:
             if _ohne_kat:
                 print(f"[Signaturen] {len(_ohne_kat)} kategorielose Einnahme-Buchung(en) repariert (Issue #132)")
 
+        # Noch offene Einträge (immutable=False) die älter als 5 Min. sind versiegeln
+        from datetime import timedelta
+        cutoff = datetime.now() - timedelta(minutes=5)
+        offene = (
+            db.query(Journaleintrag)
+            .filter(
+                Journaleintrag.immutable == False,  # noqa: E712
+                Journaleintrag.erstellt_am < cutoff,
+            )
+            .all()
+        )
+        for e in offene:
+            e.immutable = True
+            e.signatur = signatur_journaleintrag(e)
+        if offene:
+            print(f"[Signaturen] {len(offene)} offene Journal-Eintrag/Einträge versiegelt (Korrekturfenster abgelaufen)")
+
         eintraege = (
             db.query(Journaleintrag)
             .filter(Journaleintrag.immutable == True)
