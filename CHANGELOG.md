@@ -11,6 +11,7 @@ Versionen werden durch Git-Tags gesetzt – `git tag v0.x.y && git push --tags`.
 
 ### 🐛 Behoben
 - DATEV-Export: Stornobuchungen, die vor v0.3.24 erstellt wurden, haben den BU-Schlüssel jetzt wieder korrekt (z. B. BU 9 für VoSt 19 %); Regression durch vorherigen Fix – alter Code speicherte `vorsteuerabzug=False` auf Stornos, neuer Algorithmus schlug deshalb fälschlich BU="" nach (Issue #163)
+- Anlage G: Beschriftung Z. 52 im UI war noch nicht aktualisiert – zeigt jetzt korrekt „Gewerbesteuer-Vorauszahlungen lt. Journal" statt „Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)"; PDF-Beschriftung war bereits korrekt (Issue #183)
 
 ---
 

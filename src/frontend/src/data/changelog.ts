@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'fix', text: 'DATEV-Export: Stornobuchungen, die vor v0.3.24 erstellt wurden, haben den BU-Schlüssel jetzt wieder korrekt (z. B. BU 9 für VoSt 19 %); Regression durch vorherigen Fix – alter Code speicherte vorsteuerabzug=False auf Stornos, neuer Algorithmus schlug deshalb fälschlich BU="" nach (Issue #163)' },
+      { typ: 'fix', text: 'Anlage G: Beschriftung Z. 52 im UI war noch nicht aktualisiert – zeigt jetzt korrekt „Gewerbesteuer-Vorauszahlungen lt. Journal" statt „Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)"; PDF-Beschriftung war bereits korrekt (Issue #183)' },
     ],
   },
   {
