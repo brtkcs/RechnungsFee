@@ -101,7 +101,7 @@ export function AnlageGPage() {
   const messbetrag = messbetragInput
     ? parseFloat(messbetragInput.replace(',', '.')) || 0
     : messbetragBerechnet
-  const anrechnungsbetrag = messbetrag * 3.8
+  const anrechnungsbetrag = messbetrag * 4.0
 
   const gv = data ? parseFloat(data.gewinn_verlust) : 0
   const istGewinn = gv >= 0
@@ -259,7 +259,7 @@ export function AnlageGPage() {
                 </div>
                 {messbetrag > 0 && (
                   <ZeileText
-                    label="Anrechenbarer Betrag (Messbetrag × 3,8, §35 EStG)"
+                    label="Anrechenbarer Betrag (Messbetrag × 4,0, §35 EStG)"
                     wert={euroFmt(anrechnungsbetrag)}
                   />
                 )}
