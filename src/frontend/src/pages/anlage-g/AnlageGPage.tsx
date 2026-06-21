@@ -80,7 +80,6 @@ export function AnlageGPage() {
   const now = new Date()
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
-  const [hebesatzInput, setHebesatzInput] = useState('')
   const [messbetragInput, setMessbetragInput] = useState('')
 
   const [pdfLaedt, setPdfLaedt] = useState(false)
@@ -91,16 +90,12 @@ export function AnlageGPage() {
     queryFn: () => berechneAnlageG(jahr),
   })
 
-  const hebesatz = parseFloat(hebesatzInput.replace(',', '.')) || 0
   const gewstGezahlt = data ? parseFloat(data.gewst_gezahlt) : 0
-
-  // Messbetrag: aus manuellem Input ODER berechnet aus gezahlter GewSt ÷ Hebesatz
-  const messbetragBerechnet = (gewstGezahlt > 0 && hebesatz > 0)
-    ? gewstGezahlt / (hebesatz / 100)
-    : 0
+  // Richtwert aus EÜR-Schätzung als Vorschlagswert; wird mit echtem Bescheid-Wert überschrieben
+  const richtwertMessbetrag = data ? parseFloat(data.gewst_messbetrag_approx) : 0
   const messbetrag = messbetragInput
     ? parseFloat(messbetragInput.replace(',', '.')) || 0
-    : messbetragBerechnet
+    : richtwertMessbetrag
   const anrechnungsbetrag = messbetrag * 4.0
 
   const gv = data ? parseFloat(data.gewinn_verlust) : 0
@@ -143,7 +138,7 @@ export function AnlageGPage() {
         </div>
       )}
 
-      {/* Jahresauswahl + Hebesatz */}
+      {/* Jahresauswahl */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6 flex items-center gap-4 flex-wrap">
         <div>
           <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Wirtschaftsjahr</label>
@@ -155,21 +150,6 @@ export function AnlageGPage() {
             {jahre.map(j => <option key={j} value={j}>{j}</option>)}
           </select>
         </div>
-        {data?.gewst_pflichtig && (
-          <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-              Hebesatz (%, aus GewSt-Bescheid)
-            </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="z. B. 400"
-              value={hebesatzInput}
-              onChange={e => setHebesatzInput(e.target.value)}
-              className="w-28 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
-            />
-          </div>
-        )}
         {isLoading && <span className="text-sm text-slate-500 dark:text-slate-400">Berechne…</span>}
         {data && !isLoading && (
           <div className="ml-auto flex items-center gap-2">
@@ -231,27 +211,23 @@ export function AnlageGPage() {
                   label="Gewerbesteuer-Vorauszahlungen lt. Journal"
                   wert={gewstGezahlt > 0 ? euroFmt(gewstGezahlt) : undefined}
                 />
-                <ZeileText
-                  label="Richtwert Messbetrag (Schätzung, ohne Hinzurechnungen/Kürzungen)"
-                  wert={euroFmt(data.gewst_messbetrag_approx)}
-                />
-                {/* Z.51 Messbetrag: auto-berechnet oder manuell */}
+                {/* Z.51 Messbetrag: Richtwert als Vorschlag, überschreibbar mit Bescheid-Wert */}
                 <div className="flex items-center gap-3 py-2">
                   <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-green-600 dark:bg-green-700">
                     Z. 51
                   </span>
                   <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
                     Gewerbesteuer-Messbetrag (lt. Bescheid)
-                    {messbetragBerechnet > 0 && !messbetragInput && (
-                      <span className="ml-2 text-xs text-green-600 dark:text-green-400">
-                        berechnet aus Hebesatz
+                    {richtwertMessbetrag > 0 && !messbetragInput && (
+                      <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
+                        Schätzung – mit Bescheid-Wert überschreiben
                       </span>
                     )}
                   </span>
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder={messbetragBerechnet > 0 ? euroFmt(messbetragBerechnet) : '0,00'}
+                    placeholder={richtwertMessbetrag > 0 ? euroFmt(richtwertMessbetrag) : '0,00'}
                     value={messbetragInput}
                     onChange={e => setMessbetragInput(e.target.value)}
                     className="w-28 text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
@@ -285,7 +261,7 @@ export function AnlageGPage() {
           {/* Gewerbesteuer-Hinweis */}
           {data.gewst_pflichtig && (
             <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3 text-sm text-green-800 dark:text-green-200 mt-4">
-              <strong>Gewerbesteuer-Messbetrag:</strong> Den genauen Messbetrag findest du im <strong>Gewerbesteuer-Festsetzungsbescheid</strong> deines Finanzamts. Der Richtwert oben ist eine Schätzung ohne Hinzurechnungen und Kürzungen nach §§ 8, 9 GewStG.
+              <strong>Gewerbesteuer-Messbetrag (Z. 51):</strong> Der vorausgefüllte Wert ist eine Schätzung aus dem Jahresgewinn (ohne Hinzurechnungen/Kürzungen nach §§ 8, 9 GewStG). Den genauen Messbetrag findest du im <strong>Gewerbesteuer-Festsetzungsbescheid</strong> – trage ihn dort ein, um den korrekten anrechenbaren Betrag (§35 EStG) zu erhalten.
             </div>
           )}
 

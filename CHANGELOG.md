@@ -15,6 +15,9 @@ Versionen werden durch Git-Tags gesetzt – `git tag v0.x.y && git push --tags`.
 - Anlage G: Anrechnungsfaktor §35 EStG im UI war noch 3,8 – zeigt und rechnet jetzt korrekt mit 4,0 (gilt seit VZ 2020, JStG 2019); PDF war bereits korrekt (Issue #182)
 - Anlage G: PDF-Export schlug mit „Failed to fetch" fehl wenn ein Hebesatz eingetragen war und Gewerbesteuer-Buchungen im Journal vorhanden waren – Python TypeError (float ÷ Decimal) im Hebesatz-Rückrechnungs-Code behoben (Issue #187)
 
+### 🔧 Verbessert
+- Anlage G: Gewerbesteuer-Messbetrag (Z. 51) wird jetzt automatisch aus dem Jahresgewinn geschätzt und als Vorschlagswert vorbelegt; mit dem echten Wert aus dem GewSt-Festsetzungsbescheid überschreiben für korrekten §35 EStG Anrechnungsbetrag; Hebesatz-Eingabe entfernt (Issue #182)
+
 ---
 
 ## [v0.3.26] – Juni 2026

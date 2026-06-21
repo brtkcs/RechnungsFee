@@ -30,6 +30,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Anlage G: Beschriftung Z. 52 im UI war noch nicht aktualisiert – zeigt jetzt korrekt „Gewerbesteuer-Vorauszahlungen lt. Journal" statt „Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)"; PDF-Beschriftung war bereits korrekt (Issue #183)' },
       { typ: 'fix', text: 'Anlage G: Anrechnungsfaktor §35 EStG im UI war noch 3,8 – zeigt und rechnet jetzt korrekt mit 4,0 (gilt seit VZ 2020, JStG 2019); PDF war bereits korrekt (Issue #182)' },
       { typ: 'fix', text: 'Anlage G: PDF-Export schlug mit „Failed to fetch" fehl wenn ein Hebesatz eingetragen war und Gewerbesteuer-Buchungen im Journal vorhanden waren – Python TypeError (float ÷ Decimal) im Hebesatz-Rückrechnungs-Code behoben (Issue #187)' },
+      { typ: 'verbesserung', text: 'Anlage G: Hebesatz-Eingabe entfernt; Gewerbesteuer-Messbetrag (Z. 51) wird jetzt automatisch aus dem Jahresgewinn geschätzt (Richtwert) und als Vorschlagswert vorbelegt – mit dem echten Wert aus dem GewSt-Festsetzungsbescheid überschreiben für korrekten §35 EStG Anrechnungsbetrag (Issue #182)' },
     ],
   },
   {
