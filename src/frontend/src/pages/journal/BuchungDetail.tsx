@@ -123,12 +123,13 @@ export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose, onBearbei
           </div>
         ) : (
           <div className="flex flex-wrap gap-2 mb-4">
-            {onBearbeiten && !istStorno && !bereitsStorniert && istImKorrekturfenster(e.erstellt_am) && (
+            {onBearbeiten && !istStorno && !bereitsStorniert && (
               <button
                 onClick={() => { onClose(); onBearbeiten(e) }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950 text-blue-600 dark:text-blue-400"
+                title={istImKorrekturfenster(e.erstellt_am) ? 'Direktkorrektur – kein neuer Eintrag' : 'Erzeugt Storno + neue Buchung (GoBD)'}
               >
-                ✏️ Bearbeiten
+                ✏️ Bearbeiten{!istImKorrekturfenster(e.erstellt_am) && <span className="text-xs opacity-60 ml-0.5">(Storno)</span>}
               </button>
             )}
             <button
