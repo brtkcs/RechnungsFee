@@ -141,6 +141,9 @@
 - [x] Variabler Betrag (0 = variabel): Beleg-Modus mit OCR statt manuellem Eintrag
 - [x] Einnahmen-Vorlagen: Art-Umschalter Ausgabe/Einnahme; Erlös-Kategorien (Eigenverbrauch, Sachentnahmen); korrekte USt-Konten ohne Vorsteuerabzug (Issue #157)
 
+### GoBD & Korrekturen
+- [x] 5-Minuten-Korrekturfenster: Journal-Buchungen innerhalb von 5 Min. direkt bearbeitbar (immutable=False); nach Ablauf automatisch Storno + neue Buchung; Bearbeiten-Button immer sichtbar mit „(Storno)"-Hinweis nach Fristablauf (Issue #184)
+
 ---
 
 ## 📋 v0.4.x – Bank CSV-Import & Zahlungsabgleich
