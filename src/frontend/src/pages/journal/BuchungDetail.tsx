@@ -52,7 +52,9 @@ async function oeffneBelegFenster(id: number, drucken: boolean) {
 }
 
 function istImKorrekturfenster(erstellt_am: string): boolean {
-  return (Date.now() - new Date(erstellt_am).getTime()) < 6 * 60 * 1000  // 6 Min. (Server: 5 Min.)
+  // Backend gibt UTC ohne Z-Suffix zurück → explizit als UTC parsen
+  const utc = erstellt_am.endsWith('Z') || erstellt_am.includes('+') ? erstellt_am : erstellt_am + 'Z'
+  return (Date.now() - new Date(utc).getTime()) < 6 * 60 * 1000  // 6 Min. (Server: 5 Min.)
 }
 
 export function BuchungDetail({ eintrag: e, bereitsStorniert, onClose, onBearbeiten }: Props) {

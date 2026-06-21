@@ -2433,7 +2433,7 @@ def _migrate_signaturen() -> None:
 
         # Noch offene Einträge (immutable=False) die älter als 5 Min. sind versiegeln
         from datetime import timedelta
-        cutoff = datetime.now() - timedelta(minutes=5)
+        cutoff = datetime.utcnow() - timedelta(minutes=5)
         offene = (
             db.query(Journaleintrag)
             .filter(

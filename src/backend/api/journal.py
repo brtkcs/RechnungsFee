@@ -356,7 +356,7 @@ def update_eintrag(eintrag_id: int, data: JournalEintragCreate, db: Session = De
     if bereits_storniert:
         raise HTTPException(409, f"Diese Buchung wurde bereits storniert ({bereits_storniert.belegnr}).")
 
-    delta = datetime.now() - original.erstellt_am
+    delta = datetime.utcnow() - original.erstellt_am
     within_window = not original.immutable and delta.total_seconds() < KORREKTUR_FENSTER_SEKUNDEN
 
     felder = _felder_aus_data(data, db)
