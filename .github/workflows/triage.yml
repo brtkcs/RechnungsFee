@@ -1,0 +1,61 @@
+name: Issue-Triage – Backend-Fehler
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  failed-to-fetch:
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.issue.body, 'Failed to fetch') ||
+      contains(github.event.issue.body, 'failed to fetch') ||
+      contains(github.event.issue.title, 'Failed to fetch')
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Label anlegen falls noch nicht vorhanden
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'backend-fehler'
+              })
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'backend-fehler',
+                color: 'e4e669',
+                description: 'Backend-Fehler (z. B. Failed to fetch, Sidecar-Absturz)'
+              })
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 Automatischer Hinweis: "Failed to fetch"
+
+            Dieser Fehler bedeutet, dass das Frontend die Anfrage nicht abschicken konnte – meistens weil das Backend (Python-Sidecar) abgestürzt ist oder eine unbehandelte Ausnahme geworfen hat.
+
+            **Bitte ergänze folgende Informationen:**
+
+            1. **RechnungsFee-Version** (Einstellungen → Info) – bereits angegeben: super!
+            2. **Betriebssystem** – bereits angegeben: super!
+            3. **Backend-Log**: Starte RechnungsFee über das Terminal und kopiere die Ausgabe ab dem Zeitpunkt des Fehlers:
+               - Windows: \`%LOCALAPPDATA%\\RechnungsFee\\logs\\\` oder Konsole beim Start
+               - Linux: \`journalctl --user -u rechnungsfee -n 100\` oder Konsolenausgabe
+            4. **Lässt sich der Fehler immer reproduzieren?** Bei welchen genauen Eingaben?
+
+            ---
+            *Wenn du keine Backend-Logs findest: Rechtsklick auf das App-Icon → "Als Administrator ausführen" (Windows) hilft manchmal, das Protokollfenster sichtbar zu machen.*`
+            })
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['backend-fehler']
+            })

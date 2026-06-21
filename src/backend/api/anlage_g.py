@@ -244,7 +244,7 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float) -> byte
         if ergebnis.gewst_gezahlt > 0:
             zeile_row("52", "Gewerbesteuer-Vorauszahlungen (lt. Journal)", _euro(ergebnis.gewst_gezahlt))
             if messbetrag_d > 0:
-                text_row("Hebesatz (aus Bescheid)", f"{round(float(ergebnis.gewst_gezahlt) / messbetrag_d * 100):.0f} %")
+                text_row("Hebesatz (aus Bescheid)", f"{round(ergebnis.gewst_gezahlt / messbetrag_d * 100):.0f} %")
         zeile_row("51", "Gewerbesteuer-Messbetrag (lt. Bescheid)",
                   _euro(messbetrag_d) if messbetrag_d > 0 else "→ aus Bescheid")
         anrechnung = (messbetrag_d * ANRECHNUNGSFAKTOR).quantize(Decimal("0.01"))
