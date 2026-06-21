@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { KategorieErstellenModal } from '../../components/KategorieErstellenModal'
 import { getKontorahmenModus, katLabel, KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
@@ -85,6 +85,11 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
   const [keineGeldbewegung, setKeineGeldbewegung] = useState(false)
   const [kmAnzahl, setKmAnzahl] = useState<string>(bearbeiten?.km_anzahl ? String(bearbeiten.km_anzahl) : '')
   const [showNeuKategorie, setShowNeuKategorie] = useState(false)
+  // Refs: verhindern dass useEffects beim ersten Kategorien-Laden die bearbeiten-Werte überschreiben
+  const skipKatRef = useRef(!!bearbeiten)
+  const skipUstRef = useRef(!!bearbeiten)
+  const skipKmRef = useRef(!!bearbeiten)
+  const skipSonderfallRef = useRef(!!bearbeiten)
   const [katModus, setKatModus] = useState<KontorahmenModus>(getKontorahmenModus)
 
   useEffect(() => {
@@ -119,7 +124,7 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
       beschreibung: bearbeiten.beschreibung,
       art: bearbeiten.art,
       brutto_betrag: bearbeiten.brutto_betrag,
-      ust_satz: bearbeiten.ust_satz,
+      ust_satz: String(parseFloat(bearbeiten.ust_satz)),
       zahlungsart: bearbeiten.zahlungsart,
       kategorie_id: bearbeiten.kategorie_id ? String(bearbeiten.kategorie_id) : '',
       kunde_id: bearbeiten.kunde_id ? String(bearbeiten.kunde_id) : '',
@@ -193,6 +198,7 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
   // Standardkategorie vorwählen (einfache Buchung)
   useEffect(() => {
     if (!kategorien || isSplit) return
+    if (skipKatRef.current) { skipKatRef.current = false; return }
     if (art === 'Einnahme') {
       const defaultName = istKleinunternehmer ? 'Kleinunternehmer-Einnahmen' : 'Betriebseinnahmen'
       const kat = kategorien.find((k) => k.name === defaultName)
@@ -205,6 +211,7 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
   // USt + Vorsteuer aus Kategorie (einfache Buchung)
   useEffect(() => {
     if (!kategorie_id || !kategorien || isSplit) return
+    if (skipUstRef.current) { skipUstRef.current = false; return }
     const kat = kategorien.find((k) => String(k.id) === kategorie_id)
     if (!kat) return
     // Privat-Buchung: immer USt=0, kein Vorsteuerabzug
@@ -237,12 +244,18 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
 
   // ust_sonderfall: auto-setzen wenn Kategorie einen Sonderfall impliziert
   useEffect(() => {
+    if (skipSonderfallRef.current) { skipSonderfallRef.current = false; return }
     if (katSonderfall) setValue('ust_sonderfall', katSonderfall)
   }, [katSonderfall, setValue])
 
   // km-Eingabe: brutto_betrag auto-berechnen (EÜR: 0,30 €/km)
   useEffect(() => {
-    if (!istFahrtkostenKat) { setKmAnzahl(''); return }
+    if (!istFahrtkostenKat) {
+      if (!skipKmRef.current) setKmAnzahl('')
+      skipKmRef.current = false
+      return
+    }
+    if (skipKmRef.current) { skipKmRef.current = false; return }
     const km = parseFloat(kmAnzahl)
     if (!isNaN(km) && km > 0) {
       setValue('brutto_betrag', (km * 0.30).toFixed(2))
