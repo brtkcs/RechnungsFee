@@ -106,12 +106,12 @@
 ## 🚧 v0.3.x – In Arbeit
 
 ### Exporte & Auswertungen
-- [x] DATEV-Export: Buchungsstapel EXTF v700/9 mit BU-Schlüsseln (19%/7%/ig.Erwerb/§13b/§25a), konfigurierbaren Gegenkonten und Quartal-/Halbjahr-/Jahres-/Freizeitraumauswahl; Fallback-Sachkonto für RE-Zahlungen; Skonto als Bank-Buchung; AM-Konten 8920–8925 ohne BU-Schlüssel (Issues #165, #167); Stornobuchungen übernehmen BU-Schlüssel der Originalbuchung; Buchungen ohne Sachkonto mit leerem Konto exportiert statt übersprungen (Issue #163)
+- [x] DATEV-Export: Buchungsstapel EXTF v700/9 mit BU-Schlüsseln (19%/7%/ig.Erwerb/§13b/§25a), konfigurierbaren Gegenkonten und Quartal-/Halbjahr-/Jahres-/Freizeitraumauswahl; Fallback-Sachkonto für RE-Zahlungen; Skonto als Bank-Buchung; AM-Konten 8920–8925 ohne BU-Schlüssel (Issues #165, #167); Stornobuchungen übernehmen BU-Schlüssel der Originalbuchung – auch für Stornos vor v0.3.24 (DB-Lookup, Issue #163); Buchungen ohne Sachkonto mit leerem Konto exportiert statt übersprungen (Issue #163)
 - [x] Buchhalter-CSV-Export: Journal als Semikolon-CSV (UTF-8 mit BOM) für Excel/LibreOffice und Buchhaltungsprogramme ohne DATEV-Import; Zeitraumauswahl wie DATEV
 - [x] Jahresumsatzsteuererklärung (USt 2A / Anlage UR): Anzeigehilfe mit allen KZ-Werten aus den Journalbuchungen des Wirtschaftsjahres; Kleinunternehmer: KZ 48 (§19 Gesamtumsatz); Vorauszahlungsanrechnung aus gespeicherten Voranmeldungen (KZ 76); PDF-Export; Anlage-UR-Hinweis bei ig. Umsätzen
 - [x] Anlage S – Einkünfte aus selbstständiger Arbeit: Anzeigehilfe mit Gewinn/Verlust (aus EÜR), Steuernummer, Finanzamt, Berufsbezeichnung und KFZ-Privatanteil; zeigt welche Zeile in ELSTER wohin gehört
 - [x] Anlage S – Tätigkeitsart beachten: bei `gewerbe` ausblenden, bei `gemischt` Hinweis anzeigen (Issue #180)
-- [x] Anlage G – Einkünfte aus Gewerbebetrieb: Anzeigehilfe analog Anlage S für Gewerbetreibende (§15 EStG); Gewinn aus EÜR + Block für Gewerbesteuer-Anrechnung (§35 EStG); gezahlte GewSt aus Journal + Hebesatz-Eingabe berechnet Messbetrag automatisch (Issue #180)
+- [x] Anlage G – Einkünfte aus Gewerbebetrieb: Anzeigehilfe für Gewerbetreibende (§15 EStG); Gewinn aus EÜR; §35 EStG Anrechnungsbetrag = Messbetrag × min(4,0; Hebesatz%); Richtwert-Messbetrag aus Jahresgewinn als Vorschlag (Z.51), überschreibbar mit echtem Bescheid-Wert; Hebesatz optional (Issues #180, #182, #183, #187)
 - [x] Jahresübersicht: Kategoriensummen mit EÜR-Zuordnung (🔍 Aufschlüsselung-Toggle in der EÜR)
 - [x] Anlage AVEÜR – Abschreibungsplan für Anlagegüter (KFZ, EDV)
 - [x] GoBD-Export: USt-Spalte im Journal-CSV korrekt je Einnahmen-/Ausgaben-Typ (neue Spalte „Vorsteuer-Betrag")
