@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g
 
-SCHEMA_VERSION = 94
+SCHEMA_VERSION = 95
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2137,6 +2137,22 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 94 (unternehmen.bezeichnung_des_gewerbes – genaue Bezeichnung des Gewerbes für Anlage G Z.4)")
 
+        if version < 95:
+            # EÜR-Zeilenzuordnung korrigieren (Issue #185):
+            # Betriebseinnahmen (7%) gehört in Zeile 13, nicht 12
+            # Betriebseinnahmen (0%) gehört in Zeile 11 (Kleinunternehmer §19)
+            conn.execute(text(
+                "UPDATE kategorien SET euer_zeile=13 "
+                "WHERE name='Betriebseinnahmen (7%)' AND euer_zeile=12"
+            ))
+            conn.execute(text(
+                "UPDATE kategorien SET euer_zeile=11 "
+                "WHERE name='Betriebseinnahmen (0%)' AND euer_zeile=12"
+            ))
+            conn.execute(text("PRAGMA user_version = 95"))
+            conn.commit()
+            print("[Migration] Schema auf Version 95 (EÜR: Betriebseinnahmen 7% → Zeile 13, 0% → Zeile 11)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -2200,9 +2216,9 @@ def _migrate_kategorien() -> None:
         euer_korrekturen = [
             ("Mitgliedsbeiträge", 60),          # war 46 (Beratungskosten) – Issue #106
             ("Betriebseinnahmen", 12),           # Sicherheitsnetz: nie NULL lassen
-            ("Betriebseinnahmen (0%)", 12),      # dto.
             ("Betriebseinnahmen (19%)", 12),     # Datenfix #132: ältere DBs mit altem Kategorienamen
-            ("Betriebseinnahmen (7%)", 12),      # dto.
+            ("Betriebseinnahmen (7%)", 13),      # Issue #185: 7% → Zeile 13 (war fälschlich 12)
+            ("Betriebseinnahmen (0%)", 11),      # Issue #185: Kleinunternehmer §19 → Zeile 11
             # Gewährte Skonti: euer_zeile → NULL (Issue #132, Migration 73 – kein Doppelabzug)
         ]
         for name, zeile in euer_korrekturen:
@@ -2239,8 +2255,8 @@ def _migrate_kategorien() -> None:
         neue = [
             # Betriebseinnahmen: müssen VOR _migrate_signaturen() existieren (Datenfix kategorie_id=NULL)
             {"name": "Betriebseinnahmen",     "kontenart": "Erlös",  "konto_skr03": "8400", "konto_skr04": "4400", "eks_kategorie": "A1", "euer_zeile": 12, "vorsteuer_prozent": 0, "ust_satz_standard": 19},
-            {"name": "Betriebseinnahmen (7%)", "kontenart": "Erlös", "konto_skr03": "8300", "konto_skr04": "4300", "eks_kategorie": "A1", "euer_zeile": 12, "vorsteuer_prozent": 0, "ust_satz_standard": 7},
-            {"name": "Betriebseinnahmen (0%)", "kontenart": "Erlös", "konto_skr03": "8100", "konto_skr04": "4100", "eks_kategorie": "A1", "euer_zeile": 12, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
+            {"name": "Betriebseinnahmen (7%)", "kontenart": "Erlös", "konto_skr03": "8300", "konto_skr04": "4300", "eks_kategorie": "A1", "euer_zeile": 13, "vorsteuer_prozent": 0, "ust_satz_standard": 7},
+            {"name": "Betriebseinnahmen (0%)", "kontenart": "Erlös", "konto_skr03": "8100", "konto_skr04": "4100", "eks_kategorie": "A1", "euer_zeile": 11, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
             {"name": "Wareneinkauf",                         "kontenart": "Aufwand", "konto_skr03": "3000", "konto_skr04": "5000", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             {"name": "Wareneinkauf (7%)",                    "kontenart": "Aufwand", "konto_skr03": "3000", "konto_skr04": "5000", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 7},
             {"name": "Wareneinkauf EU",                      "kontenart": "Aufwand", "konto_skr03": "3400", "konto_skr04": "5400", "eks_kategorie": "B1",    "euer_zeile": 27,   "vorsteuer_prozent": 100, "ust_satz_standard": 19},

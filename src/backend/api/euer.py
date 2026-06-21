@@ -37,9 +37,10 @@ ZERO = Decimal("0.00")
 
 # (bezeichnung, abschnitt)
 EUR_ZEILEN_META: dict[int, tuple[str, str]] = {
-    12:  ("Betriebseinnahmen als Betriebseinnahmen",                            "A"),
-    13:  ("Betriebseinnahmen als Betriebseinnahmen (steuerfrei)",               "A"),
-    14:  ("Sonstige steuerfreie Einnahmen",                                     "A"),
+    11:  ("Betriebseinnahmen als Kleinunternehmer (§19 Abs. 1 UStG)",           "A"),
+    12:  ("Umsätze, die dem Regelsteuersatz (19 %) unterliegen",                "A"),
+    13:  ("Umsätze, die dem ermäßigten Steuersatz (7 %) unterliegen",           "A"),
+    14:  ("Steuerfreie Einnahmen (§4 UStG)",                                    "A"),
     17:  ("Vereinnahmte Umsatzsteuer",                                          "A"),
     18:  ("Vom FA erstattete / verrechnete Umsatzsteuer",                       "A"),
     27:  ("Waren, Rohstoffe, Hilfsstoffe (ohne USt)",                           "B"),
