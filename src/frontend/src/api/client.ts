@@ -381,7 +381,7 @@ export const getKategorien = (nurAktive = false, nurBebuchte = false) => {
 }
 export const toggleKategorieAktiv = (id: number) =>
   request<Kategorie>(`/kategorien/${id}/aktiv`, { method: 'PATCH' })
-export const updateKategorieKonten = (id: number, data: { konto_skr03?: string; konto_skr04?: string }) =>
+export const updateKategorieKonten = (id: number, data: { konto_skr03?: string; konto_skr04?: string; euer_zeile?: number | null; euer_zeile_loeschen?: boolean }) =>
   request<Kategorie>(`/kategorien/${id}/konten`, { method: 'PATCH', body: JSON.stringify(data) })
 export const resetKategorieKonten = (id: number) =>
   request<Kategorie>(`/kategorien/${id}/konten/reset`, { method: 'POST' })

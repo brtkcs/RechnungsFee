@@ -310,6 +310,37 @@ function KontoCellEdit({
 }
 
 // ---------------------------------------------------------------------------
+// EuerZeileEdit – Inline-Eingabe für EÜR-Zeile
+// ---------------------------------------------------------------------------
+
+function EuerZeileEdit({
+  value,
+  onSave,
+}: {
+  value: number | undefined
+  onSave: (v: number | null) => void
+}) {
+  const [local, setLocal] = useState(value != null ? String(value) : '')
+
+  return (
+    <input
+      type="number"
+      min={1}
+      max={200}
+      className="w-16 text-xs border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
+      value={local}
+      placeholder="—"
+      onChange={e => setLocal(e.target.value)}
+      onBlur={() => {
+        const n = local.trim() ? Number(local) : null
+        if (n !== (value ?? null)) onSave(n)
+      }}
+      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
 // KategorienPage
 // ---------------------------------------------------------------------------
 
@@ -342,7 +373,7 @@ export function KategorienPage() {
   })
 
   const kontenMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { konto_skr03?: string; konto_skr04?: string } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { konto_skr03?: string; konto_skr04?: string; euer_zeile?: number | null; euer_zeile_loeschen?: boolean } }) =>
       updateKategorieKonten(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kategorien'] }),
   })
@@ -443,7 +474,7 @@ export function KategorienPage() {
 
       {editModus && (
         <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
-          Bearbeitungsmodus aktiv – SKR03/SKR04-Kontonummern und Verwendungsbeispiele können bearbeitet werden.
+          Bearbeitungsmodus aktiv – SKR03/SKR04-Kontonummern, EÜR-Zeile und Verwendungsbeispiele können bearbeitet werden.
           Geänderte Konten sind <span className="font-semibold">orange</span> markiert. Mit ↩ zurück auf den Standardwert.
         </div>
       )}
@@ -559,10 +590,20 @@ export function KategorienPage() {
                           </td>
 
                           <td className="px-3 py-2 text-slate-500 dark:text-slate-400 text-xs">
-                            {k.euer_zeile
-                              ? <span>Zeile {k.euer_zeile}</span>
-                              : <span className="text-slate-300 dark:text-slate-600">—</span>
-                            }
+                            {editModus ? (
+                              <EuerZeileEdit
+                                key={`${k.id}-euer-${k.euer_zeile ?? 'null'}`}
+                                value={k.euer_zeile}
+                                onSave={v => kontenMutation.mutate({
+                                  id: k.id,
+                                  data: v != null ? { euer_zeile: v } : { euer_zeile_loeschen: true },
+                                })}
+                              />
+                            ) : (
+                              k.euer_zeile
+                                ? <span>Zeile {k.euer_zeile}</span>
+                                : <span className="text-slate-300 dark:text-slate-600">—</span>
+                            )}
                           </td>
                           {hatEks && (
                             <td className="px-3 py-2 font-mono text-xs">

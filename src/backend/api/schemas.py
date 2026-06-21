@@ -241,6 +241,8 @@ class KategorieResponse(BaseModel):
 class KategorieKontoUpdate(BaseModel):
     konto_skr03: Optional[str] = None
     konto_skr04: Optional[str] = None
+    euer_zeile: Optional[int] = None
+    euer_zeile_loeschen: bool = False
 
 
 class KategorieBeschreibungUpdate(BaseModel):

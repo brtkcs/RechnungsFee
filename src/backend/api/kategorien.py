@@ -128,6 +128,10 @@ def update_konten(kategorie_id: int, data: KategorieKontoUpdate, db: Session = D
     if data.konto_skr04 is not None:
         kat.konto_skr04 = data.konto_skr04 or None
         kat.user_modified_skr04 = (data.konto_skr04 != kat.konto_skr04_default)
+    if data.euer_zeile_loeschen:
+        kat.euer_zeile = None
+    elif data.euer_zeile is not None:
+        kat.euer_zeile = data.euer_zeile
     db.commit()
     db.refresh(kat)
     return kat
