@@ -228,7 +228,7 @@ export function AnlageGPage() {
             {data.gewst_pflichtig ? (
               <>
                 <ZeileNr zeile="52"
-                  label="Tatsächlich zu zahlende Gewerbesteuer (lt. Journal)"
+                  label="Gewerbesteuer-Vorauszahlungen lt. Journal"
                   wert={gewstGezahlt > 0 ? euroFmt(gewstGezahlt) : undefined}
                 />
                 <ZeileText
