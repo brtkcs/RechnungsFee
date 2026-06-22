@@ -10,6 +10,8 @@ import {
 } from '../../api/client'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 import { MailDialog } from '../../components/MailDialog'
+import { StammdatenCombobox } from '../../components/StammdatenCombobox'
+import { KundeErstellenModal } from '../../components/KundeErstellenModal'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -188,7 +190,14 @@ function ProformaFormular({
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
 
-  const [kundeId, setKundeId] = useState(initial?.kunde_id?.toString() ?? vorKundeId ?? '')
+  const [partnerId, setPartnerId] = useState(initial?.kunde_id?.toString() ?? vorKundeId ?? '')
+  const [partnerFreitext, setPartnerFreitext] = useState(initial?.partner_freitext ?? '')
+  const [partnerStrasse, setPartnerStrasse] = useState(initial?.partner_strasse ?? '')
+  const [partnerHausnummer, setPartnerHausnummer] = useState(initial?.partner_hausnummer ?? '')
+  const [partnerPlz, setPartnerPlz] = useState(initial?.partner_plz ?? '')
+  const [partnerOrt, setPartnerOrt] = useState(initial?.partner_ort ?? '')
+  const [partnerLand, setPartnerLand] = useState(initial?.partner_land ?? '')
+  const [showNeuKunde, setShowNeuKunde] = useState(false)
   const [datum, setDatum] = useState(initial?.datum ?? heuteIso())
   const [faelligAm, setFaelligAm] = useState(initial?.faellig_am ?? '')
   const [notizen, setNotizen] = useState(initial?.notizen ?? '')
@@ -196,10 +205,10 @@ function ProformaFormular({
 
   // Automatisch auf Netto wechseln wenn eine Firma (B2B) gewählt wird
   useEffect(() => {
-    if (!kundeId || !kunden) return
-    const k = kunden.find(k => String(k.id) === kundeId)
+    if (!partnerId || !kunden) return
+    const k = kunden.find(k => String(k.id) === partnerId)
     if (k) setEingabeModus(k.firmenname?.trim() ? 'netto' : 'brutto')
-  }, [kundeId, kunden])
+  }, [partnerId, kunden])
 
   // faellig_am aus Unternehmens-Standard berechnen wenn noch leer
   useEffect(() => {
@@ -251,7 +260,7 @@ function ProformaFormular({
 
   async function submit(e: React.FormEvent, istEntwurf: boolean) {
     e.preventDefault()
-    if (!kundeId) { setFehler('Bitte einen Kunden wählen.'); return }
+    if (!partnerId && !partnerFreitext.trim()) { setFehler('Bitte einen Kunden wählen oder einen Namen eingeben.'); return }
     if (positionen.some(p => !p.beschreibung.trim())) { setFehler('Alle Positionen benötigen eine Beschreibung.'); return }
 
     setLaedt(true)
@@ -273,7 +282,13 @@ function ProformaFormular({
         typ: 'ausgang' as const,
         datum,
         faellig_am: faelligAm || undefined,
-        kunde_id: parseInt(kundeId),
+        kunde_id: partnerId ? parseInt(partnerId) : undefined,
+        partner_freitext: partnerFreitext || undefined,
+        partner_strasse: !partnerId && partnerStrasse ? partnerStrasse : undefined,
+        partner_hausnummer: !partnerId && partnerHausnummer ? partnerHausnummer : undefined,
+        partner_plz: !partnerId && partnerPlz ? partnerPlz : undefined,
+        partner_ort: !partnerId && partnerOrt ? partnerOrt : undefined,
+        partner_land: !partnerId && partnerLand && partnerLand !== 'DE' ? partnerLand : undefined,
         notizen: notizen || undefined,
         dokument_typ: 'Proforma' as const,
         ist_entwurf: istEntwurf,
@@ -297,18 +312,6 @@ function ProformaFormular({
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde *</label>
-        <select value={kundeId} onChange={e => setKundeId(e.target.value)} className={selectCls} required>
-          <option value="">— Kunden wählen —</option>
-          {kunden?.map(k => (
-            <option key={k.id} value={k.id}>
-              {k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' ')}
-            </option>
-          ))}
-        </select>
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Datum</label>
@@ -319,6 +322,68 @@ function ProformaFormular({
           <input type="date" value={faelligAm} onChange={e => setFaelligAm(e.target.value)} className={inputCls} />
         </div>
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Kunde *</label>
+        <div className="flex gap-1">
+          <div className="flex-1">
+            <StammdatenCombobox
+              items={(kunden ?? []).map(k => ({
+                id: k.id,
+                label: k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' '),
+              }))}
+              selectedId={partnerId ? parseInt(partnerId) : null}
+              freitext={partnerFreitext}
+              onChange={(id, text) => {
+                setPartnerId(id != null ? String(id) : '')
+                setPartnerFreitext(text)
+                if (id != null) {
+                  setPartnerStrasse(''); setPartnerHausnummer('')
+                  setPartnerPlz(''); setPartnerOrt(''); setPartnerLand('')
+                }
+              }}
+              placeholder="Kunde suchen oder frei eingeben…"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowNeuKunde(true)}
+            title="Neuen Kunden anlegen"
+            className="shrink-0 px-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 text-base leading-none"
+          >+</button>
+        </div>
+        {showNeuKunde && (
+          <KundeErstellenModal
+            onClose={() => setShowNeuKunde(false)}
+            onSave={(neu) => {
+              setShowNeuKunde(false)
+              setPartnerId(String(neu.id ?? ''))
+              setPartnerFreitext(neu.firmenname ?? [neu.vorname, neu.nachname].filter(Boolean).join(' '))
+            }}
+          />
+        )}
+      </div>
+
+      {/* Einmalkunde-Adresse */}
+      {!partnerId && partnerFreitext.trim() && (
+        <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-3 space-y-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400">Adresse des Einmalkunden (optional – erscheint im PDF)</p>
+          <div className="flex gap-2">
+            <input type="text" value={partnerStrasse} onChange={e => setPartnerStrasse(e.target.value)} placeholder="Straße"
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+            <input type="text" value={partnerHausnummer} onChange={e => setPartnerHausnummer(e.target.value)} placeholder="Nr."
+              className="w-24 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+          </div>
+          <div className="flex gap-2">
+            <input type="text" value={partnerPlz} onChange={e => setPartnerPlz(e.target.value)} placeholder="PLZ"
+              className="w-28 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+            <input type="text" value={partnerOrt} onChange={e => setPartnerOrt(e.target.value)} placeholder="Ort"
+              className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
+            <input type="text" value={partnerLand} onChange={e => setPartnerLand(e.target.value.toUpperCase().slice(0, 2))} placeholder="DE" maxLength={2}
+              className="w-20 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 uppercase" />
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-2">
