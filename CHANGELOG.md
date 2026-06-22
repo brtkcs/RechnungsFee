@@ -9,10 +9,8 @@ Versionen werden durch Git-Tags gesetzt – `git tag v0.x.y && git push --tags`.
 
 ## [v0.3.28] – Juni 2026
 
-### ✨ Neu
-- Einmalkunden: Ausgangsrechnungen im Freitext-Modus (kein Stammdatensatz) können jetzt eine vollständige Adresse (Straße, Hausnummer, PLZ, Ort, Land) erhalten – Adressblock erscheint automatisch im PDF (Issue #188)
-
 ### 🔧 Verbessert
+- Einmalkunden: Ausgangsrechnungen, Angebote, Aufträge und Proformas unterstützen jetzt Freitext-Eingabe ohne Stammdatensatz – mit optionaler Adresse (Straße, Hausnummer, PLZ, Ort, Land) für den PDF-Adressblock; Kundenfeld vereinheitlicht (Combobox mit Autocomplete statt Dropdown) (Issue #188)
 - Artikel/Lager: Bestand und Schwellwert zählen beim Klick auf die Pfeiltasten jetzt einheitsabhängig – Stück, Pack, Set u. a. in ganzen Zahlen (Schritt 1); Gewicht, Volumen und Länge (kg, g, l, ml, m, m², cm …) im Dezimalschritt (Issue #189)
 
 ### 🐛 Behoben
