@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g
 
-SCHEMA_VERSION = 96
+SCHEMA_VERSION = 97
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2175,6 +2175,19 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 96 (Gewerbesteuer SKR03: 7600 → 4320)")
 
+        if version < 97:
+            # SKR-Kontonummern Spenden (betrieblich) korrigieren (Issue #186)
+            # SKR03 4730 = Ausgangsfrachten → korrekt: 1840 (Zuwendungen, Spenden, Einzelunternehmen)
+            # SKR04 6580 = Mautgebühren    → korrekt: 2250 (Zuwendungen, Spenden, Einzelunternehmen)
+            conn.execute(text(
+                "UPDATE kategorien SET konto_skr03='1840', konto_skr04='2250' "
+                "WHERE name='Spenden (betrieblich)' "
+                "AND (konto_skr03='4730' OR konto_skr04='6580')"
+            ))
+            conn.execute(text("PRAGMA user_version = 97"))
+            conn.commit()
+            print("[Migration] Schema auf Version 97 (Spenden SKR03: 4730→1840, SKR04: 6580→2250)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -2333,7 +2346,7 @@ def _migrate_kategorien() -> None:
             {"name": "Fahrtkosten Privat-PKW (0,10 €/km)", "kontenart": "Aufwand", "konto_skr03": "4560", "konto_skr04": "6530", "eks_kategorie": "B6_5",  "euer_zeile": 70,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Verpflegungsmehraufwand",          "kontenart": "Aufwand", "konto_skr03": "4661", "konto_skr04": "6645", "eks_kategorie": "B7_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B14_5", "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
-            {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "4730", "konto_skr04": "6580", "eks_kategorie": "B14_5", "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Spenden (betrieblich)",            "kontenart": "Aufwand", "konto_skr03": "1840", "konto_skr04": "2250", "eks_kategorie": "B14_5", "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             # Skonti
             {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
