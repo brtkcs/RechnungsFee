@@ -16,6 +16,7 @@ Versionen werden durch Git-Tags gesetzt – `git tag v0.x.y && git push --tags`.
 - Lagerführung: Direkt finalisierte Rechnungen (kein Entwurf-Zwischenschritt) haben den Artikelbestand nicht abgebucht – Session hat `autoflush=False`, Positionen waren beim Lager-Buchen noch nicht in der DB; `db.flush()` + `db.expire()` vor `_lager_buchen()` behebt das (Issue #173)
 - Kategorien: Spenden (betrieblich) hatte falsche SKR-Kontonummern – SKR03 `4730` (Ausgangsfrachten!) und SKR04 `6580` (Mautgebühren!) korrigiert auf SKR03 `1840` / SKR04 `2250` (Zuwendungen, Spenden, Einzelunternehmen lt. DATEV SKR 2026; Issue #186)
 - EÜR: Zeilen 20 (Private Kfz-Nutzung 1-%-Methode) und 21 (Sonstige Sach-, Nutzungs- und Leistungsentnahmen / Eigenverbrauch) fehlten in der EÜR-Tabelle – Buchungen auf diese Zeilen erschienen als „?" und wurden nicht zu den Betriebseinnahmen gezählt; laut Anlage EÜR 2025 BMF umfassen Betriebseinnahmen Zeilen 12–22 (Issue #185)
+- Anlage G: Labels „Gewerbesteuer-Messbetrag (lt. Bescheid)" und „Hebesatz (%, aus GewSt-Bescheid)" suggerierten fälschlich, man brauche den amtlichen GewSt-Festsetzungsbescheid – Schätzwert + Hebesatz der Gemeinde reichen für die §35-EStG-Vorabschätzung (Issue #182)
 
 ---
 
