@@ -46,7 +46,7 @@ const EINHEITEN = ['Stück', 'Pack', 'Set', 'Lizenz', 'Stunde', 'Tag', 'Monat', 
 // Für Gewicht/Volumen/Länge Dezimalschritt, für alles andere (Stück, Pack …) ganzzahlig
 function stepFuerEinheit(einheit: string | undefined | null): number {
   const e = (einheit ?? '').trim().toLowerCase()
-  return /^(kg|g|mg|t|l|ml|dl|cl|m[²³]|m|cm|mm|km)$/.test(e) ? 0.001 : 1
+  return /^(kg|g|mg|t|l|ml|dl|cl|m[²³]|m|cm|mm)$/.test(e) ? 0.001 : 1
 }
 
 function EinheitAuswahl({ value, onChange }: { value: string; onChange: (v: string) => void }) {
