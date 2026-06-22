@@ -42,6 +42,8 @@ EUR_ZEILEN_META: dict[int, tuple[str, str]] = {
     16:  ("Steuerfreie / nicht steuerbare Betriebseinnahmen (§4 UStG)",         "A"),
     17:  ("Vereinnahmte Umsatzsteuer",                                          "A"),
     18:  ("Vom FA erstattete / verrechnete Umsatzsteuer",                       "A"),
+    20:  ("Private Kfz-Nutzung (1-%-Methode / Fahrtenbuch)",                   "A"),
+    21:  ("Sonstige Sach-, Nutzungs- und Leistungsentnahmen (Eigenverbrauch)", "A"),
     27:  ("Waren, Rohstoffe, Hilfsstoffe (ohne USt)",                           "B"),
     28:  ("Bezogene Leistungen (ohne USt)",                                     "B"),
     29:  ("Fremdleistungen (ohne USt)",                                         "B"),
