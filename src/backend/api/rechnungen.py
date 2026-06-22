@@ -809,6 +809,8 @@ def create_rechnung(data: RechnungCreate, db: Session = Depends(get_db)):
     # Lagerführung: direkt finalisierte Rechnungen (ist_entwurf=False) buchen den Bestand sofort ab.
     # Entwürfe holen den Abgang über /finalisieren nach.
     if not data.ist_entwurf:
+        db.flush()  # Positionen in DB schreiben (autoflush=False in Session)
+        db.expire(rechnung, ["positionen"])  # Relationship-Cache invalidieren → fresh load
         _lager_buchen(rechnung, db, faktor=Decimal("-1"))
         rechnung.absender_snapshot = _absender_snapshot(db)
 
