@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.29',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'verbesserung', text: 'Darkmode: Scrollbalken jetzt dunkel (slate-800/600) statt weiß/grau – passt zur dunklen Oberfläche' },
+    ],
+  },
+  {
     version: 'v0.3.28',
     datum: 'Juni 2026',
     eintraege: [

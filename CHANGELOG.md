@@ -7,6 +7,13 @@ Versionen werden durch Git-Tags gesetzt – `git tag v0.x.y && git push --tags`.
 
 ---
 
+## [v0.3.29] – Juni 2026
+
+### 🔧 Verbessert
+- Darkmode: Scrollbalken jetzt dunkel (slate-800/600) statt weiß/grau
+
+---
+
 ## [v0.3.28] – Juni 2026
 
 ### 🔧 Verbessert
