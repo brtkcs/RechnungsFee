@@ -26,6 +26,7 @@
 - Leistungszeitraum Von–Bis
 - Original-PDF-Archivierung: erstes Drucken/Mailen speichert das Original; alle weiteren Ausgaben sind Kopien mit rotem KOPIE-Wasserzeichen (Entwurf: nur Vorschau)
 - Versand-Zeitstempel (`ausgegeben_am`): Detail-Panel zeigt Datum + Uhrzeit des ersten Versands als Nachweis
+- Einmalkunden: Freitext-Modus (kein Stammdatensatz) in allen Dokumenttypen (Rechnung, Angebot, Auftrag, Proforma) mit optionaler Adresse (Straße, Hausnummer, PLZ, Ort, Land) für den PDF-Adressblock; Kundenfeld überall als Combobox mit Autocomplete (Issue #188)
 
 **Lieferscheine**
 - Lieferschein-PDF ohne Preise, mit Lieferadresse und Empfangsbestätigung
