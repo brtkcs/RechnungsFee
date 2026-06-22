@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'fix', text: 'Lagerführung: Direkt finalisierte Rechnungen (kein Entwurf-Zwischenschritt) haben den Artikelbestand nicht abgebucht – Session hat autoflush=False, Positionen waren beim Lager-Buchen noch nicht in der DB; db.flush() + db.expire() vor _lager_buchen() behebt das (Issue #173)' },
+      { typ: 'verbesserung', text: 'Artikel/Lager: Bestand und Schwellwert zählen beim Klick auf die Pfeiltasten jetzt einheitsabhängig – Stück, Pack, Set u. a. in ganzen Zahlen (Schritt 1); Gewicht, Volumen und Länge (kg, g, l, ml, m, m², cm …) im Dezimalschritt (Issue #189)' },
     ],
   },
   {
