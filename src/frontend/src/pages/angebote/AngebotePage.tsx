@@ -349,8 +349,8 @@ function AngebotFormular({
         <div className="flex gap-1">
           <div className="flex-1">
             <StammdatenCombobox
-              items={(kunden ?? []).map(k => ({
-                id: k.id,
+              items={(kunden ?? []).filter(k => k.id != null).map(k => ({
+                id: k.id as number,
                 label: k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' '),
               }))}
               selectedId={partnerId ? parseInt(partnerId) : null}

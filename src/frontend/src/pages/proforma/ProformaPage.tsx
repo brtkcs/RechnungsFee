@@ -28,7 +28,6 @@ function heuteIso() {
 }
 
 const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
-const selectCls = `${inputCls} bg-white dark:bg-slate-700`
 
 // ---------------------------------------------------------------------------
 // Positions-Tabelle (identisch zu Angebote)
@@ -328,8 +327,8 @@ function ProformaFormular({
         <div className="flex gap-1">
           <div className="flex-1">
             <StammdatenCombobox
-              items={(kunden ?? []).map(k => ({
-                id: k.id,
+              items={(kunden ?? []).filter(k => k.id != null).map(k => ({
+                id: k.id as number,
                 label: k.firmenname || [k.vorname, k.nachname].filter(Boolean).join(' '),
               }))}
               selectedId={partnerId ? parseInt(partnerId) : null}

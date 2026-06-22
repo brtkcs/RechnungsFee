@@ -1144,6 +1144,11 @@ export type RechnungCreate = {
   kunde_id?: number
   lieferant_id?: number
   partner_freitext?: string
+  partner_strasse?: string
+  partner_hausnummer?: string
+  partner_plz?: string
+  partner_ort?: string
+  partner_land?: string
   kategorie_id?: number
   notizen?: string
   einleitungstext?: string | null
