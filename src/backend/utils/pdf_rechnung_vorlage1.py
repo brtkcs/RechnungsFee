@@ -137,39 +137,40 @@ class RechnungPDFVorlage1(RechnungPDFBase):
             ist_diff = getattr(pos, "differenzbesteuerung", False)
             ust_label = "§25a" if ist_diff else f"{int(pos.ust_satz)} %"
             pos_rabatt = getattr(pos, "rabatt_prozent", Decimal("0")) or Decimal("0")
+            ROW_H = 5  # einheitliche Zeilenhöhe → Versprung zwischen Beschreibung und Menge behoben
             row_y = self.get_y()
 
             # Spalten rechts der Beschreibung zuerst rendern (kein Y-Vorschub)
             self.set_x(other_x)
             if ist_lieferschein:
                 einheit = (pos.einheit or "").strip()
-                self.cell(col_w[desc_col + 1], 6.5, f"{menge:g}", align="R")
-                self.cell(col_w[desc_col + 2], 6.5, einheit)
+                self.cell(col_w[desc_col + 1], ROW_H, f"{menge:g}", align="R")
+                self.cell(col_w[desc_col + 2], ROW_H, einheit)
             elif self._ist_netto:
                 netto_ges_vor = float(str(pos.netto)) * menge * _sign
                 netto_ges_eff = (float(str(pos.brutto)) - float(str(pos.ust_betrag))) * menge * _sign
                 menge_disp = f"-{menge:g}" if ist_storno else f"{menge:g}"
-                self.cell(col_w[desc_col + 1], 6.5, _fmt_euro(pos.netto), align="R")
-                self.cell(col_w[desc_col + 2], 6.5, ust_label, align="R")
-                self.cell(col_w[desc_col + 3], 6.5, _fmt_euro(netto_ges_vor), align="R")
+                self.cell(col_w[desc_col + 1], ROW_H, _fmt_euro(pos.netto), align="R")
+                self.cell(col_w[desc_col + 2], ROW_H, ust_label, align="R")
+                self.cell(col_w[desc_col + 3], ROW_H, _fmt_euro(netto_ges_vor), align="R")
             else:
                 ust_satz = float(str(pos.ust_satz))
                 ep_brutto = float(str(pos.netto)) * (1 + ust_satz / 100)
                 brutto_ges_vor = ep_brutto * menge * _sign
                 brutto_ges_eff = float(str(pos.brutto)) * menge * _sign
                 menge_disp = f"-{menge:g}" if ist_storno else f"{menge:g}"
-                self.cell(col_w[desc_col + 1], 6.5, _fmt_euro(ep_brutto), align="R")
-                self.cell(col_w[desc_col + 2], 6.5, ust_label, align="R")
-                self.cell(col_w[desc_col + 3], 6.5, _fmt_euro(brutto_ges_vor), align="R")
+                self.cell(col_w[desc_col + 1], ROW_H, _fmt_euro(ep_brutto), align="R")
+                self.cell(col_w[desc_col + 2], ROW_H, ust_label, align="R")
+                self.cell(col_w[desc_col + 3], ROW_H, _fmt_euro(brutto_ges_vor), align="R")
 
             # Zurück zum Zeilenanfang: Pos., Datum, Art.-Nr., dann Beschreibung mit multi_cell
             self.set_xy(L_MARGIN, row_y)
-            self.cell(col_w[0], 6.5, str(pos.position_nr), align="R")
-            self.cell(col_w[1], 6.5, pos_datum_str, align="L")
+            self.cell(col_w[0], ROW_H, str(pos.position_nr), align="R")
+            self.cell(col_w[1], ROW_H, pos_datum_str, align="L")
             if hat_artikelcode:
                 ac = pos.artikel.artikelcode if getattr(pos, "artikel", None) else None
-                self.multi_cell(col_w[2], 3.5, ac or "", new_x="RIGHT", new_y="TOP", align="L")
-            self.multi_cell(col_w[desc_col], 3.5, pos.beschreibung or "",
+                self.multi_cell(col_w[2], ROW_H, ac or "", new_x="RIGHT", new_y="TOP", align="L")
+            self.multi_cell(col_w[desc_col], ROW_H, pos.beschreibung or "",
                             new_x="LMARGIN", new_y="NEXT")
 
             # Rabatt-Unterzeile
@@ -187,6 +188,7 @@ class RechnungPDFVorlage1(RechnungPDFBase):
                           new_x="LMARGIN", new_y="NEXT")
                 self.set_font("DejaVu", "", 8.5)
                 self.set_text_color(*TEXT_DUNKEL)
+            self.ln(1.5)
 
         tbl_bottom  = self.get_y()
         tbl_total_w = sum(col_w)

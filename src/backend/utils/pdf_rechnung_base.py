@@ -222,9 +222,10 @@ class RechnungPDFBase(FPDF):
             except Exception:
                 pass
 
-        absender = " ".join(filter(None, [
-            unt.get("firmenname"), unt.get("vorname"), unt.get("nachname")
-        ])) or "RechnungsFee"
+        firmenname_k = unt.get("firmenname") or ""
+        vorname_k    = unt.get("vorname") or ""
+        nachname_k   = unt.get("nachname") or ""
+        inhaber_k    = " ".join(filter(None, [vorname_k, nachname_k]))
         strasse  = f"{unt.get('strasse', '')} {unt.get('hausnummer', '')}".strip()
         plz_ort  = f"{unt.get('plz', '')} {unt.get('ort', '')}".strip()
         telefon  = unt.get("telefon") or ""
@@ -236,8 +237,14 @@ class RechnungPDFBase(FPDF):
         self.set_xy(BLOCK_X, y)
         self.set_font("DejaVu", "B", 10)
         self.set_text_color(*TEXT_DUNKEL)
-        self.cell(BLOCK_W, 5.5, absender, align="L")
+        self.cell(BLOCK_W, 5.5, firmenname_k or inhaber_k or "RechnungsFee", align="L")
         y += 5.5
+        if firmenname_k and inhaber_k:
+            self.set_xy(BLOCK_X, y)
+            self.set_font("DejaVu", "", 9)
+            self.cell(BLOCK_W, 4.5, inhaber_k, align="L")
+            y += 4.5
+            self.set_font("DejaVu", "B", 10)
 
         self.set_font("DejaVu", "", 8)
         self.set_text_color(*TEXT_GRAU)
@@ -291,21 +298,27 @@ class RechnungPDFBase(FPDF):
         bic        = unt.get("bic") or ""
         bank       = unt.get("bank_name") or ""
 
-        def _col(x: float, zeilen: list[str]):
+        inhaber_f = " ".join(filter(None, [vorname, nachname])) if firmenname else ""
+
+        def _col(x: float, zeilen: list[str], erste_fett: bool = False):
             y = start_y
-            for z in zeilen:
+            for i, z in enumerate(zeilen):
                 if z:
                     self.set_xy(x, y)
+                    if erste_fett and i == 0:
+                        self.set_font("DejaVu", "B", 7.5)
                     self.cell(col_w, lh, z)
+                    if erste_fett and i == 0:
+                        self.set_font("DejaVu", "", 7)
                     y += lh
 
-        name = " ".join(filter(None, [firmenname, vorname, nachname]))
-        _col(L_MARGIN, list(filter(None, [
-            name, strasse, plz_ort,
+        name_zeilen = [firmenname, inhaber_f] if (firmenname and inhaber_f) else [firmenname or inhaber_f]
+        _col(L_MARGIN, list(filter(None, name_zeilen + [
+            strasse, plz_ort,
             f"Tel: {telefon}" if telefon else "",
             f"E-Mail: {email}" if email else "",
             f"Web: {webseite}" if webseite else "",
-        ])))
+        ])), erste_fett=True)
 
         inhaber      = " ".join(filter(None, [vorname, nachname])) if firmenname else ""
         person_label = _person_bezeichnung(unt.get("rechtsform") or "")
