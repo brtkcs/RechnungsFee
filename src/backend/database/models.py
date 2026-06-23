@@ -334,6 +334,23 @@ class Kunde(Base):
     lieferadressen: Mapped[list["KundeLieferadresse"]] = relationship(
         back_populates="kunde", cascade="all, delete-orphan", order_by="KundeLieferadresse.id"
     )
+    dokumente: Mapped[list["KundeBeleg"]] = relationship(
+        back_populates="kunde", cascade="all, delete-orphan", order_by="KundeBeleg.id"
+    )
+
+
+class KundeBeleg(Base):
+    """Dokument am Kundenstammsatz (Vertrag, Bescheinigung, Dokumentation …)."""
+    __tablename__ = "kunden_belege"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kunde_id: Mapped[int] = mapped_column(ForeignKey("kunden.id", ondelete="CASCADE"), nullable=False)
+    beleg_id: Mapped[int] = mapped_column(ForeignKey("belege.id", ondelete="CASCADE"), nullable=False)
+    bezeichnung: Mapped[str | None] = mapped_column(String(200))
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    kunde: Mapped["Kunde"] = relationship(back_populates="dokumente")
+    beleg: Mapped["Beleg"] = relationship()
 
 
 class KundeLieferadresse(Base):

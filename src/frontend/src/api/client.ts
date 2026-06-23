@@ -671,6 +671,41 @@ export const updateLieferadresse = (kundeId: number, laId: number, data: Omit<Ku
 export const deleteLieferadresse = (kundeId: number, laId: number) =>
   request<void>(`/kunden/${kundeId}/lieferadressen/${laId}`, { method: 'DELETE' })
 
+export type KundeBelegBeleg = {
+  id: number
+  dateiname: string
+  original_name: string
+  mime_type?: string
+  dateigroesse?: number
+  hochgeladen_am: string
+  pdfa_verfuegbar: boolean
+}
+export type KundeBeleg = {
+  id: number
+  bezeichnung?: string
+  erstellt_am: string
+  beleg: KundeBelegBeleg
+}
+export const getKundeBelege = (kundeId: number) =>
+  request<KundeBeleg[]>(`/kunden/${kundeId}/belege`)
+export const uploadKundeBeleg = async (kundeId: number, datei: File, bezeichnung: string) => {
+  const fd = new FormData()
+  fd.append('datei', datei)
+  fd.append('bezeichnung', bezeichnung)
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/kunden/${kundeId}/belege`, { method: 'POST', body: fd })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json() as Promise<KundeBeleg>
+}
+export const updateKundeBelegBezeichnung = (kundeId: number, kbId: number, bezeichnung: string) =>
+  request<KundeBeleg>(`/kunden/${kundeId}/belege/${kbId}`, { method: 'PATCH', body: JSON.stringify({ bezeichnung }) })
+export const deleteKundeBeleg = (kundeId: number, kbId: number) =>
+  request<void>(`/kunden/${kundeId}/belege/${kbId}`, { method: 'DELETE' })
+export const getKundeBelegDownloadUrl = async (kundeId: number, kbId: number) => {
+  const base = await getBaseUrl()
+  return `${base}/kunden/${kundeId}/belege/${kbId}/download`
+}
+
 export async function dsgvoExportKunde(id: number) {
   const base = await getBaseUrl()
   await openUrl(`${base}/kunden/${id}/dsgvo-export`)

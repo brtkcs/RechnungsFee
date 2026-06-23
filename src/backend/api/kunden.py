@@ -2,21 +2,30 @@
 API-Endpunkte für Kundenverwaltung.
 """
 
+import hashlib
 import json as _json
-from datetime import date as _date
-
-from fastapi import APIRouter, Depends, HTTPException, Body
-from pydantic import BaseModel
+import uuid
+from datetime import date as _date, datetime as _datetime
+from pathlib import Path
 from typing import Optional
-from fastapi.responses import Response as _Response, StreamingResponse
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Body, UploadFile
+from fastapi.responses import FileResponse as _FileResponse, Response as _Response, StreamingResponse
 from io import BytesIO
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from database.connection import get_db
-from database.models import Kunde, KundeLieferadresse, Journaleintrag, Rechnung, Nummernkreis
+from database.connection import get_db, APP_DATA_DIR
+from database.models import Beleg, Kunde, KundeBeleg, KundeLieferadresse, Journaleintrag, Rechnung, Nummernkreis
 from .journal import _belegnr_aus_format
 from .schemas import KundeCreate, KundeUpdate, KundeResponse
+from .schemas_rechnungen import BelegResponse
 from utils.pdf_dsgvo import generate_dsgvo_pdf
+
+_BELEG_DIR = APP_DATA_DIR / "uploads" / "belege"
+_ERLAUBTE_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff", "image/webp",
+                  "application/msword",
+                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
 
 
 def _naechste_nummer(typ: str, db: Session) -> str | None:
@@ -340,6 +349,118 @@ def delete_lieferadresse(kunde_id: int, la_id: int, db: Session = Depends(get_db
             if immutable_anzahl else ""
         ),
     }
+
+
+# ---------------------------------------------------------------------------
+# Dokumente im Kundenstamm
+# ---------------------------------------------------------------------------
+
+class KundeBelegResponse(BaseModel):
+    id: int
+    bezeichnung: Optional[str]
+    erstellt_am: _datetime
+    beleg: BelegResponse
+    model_config = {"from_attributes": True}
+
+
+@router.get("/{kunde_id}/belege", response_model=list[KundeBelegResponse])
+def list_kunde_belege(kunde_id: int, db: Session = Depends(get_db)):
+    if not db.query(Kunde).filter(Kunde.id == kunde_id).first():
+        raise HTTPException(404, "Kunde nicht gefunden.")
+    return db.query(KundeBeleg).filter(KundeBeleg.kunde_id == kunde_id).order_by(KundeBeleg.id).all()
+
+
+@router.post("/{kunde_id}/belege", response_model=KundeBelegResponse, status_code=201)
+async def upload_kunde_beleg(
+    kunde_id: int,
+    datei: UploadFile = File(...),
+    bezeichnung: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not db.query(Kunde).filter(Kunde.id == kunde_id).first():
+        raise HTTPException(404, "Kunde nicht gefunden.")
+    mime = datei.content_type or ""
+    if mime not in _ERLAUBTE_MIME:
+        raise HTTPException(422, f"Dateityp '{mime}' nicht erlaubt.")
+
+    inhalt = await datei.read()
+    sha256 = hashlib.sha256(inhalt).hexdigest()
+    jetzt = _datetime.now()
+    ziel_dir = _BELEG_DIR / str(jetzt.year) / jetzt.strftime("%m")
+    ziel_dir.mkdir(parents=True, exist_ok=True)
+
+    original = Path(datei.filename or "dokument")
+    stem = original.stem[:50]
+    suffix = original.suffix.lower() or ".bin"
+    dateiname_lokal = f"{stem}_{uuid.uuid4().hex[:8]}{suffix}"
+    rel_pfad = f"belege/{jetzt.year}/{jetzt.strftime('%m')}/{dateiname_lokal}"
+    (ziel_dir / dateiname_lokal).write_bytes(inhalt)
+
+    beleg = Beleg(
+        dateiname=rel_pfad,
+        original_name=datei.filename or "dokument",
+        mime_type=mime,
+        dateigroesse=len(inhalt),
+        sha256=sha256,
+    )
+    db.add(beleg)
+    db.flush()
+
+    kb = KundeBeleg(
+        kunde_id=kunde_id,
+        beleg_id=beleg.id,
+        bezeichnung=bezeichnung.strip() or None,
+    )
+    db.add(kb)
+    db.commit()
+    db.refresh(kb)
+    return kb
+
+
+@router.patch("/{kunde_id}/belege/{kb_id}", response_model=KundeBelegResponse)
+def update_kunde_beleg_bezeichnung(
+    kunde_id: int, kb_id: int,
+    bezeichnung: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+):
+    kb = db.query(KundeBeleg).filter(KundeBeleg.id == kb_id, KundeBeleg.kunde_id == kunde_id).first()
+    if not kb:
+        raise HTTPException(404, "Dokument nicht gefunden.")
+    kb.bezeichnung = bezeichnung.strip() or None
+    db.commit()
+    db.refresh(kb)
+    return kb
+
+
+@router.get("/{kunde_id}/belege/{kb_id}/download")
+def download_kunde_beleg(kunde_id: int, kb_id: int, db: Session = Depends(get_db)):
+    kb = db.query(KundeBeleg).filter(KundeBeleg.id == kb_id, KundeBeleg.kunde_id == kunde_id).first()
+    if not kb:
+        raise HTTPException(404, "Dokument nicht gefunden.")
+    beleg = kb.beleg
+    pfad = APP_DATA_DIR / "uploads" / beleg.dateiname
+    if not pfad.exists():
+        raise HTTPException(404, "Datei nicht gefunden.")
+    return _FileResponse(
+        path=str(pfad),
+        media_type=beleg.mime_type or "application/octet-stream",
+        filename=beleg.original_name,
+        content_disposition_type="inline",
+    )
+
+
+@router.delete("/{kunde_id}/belege/{kb_id}", status_code=204)
+def delete_kunde_beleg(kunde_id: int, kb_id: int, db: Session = Depends(get_db)):
+    kb = db.query(KundeBeleg).filter(KundeBeleg.id == kb_id, KundeBeleg.kunde_id == kunde_id).first()
+    if not kb:
+        raise HTTPException(404, "Dokument nicht gefunden.")
+    beleg = kb.beleg
+    pfad = APP_DATA_DIR / "uploads" / beleg.dateiname
+    if pfad.exists():
+        pfad.unlink()
+    db.delete(kb)
+    db.delete(beleg)
+    db.commit()
 
 
 @router.get("/{kunde_id}", response_model=KundeResponse)
