@@ -264,7 +264,7 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
           type="text"
           value={uploadLabel}
           onChange={e => setUploadLabel(e.target.value)}
-          placeholder="Bezeichnung (optional, z.B. „Vereinsbescheinigung §4 Nr. 21")"
+          placeholder="Bezeichnung (optional, z.B. Vereinsbescheinigung §4 Nr. 21)"
           className={`${inp} w-full`}
         />
         <label className={`flex items-center justify-center gap-2 px-3 py-2 text-xs rounded-lg cursor-pointer
