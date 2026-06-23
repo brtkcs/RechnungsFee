@@ -8,7 +8,7 @@ import {
   getKunden, createKunde, updateKunde, deleteKunde,
   anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen, getAngebote, getUnternehmen,
   getLieferadressen, createLieferadresse, updateLieferadresse, deleteLieferadresse,
-  getKundeBelege, uploadKundeBeleg, deleteKundeBeleg, updateKundeBelegBezeichnung, getKundeBelegDownloadUrl,
+  getKundeBelege, uploadKundeBeleg, deleteKundeBeleg, updateKundeBeleg, getKundeBelegDownloadUrl,
   type Kunde, type AnonymisierungResult, type Rechnung, type KundeLieferadresse, type KundeBeleg,
 } from '../../api/client'
 
@@ -147,8 +147,10 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
   const qc = useQueryClient()
   const [editId, setEditId] = useState<number | null>(null)
   const [editLabel, setEditLabel] = useState('')
+  const [editLoeschdatum, setEditLoeschdatum] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadLabel, setUploadLabel] = useState('')
+  const [uploadLoeschdatum, setUploadLoeschdatum] = useState('')
 
   const { data: docs = [] } = useQuery({
     queryKey: ['kunde-belege', kundeId],
@@ -160,20 +162,25 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kunde-belege', kundeId] }),
   })
 
-  const renameMut = useMutation({
-    mutationFn: ({ kbId, label }: { kbId: number; label: string }) =>
-      updateKundeBelegBezeichnung(kundeId, kbId, label),
+  const updateMut = useMutation({
+    mutationFn: ({ kbId, label, ld }: { kbId: number; label: string; ld: string }) =>
+      updateKundeBeleg(kundeId, kbId, {
+        bezeichnung: label,
+        loeschdatum: ld || undefined,
+        loeschdatum_loeschen: ld === '',
+      }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['kunde-belege', kundeId] }); setEditId(null) },
   })
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(e: { target: HTMLInputElement }) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
     try {
-      await uploadKundeBeleg(kundeId, file, uploadLabel)
+      await uploadKundeBeleg(kundeId, file, uploadLabel, uploadLoeschdatum || undefined)
       qc.invalidateQueries({ queryKey: ['kunde-belege', kundeId] })
       setUploadLabel('')
+      setUploadLoeschdatum('')
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -200,6 +207,17 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   }
 
+  function loeschdatumBadge(ld?: string) {
+    if (!ld) return null
+    const heute = new Date().toISOString().slice(0, 10)
+    const tage = Math.ceil((new Date(ld).getTime() - new Date(heute).getTime()) / 86400000)
+    if (tage < 0)
+      return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium">Löschen überfällig ({formatDatum(ld)})</span>
+    if (tage <= 30)
+      return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 font-medium">Löschen bis {formatDatum(ld)}</span>
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Löschen bis {formatDatum(ld)}</span>
+  }
+
   const inp = 'border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500'
 
   return (
@@ -209,50 +227,47 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
       </div>
 
       {docs.map(kb => (
-        <div key={kb.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm">
+        <div key={kb.id} className={`border rounded-lg p-3 text-sm ${kb.loeschdatum && kb.loeschdatum < new Date().toISOString().slice(0,10) ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-slate-700'}`}>
           {editId === kb.id ? (
-            <div className="flex gap-2">
-              <input
-                value={editLabel}
-                onChange={e => setEditLabel(e.target.value)}
-                className={`${inp} flex-1`}
-                placeholder="Bezeichnung"
-                autoFocus
-              />
-              <button type="button"
-                onClick={() => renameMut.mutate({ kbId: kb.id, label: editLabel })}
-                className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-                OK
-              </button>
-              <button type="button" onClick={() => setEditId(null)}
-                className="px-3 py-1 border border-slate-300 dark:border-slate-600 text-xs rounded text-slate-600 dark:text-slate-300">
-                Abbruch
-              </button>
+            <div className="space-y-2">
+              <input value={editLabel} onChange={e => setEditLabel(e.target.value)}
+                className={`${inp} w-full`} placeholder="Bezeichnung" autoFocus />
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Löschdatum (DSGVO)</label>
+                <input type="date" value={editLoeschdatum} onChange={e => setEditLoeschdatum(e.target.value)}
+                  className={`${inp} w-full`} />
+                {editLoeschdatum && <button type="button" onClick={() => setEditLoeschdatum('')}
+                  className="text-xs text-slate-400 hover:text-slate-600 mt-1">× Kein Löschdatum</button>}
+              </div>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => updateMut.mutate({ kbId: kb.id, label: editLabel, ld: editLoeschdatum })}
+                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Speichern</button>
+                <button type="button" onClick={() => setEditId(null)}
+                  className="px-3 py-1 border border-slate-300 dark:border-slate-600 text-xs rounded text-slate-600 dark:text-slate-300">Abbruch</button>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-base shrink-0">{fileIcon(kb.beleg.mime_type)}</span>
+            <div className="flex items-start gap-2">
+              <span className="text-base shrink-0 mt-0.5">{fileIcon(kb.beleg.mime_type)}</span>
               <div className="flex-1 min-w-0">
                 <button type="button" onClick={() => handleOpen(kb)}
                   className="text-blue-600 dark:text-blue-400 hover:underline text-left truncate block max-w-full font-medium">
                   {kb.bezeichnung || kb.beleg.original_name}
                 </button>
-                {kb.bezeichnung && (
-                  <div className="text-xs text-slate-400 truncate">{kb.beleg.original_name}</div>
-                )}
-                <div className="text-xs text-slate-400">{fmtSize(kb.beleg.dateigroesse)}</div>
+                {kb.bezeichnung && <div className="text-xs text-slate-400 truncate">{kb.beleg.original_name}</div>}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="text-xs text-slate-400">{fmtSize(kb.beleg.dateigroesse)}</span>
+                  {loeschdatumBadge(kb.loeschdatum)}
+                </div>
               </div>
               <div className="flex gap-1 shrink-0">
                 <button type="button"
-                  onClick={() => { setEditId(kb.id); setEditLabel(kb.bezeichnung ?? '') }}
-                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                  Bearb.
-                </button>
+                  onClick={() => { setEditId(kb.id); setEditLabel(kb.bezeichnung ?? ''); setEditLoeschdatum(kb.loeschdatum ?? '') }}
+                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Bearb.</button>
                 <button type="button"
                   onClick={() => { if (confirm('Dokument löschen?')) delMut.mutate(kb.id) }}
-                  className="text-xs text-red-500 hover:text-red-600">
-                  Löschen
-                </button>
+                  className="text-xs text-red-500 hover:text-red-600">Löschen</button>
               </div>
             </div>
           )}
@@ -260,13 +275,13 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
       ))}
 
       <div className="border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-3 space-y-2">
-        <input
-          type="text"
-          value={uploadLabel}
-          onChange={e => setUploadLabel(e.target.value)}
-          placeholder="Bezeichnung (optional, z.B. Vereinsbescheinigung §4 Nr. 21)"
-          className={`${inp} w-full`}
-        />
+        <input type="text" value={uploadLabel} onChange={e => setUploadLabel(e.target.value)}
+          placeholder="Bezeichnung (optional)" className={`${inp} w-full`} />
+        <div>
+          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Löschdatum (DSGVO, optional)</label>
+          <input type="date" value={uploadLoeschdatum} onChange={e => setUploadLoeschdatum(e.target.value)}
+            className={`${inp} w-full`} />
+        </div>
         <label className={`flex items-center justify-center gap-2 px-3 py-2 text-xs rounded-lg cursor-pointer
           ${uploading
             ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'

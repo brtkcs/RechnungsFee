@@ -347,6 +347,7 @@ class KundeBeleg(Base):
     kunde_id: Mapped[int] = mapped_column(ForeignKey("kunden.id", ondelete="CASCADE"), nullable=False)
     beleg_id: Mapped[int] = mapped_column(ForeignKey("belege.id", ondelete="CASCADE"), nullable=False)
     bezeichnung: Mapped[str | None] = mapped_column(String(200))
+    loeschdatum: Mapped[date | None] = mapped_column(Date)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     kunde: Mapped["Kunde"] = relationship(back_populates="dokumente")

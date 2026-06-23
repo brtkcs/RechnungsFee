@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g
 
-SCHEMA_VERSION = 99
+SCHEMA_VERSION = 100
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2219,6 +2219,15 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 99"))
             conn.commit()
             print("[Migration] Schema auf Version 99 (kunden_belege: Dokumente im Kundenstamm)")
+
+        if version < 100:
+            try:
+                conn.execute(text("ALTER TABLE kunden_belege ADD COLUMN loeschdatum DATE"))
+            except Exception:
+                pass
+            conn.execute(text("PRAGMA user_version = 100"))
+            conn.commit()
+            print("[Migration] Schema auf Version 100 (kunden_belege.loeschdatum: DSGVO-Löschdatum pro Dokument)")
 
 
 def _migrate_kategorien() -> None:

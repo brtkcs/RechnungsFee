@@ -683,22 +683,24 @@ export type KundeBelegBeleg = {
 export type KundeBeleg = {
   id: number
   bezeichnung?: string
+  loeschdatum?: string
   erstellt_am: string
   beleg: KundeBelegBeleg
 }
 export const getKundeBelege = (kundeId: number) =>
   request<KundeBeleg[]>(`/kunden/${kundeId}/belege`)
-export const uploadKundeBeleg = async (kundeId: number, datei: File, bezeichnung: string) => {
+export const uploadKundeBeleg = async (kundeId: number, datei: File, bezeichnung: string, loeschdatum?: string) => {
   const fd = new FormData()
   fd.append('datei', datei)
   fd.append('bezeichnung', bezeichnung)
+  if (loeschdatum) fd.append('loeschdatum', loeschdatum)
   const base = await getBaseUrl()
   const res = await fetch(`${base}/kunden/${kundeId}/belege`, { method: 'POST', body: fd })
   if (!res.ok) throw new Error(await res.text())
   return res.json() as Promise<KundeBeleg>
 }
-export const updateKundeBelegBezeichnung = (kundeId: number, kbId: number, bezeichnung: string) =>
-  request<KundeBeleg>(`/kunden/${kundeId}/belege/${kbId}`, { method: 'PATCH', body: JSON.stringify({ bezeichnung }) })
+export const updateKundeBeleg = (kundeId: number, kbId: number, data: { bezeichnung?: string; loeschdatum?: string | null; loeschdatum_loeschen?: boolean }) =>
+  request<KundeBeleg>(`/kunden/${kundeId}/belege/${kbId}`, { method: 'PATCH', body: JSON.stringify(data) })
 export const deleteKundeBeleg = (kundeId: number, kbId: number) =>
   request<void>(`/kunden/${kundeId}/belege/${kbId}`, { method: 'DELETE' })
 export const getKundeBelegDownloadUrl = async (kundeId: number, kbId: number) => {

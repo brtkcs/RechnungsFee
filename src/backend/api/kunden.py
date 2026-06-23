@@ -358,6 +358,7 @@ def delete_lieferadresse(kunde_id: int, la_id: int, db: Session = Depends(get_db
 class KundeBelegResponse(BaseModel):
     id: int
     bezeichnung: Optional[str]
+    loeschdatum: Optional[_date]
     erstellt_am: _datetime
     beleg: BelegResponse
     model_config = {"from_attributes": True}
@@ -375,6 +376,7 @@ async def upload_kunde_beleg(
     kunde_id: int,
     datei: UploadFile = File(...),
     bezeichnung: str = Form(""),
+    loeschdatum: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     if not db.query(Kunde).filter(Kunde.id == kunde_id).first():
@@ -406,10 +408,19 @@ async def upload_kunde_beleg(
     db.add(beleg)
     db.flush()
 
+    from datetime import date as _date_cls
+    ld = None
+    if loeschdatum:
+        try:
+            ld = _date_cls.fromisoformat(loeschdatum)
+        except ValueError:
+            pass
+
     kb = KundeBeleg(
         kunde_id=kunde_id,
         beleg_id=beleg.id,
         bezeichnung=bezeichnung.strip() or None,
+        loeschdatum=ld,
     )
     db.add(kb)
     db.commit()
@@ -417,16 +428,26 @@ async def upload_kunde_beleg(
     return kb
 
 
+class KundeBelegUpdate(BaseModel):
+    bezeichnung: Optional[str] = None
+    loeschdatum: Optional[_date] = None
+    loeschdatum_loeschen: bool = False
+
 @router.patch("/{kunde_id}/belege/{kb_id}", response_model=KundeBelegResponse)
-def update_kunde_beleg_bezeichnung(
+def update_kunde_beleg(
     kunde_id: int, kb_id: int,
-    bezeichnung: str = Body(..., embed=True),
+    data: KundeBelegUpdate,
     db: Session = Depends(get_db),
 ):
     kb = db.query(KundeBeleg).filter(KundeBeleg.id == kb_id, KundeBeleg.kunde_id == kunde_id).first()
     if not kb:
         raise HTTPException(404, "Dokument nicht gefunden.")
-    kb.bezeichnung = bezeichnung.strip() or None
+    if data.bezeichnung is not None:
+        kb.bezeichnung = data.bezeichnung.strip() or None
+    if data.loeschdatum_loeschen:
+        kb.loeschdatum = None
+    elif data.loeschdatum is not None:
+        kb.loeschdatum = data.loeschdatum
     db.commit()
     db.refresh(kb)
     return kb
