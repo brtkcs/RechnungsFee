@@ -9,6 +9,9 @@ Versionen werden durch Git-Tags gesetzt – `git tag v0.x.y && git push --tags`.
 
 ## [v0.3.29] – Juni 2026
 
+### ✨ Neu
+- Kundenstamm: Dokumente hinterlegen (Verträge, Bescheinigungen §4 Nr. 21 UStG, Handelsregisterauszug, Gewerbeschein, Personalausweiskopie u. v. m.) – Upload, Inline-Vorschau, Umbenennen, Löschen; erreichbar über Tab „Dokumente" im Kunden-Detail-Panel
+
 ### 🔧 Verbessert
 - Darkmode: Scrollbalken jetzt dunkel (slate-800/600) statt weiß/grau
 - PDF-Kopfzeile: Firmenname und Inhaber getrennt dargestellt (Firma fett, Inhaber darunter); Fußzeile entsprechend
