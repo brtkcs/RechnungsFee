@@ -288,7 +288,7 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
 function KundeRechnungen({ kunde }: { kunde: Kunde }) {
   const navigate = useNavigate()
   const [offeneRechnung, setOffeneRechnung] = useState<number | null>(null)
-  const [tab, setTab] = useState<'rechnungen' | 'angebote'>('rechnungen')
+  const [tab, setTab] = useState<'rechnungen' | 'angebote' | 'dokumente'>('rechnungen')
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
   const angeboteAktiv = !!unternehmen?.angebote_aktiv
@@ -325,24 +325,33 @@ function KundeRechnungen({ kunde }: { kunde: Kunde }) {
               Angebote ({angebote?.length ?? '…'})
             </button>
           )}
-        </div>
-        {/* Aktions-Buttons */}
-        <div className="flex gap-1">
-          <button
-            onClick={() => navigate(`/rechnungen?neue_aus_kunde=${kunde.id}`)}
-            className="flex-1 text-[11px] py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
-            + Neue Rechnung
+          <button onClick={() => setTab('dokumente')}
+            className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'dokumente' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+            Dokumente
           </button>
-          {angeboteAktiv && (
-            <button
-              onClick={() => navigate(`/angebote?kunde_id=${kunde.id}`)}
-              className="flex-1 text-[11px] py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
-              + Neues Angebot
-            </button>
-          )}
         </div>
+        {/* Aktions-Buttons – nur bei Rechnungen/Angebote-Tab */}
+        {tab !== 'dokumente' && (
+          <div className="flex gap-1">
+            <button
+              onClick={() => navigate(`/rechnungen?neue_aus_kunde=${kunde.id}`)}
+              className="flex-1 text-[11px] py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+              + Neue Rechnung
+            </button>
+            {angeboteAktiv && (
+              <button
+                onClick={() => navigate(`/angebote?kunde_id=${kunde.id}`)}
+                className="flex-1 text-[11px] py-1 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+                + Neues Angebot
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
+        {tab === 'dokumente' ? (
+          <KundeDokumente kundeId={kunde.id!} />
+        ) : (<div className="space-y-1.5">
         {isLoading && <p className="text-xs text-slate-400 dark:text-slate-500 p-1">Lade…</p>}
         {!isLoading && !liste.length && (
           <p className="text-xs text-slate-400 dark:text-slate-500 p-1">
@@ -404,6 +413,7 @@ function KundeRechnungen({ kunde }: { kunde: Kunde }) {
             )}
           </div>
         ))}
+        </div>)}
       </div>
     </div>
   )
@@ -837,12 +847,6 @@ export function KundenPage() {
                 </div>
               )}
 
-              {/* Dokumente – nur bei bestehendem Kunden */}
-              {editKunde?.id && (
-                <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
-                  <KundeDokumente kundeId={editKunde.id} />
-                </div>
-              )}
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={closeForm} className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700">Abbrechen</button>
