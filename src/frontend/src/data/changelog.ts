@@ -30,6 +30,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'PDF-Positionstabelle: Zeilenabstand in Beschreibungen wieder 3,5 mm (statt 5); erste Beschreibungszeile bündig mit Preis/Menge; Abstand zwischen Positionen (Issue #190)' },
       { typ: 'verbesserung', text: 'PDF-Kopfzeile: Firmenname und Inhaber getrennt dargestellt (Firma fett, Inhaber darunter)' },
       { typ: 'neu', text: 'Kundenstamm: Dokumente hinterlegen (Verträge, Bescheinigungen, Zertifikate) – Upload, Inline-Vorschau, Umbenennen, Löschen; DSGVO-Löschdatum pro Dokument mit Fristwarnung (rot = überfällig, gelb = ≤ 30 Tage)' },
+      { typ: 'verbesserung', text: 'Kundenstamm: Schnell-Buttons zum Erstellen von Auftrag, Proforma und Lieferschein direkt aus dem Kundensatz (erscheinen nur wenn das jeweilige Feature aktiv ist; Kunde wird im Formular automatisch vorbelegt)' },
     ],
   },
   {
