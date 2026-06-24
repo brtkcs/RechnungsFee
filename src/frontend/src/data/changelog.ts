@@ -31,6 +31,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'PDF-Kopfzeile: Firmenname und Inhaber getrennt dargestellt (Firma fett, Inhaber darunter)' },
       { typ: 'neu', text: 'Kundenstamm: Dokumente hinterlegen (Verträge, Bescheinigungen, Zertifikate) – Upload, Inline-Vorschau, Umbenennen, Löschen; DSGVO-Löschdatum pro Dokument mit Fristwarnung (rot = überfällig, gelb = ≤ 30 Tage)' },
       { typ: 'verbesserung', text: 'Kundenstamm: Schnell-Buttons zum Erstellen von Auftrag, Proforma und Lieferschein direkt aus dem Kundensatz (erscheinen nur wenn das jeweilige Feature aktiv ist; Kunde wird im Formular automatisch vorbelegt)' },
+      { typ: 'verbesserung', text: 'Positionsformulare: Menge per −/+ Schaltfläche anpassen – Schritt 1 für Stück/Pack/Stunden usw., Schritt 0,001 für Gewicht/Volumen/Länge (kg, g, l, m …); gilt in Rechnungen, Lieferscheinen, Angeboten, Aufträgen, Proformas und Wiederkehrenden Vorlagen (Issue #191)' },
     ],
   },
   {
