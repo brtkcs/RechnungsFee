@@ -45,6 +45,17 @@ function formatDatum(iso: string): string {
   return `${d}.${m}.${y}`
 }
 
+function stepFuerEinheit(einheit: string | undefined | null): number {
+  const e = (einheit ?? '').trim().toLowerCase()
+  return /^(kg|g|mg|t|l|ml|dl|cl|m[²³]|m|cm|mm)$/.test(e) ? 0.001 : 1
+}
+
+function adjustMenge(current: string, step: number): string {
+  const n = parseFloat(current.replace(',', '.')) || 0
+  const r = Math.max(0, Math.round((n + step) * 1000) / 1000)
+  return r % 1 === 0 ? String(r) : String(r).replace('.', ',')
+}
+
 function heuteIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -2899,12 +2910,20 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
                     />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input
-                      type="text"
-                      value={pos.menge}
-                      onChange={(e) => updatePosition(i, 'menge', e.target.value)}
-                      className="w-full border-0 outline-none bg-transparent text-right text-slate-700 dark:text-slate-200"
-                    />
+                    <div className="flex items-center gap-0.5 justify-end">
+                      <button type="button" tabIndex={-1}
+                        onClick={() => updatePosition(i, 'menge', adjustMenge(pos.menge, -stepFuerEinheit(pos.einheit)))}
+                        className="text-slate-300 hover:text-blue-500 dark:text-slate-600 dark:hover:text-blue-400 leading-none shrink-0 text-base">−</button>
+                      <input
+                        type="text"
+                        value={pos.menge}
+                        onChange={(e) => updatePosition(i, 'menge', e.target.value)}
+                        className="w-8 border-0 outline-none bg-transparent text-center text-slate-700 dark:text-slate-200"
+                      />
+                      <button type="button" tabIndex={-1}
+                        onClick={() => updatePosition(i, 'menge', adjustMenge(pos.menge, +stepFuerEinheit(pos.einheit)))}
+                        className="text-slate-300 hover:text-blue-500 dark:text-slate-600 dark:hover:text-blue-400 leading-none shrink-0 text-base">+</button>
+                    </div>
                   </td>
                   <td className="px-2 py-1.5">
                     <EinheitZelle
