@@ -373,19 +373,6 @@ export function ArtikelFormModal({
     setValue('gruppe_id', '')
   }, [typ, setValue])
 
-  // Timing-Fix: gruppen-Query ist async – Optionen können nach dem ersten Render laden.
-  // Ref trackt die ID des zuletzt initialisierten Artikels: Effekt läuft einmal pro Artikel,
-  // aber nicht erneut bei Re-Fetches (würde Nutzerauswahl überschreiben).
-  const gruppeInitForId = useRef<number | undefined>(undefined)
-  useEffect(() => {
-    if (gruppen.length === 0) return
-    if (gruppeInitForId.current === (initial?.id ?? -1)) return
-    gruppeInitForId.current = initial?.id ?? -1
-    const gid = initial?.gruppe_id ? String(initial.gruppe_id) : ''
-    if (gid && gruppen.some(g => String(g.id) === gid)) {
-      setValue('gruppe_id', gid)
-    }
-  }, [gruppen, initial?.id, initial?.gruppe_id, setValue])
 
   function bruttoAusNetto(netto: number) {
     if (differenzbesteuerung) return netto  // §25a: Brutto = Netto (kein USt-Aufschlag)
@@ -667,7 +654,11 @@ export function ArtikelFormModal({
           {/* Gruppe */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{GRUPPE_LABELS[typ]}</label>
-            <select {...register('gruppe_id')} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100">
+            <select
+              value={watch('gruppe_id') ?? ''}
+              onChange={e => setValue('gruppe_id', e.target.value, { shouldDirty: true })}
+              className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-slate-100"
+            >
               <option value="">– keine –</option>
               {gruppen.map(g => (
                 <option key={g.id} value={g.id}>{g.name}</option>
