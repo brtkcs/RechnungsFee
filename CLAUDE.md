@@ -53,7 +53,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 98` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 100` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -215,6 +215,8 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 96 | Gewerbesteuer SKR03-Kontonummer korrigiert: 7600 → 4320 (Im SKR03 gibt es kein Konto 7600; Issue #186); SKR04 7610 war bereits korrekt (SKR04 7600 = Körperschaftsteuer) |
 | 97 | Spenden (betrieblich) SKR-Konten korrigiert: SKR03 4730 (Ausgangsfrachten!) → 1840, SKR04 6580 (Mautgebühren!) → 2250 (je „Zuwendungen, Spenden" Einzelunternehmen; Issue #186) |
 | 98 | Einmalkunden-Adressfelder: rechnungen + partner_strasse/hausnummer/plz/ort/land (nullable); Adressblock im PDF; alle Dokumentpropagierungen (Storno, Gutschrift, LS, Auftrag etc.) tragen Felder durch (Issue #188) |
+| 99 | kunden_belege-Tabelle: Dokumente im Kundenstamm (Verträge, Bescheinigungen, Zertifikate) – Upload, Inline-Vorschau, Umbenennen, Löschen |
+| 100 | kunden_belege.loeschdatum DATE – DSGVO-Löschdatum pro Dokument mit Fristwarnung (rot = überfällig, gelb = ≤ 30 Tage) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
