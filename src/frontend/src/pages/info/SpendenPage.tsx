@@ -67,6 +67,11 @@ export function SpendenPage() {
           <span>💙</span>
           <span>Via PayPal spenden</span>
         </button>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Spenden werden treuhänderisch von der <strong className="font-medium">PC-Wittfoot UG</strong> verwaltet
+          (Spendenverwalter, nicht Entwickler).
+          Die Entwicklung von RechnungsFee erfolgt durch die Community als Open-Source-Projekt.
+        </p>
       </div>
 
       {/* Alternativ */}
@@ -99,11 +104,6 @@ export function SpendenPage() {
 
       <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
         Danke, dass du RechnungsFee nutzt. ♥
-      </p>
-
-      <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-        Spenden werden treuhänderisch von der <strong className="font-medium">PC-Wittfoot UG</strong> verwaltet
-        (Spendenverwalter, nicht Entwickler). Die Entwicklung von RechnungsFee erfolgt durch die Community als Open-Source-Projekt.
       </p>
 
       <div className="flex justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
