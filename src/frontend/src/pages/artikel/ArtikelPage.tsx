@@ -374,18 +374,18 @@ export function ArtikelFormModal({
   }, [typ, setValue])
 
   // Timing-Fix: gruppen-Query ist async – Optionen können nach dem ersten Render laden.
-  // Ref verhindert, dass der Effekt nach späteren Re-Fetches erneut feuert und
-  // eine vom Nutzer geänderte Gruppe (z. B. auf „–keine–") wieder überschreibt.
-  const gruppeInitRef = useRef(false)
+  // Ref trackt die ID des zuletzt initialisierten Artikels: Effekt läuft einmal pro Artikel,
+  // aber nicht erneut bei Re-Fetches (würde Nutzerauswahl überschreiben).
+  const gruppeInitForId = useRef<number | undefined>(undefined)
   useEffect(() => {
-    if (gruppeInitRef.current) return
     if (gruppen.length === 0) return
-    gruppeInitRef.current = true
+    if (gruppeInitForId.current === (initial?.id ?? -1)) return
+    gruppeInitForId.current = initial?.id ?? -1
     const gid = initial?.gruppe_id ? String(initial.gruppe_id) : ''
     if (gid && gruppen.some(g => String(g.id) === gid)) {
       setValue('gruppe_id', gid)
     }
-  }, [gruppen, initial?.gruppe_id, setValue])
+  }, [gruppen, initial?.id, initial?.gruppe_id, setValue])
 
   function bruttoAusNetto(netto: number) {
     if (differenzbesteuerung) return netto  // §25a: Brutto = Netto (kein USt-Aufschlag)
