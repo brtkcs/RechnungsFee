@@ -34,6 +34,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Positionsformulare: Menge per −/+ Schaltfläche anpassen – Schritt 1 für Stück/Pack/Stunden usw., Schritt 0,001 für Gewicht/Volumen/Länge (kg, g, l, m …); gilt in Rechnungen, Lieferscheinen, Angeboten, Aufträgen, Proformas und Wiederkehrenden Vorlagen (Issue #191)' },
       { typ: 'fix', text: 'Artikel bearbeiten: Servicegruppe/Warengruppe wurde nach dem Öffnen des Bearbeitungsdialogs auf „–keine–" zurückgesetzt (Issue #192)' },
       { typ: 'fix', text: 'Artikel: Lagerführung-Abschnitt bei Dienstleistungen und Fremdleistungen ausgeblendet – Bestandsführung ist nur für physische Artikel sinnvoll' },
+      { typ: 'verbesserung', text: 'Artikelliste: Filter nach Warengruppe, Servicegruppe oder Fremdleistungsgruppe – Dropdown erscheint automatisch wenn Gruppen vorhanden sind' },
     ],
   },
   {
