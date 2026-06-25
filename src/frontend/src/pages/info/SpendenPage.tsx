@@ -11,7 +11,7 @@ export function SpendenPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">RechnungsFee unterstützen</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">
-          RechnungsFee ist kostenlos, Open Source (GPLv3) und wird in der Freizeit entwickelt.
+          RechnungsFee ist kostenlos, Open Source (AGPLv3) und wird in der Freizeit entwickelt.
           Jede Unterstützung hilft dabei, das Projekt weiterzuführen und neue Features umzusetzen.
         </p>
       </div>
