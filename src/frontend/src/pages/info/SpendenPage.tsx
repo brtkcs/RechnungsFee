@@ -2,6 +2,8 @@ import { openUrl } from '../../api/client'
 
 const PAYPAL_URL = 'https://www.paypal.com/ncp/payment/UYJ73YNEZ3KHL'
 const GITHUB_URL = 'https://github.com/nicolettas-muggelbude/RechnungsFee'
+const IMPRESSUM_URL = 'https://nicolettas-muggelbude.github.io/RechnungsFee/impressum'
+const DATENSCHUTZ_URL = 'https://nicolettas-muggelbude.github.io/RechnungsFee/datenschutz'
 
 export function SpendenPage() {
   return (
@@ -75,6 +77,16 @@ export function SpendenPage() {
       <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
         Danke, dass du RechnungsFee nutzt. ♥
       </p>
+
+      <div className="flex justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+        <button onClick={() => openUrl(IMPRESSUM_URL)} className="hover:underline hover:text-slate-600 dark:hover:text-slate-300">
+          Impressum
+        </button>
+        <span>·</span>
+        <button onClick={() => openUrl(DATENSCHUTZ_URL)} className="hover:underline hover:text-slate-600 dark:hover:text-slate-300">
+          Datenschutz
+        </button>
+      </div>
     </div>
   )
 }
