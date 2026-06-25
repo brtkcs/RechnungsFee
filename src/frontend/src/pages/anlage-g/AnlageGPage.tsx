@@ -254,7 +254,7 @@ export function AnlageGPage() {
                     className="w-28 text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-sm bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
                   />
                 </div>
-                {messbetrag > 0 && (
+                {messbetrag > 0 && hebesatz > 0 && (
                   <ZeileText
                     label={`Anrechenbarer Betrag (Messbetrag × ${anrechnungsFaktor.toFixed(1).replace('.', ',')}, §35 EStG)`}
                     wert={euroFmt(anrechnungsbetrag)}
