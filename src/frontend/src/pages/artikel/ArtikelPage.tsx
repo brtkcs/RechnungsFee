@@ -1047,6 +1047,7 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
 export function ArtikelPage() {
   const [suche, setSuche] = useState('')
   const [typFilter, setTypFilter] = useState<ArtikelTyp | ''>('')
+  const [gruppeFilter, setGruppeFilter] = useState<number | ''>('')
   const [aktiv, setAktiv] = useState<boolean | undefined>(true)
   const [selected, setSelected] = useState<Artikel | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -1058,6 +1059,11 @@ export function ArtikelPage() {
     queryFn: () => getArtikel({ aktiv, typ: typFilter || undefined }),
   })
 
+  const { data: alleGruppen = [] } = useQuery({
+    queryKey: ['artikel-gruppen', typFilter || undefined],
+    queryFn: () => getArtikelGruppen(typFilter || undefined, true),
+  })
+
   // selected mit aktuellem Listeneintrag synchronisieren (z. B. nach Toggle-Mutationen)
   useEffect(() => {
     if (!selected || !artikel) return
@@ -1066,6 +1072,7 @@ export function ArtikelPage() {
   }, [artikel])
 
   const gefiltert = (artikel ?? []).filter(a => {
+    if (gruppeFilter !== '' && a.gruppe_id !== gruppeFilter) return false
     if (!suche) return true
     const s = suche.toLowerCase()
     return (
@@ -1119,7 +1126,7 @@ export function ArtikelPage() {
             {(['', 'artikel', 'dienstleistung', 'fremdleistung'] as const).map(t => (
               <button
                 key={t}
-                onClick={() => setTypFilter(t)}
+                onClick={() => { setTypFilter(t); setGruppeFilter('') }}
                 className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   typFilter === t
                     ? 'bg-slate-700 dark:bg-slate-500 text-white border-slate-700 dark:border-slate-500'
@@ -1140,6 +1147,24 @@ export function ArtikelPage() {
               {aktiv === true ? 'Nur aktive' : 'Alle'}
             </button>
           </div>
+          {alleGruppen.length > 0 && (
+            <select
+              value={gruppeFilter}
+              onChange={e => setGruppeFilter(e.target.value === '' ? '' : Number(e.target.value))}
+              className={`mt-2 w-full border rounded-lg px-3 py-1.5 text-xs dark:bg-slate-700 dark:text-slate-100 transition-colors ${
+                gruppeFilter !== ''
+                  ? 'border-blue-400 dark:border-blue-500 text-slate-800 dark:text-slate-100'
+                  : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              <option value="">Alle Gruppen</option>
+              {alleGruppen.map(g => (
+                <option key={g.id} value={g.id}>
+                  {typFilter === '' ? `${GRUPPE_LABELS[g.typ]}: ` : ''}{g.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Liste */}
