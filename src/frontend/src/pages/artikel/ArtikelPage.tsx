@@ -676,8 +676,8 @@ export function ArtikelFormModal({
             )}
           </div>
 
-          {/* Lagerführung – nur wenn global aktiviert */}
-          {unt?.lagerführung_aktiv && (
+          {/* Lagerführung – nur für physische Artikel und nur wenn global aktiviert */}
+          {unt?.lagerführung_aktiv && typ === 'artikel' && (
             <div className="space-y-3 pt-1 border-t border-slate-200 dark:border-slate-700">
               <label className="flex items-start gap-3 cursor-pointer pt-1">
                 <input type="checkbox" {...register('lager_aktiv')} className="mt-0.5 w-4 h-4 rounded accent-blue-600" />
