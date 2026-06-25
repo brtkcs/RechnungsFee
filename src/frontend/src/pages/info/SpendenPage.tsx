@@ -1,0 +1,80 @@
+import { openUrl } from '../../api/client'
+
+const PAYPAL_URL = 'https://www.paypal.com/ncp/payment/UYJ73YNEZ3KHL'
+const GITHUB_URL = 'https://github.com/nicolettas-muggelbude/RechnungsFee'
+
+export function SpendenPage() {
+  return (
+    <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">RechnungsFee unterstützen</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">
+          RechnungsFee ist kostenlos, Open Source (GPLv3) und wird in der Freizeit entwickelt.
+          Jede Unterstützung hilft dabei, das Projekt weiterzuführen und neue Features umzusetzen.
+        </p>
+      </div>
+
+      {/* Kosten */}
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Laufende Kosten</h2>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between text-slate-700 dark:text-slate-200">
+            <span>GitHub (Hosting, Actions, Releases)</span>
+            <span className="font-medium">kostenlos</span>
+          </div>
+          <div className="flex justify-between text-slate-700 dark:text-slate-200">
+            <span>Entwicklungszeit (Freizeit)</span>
+            <span className="font-medium">unbezahlt</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Spenden-Button */}
+      <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl p-6 text-center space-y-4">
+        <p className="text-slate-700 dark:text-slate-200 text-sm">
+          Wenn RechnungsFee dir Arbeit spart oder dich in deiner Selbstständigkeit unterstützt –
+          freue ich mich über jede Spende, egal wie klein.
+        </p>
+        <button
+          onClick={() => openUrl(PAYPAL_URL)}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold rounded-xl text-sm transition-colors shadow-sm"
+        >
+          <span>💙</span>
+          <span>Via PayPal spenden</span>
+        </button>
+      </div>
+
+      {/* Alternativ */}
+      <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Andere Wege zu helfen</h2>
+        <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5">⭐</span>
+            <span>
+              Das Projekt auf{' '}
+              <button
+                onClick={() => openUrl(GITHUB_URL)}
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                GitHub mit einem Stern markieren
+              </button>{' '}
+              – macht das Projekt sichtbarer
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5">🐛</span>
+            <span>Bugs melden und Feature-Wünsche als GitHub Issue eintragen</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5">📣</span>
+            <span>RechnungsFee anderen Freiberuflern und Kleinunternehmern empfehlen</span>
+          </li>
+        </ul>
+      </div>
+
+      <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+        Danke, dass du RechnungsFee nutzt. ♥
+      </p>
+    </div>
+  )
+}

@@ -305,6 +305,9 @@ export function AppLayout() {
           <NavLink to="/info" className={navLinkClass}>
             <span>ℹ️</span><span>Info & Updates</span>
           </NavLink>
+          <NavLink to="/spenden" className={navLinkClass}>
+            <span>💙</span><span>Spenden</span>
+          </NavLink>
 
         </nav>
       </aside>

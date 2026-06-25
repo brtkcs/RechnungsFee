@@ -35,6 +35,7 @@ import { WiederkehrendePage } from './pages/wiederkehrend/WiederkehrendePage'
 import BuchungsvorlagenPage from './pages/buchungsvorlagen/BuchungsvorlagenPage'
 import { BackupPage } from './pages/backup/BackupPage'
 import { InfoPage } from './pages/info/InfoPage'
+import { SpendenPage } from './pages/info/SpendenPage'
 
 function AppRoutes() {
   const { data: status, isLoading } = useQuery({
@@ -123,6 +124,7 @@ function AppRoutes() {
           <Route path="/anlage-g" element={<AnlageGPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/info" element={<InfoPage />} />
+          <Route path="/spenden" element={<SpendenPage />} />
         </Route>
       ) : (
         <Route path="*" element={<Navigate to="/setup" replace />} />
