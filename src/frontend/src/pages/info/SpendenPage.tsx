@@ -17,16 +17,39 @@ export function SpendenPage() {
       </div>
 
       {/* Kosten */}
-      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Laufende Kosten</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between text-slate-700 dark:text-slate-200">
-            <span>GitHub (Hosting, Actions, Releases)</span>
-            <span className="font-medium">kostenlos</span>
+      <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Laufende Kosten</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between text-slate-700 dark:text-slate-200">
+              <span>GitHub (Hosting, Actions, Releases)</span>
+              <span className="font-medium">kostenlos</span>
+            </div>
+            <div className="flex justify-between text-slate-700 dark:text-slate-200">
+              <span>Entwicklungszeit (Freizeit)</span>
+              <span className="font-medium">unbezahlt</span>
+            </div>
           </div>
-          <div className="flex justify-between text-slate-700 dark:text-slate-200">
-            <span>Entwicklungszeit (Freizeit)</span>
-            <span className="font-medium">unbezahlt</span>
+        </div>
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Einmalige &amp; anlassbezogene Kosten</h2>
+          <div className="space-y-2 text-sm text-slate-700 dark:text-slate-200">
+            <div className="flex items-start gap-2">
+              <span className="shrink-0">🖥️</span>
+              <span>Infrastruktur – Hardware, Tools und Lizenzen für die Entwicklung</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="shrink-0">🎤</span>
+              <span>Raummiete für kostenfreie Vorträge und Workshops rund um RechnungsFee</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="shrink-0">👕</span>
+              <span>Merchandise – Aufkleber, Shirts und Materialien für die Community</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="shrink-0">🎪</span>
+              <span>Event-Teilnahmen – Anreise, Unterkunft und Standgebühren</span>
+            </div>
           </div>
         </div>
       </div>
