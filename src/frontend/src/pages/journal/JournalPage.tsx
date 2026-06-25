@@ -68,6 +68,15 @@ export function JournalPage() {
   const [csvErfolg, setCsvErfolg] = useState<string | null>(null)
 
   const aktivesJahr = new Date().getFullYear()
+
+  function datumVorschlagFuerNeueBuchung(): string {
+    const t = new Date().toISOString().slice(0, 10)
+    if (filterModus === 'monat') return t.startsWith(monat) ? t : ''
+    if (filterModus === 'datum') return datum === t ? t : ''
+    if (filterModus === 'zeitraum') return datumVon <= t && t <= datumBis ? t : ''
+    return t // 'jahr' / 'alle' → immer aktuelles Jahr
+  }
+
   const filterParams = filterModus === 'monat'
     ? { monat }
     : filterModus === 'datum'
@@ -505,6 +514,7 @@ export function JournalPage() {
       {showBuchung && (
         <BuchungForm
           bearbeiten={bearbeitenEintrag ?? undefined}
+          initialDatum={bearbeitenEintrag ? undefined : datumVorschlagFuerNeueBuchung()}
           onClose={() => { setShowBuchung(false); setBearbeitenEintrag(null) }}
           onSuccess={() => { setShowBuchung(false); setBearbeitenEintrag(null) }}
         />

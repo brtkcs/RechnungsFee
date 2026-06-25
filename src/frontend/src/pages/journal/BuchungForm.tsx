@@ -64,6 +64,7 @@ interface Props {
   onClose: () => void
   onSuccess: () => void
   bearbeiten?: JournalEintrag
+  initialDatum?: string
 }
 
 function heute(): string {
@@ -78,7 +79,7 @@ function formatEuro(n: number): string {
 // Komponente
 // ---------------------------------------------------------------------------
 
-export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
+export function BuchungForm({ onClose, onSuccess, bearbeiten, initialDatum }: Props) {
   const qc = useQueryClient()
   const [isSplit, setIsSplit] = useState(false)
   const [eingabeModus, setEingabeModus] = useState<'brutto' | 'netto'>('brutto')
@@ -132,7 +133,7 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
       ust_sonderfall: bearbeiten.ust_sonderfall ?? '',
       externe_belegnr: bearbeiten.externe_belegnr ?? '',
     } : {
-      datum: heute(),
+      datum: initialDatum ?? heute(),
       art: 'Einnahme',
       zahlungsart: 'Bar',
       ust_satz: '0',
@@ -151,7 +152,7 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten }: Props) {
   } = useForm<SplitValues>({
     resolver: zodResolver(splitSchema),
     defaultValues: {
-      datum: heute(),
+      datum: initialDatum ?? heute(),
       art: 'Ausgabe',
       zahlungsart: 'Bar',
       positionen: [
