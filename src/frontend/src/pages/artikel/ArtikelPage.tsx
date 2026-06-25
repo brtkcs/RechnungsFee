@@ -435,7 +435,7 @@ export function ArtikelFormModal({
         hersteller: hatHersteller(v.typ) ? v.hersteller || undefined : undefined,
         artikelcode: hatHersteller(v.typ) ? v.artikelcode || undefined : undefined,
         beschreibung: v.beschreibung || null,
-        gruppe_id: v.gruppe_id ? Number(v.gruppe_id) : undefined,
+        gruppe_id: v.gruppe_id ? Number(v.gruppe_id) : null,
         differenzbesteuerung: v.differenzbesteuerung,
         lager_aktiv: v.lager_aktiv,
         ...(v.lager_aktiv ? { bestand_aktuell: v.bestand_aktuell || '0' } : {}),
