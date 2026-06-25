@@ -5,7 +5,7 @@ deployed via GitHub Actions auf GitHub Pages.
 
 ## Status
 
-- [ ] Domain beschaffen
+- [x] Domain beschaffen (rechnungsfee.app)
 - [ ] `web`-Branch anlegen + Astro-Projekt einrichten
 - [ ] GitHub Actions Workflow (Build + Deploy)
 - [ ] Seiten bauen
@@ -23,7 +23,7 @@ deployed via GitHub Actions auf GitHub Pages.
 | CSS | Tailwind v4 (wie Frontend) |
 | Deployment | GitHub Actions → GitHub Pages |
 | Branch | `web` (Quellcode) → `gh-pages` (Build-Output) |
-| Domain | *noch offen* |
+| Domain | rechnungsfee.app (Registrar: resellerinterface.de) |
 
 ---
 
