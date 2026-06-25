@@ -373,10 +373,14 @@ export function ArtikelFormModal({
     setValue('gruppe_id', '')
   }, [typ, setValue])
 
-  // Timing-Fix: gruppen-Query ist async – wenn Optionen nach dem ersten Render laden,
-  // findet der Browser keinen passenden Option-Wert und zeigt „–keine–".
-  // Nach dem Laden explizit den Wert aus initial wiederherstellen.
+  // Timing-Fix: gruppen-Query ist async – Optionen können nach dem ersten Render laden.
+  // Ref verhindert, dass der Effekt nach späteren Re-Fetches erneut feuert und
+  // eine vom Nutzer geänderte Gruppe (z. B. auf „–keine–") wieder überschreibt.
+  const gruppeInitRef = useRef(false)
   useEffect(() => {
+    if (gruppeInitRef.current) return
+    if (gruppen.length === 0) return
+    gruppeInitRef.current = true
     const gid = initial?.gruppe_id ? String(initial.gruppe_id) : ''
     if (gid && gruppen.some(g => String(g.id) === gid)) {
       setValue('gruppe_id', gid)
