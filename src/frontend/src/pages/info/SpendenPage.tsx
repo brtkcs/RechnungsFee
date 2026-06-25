@@ -101,6 +101,11 @@ export function SpendenPage() {
         Danke, dass du RechnungsFee nutzt. ♥
       </p>
 
+      <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+        Spenden werden von der <strong className="font-medium">PC-Wittfoot UG</strong> entgegengenommen –
+        dem Unternehmen hinter RechnungsFee, das auch für Impressum und Datenschutz verantwortlich ist.
+      </p>
+
       <div className="flex justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
         <button onClick={() => openUrl(IMPRESSUM_URL)} className="hover:underline hover:text-slate-600 dark:hover:text-slate-300">
           Impressum
