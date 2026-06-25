@@ -35,7 +35,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Artikel bearbeiten: Servicegruppe/Warengruppe wurde nach dem Öffnen des Bearbeitungsdialogs auf „–keine–" zurückgesetzt (Issue #192)' },
       { typ: 'fix', text: 'Artikel: Lagerführung-Abschnitt bei Dienstleistungen und Fremdleistungen ausgeblendet – Bestandsführung ist nur für physische Artikel sinnvoll' },
       { typ: 'verbesserung', text: 'Artikelliste: Filter nach Warengruppe, Servicegruppe oder Fremdleistungsgruppe – Dropdown erscheint automatisch wenn Gruppen vorhanden sind' },
-      { typ: 'fix', text: 'Anlage G: Anrechenbarer Betrag (§35 EStG) wird erst nach Eingabe des Hebesatzes angezeigt (Issue #182)' },
+      { typ: 'verbesserung', text: 'Anlage G: Anrechenbarer Betrag (§35 EStG) wird erst nach Eingabe des Hebesatzes angezeigt (Issue #182)' },
     ],
   },
   {
