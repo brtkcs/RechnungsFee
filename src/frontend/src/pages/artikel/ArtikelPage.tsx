@@ -366,10 +366,11 @@ export function ArtikelFormModal({
     setEkBrutto(initial?.ek_brutto ? String(parseFloat(initial.ek_brutto)) : '')
   }, [initial?.id])
 
-  // Gruppe zurücksetzen wenn Typ wechselt – nicht beim ersten Render (würde initial.gruppe_id löschen)
-  const typMountRef = useRef(true)
+  // Gruppe zurücksetzen wenn Typ wechselt – nicht beim Mounten (initial?.typ als Startwert)
+  const prevTypRef = useRef(initial?.typ ?? 'artikel')
   useEffect(() => {
-    if (typMountRef.current) { typMountRef.current = false; return }
+    if (prevTypRef.current === typ) return
+    prevTypRef.current = typ
     setValue('gruppe_id', '')
   }, [typ, setValue])
 
