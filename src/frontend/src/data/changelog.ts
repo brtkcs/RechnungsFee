@@ -26,7 +26,8 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.3.31',
     datum: 'Juli 2026',
     eintraege: [
-      { typ: 'fix', text: 'Spenden-Seite: Transparenzhinweis steht jetzt direkt unter dem PayPal-Button – PC-Wittfoot UG ist Spendenverwalter, nicht Entwickler; die Entwicklung erfolgt durch die Community als Open-Source-Projekt' },
+      { typ: 'verbesserung', text: 'Spenden-Seite: Banküberweisung mit IBAN als gebührenfreie Alternative zu PayPal ergänzt; PayPal-Gebührenhinweis (~1,5 % + 0,35 €) direkt unter dem Button' },
+      { typ: 'fix', text: 'Spenden-Seite: PC-Wittfoot UG korrekt als Spendenverwalter (nicht Entwickler) ausgewiesen; Transparenzhinweis direkt unter dem PayPal-Button platziert' },
     ],
   },
   {
