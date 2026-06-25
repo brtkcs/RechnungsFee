@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { LieferantErstellenModal } from '../../components/LieferantErstellenModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -366,8 +366,10 @@ export function ArtikelFormModal({
     setEkBrutto(initial?.ek_brutto ? String(parseFloat(initial.ek_brutto)) : '')
   }, [initial?.id])
 
-  // Gruppe zurücksetzen wenn Typ wechselt
+  // Gruppe zurücksetzen wenn Typ wechselt – nicht beim ersten Render (würde initial.gruppe_id löschen)
+  const typMountRef = useRef(true)
   useEffect(() => {
+    if (typMountRef.current) { typMountRef.current = false; return }
     setValue('gruppe_id', '')
   }, [typ, setValue])
 
