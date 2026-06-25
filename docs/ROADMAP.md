@@ -145,6 +145,10 @@
 ### GoBD & Korrekturen
 - [x] 5-Minuten-Korrekturfenster: Journal-Buchungen innerhalb von 5 Min. direkt bearbeitbar (immutable=False); nach Ablauf automatisch Storno + neue Buchung; Bearbeiten-Button immer sichtbar mit „(Storno)"-Hinweis nach Fristablauf (Issue #184)
 
+### UX & Community
+- [x] Tagesabschluss-Erinnerung nur bei offenen Bar-Buchungen: Banner erscheint ausschließlich wenn Tage mit Bar-Buchungen ohne Abschluss existieren; ältestes offenes Datum wird angezeigt (Issue #194)
+- [x] Spenden-Seite: PayPal-Link, Kostenübersicht, alternative Unterstützungsmöglichkeiten; Impressum + Datenschutz auf GitHub Pages (Issue #174)
+
 ---
 
 ## 📋 v0.4.x – Bank CSV-Import & Zahlungsabgleich
