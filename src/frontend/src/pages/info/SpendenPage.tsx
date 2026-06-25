@@ -54,20 +54,53 @@ export function SpendenPage() {
         </div>
       </div>
 
-      {/* Spenden-Button */}
-      <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl p-6 text-center space-y-4">
-        <p className="text-slate-700 dark:text-slate-200 text-sm">
+      {/* Spenden */}
+      <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl p-6 space-y-5">
+        <p className="text-slate-700 dark:text-slate-200 text-sm text-center">
           Wenn RechnungsFee dir Arbeit spart oder dich in deiner Selbstständigkeit unterstützt –
           freue ich mich über jede Spende, egal wie klein.
         </p>
-        <button
-          onClick={() => openUrl(PAYPAL_URL)}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold rounded-xl text-sm transition-colors shadow-sm"
-        >
-          <span>💙</span>
-          <span>Via PayPal spenden</span>
-        </button>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+
+        {/* PayPal */}
+        <div className="flex flex-col items-center gap-2">
+          <button
+            onClick={() => openUrl(PAYPAL_URL)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold rounded-xl text-sm transition-colors shadow-sm"
+          >
+            <span>💙</span>
+            <span>Via PayPal spenden</span>
+          </button>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            PayPal zieht Transaktionsgebühren ab (~1,5 % + 0,35 €)
+          </p>
+        </div>
+
+        {/* Überweisung */}
+        <div className="border-t border-blue-200 dark:border-blue-800 pt-4">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3 text-center">
+            Oder gebührenfrei per Banküberweisung
+          </p>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 space-y-1 text-sm font-mono">
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-400 dark:text-slate-500 font-sans shrink-0">Kontoinhaber</span>
+              <span className="text-slate-700 dark:text-slate-200 text-right">PC-Wittfoot UG</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-400 dark:text-slate-500 font-sans shrink-0">IBAN</span>
+              <span className="text-slate-700 dark:text-slate-200 tracking-wider">DE43 2805 0100 0093 3624 57</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-400 dark:text-slate-500 font-sans shrink-0">BIC</span>
+              <span className="text-slate-700 dark:text-slate-200">SLZODE22XXX</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-slate-400 dark:text-slate-500 font-sans shrink-0">Verwendungszweck</span>
+              <span className="text-slate-700 dark:text-slate-200">Spende RechnungsFee</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-1">
           Spenden werden treuhänderisch von der <strong className="font-medium">PC-Wittfoot UG</strong> verwaltet
           (Spendenverwalter, nicht Entwickler).
           Die Entwicklung von RechnungsFee erfolgt durch die Community als Open-Source-Projekt.
