@@ -252,7 +252,8 @@ export function AppLayout() {
       className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden"
       onContextMenu={(e) => {
         const t = e.target as HTMLElement
-        if (!t.closest('input, textarea, select, [contenteditable]')) e.preventDefault()
+        const hasSelection = (window.getSelection()?.toString().length ?? 0) > 0
+        if (!hasSelection && !t.closest('input, textarea, select, [contenteditable]')) e.preventDefault()
       }}
     >
       {/* Sidebar */}
