@@ -432,7 +432,7 @@ export function Dashboard() {
   })
 
   const { data: faellige } = useQuery({
-    queryKey: ['rechnungen-faellig'],
+    queryKey: ['rechnungen', 'faellig'],
     queryFn: () => getFaelligeRechnungen(7),
     staleTime: 1000 * 60 * 5,
   })
