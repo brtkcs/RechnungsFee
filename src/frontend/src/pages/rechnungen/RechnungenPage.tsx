@@ -3048,9 +3048,9 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
         )}
       </div>
 
-      {/* Lager-Warnungen */}
+      {/* Lager-Warnungen – nur bei Ausgangsrechnungen */}
       {(() => {
-        const warnungen = positionen.filter(p =>
+        const warnungen = typ === 'eingang' ? [] : positionen.filter(p =>
           p.art_lager_aktiv && p.art_minusbestand_erlaubt === false &&
           parseFloat(p.menge || '1') > parseFloat(p.art_bestand || '0')
         )
@@ -3152,7 +3152,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
         <button
           type="button"
           onClick={(e) => handleSubmit(e, false)}
-          disabled={positionen.some(p =>
+          disabled={typ !== 'eingang' && positionen.some(p =>
             p.art_lager_aktiv && p.art_minusbestand_erlaubt === false &&
             parseFloat(p.menge || '1') > parseFloat(p.art_bestand || '0')
           )}
