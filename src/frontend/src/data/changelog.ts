@@ -31,6 +31,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Eingangsrechnung: Lagerbestand-Prüfung wird nicht mehr ausgelöst – bei Eingangsrechnungen findet kein Lagerabzug statt' },
       { typ: 'fix', text: 'Dashboard: Fällige Rechnungen wurden nach dem Anlegen einer Rechnung nicht sofort aktualisiert (Cache-Invalidierung fehlte)' },
       { typ: 'verbesserung', text: 'Datumsfelder: Direkte Tastatureingabe im Format TT.MM.JJJJ mit automatischer Punkt-Einfügung; kleines Kalender-Icon öffnet weiterhin den nativen Picker für Maus-Nutzer (Issue #196)' },
+      { typ: 'verbesserung', text: 'Kontextmenü: Browser-Rechtsklickmenü deaktiviert – Rechtsklick auf markierten Text zeigt Kopieren, in Eingabefeldern Einfügen (Issue #197)' },
       { typ: 'fix', text: 'Kategorien Erlöse: Falsche SKR-Kontonummern korrigiert – USt-/Vorsteuererstattung FA (1779/1570 → 1790/3841), Zuwendungen von Dritten (8910/4910 → 2747/4982), Eigenverbrauch 7% (8911/4641 → 8915/4610)' },
       { typ: 'fix', text: 'EÜR: Fehlende Zeilen ergänzt – FA-Erstattungen erscheinen jetzt in Zeile 18, Eigenverbrauch in Zeile 21' },
     ],
