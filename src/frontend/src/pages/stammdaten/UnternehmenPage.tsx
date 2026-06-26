@@ -5,7 +5,7 @@ import {
   type Unternehmen,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
-import { guardedDateChange } from '../../utils/dateInput'
+import { DateInput } from '../../components/DateInput'
 import { KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
 
 // ---------------------------------------------------------------------------
@@ -401,10 +401,9 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
             </p>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Geburtsdatum">
-                <input
-                  type="date"
+                <DateInput
                   value={form.geburtsdatum ?? ''}
-                  onChange={guardedDateChange((v) => set('geburtsdatum', v))}
+                  onChange={(v) => set('geburtsdatum', v)}
                   className={inputCls}
                 />
               </Field>

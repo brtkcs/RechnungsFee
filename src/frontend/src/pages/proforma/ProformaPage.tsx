@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { DateInput } from '../../components/DateInput'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -333,11 +334,11 @@ function ProformaFormular({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Datum</label>
-          <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={inputCls} />
+          <DateInput value={datum} onChange={setDatum} className={inputCls} />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zahlungsziel</label>
-          <input type="date" value={faelligAm} onChange={e => setFaelligAm(e.target.value)} className={inputCls} />
+          <DateInput value={faelligAm} onChange={setFaelligAm} className={inputCls} />
         </div>
       </div>
 
@@ -705,7 +706,7 @@ function ProformaDetail({
               </div>
               <div>
                 <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">Zahlungsdatum</label>
-                <input type="date" value={bezahltAm} onChange={e => setBezahltAm(e.target.value)}
+                <DateInput value={bezahltAm} onChange={setBezahltAm}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm dark:bg-slate-700 dark:text-slate-100" />
               </div>
             </div>

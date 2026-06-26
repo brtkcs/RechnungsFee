@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, type Rechnung } from '../../api/client'
-import { guardedDateChange } from '../../utils/dateInput'
+import { DateInput } from '../../components/DateInput'
 import { dashboardFilter } from '../../store/filterStore'
 
 function formatEuro(val: string | number): string {
@@ -513,27 +513,24 @@ export function Dashboard() {
             />
           )}
           {filterModus === 'datum' && (
-            <input
-              type="date"
+            <DateInput
               value={datum}
-              onChange={guardedDateChange(setDatum)}
+              onChange={setDatum}
               className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
             />
           )}
           {filterModus === 'zeitraum' && (
             <div className="flex items-center gap-2">
-              <input
-                type="date"
+              <DateInput
                 value={datumVon}
-                onChange={guardedDateChange(setDatumVon)}
+                onChange={setDatumVon}
                 className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
               />
               <span className="text-slate-400 dark:text-slate-500 text-sm">bis</span>
-              <input
-                type="date"
+              <DateInput
                 value={datumBis}
                 min={datumVon}
-                onChange={guardedDateChange(setDatumBis)}
+                onChange={setDatumBis}
                 className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100"
               />
             </div>

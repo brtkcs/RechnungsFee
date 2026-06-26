@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DateInput } from '../../components/DateInput'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -205,7 +206,7 @@ function VorlageFormular({
       <div className={form.art === 'Ausgabe' ? 'grid grid-cols-2 gap-4' : ''}>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Nächste Fälligkeit *</label>
-          <input type="date" value={form.naechstes_datum} onChange={e => set('naechstes_datum', e.target.value)} required className={inputCls} />
+          <DateInput value={form.naechstes_datum} onChange={(v) => set('naechstes_datum', v)} required className={inputCls} />
         </div>
         {form.art === 'Ausgabe' && (
           <div>

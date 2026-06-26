@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { DateInput } from '../../components/DateInput'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -352,7 +353,7 @@ function AuftragFormular({
     <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Auftragsdatum</label>
-        <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={inputCls} />
+        <DateInput value={datum} onChange={setDatum} className={inputCls} />
       </div>
 
       <div>

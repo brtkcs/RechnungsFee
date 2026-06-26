@@ -22,7 +22,7 @@ import { ArtikelFormModal } from '../artikel/ArtikelPage'
 import { ArtikelAutocomplete } from '../../components/ArtikelAutocomplete'
 import { MailDialog } from '../../components/MailDialog'
 import { StammdatenCombobox } from '../../components/StammdatenCombobox'
-import { guardedDateChange } from '../../utils/dateInput'
+import { DateInput } from '../../components/DateInput'
 import { getKontorahmenModus, katLabel, KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
 
 // ---------------------------------------------------------------------------
@@ -631,11 +631,10 @@ function ZahlungsDialog({
           {/* Datum */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Zahlungsdatum</label>
-            <input
-              type="date"
+            <DateInput
               value={datum}
               max={new Date().toISOString().slice(0, 10)}
-              onChange={guardedDateChange(setDatum)}
+              onChange={setDatum}
               className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
@@ -2399,11 +2398,10 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Rechnungsdatum *</label>
           <div className={pfRing('datum')}>
-            <input
-              type="date"
+            <DateInput
               required
               value={datum}
-              onChange={guardedDateChange(setDatum)}
+              onChange={setDatum}
               className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
@@ -2430,31 +2428,26 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
           </div>
           {leistungZeitraum ? (
             <div className="flex items-center gap-2">
-              <input
-                type="date"
+              <DateInput
                 value={leistungVon}
-                onChange={(e) => {
-                  if (e.target.value) { setLeistungVon(e.target.value); setLeistungManuell(true) }
-                }}
+                onChange={(v) => { if (v) { setLeistungVon(v); setLeistungManuell(true) } }}
                 className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
               />
               <span className="text-slate-400 dark:text-slate-500 text-sm">–</span>
-              <input
-                type="date"
+              <DateInput
                 value={leistungBis}
                 min={leistungVon}
-                onChange={guardedDateChange(setLeistungBis)}
+                onChange={setLeistungBis}
                 className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
               />
             </div>
           ) : (
-            <input
-              type="date"
+            <DateInput
               value={leistungVon}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setLeistungVon(e.target.value)
-                  setLeistungManuell(e.target.value !== datum)
+              onChange={(v) => {
+                if (v) {
+                  setLeistungVon(v)
+                  setLeistungManuell(v !== datum)
                 }
               }}
               className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
@@ -2464,11 +2457,10 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
         {!leistungZeitraum && <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Fällig am</label>
           <div className={pfRing('faellig_am')}>
-            <input
-              type="date"
+            <DateInput
               value={faelligAm}
               min={datum}
-              onChange={guardedDateChange(setFaelligAm)}
+              onChange={setFaelligAm}
               className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
@@ -2478,11 +2470,10 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Fällig am</label>
           <div className={pfRing('faellig_am')}>
-            <input
-              type="date"
+            <DateInput
               value={faelligAm}
               min={datum}
-              onChange={guardedDateChange(setFaelligAm)}
+              onChange={setFaelligAm}
               className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
@@ -3858,27 +3849,24 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
               />
             )}
             {filterModus === 'datum' && (
-              <input
-                type="date"
+              <DateInput
                 value={datum}
-                onChange={guardedDateChange(setDatum)}
+                onChange={setDatum}
                 className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
               />
             )}
             {filterModus === 'zeitraum' && (
               <div className="flex items-center gap-2">
-                <input
-                  type="date"
+                <DateInput
                   value={datumVon}
-                  onChange={guardedDateChange(setDatumVon)}
+                  onChange={setDatumVon}
                   className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
                 />
                 <span className="text-slate-400 dark:text-slate-500 text-sm">bis</span>
-                <input
-                  type="date"
+                <DateInput
                   value={datumBis}
                   min={datumVon}
-                  onChange={guardedDateChange(setDatumBis)}
+                  onChange={setDatumBis}
                   className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100"
                 />
               </div>
@@ -4266,18 +4254,18 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Rechnungsdatum *</label>
-                <input type="date" value={srDatum} onChange={e => setSrDatum(e.target.value)} required
+                <DateInput value={srDatum} onChange={setSrDatum} required
                   className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Leistung von</label>
-                  <input type="date" value={srLeistungVon} onChange={e => setSrLeistungVon(e.target.value)}
+                  <DateInput value={srLeistungVon} onChange={setSrLeistungVon}
                     className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Leistung bis</label>
-                  <input type="date" value={srLeistungBis} onChange={e => setSrLeistungBis(e.target.value)}
+                  <DateInput value={srLeistungBis} onChange={setSrLeistungBis}
                     className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100" />
                 </div>
               </div>
