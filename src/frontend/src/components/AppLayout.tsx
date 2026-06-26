@@ -254,7 +254,7 @@ export function AppLayout() {
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
           <img src="/logo.svg" alt="RechnungsFee" className="w-8 h-8 flex-shrink-0" />
           <div>
-            <h1 className="font-bold text-lg leading-tight"><span className="text-slate-800 dark:text-slate-100">Rechnungs</span><span className="text-[#4F46E5]">Fee</span></h1>
+            <h1 className="font-bold text-lg leading-tight"><span className="text-slate-800 dark:text-white">Rechnungs</span><span className="text-[#4F46E5]">Fee</span></h1>
             <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">v{__APP_VERSION__}</p>
           </div>
         </div>
