@@ -165,7 +165,7 @@ Dieses Projekt wird offen entwickelt – die Community soll von Anfang an dabei 
 - 🐛 **Bugs melden** → [GitHub Issues](https://github.com/nicolettas-muggelbude/RechnungsFee/issues)
 - 💻 **Code beitragen** → Pull Requests sind willkommen
 - ⭐ **Stern geben** → Hilft anderen, das Projekt zu finden
-- 💙 **Spenden** → [Via PayPal unterstützen](https://www.paypal.com/ncp/payment/UYJ73YNEZ3KHL)
+- 💙 **Spenden** → [Via PayPal unterstützen](https://www.paypal.com/ncp/payment/UYJ73YNEZ3KHL) · [Weitere Wege](https://rechnungsfee.app/spenden)
 
 ---
 
@@ -216,4 +216,8 @@ RechnungsFee ist ein Software-Tool und ersetzt keine professionelle Steuerberatu
 
 <div align="center">
   <strong>Entwickelt mit ❤️ für die Freiberufler- und Selbstständigen-Community</strong>
+  <br/><br/>
+  <a href="https://rechnungsfee.app/impressum">Impressum</a> &nbsp;·&nbsp;
+  <a href="https://rechnungsfee.app/datenschutz">Datenschutz</a> &nbsp;·&nbsp;
+  <a href="https://rechnungsfee.app/spenden">Spenden</a>
 </div>
