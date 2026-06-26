@@ -1,7 +1,7 @@
 <div align="center">
   <img src="src/frontend/public/logo.svg" alt="RechnungsFee Logo" width="120"/>
 
-  # <span style="color:#1e293b">Rechnungs</span><span style="color:#4F46E5">Fee</span>
+  <img src="assets/readme-title.svg" alt="RechnungsFee" height="48"/>
 
   **Open-Source Buchhaltungssoftware für Freiberufler, Selbstständige und Kleinunternehmer**
 
