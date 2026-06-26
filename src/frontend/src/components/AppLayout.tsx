@@ -248,7 +248,13 @@ export function AppLayout() {
   const einstellungenAktiv = einstellungenPfade.some(p => location.pathname.startsWith(p))
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
+    <div
+      className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden"
+      onContextMenu={(e) => {
+        const t = e.target as HTMLElement
+        if (!t.closest('input, textarea, select, [contenteditable]')) e.preventDefault()
+      }}
+    >
       {/* Sidebar */}
       <aside className="w-56 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
