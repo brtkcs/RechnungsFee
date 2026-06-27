@@ -519,29 +519,6 @@ jobs:
         with:
           ref: web
 
-      - name: Changelog aus main synchronisieren
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: _main
-          sparse-checkout: src/frontend/src/data/changelog.ts
-          sparse-checkout-cone-mode: false
-
-      - name: Changelog kopieren
-        run: cp _main/src/frontend/src/data/changelog.ts src/data/changelog.ts
-
-      - name: Node.js einrichten
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Abhängigkeiten installieren
-        run: npm ci
-
-      - name: Website bauen
-        run: npm run build
-
       - name: GitHub Pages Artefakt hochladen
         uses: actions/upload-pages-artifact@v3
         with:
