@@ -191,6 +191,21 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 
 ---
 
+## ⌨️ Tastatursteuerung (kein fester Zeitplan)
+
+Übersicht über geplante und bereits umgesetzte Tastaturkürzel.
+
+| Kürzel | Aktion | Status |
+|--------|--------|--------|
+| Strg + F | Suchfeld auf der aktuellen Seite fokussieren | ✅ v0.3.33 |
+| Strg + Shift + E | Direkt zu Eingangsrechnungen | ✅ v0.3.26 |
+| Strg + N | Neue Rechnung / Neues Dokument anlegen (kontextabhängig) | 💡 Idee |
+| Strg + S | Speichern (im aktiven Formular) | 💡 Idee |
+| Strg + Enter | Finalisieren (Entwurf → Rechnung) | 💡 Idee |
+| Esc | Dialog / Detail-Panel schließen | 💡 Idee |
+
+---
+
 ## 💡 Ideen (ohne Zeitplan)
 
 - **Kalenderansicht** (Issue #198, Folge-Feature) – Vollständige Monatsansicht mit Buchungen, Steuerfristen und Feiertagen. Setzt Steuer-Fristenliste voraus. Größerer Scope, kein fester Zeitplan.
