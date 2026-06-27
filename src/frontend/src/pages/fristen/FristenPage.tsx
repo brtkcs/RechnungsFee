@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getFristen, type SteuerFrist, type FristenResponse } from '../../api/client'
+import { getFristen, type FristenResponse } from '../../api/client'
 
 const TYP_STYLE: Record<string, string> = {
   UStVA:     'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
