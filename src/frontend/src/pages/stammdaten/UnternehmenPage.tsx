@@ -97,7 +97,6 @@ function LogoSektion({
     mutationFn: () => deleteLogo(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unternehmen'] })
-      qc.invalidateQueries({ queryKey: ['fristen'] })
       onDeleted()
     },
     onError: (e: Error) => setFehler(e.message),
@@ -185,6 +184,7 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
     mutationFn: (d: Partial<Unternehmen>) => updateUnternehmen(d),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unternehmen'] })
+      qc.invalidateQueries({ queryKey: ['fristen'] })
       setGespeichert(true)
       setFehler(null)
       setTimeout(() => setGespeichert(false), 2500)
