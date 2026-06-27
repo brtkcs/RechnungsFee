@@ -954,6 +954,7 @@ export function ProformaPage() {
           <div className="flex flex-wrap gap-2">
             <input
               type="search"
+              data-search-input
               placeholder="Nummer oder Kunde suchen…"
               value={suche}
               onChange={e => setSuche(e.target.value)}

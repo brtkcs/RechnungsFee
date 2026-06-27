@@ -1031,6 +1031,7 @@ export function AuftraegePage() {
           <div className="flex flex-wrap gap-2">
             <input
               type="search"
+              data-search-input
               value={suche}
               onChange={e => setSuche(e.target.value)}
               placeholder="Nummer oder Kunde suchen…"

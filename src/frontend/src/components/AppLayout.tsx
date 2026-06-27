@@ -184,6 +184,22 @@ export function AppLayout() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [navigate])
+
+  // Ctrl+F → Suchfeld fokussieren (wenn vorhanden)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.shiftKey && !e.metaKey && !e.altKey && e.key === 'f') {
+        const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]')
+        if (searchInput) {
+          e.preventDefault()
+          searchInput.focus()
+          searchInput.select()
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
   const [abschlussDialog, setAbschlussDialog] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const [wiederErgebnisse, setWiederErgebnisse] = useState<EntwurfErgebnis[]>([])
