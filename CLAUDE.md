@@ -218,6 +218,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 99 | kunden_belege-Tabelle: Dokumente im Kundenstamm (Verträge, Bescheinigungen, Zertifikate) – Upload, Inline-Vorschau, Umbenennen, Löschen |
 | 100 | kunden_belege.loeschdatum DATE – DSGVO-Löschdatum pro Dokument mit Fristwarnung (rot = überfällig, gelb = ≤ 30 Tage) |
 | 101 | kategorien: SKR-Konten Erlöse korrigiert (Issue #195): USt-Erstattung FA 1779→1790/3841, VoSt-Erstattung FA 1570→1790/3841, Zuwendungen von Dritten 8910/4910→2747/4982; EÜR-Zeilen ergänzt: FA-Erstattungen →18, Eigenverbrauch →21; Eigenverbrauch (7%) SKR03 8911→8915, SKR04 4641→4610 |
+| 102 | unternehmen: bundesland VARCHAR(2), dauerfristverlaengerung_ust BOOLEAN DEFAULT 0, est_vorauszahlungen_aktiv BOOLEAN DEFAULT 0, gewst_vorauszahlungen_aktiv BOOLEAN DEFAULT 0 – Steuer-Fristenliste (Issue #198) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

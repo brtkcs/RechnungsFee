@@ -37,6 +37,7 @@ const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: Zeig
   { to: '/anlage-s', label: 'Anlage S',   icon: '📝', zeigen: ({ unt }) => unt?.taetigkeitsart !== 'gewerbe' },
   { to: '/anlage-g', label: 'Anlage G',   icon: '🏭', zeigen: ({ unt }) => unt?.taetigkeitsart === 'gewerbe' || unt?.taetigkeitsart === 'gemischt' },
   { to: '/eks',     label: 'EKS',         icon: '📋', zeigen: ({ unt }) => !!unt?.bezieht_transferleistungen },
+  { to: '/fristen', label: 'Fristen',     icon: '🗓️', zeigen: () => true },
   { to: '/exporte', label: 'Exporte', icon: '📦', zeigen: () => true },
 ]
 

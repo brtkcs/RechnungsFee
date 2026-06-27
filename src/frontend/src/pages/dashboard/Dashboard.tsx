@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, type Rechnung } from '../../api/client'
+import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, getFristen, type Rechnung } from '../../api/client'
 import { DateInput } from '../../components/DateInput'
 import { dashboardFilter } from '../../store/filterStore'
 
@@ -307,6 +307,57 @@ function KleinunternehmerWarnung() {
 }
 
 // ---------------------------------------------------------------------------
+// Steuer-Fristen-Banner
+// ---------------------------------------------------------------------------
+
+function SteuerFristenBanner() {
+  const navigate = useNavigate()
+  const { data } = useQuery({
+    queryKey: ['fristen', 3],
+    queryFn: () => getFristen(3),
+    staleTime: 1000 * 60 * 60,
+  })
+
+  if (!data || data.fristen.length === 0) return null
+
+  const naechste = data.fristen[0]
+  const heute = new Date(); heute.setHours(0, 0, 0, 0)
+  const fristDatum = new Date(naechste.faellig)
+  const tage = Math.round((fristDatum.getTime() - heute.getTime()) / 86_400_000)
+
+  const dringend = tage <= 14
+  const [d, m, y] = naechste.faellig.split('-').reverse()
+
+  return (
+    <div
+      className={`rounded-lg border p-4 mb-4 cursor-pointer ${
+        dringend
+          ? 'bg-amber-50 border-amber-300 dark:bg-amber-950 dark:border-amber-800'
+          : 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
+      }`}
+      onClick={() => navigate('/fristen')}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-xl">🗓️</span>
+        <div className="flex-1 min-w-0">
+          <p className={`font-semibold text-sm ${dringend ? 'text-amber-800 dark:text-amber-300' : 'text-blue-800 dark:text-blue-300'}`}>
+            Nächste Steuerfrist: {naechste.bezeichnung}
+          </p>
+          <p className={`text-sm ${dringend ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}>
+            Fällig am {d}.{m}.{y}
+            {tage === 0 ? ' – heute!' : tage > 0 ? ` – noch ${tage} ${tage === 1 ? 'Tag' : 'Tage'}` : ' – abgelaufen'}
+            {data.fristen.length > 1 ? ` · ${data.fristen.length - 1} weitere` : ''}
+          </p>
+        </div>
+        <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${dringend ? 'bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'}`}>
+          Alle anzeigen →
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Dashboard
 // ---------------------------------------------------------------------------
 
@@ -483,6 +534,7 @@ export function Dashboard() {
     <div className="p-6 max-w-4xl mx-auto">
       <KleinunternehmerWarnung />
       <LagerwarnungWidget />
+      <SteuerFristenBanner />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Dashboard</h2>
 

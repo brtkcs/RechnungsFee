@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.3.33',
+    datum: 'Juni 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Steuer-Fristenliste (Issue #198): Übersicht aller anstehenden UStVA-, ESt- und GewSt-Fristen für die nächsten 3/6/12 Monate – mit Feiertag-Verschiebung je nach Bundesland und Dauerfristverlängerung' },
+      { typ: 'neu', text: 'Stammdaten – Steuer & Recht: Bundesland, Dauerfristverlängerung (UStVA) sowie ESt- und GewSt-Vorauszahlungs-Toggles ergänzt' },
+      { typ: 'neu', text: 'Dashboard: Banner zeigt die nächste Steuerfrist mit Dringlichkeitsanzeige; Klick öffnet die vollständige Fristenliste' },
+    ],
+  },
+  {
     version: 'v0.3.32',
     datum: 'Juni 2026',
     eintraege: [

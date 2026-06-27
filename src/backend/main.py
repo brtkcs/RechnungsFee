@@ -31,9 +31,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api
 
-SCHEMA_VERSION = 101
+SCHEMA_VERSION = 102
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -81,6 +81,7 @@ app.include_router(anlageverzeichnis.router)
 app.include_router(datev.router)
 app.include_router(anlage_s.router)
 app.include_router(anlage_g.router)
+app.include_router(fristen_api.router)
 
 
 @app.post("/api/shutdown")
@@ -2279,6 +2280,20 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 101"))
             conn.commit()
             print("[Migration] Schema auf Version 101 (Issue #195: SKR-Konten Erlöse korrigiert, EÜR-Zeilen ergänzt)")
+
+        if version < 102:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            if "bundesland" not in cols:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN bundesland VARCHAR(2)"))
+            if "dauerfristverlaengerung_ust" not in cols:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN dauerfristverlaengerung_ust INTEGER NOT NULL DEFAULT 0"))
+            if "est_vorauszahlungen_aktiv" not in cols:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN est_vorauszahlungen_aktiv INTEGER NOT NULL DEFAULT 0"))
+            if "gewst_vorauszahlungen_aktiv" not in cols:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN gewst_vorauszahlungen_aktiv INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("PRAGMA user_version = 102"))
+            conn.commit()
+            print("[Migration] Schema auf Version 102 (unternehmen: bundesland, Steuer-Fristenliste-Felder)")
 
 
 def _migrate_kategorien() -> None:
