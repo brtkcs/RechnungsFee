@@ -501,29 +501,15 @@ jobs:
             --draft=false \
             --repo "$REPO"
 
-  # ── Website deployen (Branch: web → GitHub Pages) ────────────────────────
+  # ── Website deployen (löst website.yml auf Branch web aus) ──────────────
   deploy-web:
     needs: release-notes
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      actions: write
     steps:
-      - name: Web-Branch auschecken
-        uses: actions/checkout@v4
-        with:
-          ref: web
-
-      - name: GitHub Pages Artefakt hochladen
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-      - name: GitHub Pages deployen
-        id: deploy
-        uses: actions/deploy-pages@v4
+      - name: website.yml auf Branch web auslösen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run website.yml --repo ${{ github.repository }} --ref web
