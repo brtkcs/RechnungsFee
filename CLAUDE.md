@@ -28,6 +28,7 @@ Label **`awaiting-response`** auf ein Issue setzen → schließt sich automatisc
 
 | Kürzel | Aktion | Implementierung |
 |--------|--------|-----------------|
+| Strg + F | Suchfeld fokussieren (wenn Seite eine Suche hat) | `AppLayout.tsx` keydown-Handler → `[data-search-input]` fokussieren |
 | Strg + Shift + E | Direkt zu Eingangsrechnungen | `AppLayout.tsx` keydown-Handler → `/rechnungen?typ=eingang`; `RechnungenPage` liest `?typ=`-Parameter |
 
 ---

@@ -917,7 +917,7 @@ export function WiederkehrendePage() {
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <input type="search" placeholder="Bezeichnung oder Kunde suchen…"
+            <input type="search" data-search-input placeholder="Bezeichnung oder Kunde suchen…"
               value={suche} onChange={e => setSuche(e.target.value)}
               className="border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-slate-100 flex-1 min-w-[140px]"
             />

@@ -3875,6 +3875,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
             {/* Suche */}
             <input
               type="search"
+              data-search-input
               placeholder={lieferscheinModus ? 'Nummer, Partner oder Rechnung suchen…' : 'Nummer oder Partner suchen…'}
               value={suche}
               onChange={(e) => setSuche(e.target.value)}
