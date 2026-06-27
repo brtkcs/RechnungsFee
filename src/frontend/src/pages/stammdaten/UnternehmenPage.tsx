@@ -97,6 +97,7 @@ function LogoSektion({
     mutationFn: () => deleteLogo(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['unternehmen'] })
+      qc.invalidateQueries({ queryKey: ['fristen'] })
       onDeleted()
     },
     onError: (e: Error) => setFehler(e.message),
