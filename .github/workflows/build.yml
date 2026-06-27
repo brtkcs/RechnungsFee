@@ -501,15 +501,23 @@ jobs:
             --draft=false \
             --repo "$REPO"
 
-  # ── Website deployen (löst website.yml auf Branch web aus) ──────────────
+  # ── Website deployen (main → web mergen → löst website.yml aus) ─────────
   deploy-web:
     needs: release-notes
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
-      actions: write
+      contents: write
     steps:
-      - name: website.yml auf Branch web auslösen
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run website.yml --repo ${{ github.repository }} --ref web
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: main in web-Branch mergen und pushen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout web
+          git merge origin/main --no-edit
+          git push origin web
