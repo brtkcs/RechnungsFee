@@ -192,6 +192,10 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 
 ## 💡 Ideen (ohne Zeitplan)
 
+- **Steuer-Fristenliste** (Issue #198) – Übersicht der nächsten 90 Tage: fällige UStVA, ESt-/GewSt-Vorauszahlungen, automatische Verschiebung auf den nächsten Werktag bei Feiertagen/Wochenende; Bundesland in den Stammdaten; Toggle „Dauerfristverlängerung" pro Steuerart (verschiebt Frist um einen Monat). Bewusst als **Fristenliste** (kein Kalender) umgesetzt – schlanker Scope, kein extra UI-Framework nötig.
+
+- **Kalenderansicht** (Issue #198, Folge-Feature) – Vollständige Monatsansicht mit Buchungen, Steuerfristen und Feiertagen. Setzt Steuer-Fristenliste voraus. Größerer Scope, kein fester Zeitplan.
+
 - **Artikel-Varianten** – Varianten eines Artikels (z. B. Größe, Farbe) mit eigenem Preis und Bestand; Auswahl direkt in der Rechnungsposition (Issue #171)
 
 - **Rich-Text-Editor für Einleitungstext** – WYSIWYG-Editor (z. B. TipTap oder Quill) statt Markdown-Textarea für den Einleitungstext auf Rechnungen; aktuell: Markdown mit `**fett**`-Unterstützung im PDF
