@@ -318,7 +318,7 @@ function SteuerFristenBanner() {
     staleTime: 1000 * 60 * 60,
   })
 
-  if (!data || data.fristen.length === 0) return null
+  if (!data || !data.konfiguriert || data.fristen.length === 0) return null
 
   const naechste = data.fristen[0]
   const heute = new Date(); heute.setHours(0, 0, 0, 0)
