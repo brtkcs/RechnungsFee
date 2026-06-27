@@ -191,18 +191,41 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 
 ---
 
-## ⌨️ Tastatursteuerung (kein fester Zeitplan)
+## ⌨️ Ziel: Vollständige Tastatursteuerung (kein fester Zeitplan)
 
-Übersicht über geplante und bereits umgesetzte Tastaturkürzel.
+**Ziel:** RechnungsFee soll komplett ohne Maus bedienbar sein – von der Navigation bis zum Finalisieren einer Rechnung.
+
+### Globale Kürzel
 
 | Kürzel | Aktion | Status |
 |--------|--------|--------|
 | Strg + F | Suchfeld auf der aktuellen Seite fokussieren | ✅ v0.3.33 |
 | Strg + Shift + E | Direkt zu Eingangsrechnungen | ✅ v0.3.26 |
-| Strg + N | Neue Rechnung / Neues Dokument anlegen (kontextabhängig) | 💡 Idee |
-| Strg + S | Speichern (im aktiven Formular) | 💡 Idee |
-| Strg + Enter | Finalisieren (Entwurf → Rechnung) | 💡 Idee |
-| Esc | Dialog / Detail-Panel schließen | 💡 Idee |
+| Strg + N | Neue Rechnung / Neues Dokument anlegen (kontextabhängig) | [ ] |
+| Strg + S | Speichern (im aktiven Formular) | [ ] |
+| Strg + Enter | Finalisieren (Entwurf → Rechnung) | [ ] |
+| Esc | Dialog / Detail-Panel schließen | [ ] |
+
+### Navigation & Listen
+
+- [ ] Sidebar vollständig per Tab erreichbar; aktiver Menüpunkt per Enter öffnen
+- [ ] Listeneinträge (Rechnungen, Kunden usw.) per Pfeiltasten durchblättern; Enter öffnet Detail-Panel
+- [ ] Detail-Panel: Tab-Navigation durch alle Aktions-Buttons (Bearbeiten, Drucken, Stornieren …)
+- [ ] Tabellen-Header per Tab fokussierbar, Enter sortiert die Spalte
+
+### Formulare
+
+- [ ] Tab / Shift+Tab springt durch alle Felder in logischer Reihenfolge
+- [ ] Positionszeilen: Tab springt durch alle Spalten, Enter fügt neue Zeile hinzu
+- [ ] Datums-Felder: Pfeiltasten erhöhen/verringern Tag/Monat/Jahr
+- [ ] Dropdowns (USt-Satz, Kategorie, Zahlungsart): Pfeiltasten + Enter, kein Mausklick nötig
+- [ ] Autocomplete (Artikel, Kunde): Pfeiltasten wählen Vorschlag, Enter übernimmt
+
+### Modals & Dialoge
+
+- [ ] Focus-Trap: Tab bleibt innerhalb des offenen Dialogs
+- [ ] Esc schließt alle Dialoge (Mail, Storno, Finalisieren, …)
+- [ ] Bestätigungs-Buttons (Ja/Nein) per Enter / Leertaste auslösbar
 
 ---
 
