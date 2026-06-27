@@ -447,7 +447,13 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
 
         <hr className="border-slate-100 dark:border-slate-700" />
 
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Steuer-Fristenliste</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Steuer-Fristenliste</p>
+          {form.bundesland
+            ? <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">aktiv</span>
+            : <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">inaktiv – Bundesland wählen</span>
+          }
+        </div>
 
         <Field label={<>Bundesland <InfoTooltip text="Wird für die Berechnung der Steuerfristen benötigt – Feiertage sind bundeslandspezifisch und verschieben Abgabefristen." /></>}>
           <select
