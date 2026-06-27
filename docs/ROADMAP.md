@@ -148,6 +148,7 @@
 ### UX & Community
 - [x] Tagesabschluss-Erinnerung nur bei offenen Bar-Buchungen: Banner erscheint ausschließlich wenn Tage mit Bar-Buchungen ohne Abschluss existieren; ältestes offenes Datum wird angezeigt (Issue #194)
 - [x] Spenden-Seite: PayPal-Link, Kostenübersicht, alternative Unterstützungsmöglichkeiten; Impressum + Datenschutz auf GitHub Pages (Issue #174)
+- [x] Steuer-Fristenliste (Issue #198): Übersicht fälliger UStVA-, ESt- und GewSt-Vorauszahlungsfristen für 3/6/12 Monate; automatische Verschiebung auf nächsten Werktag je Bundesland; Dauerfristverlängerung-Toggle; Dashboard-Banner für die nächste Frist
 
 ---
 
@@ -191,8 +192,6 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 ---
 
 ## 💡 Ideen (ohne Zeitplan)
-
-- **Steuer-Fristenliste** (Issue #198) – Übersicht der nächsten 90 Tage: fällige UStVA, ESt-/GewSt-Vorauszahlungen, automatische Verschiebung auf den nächsten Werktag bei Feiertagen/Wochenende; Bundesland in den Stammdaten; Toggle „Dauerfristverlängerung" pro Steuerart (verschiebt Frist um einen Monat). Bewusst als **Fristenliste** (kein Kalender) umgesetzt – schlanker Scope, kein extra UI-Framework nötig.
 
 - **Kalenderansicht** (Issue #198, Folge-Feature) – Vollständige Monatsansicht mit Buchungen, Steuerfristen und Feiertagen. Setzt Steuer-Fristenliste voraus. Größerer Scope, kein fester Zeitplan.
 
