@@ -482,12 +482,13 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
           </select>
         </Field>
 
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-3 ${!form.bundesland ? 'opacity-40 pointer-events-none' : ''}`}>
           <input
             id="dauerfrist"
             type="checkbox"
             checked={form.dauerfristverlaengerung_ust ?? false}
             onChange={ev => set('dauerfristverlaengerung_ust', ev.target.checked)}
+            disabled={!form.bundesland}
             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
           <label htmlFor="dauerfrist" className="text-sm text-slate-700 dark:text-slate-200">
@@ -495,12 +496,13 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
           </label>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-3 ${!form.bundesland ? 'opacity-40 pointer-events-none' : ''}`}>
           <input
             id="est_vz"
             type="checkbox"
             checked={form.est_vorauszahlungen_aktiv ?? false}
             onChange={ev => set('est_vorauszahlungen_aktiv', ev.target.checked)}
+            disabled={!form.bundesland}
             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
           <label htmlFor="est_vz" className="text-sm text-slate-700 dark:text-slate-200">
@@ -508,12 +510,13 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
           </label>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-3 ${!form.bundesland ? 'opacity-40 pointer-events-none' : ''}`}>
           <input
             id="gewst_vz"
             type="checkbox"
             checked={form.gewst_vorauszahlungen_aktiv ?? false}
             onChange={ev => set('gewst_vorauszahlungen_aktiv', ev.target.checked)}
+            disabled={!form.bundesland}
             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
           <label htmlFor="gewst_vz" className="text-sm text-slate-700 dark:text-slate-200">
