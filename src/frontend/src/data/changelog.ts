@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juni 2026',
     eintraege: [
       { typ: 'fix', text: 'Sidebar: Abschnitte (Buchhaltung, Auswertung usw.) öffnen sich nicht mehr selbstständig beim App-Start – der gespeicherte Zustand wird jetzt zuverlässig beibehalten' },
+      { typ: 'verbesserung', text: 'Neues App-Logo: überarbeitet und in App-Icon, Favicon und Desktop-Icon übernommen' },
     ],
   },
   {
