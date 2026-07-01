@@ -18,3 +18,4 @@ ocrmypdf
 markdown
 cryptography
 smbprotocol
+charset-normalizer

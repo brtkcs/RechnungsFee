@@ -4,8 +4,9 @@ Startwerte für die Datenbank:
 - EU-Mitgliedsstaaten
 """
 
+import json
 from sqlalchemy.orm import Session
-from .models import Kategorie, EuLand, Nummernkreis
+from .models import Kategorie, EuLand, Nummernkreis, BankTemplate
 
 
 STANDARD_KATEGORIEN = [
@@ -190,8 +191,198 @@ def seed_ust_saetze(db: Session) -> None:
     db.commit()
 
 
+SYSTEM_BANK_TEMPLATES = [
+    {
+        "id": "sparkasse-mt940",
+        "name": "Sparkasse / LZO – MT940",
+        "bank": "Sparkasse",
+        "format": "MT940",
+        "delimiter": ";",
+        "encoding": "ISO-8859-1",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Buchungstag":                      "datum",
+            "Valutadatum":                      "valuta",
+            "Buchungstext":                     "buchungstext",
+            "Verwendungszweck":                 "verwendungszweck",
+            "Beguenstigter/Zahlungspflichtiger":"partner_name",
+            "Kontonummer/IBAN":                 "partner_iban",
+            "BLZ/BIC":                          "partner_bic",
+            "Betrag":                           "betrag",
+            "Gläubiger ID":                     "glaeubiger_id",
+            "Mandatsreferenz":                  "mandatsreferenz",
+            "Kundenreferenz":                   "kundenreferenz",
+        },
+        "erkennungs_spalten": ["Auftragskonto", "Buchungstag", "Valutadatum", "Buchungstext", "Verwendungszweck", "Betrag"],
+    },
+    {
+        "id": "sparkasse-camt",
+        "name": "Sparkasse / LZO – CAMT",
+        "bank": "Sparkasse",
+        "format": "CAMT",
+        "delimiter": ";",
+        "encoding": "UTF-8",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Buchungstag":    "datum",
+            "Wertstellung":   "valuta",
+            "Buchungstext":   "buchungstext",
+            "Verwendungszweck": "verwendungszweck",
+            "Beguenstigter/Zahlungspflichtiger": "partner_name",
+            "Kontonummer/IBAN": "partner_iban",
+            "BIC":            "partner_bic",
+            "Betrag":         "betrag",
+            "Glaeubiger ID":  "glaeubiger_id",
+            "Mandatsreferenz":"mandatsreferenz",
+        },
+        "erkennungs_spalten": ["Auftragskonto", "Buchungstag", "Wertstellung", "Verwendungszweck", "Betrag"],
+    },
+    {
+        "id": "dkb",
+        "name": "DKB – Girokonto",
+        "bank": "DKB",
+        "format": "Standard",
+        "delimiter": ";",
+        "encoding": "UTF-8",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%Y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Buchungsdatum":   "datum",
+            "Wertstellung":    "valuta",
+            "Status":          "buchungstext",
+            "Zahlungspflichtige*r": "partner_name",
+            "Zahlungsempfänger*in": "partner_name_alt",
+            "Verwendungszweck":"verwendungszweck",
+            "Glaeubiger-ID":   "glaeubiger_id",
+            "Mandatsreferenz": "mandatsreferenz",
+            "Gläubiger-ID":    "glaeubiger_id",
+            "Betrag (€)":      "betrag",
+            "Gläubiger-ID":    "glaeubiger_id",
+            "IBAN":            "partner_iban",
+        },
+        "erkennungs_spalten": ["Buchungsdatum", "Wertstellung", "Verwendungszweck", "Betrag (€)"],
+    },
+    {
+        "id": "ing",
+        "name": "ING – Girokonto",
+        "bank": "ING",
+        "format": "Standard",
+        "delimiter": ";",
+        "encoding": "ISO-8859-1",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%Y",
+        "skip_rows": 13,
+        "column_mapping": {
+            "Buchung":        "datum",
+            "Valuta":         "valuta",
+            "Auftraggeber/Empfänger": "partner_name",
+            "Buchungstext":   "buchungstext",
+            "Verwendungszweck": "verwendungszweck",
+            "Betrag":         "betrag",
+            "Glaeubiger ID":  "glaeubiger_id",
+            "Mandats ID":     "mandatsreferenz",
+            "IBAN":           "partner_iban",
+        },
+        "erkennungs_spalten": ["Buchung", "Valuta", "Auftraggeber/Empfänger", "Buchungstext", "Betrag"],
+    },
+    {
+        "id": "volksbank",
+        "name": "Volksbank / Raiffeisenbank",
+        "bank": "Volksbank",
+        "format": "Standard",
+        "delimiter": ";",
+        "encoding": "ISO-8859-1",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%Y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Buchungstag":    "datum",
+            "Valuta":         "valuta",
+            "Auftraggeber/Beguenstigter": "partner_name",
+            "Verwendungszweck": "verwendungszweck",
+            "IBAN":           "partner_iban",
+            "BIC":            "partner_bic",
+            "Betrag":         "betrag",
+            "Glaeubiger-ID":  "glaeubiger_id",
+            "Mandatsreferenz":"mandatsreferenz",
+            "Kundenreferenz": "kundenreferenz",
+        },
+        "erkennungs_spalten": ["Buchungstag", "Valuta", "Auftraggeber/Beguenstigter", "Verwendungszweck", "Betrag"],
+    },
+    {
+        "id": "commerzbank",
+        "name": "Commerzbank",
+        "bank": "Commerzbank",
+        "format": "Standard",
+        "delimiter": ";",
+        "encoding": "UTF-8",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%Y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Buchungstag":    "datum",
+            "Wertstellung":   "valuta",
+            "Buchungstext":   "buchungstext",
+            "Auftraggeber / Begünstigter": "partner_name",
+            "IBAN":           "partner_iban",
+            "BIC":            "partner_bic",
+            "Betrag":         "betrag",
+            "Währung":        "waehrung",
+            "Verwendungszweck": "verwendungszweck",
+        },
+        "erkennungs_spalten": ["Buchungstag", "Wertstellung", "Auftraggeber / Begünstigter", "Betrag", "Währung"],
+    },
+    {
+        "id": "paypal",
+        "name": "PayPal",
+        "bank": "PayPal",
+        "format": "Standard",
+        "delimiter": ",",
+        "encoding": "UTF-8",
+        "decimal_separator": ",",
+        "date_format": "%d.%m.%Y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Datum":          "datum",
+            "Uhrzeit":        "uhrzeit",
+            "Name":           "partner_name",
+            "Typ":            "buchungstext",
+            "Betreff":        "verwendungszweck",
+            "Brutto":         "betrag",
+            "Währung":        "waehrung",
+            "Transaktionscode": "referenz",
+        },
+        "erkennungs_spalten": ["Datum", "Uhrzeit", "Name", "Typ", "Währung", "Brutto", "Transaktionscode"],
+    },
+]
+
+
+def seed_bank_templates(db: Session) -> None:
+    vorhandene = {t.id for t in db.query(BankTemplate.id).all()}
+    for tpl in SYSTEM_BANK_TEMPLATES:
+        if tpl["id"] in vorhandene:
+            continue
+        tpl_copy = dict(tpl)
+        mapping = tpl_copy.pop("column_mapping")
+        erkennungs = tpl_copy.pop("erkennungs_spalten", [])
+        # erkennungs_spalten wird als Sonderkey im mapping-JSON gespeichert
+        mapping_mit_erkennungs = {"__erkennungs__": erkennungs, **mapping}
+        db.add(BankTemplate(
+            **tpl_copy,
+            column_mapping=json.dumps(mapping_mit_erkennungs, ensure_ascii=False),
+            ist_system=True,
+        ))
+    db.commit()
+
+
 def run_all_seeds(db: Session) -> None:
     seed_kategorien(db)
     seed_eu_laender(db)
     seed_nummernkreise(db)
     seed_ust_saetze(db)
+    seed_bank_templates(db)

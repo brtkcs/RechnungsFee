@@ -161,7 +161,7 @@ class KontoBase(BaseModel):
     iban: Optional[str] = None
     bic: Optional[str] = None
     kennung: Optional[str] = None   # PayPal-E-Mail, Stripe-ID etc.
-    kontotyp: str = "geschaeftlich" # geschaeftlich|mischkonto
+    kontotyp: str = "geschaeftlich" # geschaeftlich|mischkonto|privat
     ist_standard: bool = False
 
     @model_validator(mode="after")
@@ -188,8 +188,8 @@ class KontoBase(BaseModel):
     @field_validator("kontotyp")
     @classmethod
     def check_kontotyp(cls, v: str) -> str:
-        if v not in ("geschaeftlich", "mischkonto"):
-            raise ValueError("kontotyp muss 'geschaeftlich' oder 'mischkonto' sein")
+        if v not in ("geschaeftlich", "mischkonto", "privat"):
+            raise ValueError("kontotyp muss 'geschaeftlich', 'mischkonto' oder 'privat' sein")
         return v
 
 
