@@ -32,16 +32,16 @@
 
 ## Phase 1 – Fundament Backend
 
-- [ ] **1.1** `charset-normalizer` in `requirements.txt`
-- [ ] **1.2** `kontotyp` Validator in `schemas.py` um `privat` erweitern
-- [ ] **1.3** System-Templates als Python-Dicts in `seed.py` + `seed_bank_templates()`
-  - Sparkasse MT940, DKB, ING, Volksbank, PayPal, Commerzbank
-- [ ] **1.4** `api/bank_templates.py`
+- [x] **1.1** `charset-normalizer` in `requirements.txt`
+- [x] **1.2** `kontotyp` Validator in `schemas.py` um `privat` erweitern
+- [x] **1.3** System-Templates als Python-Dicts in `seed.py` + `seed_bank_templates()`
+  - Sparkasse MT940, Sparkasse CAMT, DKB, ING, Volksbank, Commerzbank, PayPal
+- [x] **1.4** `api/bank_templates.py`
   - `GET /api/bank-templates`
   - `POST /api/bank-templates` (User-Templates)
   - `PUT /api/bank-templates/{id}`
   - `DELETE /api/bank-templates/{id}` (nur User-Templates)
-- [ ] **1.5** `utils/bank_csv_parser.py`
+- [x] **1.5** `utils/bank_csv_parser.py`
   - Encoding-Erkennung (charset-normalizer)
   - Delimiter-Erkennung (`;`, `,`, `\t`)
   - Template-Matching (Match-Score gegen Header)
