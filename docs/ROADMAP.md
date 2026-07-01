@@ -156,12 +156,16 @@
 
 ## 📋 v0.4.x – Bank CSV-Import & Zahlungsabgleich
 
-- [ ] CSV-Kontoauszug-Import (Postbank, Sparkasse, Volksbank, Commerzbank)
-- [ ] Vorschau und manuelle Zuordnung vor dem Import
-- [ ] Automatischer Zahlungsabgleich: Kontoauszugzeile ↔ offene Rechnung (Betrag + Empfänger)
-- [ ] Auto-Filter-Regeln (Empfänger/Verwendungszweck → Kategorie)
-- [ ] Duplikat-Erkennung
-- [ ] Import-Protokoll (GoBD: Herkunft nachvollziehbar)
+- [x] System-Templates: Sparkasse MT940/CAMT, DKB, ING, Volksbank, Commerzbank, PayPal (v0.4.0)
+- [x] Automatische Encoding- und Format-Erkennung (charset-normalizer, kein pandas) (v0.4.0)
+- [x] Template-API: eigene Bank-Formate anlegen, bearbeiten, löschen (v0.4.0)
+- [x] CSV-Parser: Delimiter, Datum, Betrag, Duplikat-Hash-Grundlage (v0.4.0)
+- [ ] CSV-Kontoauszug-Import: Vorschau + Bestätigung (Phase 2)
+- [ ] Mischkonto-Klassifizierung: geschäftlich / privat / Privatentnahme (Phase 3)
+- [ ] Auto-Filter-Regeln (Empfänger/Verwendungszweck → Kategorie) (Phase 3)
+- [ ] Duplikat-Erkennung (Phase 2)
+- [ ] Import-Protokoll / Transaktionsliste (Phase 4)
+- [ ] Manuelle Journal-Buchung aus Transaktion – Option A (Phase 5)
 
 ---
 

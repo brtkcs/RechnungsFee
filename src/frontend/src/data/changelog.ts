@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.0',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Bank CSV-Import – Fundament: 7 System-Templates (Sparkasse MT940/CAMT, DKB, ING, Volksbank, Commerzbank, PayPal), automatische Encoding- und Format-Erkennung, Template-API für eigene Bank-Formate' },
+    ],
+  },
+  {
     version: 'v0.3.34',
     datum: 'Juni 2026',
     eintraege: [
