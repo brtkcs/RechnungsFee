@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juli 2026',
     eintraege: [
       { typ: 'neu', text: 'Bank CSV-Import – Fundament: 7 System-Templates (Sparkasse MT940/CAMT, DKB, ING, Volksbank, Commerzbank, PayPal), automatische Encoding- und Format-Erkennung, Template-API für eigene Bank-Formate' },
+      { typ: 'neu', text: 'Bank CSV-Import – Import-Backend: Vorschau-Endpoint (parst CSV ohne Speichern), Import-Endpoint (speichert bestätigte Transaktionen), Duplikat-Erkennung via SHA-256-Hash (Datum + Betrag + Partner-IBAN + Verwendungszweck)' },
     ],
   },
   {

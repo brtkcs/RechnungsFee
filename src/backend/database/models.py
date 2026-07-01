@@ -792,6 +792,7 @@ class BankTransaktion(Base):
     ist_einlage: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     auto_vorschlag: Mapped[str | None] = mapped_column(String(20))
     user_ueberschrieben: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    dedupe_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     # Zuordnung
     kategorie_id: Mapped[int | None] = mapped_column(ForeignKey("kategorien.id"))
     rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))

@@ -51,17 +51,17 @@
 
 ## Phase 2 – Import-Backend
 
-- [ ] **2.1** `api/bank_import.py`
+- [x] **2.1** `api/bank_import.py`
   - `POST /api/bank-import/vorschau` – CSV hochladen, parsen, zurückgeben (nichts speichern)
   - `POST /api/bank-import/importieren` – nach User-Bestätigung speichern
   - `GET /api/bank-import/{konto_id}` – Transaktionen eines Kontos
   - `PATCH /api/bank-import/transaktion/{id}` – Klassifizierung (Mischkonto)
-  - `DELETE /api/bank-import/{import_id}` – Import-Batch rückgängig
-- [ ] **2.2** Duplikat-Erkennung
+  - `DELETE /api/bank-import/import/{import_id}` – Import-Batch rückgängig
+- [x] **2.2** Duplikat-Erkennung
   - Neue Spalte `dedupe_hash` in `bank_transaktionen` (Migration `version < 104`)
-  - `UNIQUE (konto_id, dedupe_hash)`
+  - `UNIQUE (konto_id, dedupe_hash)` WHERE dedupe_hash IS NOT NULL
   - Hash aus `datum + betrag + partner_iban + verwendungszweck`
-- [ ] **2.3** Router in `main.py` registrieren
+- [x] **2.3** Router in `main.py` registrieren
 
 ---
 

@@ -54,7 +54,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 103` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 104` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -221,6 +221,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 101 | kategorien: SKR-Konten Erlöse korrigiert (Issue #195): USt-Erstattung FA 1779→1790/3841, VoSt-Erstattung FA 1570→1790/3841, Zuwendungen von Dritten 8910/4910→2747/4982; EÜR-Zeilen ergänzt: FA-Erstattungen →18, Eigenverbrauch →21; Eigenverbrauch (7%) SKR03 8911→8915, SKR04 4641→4610 |
 | 102 | unternehmen: bundesland VARCHAR(2), dauerfristverlaengerung_ust BOOLEAN DEFAULT 0, est_vorauszahlungen_aktiv BOOLEAN DEFAULT 0, gewst_vorauszahlungen_aktiv BOOLEAN DEFAULT 0 – Steuer-Fristenliste (Issue #198) |
 | 103 | unternehmen.guv_aktiv BOOLEAN DEFAULT 0 – GuV / §141 AO Buchführungspflicht-Schwellenwert (800.000 € Umsatz oder 80.000 € Gewinn); Dashboard-Warnung ab 80 %; auto-Aktivierung bei Überschreitung für taetigkeitsart gewerbe/gemischt |
+| 104 | bank_transaktionen.dedupe_hash TEXT + UNIQUE INDEX uix_bank_tx_hash (konto_id, dedupe_hash) WHERE NOT NULL – Duplikat-Erkennung beim Bank-CSV-Import (SHA-256 aus Datum + Betrag + Partner-IBAN + Verwendungszweck) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

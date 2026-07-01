@@ -31,9 +31,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import
 
-SCHEMA_VERSION = 103
+SCHEMA_VERSION = 104
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -84,6 +84,7 @@ app.include_router(anlage_g.router)
 app.include_router(fristen_api.router)
 app.include_router(guv.router)
 app.include_router(bank_templates.router)
+app.include_router(bank_import.router)
 
 
 @app.post("/api/shutdown")
@@ -2304,6 +2305,18 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 103"))
             conn.commit()
             print("[Migration] Schema auf Version 103 (unternehmen: guv_aktiv – GuV / §141 AO Buchführungspflicht)")
+
+        if version < 104:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(bank_transaktionen)")).fetchall()}
+            if "dedupe_hash" not in cols:
+                conn.execute(text("ALTER TABLE bank_transaktionen ADD COLUMN dedupe_hash TEXT"))
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uix_bank_tx_hash "
+                "ON bank_transaktionen (konto_id, dedupe_hash) WHERE dedupe_hash IS NOT NULL"
+            ))
+            conn.execute(text("PRAGMA user_version = 104"))
+            conn.commit()
+            print("[Migration] Schema auf Version 104 (bank_transaktionen: dedupe_hash + UNIQUE Index)")
 
 
 def _migrate_kategorien() -> None:
