@@ -34,7 +34,7 @@ type TabId = 'firma' | 'steuer' | 'rechnungen' | 'artikel' | 'email' | 'untersch
 const TABS: { id: TabId; label: string }[] = [
   { id: 'firma',        label: 'Firma' },
   { id: 'steuer',       label: 'Steuer & Recht' },
-  { id: 'rechnungen',   label: 'Rechnungen' },
+  { id: 'rechnungen',   label: 'Funktionen' },
   { id: 'artikel',      label: 'Artikel' },
   { id: 'email',        label: 'E-Mail' },
   { id: 'unterschrift', label: 'Unterschrift' },
@@ -587,25 +587,9 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
           </div>
         </label>
 
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={!!form.bank_import_aktiv}
-            onChange={ev => set('bank_import_aktiv', ev.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              Bank CSV-Import aktivieren
-            </span>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Kontoauszüge als CSV importieren (Sparkasse, DKB, ING, Volksbank, Commerzbank, PayPal). Aktiviert den Menüpunkt „Bank-Import" unter Buchhaltung.
-            </p>
-          </div>
-        </label>
       </div>
 
-      {/* ── Tab: Rechnungen ───────────────────────────────────────────── */}
+      {/* ── Tab: Funktionen ───────────────────────────────────────────── */}
       <div className={isRechnungTab ? 'space-y-6' : 'hidden'}>
 
         <div className="space-y-4">
@@ -797,6 +781,23 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
               </span>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Vorlagen für Fixkosten (Miete, Leasing, Abonnements) – Modus „Direkt" bucht sofort ins Journal, Modus „Warte auf Beleg" füllt das Eingangsrechnungs-Formular vor.
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.bank_import_aktiv}
+              onChange={ev => set('bank_import_aktiv', ev.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <div>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Bank CSV-Import aktivieren
+              </span>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Kontoauszüge als CSV importieren (Sparkasse, DKB, ING, Volksbank, Commerzbank, PayPal). Aktiviert den Menüpunkt „Bank-Import" unter Buchhaltung.
               </p>
             </div>
           </label>
