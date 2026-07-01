@@ -23,6 +23,10 @@ const buchhaltungNavBase = [
   { to: '/tagesabschluesse', label: 'Tagesabschlüsse',  icon: '📋' },
 ]
 
+const buchhaltungNavOptional: { to: string; label: string; icon: string; zeigen: (u: Unternehmen | undefined) => boolean }[] = [
+  { to: '/bank-import', label: 'Bank-Import', icon: '🏦', zeigen: (u) => !!u?.bank_import_aktiv },
+]
+
 import type { Unternehmen, ZMPruefung } from '../api/client'
 
 type NavKontext = { unt: Unternehmen | undefined; zm: ZMPruefung | undefined }
@@ -58,7 +62,7 @@ const einstellungenNav = [
   { to: '/unternehmen',      label: 'Unternehmen',       icon: '🏢' },
 ]
 
-const buchhaltungPfade   = [...buchhaltungNavBase.map(n => n.to), '/buchungsvorlagen']
+const buchhaltungPfade   = [...buchhaltungNavBase.map(n => n.to), '/buchungsvorlagen', ...buchhaltungNavOptional.map(n => n.to)]
 const auswertungAllePfade = auswertungNavAlle.map(n => n.to)
 const stammdatenPfade    = stammdatenNav.map(n => n.to)
 const einstellungenPfade = einstellungenNav.map(n => n.to)
@@ -234,6 +238,7 @@ export function AppLayout() {
   const buchhaltungNav = [
     ...buchhaltungNavBase,
     ...(untDef?.buchungsvorlagen_aktiv ? [{ to: '/buchungsvorlagen', label: 'Buchungsvorlagen', icon: '🔄' }] : []),
+    ...buchhaltungNavOptional.filter(n => n.zeigen(untDef)),
   ]
 
   const { data: faelligeBuchungen = [] } = useQuery({

@@ -99,6 +99,7 @@ class UnternehmenBase(BaseModel):
     datev_konto_karte:      Optional[str] = None
     datev_konto_paypal:     Optional[str] = None
     guv_aktiv: bool = False
+    bank_import_aktiv: bool = False
 
     @field_validator("versteuerungsart")
     @classmethod

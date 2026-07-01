@@ -80,22 +80,23 @@
 
 ## Phase 4 – Frontend
 
-- [ ] **4.1** TypeScript-Typen in `client.ts`
-  - `BankTemplate`, `BankTransaktion`, `BankImport`
-  - API-Funktionen: `getBankTemplates`, `vorschauImport`, `startImport`, `getBankTransaktionen`
-- [ ] **4.2** Aktivierung: `unternehmen.bank_import_aktiv` (neues Feld, Migration `version < 105`)
-  - Nav-Eintrag erscheint nur wenn aktiv (Pattern: GuV, Angebote etc.)
-- [ ] **4.3** Import-Dialog (Stepper, 5 Schritte):
+- [x] **4.1** TypeScript-Typen in `client.ts`
+  - `BankTemplate`, `BankTransaktion`, `BankVorschauResponse`, `BankImportResult`, `AutoFilterVorschlag`
+  - API-Funktionen: `getBankTemplates`, `vorschauBankImport`, `importiereBankTransaktionen`, `getBankTransaktionen`, `klassifiziereBankTransaktion`, `loescheBankImport`, `getBankVorschlag`
+- [x] **4.2** Aktivierung: `unternehmen.bank_import_aktiv` (Migration `version < 105`)
+  - Nav-Eintrag „Bank-Import" unter Buchhaltung erscheint nur wenn aktiv
+  - Checkbox in UnternehmenPage → Tab Steuer & Recht
+- [x] **4.3** Import-Dialog (Stepper, 5 Schritte):
   1. Konto auswählen + CSV hochladen
-  2. Erkanntes Template anzeigen / manuell wählen
-  3. Vorschau-Tabelle (Datum, Betrag, Partner, Verwendungszweck)
-     - Mischkonto: Toggle ✅ geschäftlich / ❌ privat / 💰 Privatentnahme
-     - Geschäftskonto: direkt weiter
+  2. Template: automatisch erkannt oder manuell wählbar
+  3. Vorschau-Tabelle (Datum, Betrag, Partner, Verwendungszweck, Duplikat-Markierung)
+     - Mischkonto: Hinweis auf nachträgliche Klassifizierung in Transaktionsliste
   4. Zusammenfassung (X importieren, Y ignorieren, Z Duplikate)
-  5. Bestätigen → Import
-- [ ] **4.4** Transaktionen-Liste `/bank-import`
-  - Filter: Zeitraum, Konto, Status (gebucht/offen)
-  - Button „Als Buchung übernehmen" → vorausgefülltes Journal-Formular (Option A)
+  5. Erfolgsmeldung
+- [x] **4.4** Transaktionen-Liste `/bank-import`
+  - Konto-Tabs (mehrere Konten)
+  - Tabelle: Datum, Betrag, Partner, Verwendungszweck, Klassifizierungs-Badge
+  - „Als Buchung übernehmen" folgt in Phase 5
 
 ---
 

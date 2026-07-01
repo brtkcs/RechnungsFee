@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter
 
-SCHEMA_VERSION = 104
+SCHEMA_VERSION = 105
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2318,6 +2318,14 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 104"))
             conn.commit()
             print("[Migration] Schema auf Version 104 (bank_transaktionen: dedupe_hash + UNIQUE Index)")
+
+        if version < 105:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            if "bank_import_aktiv" not in cols:
+                conn.execute(text("ALTER TABLE unternehmen ADD COLUMN bank_import_aktiv INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("PRAGMA user_version = 105"))
+            conn.commit()
+            print("[Migration] Schema auf Version 105 (unternehmen: bank_import_aktiv – Bank CSV-Import)")
 
 
 def _migrate_kategorien() -> None:

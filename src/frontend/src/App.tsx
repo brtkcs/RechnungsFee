@@ -38,6 +38,7 @@ import { BackupPage } from './pages/backup/BackupPage'
 import { InfoPage } from './pages/info/InfoPage'
 import { SpendenPage } from './pages/info/SpendenPage'
 import { FristenPage } from './pages/fristen/FristenPage'
+import { BankImportPage } from './pages/bank-import/BankImportPage'
 
 function AppRoutes() {
   const { data: status, isLoading } = useQuery({
@@ -126,6 +127,7 @@ function AppRoutes() {
           <Route path="/anlage-s" element={<AnlageSPage />} />
           <Route path="/anlage-g" element={<AnlageGPage />} />
           <Route path="/fristen" element={<FristenPage />} />
+          <Route path="/bank-import" element={<BankImportPage />} />
           <Route path="/backup" element={<BackupPage />} />
           <Route path="/info" element={<InfoPage />} />
           <Route path="/spenden" element={<SpendenPage />} />

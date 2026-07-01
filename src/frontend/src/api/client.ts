@@ -290,6 +290,7 @@ export type Unternehmen = {
   datev_konto_paypal?: string | null
   einleitungstext?: string | null
   guv_aktiv?: boolean
+  bank_import_aktiv?: boolean
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -332,7 +333,7 @@ export type Konto = {
   iban?: string
   bic?: string
   kennung?: string
-  kontotyp: 'geschaeftlich' | 'mischkonto'
+  kontotyp: 'geschaeftlich' | 'mischkonto' | 'privat'
   ist_standard: boolean
   aktiv?: boolean
   erstellt_am?: string
@@ -2150,3 +2151,130 @@ export const berechneGUV = (jahr: number) =>
 
 export const getGUVSchwellenwert = () =>
   request<GUVSchwellenwert>('/guv/schwellenwert')
+
+
+// ---------------------------------------------------------------------------
+// Bank CSV-Import
+// ---------------------------------------------------------------------------
+
+export type BankTemplate = {
+  id: string
+  name: string
+  bank: string
+  format: string
+  delimiter: string
+  encoding: string
+  decimal_separator: string
+  date_format: string
+  skip_rows: number
+  column_mapping: Record<string, string>
+  ist_system: boolean
+  autor?: string | null
+}
+
+export type BankTransaktionVorschau = {
+  datum: string
+  valuta?: string | null
+  buchungstext?: string | null
+  verwendungszweck?: string | null
+  partner_name?: string | null
+  partner_iban?: string | null
+  betrag: string
+  waehrung: string
+  saldo?: string | null
+  referenz?: string | null
+  dedupe_hash: string
+  ist_duplikat: boolean
+}
+
+export type BankVorschauResponse = {
+  erkanntes_template: string | null
+  template_name: string | null
+  encoding: string
+  transaktionen: BankTransaktionVorschau[]
+}
+
+export type BankImportResult = {
+  import_id: number
+  erfolg: number
+  duplikate: number
+  fehler: number
+}
+
+export type BankTransaktion = {
+  id: number
+  import_id: number
+  konto_id: number
+  datum: string
+  valuta?: string | null
+  buchungstext?: string | null
+  verwendungszweck?: string | null
+  partner_name?: string | null
+  partner_iban?: string | null
+  betrag: string
+  waehrung: string
+  saldo?: string | null
+  ist_geschaeftlich: boolean
+  ist_privatentnahme: boolean
+  ist_einlage: boolean
+  auto_vorschlag?: string | null
+  user_ueberschrieben: boolean
+  kategorie_id?: number | null
+  dedupe_hash?: string | null
+}
+
+export type AutoFilterVorschlag = {
+  vorschlag: string | null
+  kategorie_id: number | null
+  quelle: string | null
+}
+
+export const getBankTemplates = () =>
+  request<BankTemplate[]>('/bank-templates')
+
+export async function vorschauBankImport(
+  datei: File,
+  kontoId: number,
+  templateId?: string,
+): Promise<BankVorschauResponse> {
+  const base = await getBaseUrl()
+  const form = new FormData()
+  form.append('datei', datei)
+  form.append('konto_id', String(kontoId))
+  if (templateId) form.append('template_id', templateId)
+  const res = await fetch(`${base}/bank-import/vorschau`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail ?? `Fehler ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function importiereBankTransaktionen(payload: {
+  konto_id: number
+  template_id: string
+  dateiname: string
+  transaktionen: BankTransaktionVorschau[]
+}): Promise<BankImportResult> {
+  return request<BankImportResult>('/bank-import/importieren', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export const getBankTransaktionen = (kontoId: number, limit = 200, offset = 0) =>
+  request<BankTransaktion[]>(`/bank-import/${kontoId}?limit=${limit}&offset=${offset}`)
+
+export const klassifiziereBankTransaktion = (
+  txId: number,
+  data: { ist_geschaeftlich: boolean; ist_privatentnahme: boolean; ist_einlage: boolean; kategorie_id?: number | null },
+) => request<BankTransaktion>(`/bank-import/transaktion/${txId}`, { method: 'PATCH', body: JSON.stringify(data) })
+
+export const loescheBankImport = (importId: number) =>
+  request<void>(`/bank-import/import/${importId}`, { method: 'DELETE' })
+
+export const getBankVorschlag = (data: {
+  partner_name?: string | null
+  verwendungszweck?: string | null
+  betrag?: number | null
+}) => request<AutoFilterVorschlag>('/auto-filter/vorschlag', { method: 'POST', body: JSON.stringify(data) })

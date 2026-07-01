@@ -54,7 +54,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 104` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 105` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -222,6 +222,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 102 | unternehmen: bundesland VARCHAR(2), dauerfristverlaengerung_ust BOOLEAN DEFAULT 0, est_vorauszahlungen_aktiv BOOLEAN DEFAULT 0, gewst_vorauszahlungen_aktiv BOOLEAN DEFAULT 0 – Steuer-Fristenliste (Issue #198) |
 | 103 | unternehmen.guv_aktiv BOOLEAN DEFAULT 0 – GuV / §141 AO Buchführungspflicht-Schwellenwert (800.000 € Umsatz oder 80.000 € Gewinn); Dashboard-Warnung ab 80 %; auto-Aktivierung bei Überschreitung für taetigkeitsart gewerbe/gemischt |
 | 104 | bank_transaktionen.dedupe_hash TEXT + UNIQUE INDEX uix_bank_tx_hash (konto_id, dedupe_hash) WHERE NOT NULL – Duplikat-Erkennung beim Bank-CSV-Import (SHA-256 aus Datum + Betrag + Partner-IBAN + Verwendungszweck) |
+| 105 | unternehmen.bank_import_aktiv BOOLEAN DEFAULT 0 – Bank CSV-Import aktivieren (Nav-Eintrag sichtbar) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
