@@ -179,9 +179,14 @@ def _betrag_match(rechnung: Rechnung, tx_betrag: Decimal) -> bool:
 
 
 def _nummer_match(rechnung: Rechnung, verwendungszweck: str | None) -> bool:
-    if not rechnung.rechnungsnummer or not verwendungszweck:
+    if not verwendungszweck:
         return False
-    return rechnung.rechnungsnummer.upper() in verwendungszweck.upper()
+    vwz = verwendungszweck.upper()
+    if rechnung.rechnungsnummer and rechnung.rechnungsnummer.upper() in vwz:
+        return True
+    if rechnung.externe_belegnr and rechnung.externe_belegnr.upper() in vwz:
+        return True
+    return False
 
 
 def _name_match(partner_rechnung: str, partner_tx: str | None) -> bool:

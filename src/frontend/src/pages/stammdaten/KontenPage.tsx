@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -60,6 +61,11 @@ function defaultValues(konto: Konto | null): FormValues {
   }
 }
 
+function defaultValuesWithIban(iban: string): FormValues {
+  return { kontoart: 'bank', name: '', anbieter: '', iban, bic: '',
+    kennung: '', kontotyp: 'geschaeftlich', ist_standard: false, datev_kontonummer: '' }
+}
+
 function formatIban(iban: string) {
   return iban.replace(/(.{4})/g, '$1 ').trim()
 }
@@ -68,11 +74,11 @@ function formatIban(iban: string) {
 // Modal
 // ---------------------------------------------------------------------------
 
-function KontoModal({ konto, onClose }: { konto: Konto | null; onClose: () => void }) {
+function KontoModal({ konto, initialIban, onClose }: { konto: Konto | null; initialIban?: string; onClose: () => void }) {
   const qc = useQueryClient()
   const { register, handleSubmit, control, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: defaultValues(konto),
+    defaultValues: konto ? defaultValues(konto) : initialIban ? defaultValuesWithIban(initialIban) : defaultValues(null),
   })
   const kontoart = useWatch({ control, name: 'kontoart' })
 
@@ -233,8 +239,15 @@ function KontoModal({ konto, onClose }: { konto: Konto | null; onClose: () => vo
 export function KontenPage() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<'neu' | Konto | null>(null)
+  const [initialIban, setInitialIban] = useState<string | undefined>()
   const [zuLoeschen, setZuLoeschen] = useState<Konto | null>(null)
   const [loeschFehler, setLoeschFehler] = useState<string | null>(null)
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    const iban = searchParams.get('iban')
+    if (iban) { setInitialIban(iban); setModal('neu') }
+  }, [])
 
   const { data: konten = [], isLoading } = useQuery({
     queryKey: ['konten'],
@@ -350,7 +363,8 @@ export function KontenPage() {
       {modal !== null && (
         <KontoModal
           konto={modal === 'neu' ? null : modal}
-          onClose={() => setModal(null)}
+          initialIban={modal === 'neu' ? initialIban : undefined}
+          onClose={() => { setModal(null); setInitialIban(undefined) }}
         />
       )}
 

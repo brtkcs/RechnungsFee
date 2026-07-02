@@ -263,7 +263,7 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { onClose(); navigate('/einstellungen/konten') }}
+                      onClick={() => { navigate(`/konten?iban=${encodeURIComponent(analyseStatus.iban)}`); onClose() }}
                       className="flex-1 px-3 py-2 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
                     >
                       Ja, Konto anlegen
