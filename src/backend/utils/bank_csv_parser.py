@@ -8,9 +8,13 @@ Gibt list[dict] zurück – kein SQLAlchemy-Bezug.
 import csv
 import io
 import json
+import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Optional
+
+# IBAN-Muster: Länderkürzel + 2 Prüfziffern + 10–30 alphanumerische Zeichen (Leerzeichen erlaubt)
+_IBAN_RE = re.compile(r'[A-Z]{2}\d{2}(?:\s?[0-9A-Z]{4}){3,7}')
 
 from charset_normalizer import from_bytes
 
@@ -173,6 +177,23 @@ def parse_csv(
             ergebnis.append(tx)
 
     return ergebnis
+
+
+def extract_konto_iban(raw: bytes, template) -> Optional[str]:
+    """
+    Sucht in den übersprungenen Header-Zeilen (skip_rows) nach der eigenen Konto-IBAN.
+    Gibt die IBAN ohne Leerzeichen zurück oder None.
+    """
+    enc = detect_encoding(raw)
+    text = raw.decode(enc, errors="replace")
+    n = max(getattr(template, "skip_rows", 0), 1)
+    header_text = "\n".join(text.splitlines()[:n + 2])
+    match = _IBAN_RE.search(header_text)
+    if match:
+        iban = match.group(0).replace(" ", "")
+        if len(iban) >= 15:
+            return iban
+    return None
 
 
 def parse_csv_mit_template(raw: bytes, template) -> tuple[list[dict], str]:

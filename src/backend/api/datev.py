@@ -22,7 +22,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Journaleintrag, Kategorie, Rechnung, Unternehmen
+from database.models import Journaleintrag, Kategorie, Konto, Rechnung, Unternehmen
 
 router = APIRouter(prefix="/api/datev", tags=["DATEV"])
 
@@ -145,19 +145,25 @@ def _bu(j: Journaleintrag, skr: str, konto: Optional[str], db: Optional[Session]
     return ""
 
 
-def _gegenkonto(j: Journaleintrag, unt: Unternehmen) -> Optional[str]:
+def _gegenkonto(j: Journaleintrag, unt: Unternehmen, db: Optional[Session] = None) -> Optional[str]:
+    za = j.zahlungsart
+    if za == "Keine":
+        return None
+    if za == "Skonto":
+        za = "Bank"
+
+    # Bankkonto mit eigener DATEV-Kontonummer hat Vorrang vor globalem datev_konto_bank
+    if za == "Bank" and j.konto_id and db is not None:
+        konto = db.query(Konto).filter(Konto.id == j.konto_id).first()
+        if konto and konto.datev_kontonummer:
+            return konto.datev_kontonummer
+
     konfig = {
         "Bar":    unt.datev_konto_bar,
         "Bank":   unt.datev_konto_bank,
         "Karte":  unt.datev_konto_karte,
         "PayPal": unt.datev_konto_paypal,
     }
-    za = j.zahlungsart
-    if za == "Keine":
-        return None
-    # Skonto hat keinen eigenen Kassenkontext → Bank als Gegenkonto
-    if za == "Skonto":
-        za = "Bank"
     d = _DEFAULTS.get(unt.kontenrahmen, _DEFAULTS["SKR04"])
     return konfig.get(za) or d.get(za)
 
@@ -262,7 +268,7 @@ def datev_buchungsstapel(
 
     for j in eintraege:
         konto = _sachkonto(j, skr, db)
-        gegenkonto = _gegenkonto(j, unt)
+        gegenkonto = _gegenkonto(j, unt, db)
 
         if not gegenkonto:
             # zahlungsart='Keine' → kein Zahlungskonto, Buchung nicht exportierbar

@@ -158,6 +158,7 @@ class Konto(Base):
     kennung: Mapped[str | None] = mapped_column(String(200))                 # PayPal-E-Mail, Stripe-ID etc.
     kontotyp: Mapped[str] = mapped_column(String(20), default="geschaeftlich", nullable=False)  # geschaeftlich|mischkonto
     ist_standard: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    datev_kontonummer: Mapped[str | None] = mapped_column(String(8))  # individuelles DATEV-Gegenkonto (z.B. 1200, 1210)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -251,6 +252,7 @@ class Journaleintrag(Base):
     rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))
     beleg_id: Mapped[int | None] = mapped_column(ForeignKey("belege.id"))
     buchungsvorlage_id: Mapped[int | None] = mapped_column(ForeignKey("buchungsvorlagen.id"))
+    konto_id: Mapped[int | None] = mapped_column(ForeignKey("konten.id", ondelete="SET NULL"))  # Bankkonto (für DATEV Gegenkonto per Konto)
     # Kontonummern-Snapshot (aus Kategorie zum Buchungszeitpunkt – unveränderbar)
     konto_skr03: Mapped[str | None] = mapped_column(String(10))
     konto_skr04: Mapped[str | None] = mapped_column(String(10))
@@ -580,6 +582,7 @@ class Rechnung(Base):
     ist_entwurf: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     immutable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     storniert: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ueberzahlung_anerkannt: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     storno_grund: Mapped[str | None] = mapped_column(String(500))
     storno_datum: Mapped[date | None] = mapped_column(Date, nullable=True)
     storno_rechnungsnummer: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -798,6 +801,7 @@ class BankTransaktion(Base):
     # Zuordnung
     kategorie_id: Mapped[int | None] = mapped_column(ForeignKey("kategorien.id"))
     rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id"))
+    journal_id: Mapped[int | None] = mapped_column(ForeignKey("journal.id", ondelete="SET NULL"))
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     konto: Mapped["Konto"] = relationship(back_populates="transaktionen")
@@ -816,6 +820,29 @@ class AutoFilterRegel(Base):
     kategorie_id: Mapped[int | None] = mapped_column(ForeignKey("kategorien.id"))
     prioritaet: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     aktiv: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Forderung(Base):
+    """Offene Verrechnungsposten – Fundament für Forderungsmanagement."""
+    __tablename__ = "forderungen"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    typ: Mapped[str] = mapped_column(String(50), default="lieferantenguthaben", nullable=False)
+    # offen | ausgeglichen | ausgebucht
+    status: Mapped[str] = mapped_column(String(20), default="offen", nullable=False)
+    betrag: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    waehrung: Mapped[str] = mapped_column(String(3), default="EUR", nullable=False)
+    faellig_am: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # partner_typ: lieferant | kunde (kein FK-Constraint für Flexibilität)
+    partner_typ: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    partner_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rechnung_id: Mapped[int | None] = mapped_column(ForeignKey("rechnungen.id", ondelete="SET NULL"), nullable=True)
+    # journal_id: Buchung die den Posten erzeugt hat
+    journal_id: Mapped[int | None] = mapped_column(ForeignKey("journal.id", ondelete="SET NULL"), nullable=True)
+    # ausgleich_journal_id: gesetzt bei Ausgleich oder Ausbuchen
+    ausgleich_journal_id: Mapped[int | None] = mapped_column(ForeignKey("journal.id", ondelete="SET NULL"), nullable=True)
+    notiz: Mapped[str | None] = mapped_column(Text, nullable=True)
     erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

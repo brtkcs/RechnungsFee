@@ -291,6 +291,7 @@ export type Unternehmen = {
   einleitungstext?: string | null
   guv_aktiv?: boolean
   bank_import_aktiv?: boolean
+  bank_import_manuell?: boolean
 }
 export const getUnternehmen = () => request<Unternehmen | null>('/unternehmen')
 export const createUnternehmen = (data: Unternehmen) =>
@@ -335,6 +336,7 @@ export type Konto = {
   kennung?: string
   kontotyp: 'geschaeftlich' | 'mischkonto' | 'privat'
   ist_standard: boolean
+  datev_kontonummer?: string | null
   aktiv?: boolean
   erstellt_am?: string
 }
@@ -1322,6 +1324,9 @@ export const lieferscheinAusRechnung = (rechnungId: number) =>
 
 export const getOffeneRechnungen = () => request<Rechnung[]>('/rechnungen/offene')
 export const getFaelligeRechnungen = (tage = 7) => request<Rechnung[]>(`/rechnungen/faellig?tage=${tage}`)
+export const getUeberzahlungen = () => request<Rechnung[]>('/rechnungen/ueberzahlungen')
+export const ueberzahlungAnerkennen = (rechnungId: number) =>
+  request<Rechnung>(`/rechnungen/${rechnungId}/ueberzahlung-anerkannt`, { method: 'PATCH' })
 
 // ---------------------------------------------------------------------------
 // Dokumentenpakete
@@ -2191,6 +2196,8 @@ export type BankVorschauResponse = {
   erkanntes_template: string | null
   template_name: string | null
   encoding: string
+  konto_iban: string | null
+  erkanntes_konto_id: number | null
   transaktionen: BankTransaktionVorschau[]
 }
 
@@ -2199,6 +2206,13 @@ export type BankImportResult = {
   erfolg: number
   duplikate: number
   fehler: number
+}
+
+export type RechnungKurzinfo = {
+  rechnungsnummer: string
+  partner: string
+  brutto_gesamt: string
+  gebuchter_betrag: string
 }
 
 export type BankTransaktion = {
@@ -2220,7 +2234,24 @@ export type BankTransaktion = {
   auto_vorschlag?: string | null
   user_ueberschrieben: boolean
   kategorie_id?: number | null
+  rechnung_id?: number | null
+  journal_id?: number | null
+  forderung_id?: number | null
   dedupe_hash?: string | null
+  rechnung_info?: RechnungKurzinfo | null
+}
+
+export type BankAbgleichVorschlag = {
+  rechnung_id: number
+  rechnungsnummer: string
+  partner: string
+  datum: string
+  brutto_gesamt: string
+  restbetrag: string
+  score: number
+  betrag_match: boolean
+  nummer_match: boolean
+  name_match: boolean
 }
 
 export type AutoFilterVorschlag = {
@@ -2234,13 +2265,13 @@ export const getBankTemplates = () =>
 
 export async function vorschauBankImport(
   datei: File,
-  kontoId: number,
+  kontoId?: number,
   templateId?: string,
 ): Promise<BankVorschauResponse> {
   const base = await getBaseUrl()
   const form = new FormData()
   form.append('datei', datei)
-  form.append('konto_id', String(kontoId))
+  if (kontoId != null) form.append('konto_id', String(kontoId))
   if (templateId) form.append('template_id', templateId)
   const res = await fetch(`${base}/bank-import/vorschau`, { method: 'POST', body: form })
   if (!res.ok) {
@@ -2265,6 +2296,16 @@ export async function importiereBankTransaktionen(payload: {
 export const getBankTransaktionen = (kontoId: number, limit = 200, offset = 0) =>
   request<BankTransaktion[]>(`/bank-import/${kontoId}?limit=${limit}&offset=${offset}`)
 
+export type AutoBuchenResult = {
+  gebucht: number
+  offen: number
+  forderungen: number
+  fehler: number
+}
+
+export const autoBuchen = (kontoId: number) =>
+  request<AutoBuchenResult>(`/bank-import/${kontoId}/auto-buchen`, { method: 'POST' })
+
 export const klassifiziereBankTransaktion = (
   txId: number,
   data: { ist_geschaeftlich: boolean; ist_privatentnahme: boolean; ist_einlage: boolean; kategorie_id?: number | null },
@@ -2272,6 +2313,73 @@ export const klassifiziereBankTransaktion = (
 
 export const loescheBankImport = (importId: number) =>
   request<void>(`/bank-import/import/${importId}`, { method: 'DELETE' })
+
+export const abgleichTransaktion = (txId: number) =>
+  request<BankAbgleichVorschlag[]>(`/bank-import/transaktion/${txId}/abgleich`)
+
+export const bucheTransaktion = (
+  txId: number,
+  rechnungId: number | null = null,
+  betragZuBuchen?: number,
+) =>
+  request<BankTransaktion>(`/bank-import/transaktion/${txId}/buchen`, {
+    method: 'POST',
+    body: JSON.stringify({ rechnung_id: rechnungId, betrag_zu_buchen: betragZuBuchen ?? null }),
+  })
+
+// ---------------------------------------------------------------------------
+// Forderungen
+// ---------------------------------------------------------------------------
+
+export type Forderung = {
+  id: number
+  typ: string
+  status: string  // offen | ausgeglichen | ausgebucht
+  betrag: string
+  waehrung: string
+  faellig_am?: string | null
+  partner_typ?: string | null
+  partner_id?: number | null
+  rechnung_id?: number | null
+  journal_id?: number | null
+  ausgleich_journal_id?: number | null
+  notiz?: string | null
+  erstellt_am: string
+}
+
+export const getOffeneForderungen = () =>
+  request<Forderung[]>('/forderungen/offen')
+
+export const getKundenguthaben = (kundeId: number) =>
+  request<Forderung[]>(`/forderungen/offen?kunde_id=${kundeId}`)
+
+export const forderungVerrechnen = (forderungId: number, rechnungId: number) =>
+  request<Forderung>(`/forderungen/${forderungId}/verrechnen`, {
+    method: 'POST',
+    body: JSON.stringify({ rechnung_id: rechnungId }),
+  })
+
+export const createForderung = (data: {
+  typ?: string
+  betrag: number
+  partner_typ?: string
+  partner_id?: number
+  rechnung_id?: number
+  journal_id?: number
+  notiz?: string
+}) => request<Forderung>('/forderungen', { method: 'POST', body: JSON.stringify(data) })
+
+export const forderungAusgleichen = (forderungId: number, journalId: number) =>
+  request<Forderung>(`/forderungen/${forderungId}/ausgleichen`, {
+    method: 'PATCH',
+    body: JSON.stringify({ journal_id: journalId }),
+  })
+
+export const forderungAusbuchen = (forderungId: number, kategorieId: number, notiz?: string) =>
+  request<Forderung>(`/forderungen/${forderungId}/ausbuchen`, {
+    method: 'PATCH',
+    body: JSON.stringify({ kategorie_id: kategorieId, notiz }),
+  })
 
 export const getBankVorschlag = (data: {
   partner_name?: string | null

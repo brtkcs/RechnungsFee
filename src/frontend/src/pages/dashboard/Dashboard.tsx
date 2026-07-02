@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, getFristen, getGUVSchwellenwert, type Rechnung } from '../../api/client'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { getJournal, getUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, getFristen, getGUVSchwellenwert, getUeberzahlungen, ueberzahlungAnerkennen, getOffeneForderungen, forderungAusbuchen, getKategorien, type Rechnung, type Forderung } from '../../api/client'
 import { DateInput } from '../../components/DateInput'
 import { dashboardFilter } from '../../store/filterStore'
 
@@ -204,6 +204,197 @@ function ZuflussMonitor({
       <p className="text-[10px] text-slate-400 dark:text-slate-500">
         § 11b Abs. 2 SGB II: 0–100 € frei · 100–1.000 € → 20 % Freibetrag · 1.000–1.200 € → 10 % Freibetrag · darüber volle Anrechnung. Kein Ersatz für Rechtsberatung.
       </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Überzahlungs-Widget
+// ---------------------------------------------------------------------------
+
+function UeberzahlungWidget() {
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const { data: rechnungen } = useQuery({
+    queryKey: ['ueberzahlungen'],
+    queryFn: getUeberzahlungen,
+    staleTime: 1000 * 60 * 5,
+  })
+  const anerkenneMut = useMutation({
+    mutationFn: (id: number) => ueberzahlungAnerkennen(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ueberzahlungen'] }),
+  })
+
+  if (!rechnungen || rechnungen.length === 0) return null
+
+  const fmt = (v: string | number) =>
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
+      typeof v === 'string' ? parseFloat(v) : v
+    )
+
+  return (
+    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+          {rechnungen.length === 1 ? '1 offene Überzahlung' : `${rechnungen.length} offene Überzahlungen`}
+        </p>
+        <span className="text-xs text-amber-600 dark:text-amber-400">Gutschrift erforderlich</span>
+      </div>
+      <div className="space-y-2">
+        {rechnungen.map(r => {
+          const ueberzahlung = parseFloat(r.bezahlt_betrag) - parseFloat(r.brutto_gesamt)
+          return (
+            <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
+              <div className="min-w-0">
+                <button
+                  onClick={() => navigate(`/rechnungen/${r.id}`)}
+                  className="font-medium text-amber-800 dark:text-amber-300 hover:underline truncate block"
+                >
+                  {r.rechnungsnummer}
+                </button>
+                <span className="text-amber-700 dark:text-amber-400 truncate block">
+                  +{fmt(ueberzahlung)} zu viel erhalten
+                </span>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <button
+                  onClick={() => navigate(`/rechnungen/${r.id}`)}
+                  className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap"
+                >
+                  Gutschrift →
+                </button>
+                <button
+                  onClick={() => anerkenneMut.mutate(r.id)}
+                  disabled={anerkenneMut.isPending}
+                  className="px-2 py-1 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 rounded hover:bg-amber-100 dark:hover:bg-amber-900/50 whitespace-nowrap disabled:opacity-40"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Lieferantenguthaben-Widget (offene Verrechnungsposten)
+// ---------------------------------------------------------------------------
+
+function LieferantenguthabenWidget() {
+  const qc = useQueryClient()
+  const [ausbuchenId, setAusbuchenId] = useState<number | null>(null)
+  const [kategorieId, setKategorieId] = useState<string>('')
+  const [notiz, setNotiz] = useState('')
+
+  const { data: forderungen } = useQuery({
+    queryKey: ['forderungen', 'offen'],
+    queryFn: getOffeneForderungen,
+    staleTime: 1000 * 60 * 5,
+    select: (list) => list.filter((f: Forderung) => f.typ === 'lieferantenguthaben' || f.typ === 'kundenguthaben'),
+  })
+  const { data: kategorien } = useQuery({
+    queryKey: ['kategorien'],
+    queryFn: () => getKategorien(true),
+    enabled: ausbuchenId !== null,
+  })
+  const ausbuchenMut = useMutation({
+    mutationFn: ({ id, katId, n }: { id: number; katId: number; n: string }) =>
+      forderungAusbuchen(id, katId, n || undefined),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['forderungen'] })
+      setAusbuchenId(null)
+      setKategorieId('')
+      setNotiz('')
+    },
+  })
+
+  if (!forderungen || forderungen.length === 0) return null
+
+  const fmt = (v: string | number) =>
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
+      typeof v === 'string' ? parseFloat(v) : v
+    )
+
+  const ausgabeKats = kategorien?.filter((k: { art: string }) => k.art === 'Ausgabe') ?? []
+
+  return (
+    <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+          {forderungen.length === 1
+            ? '1 offenes Guthaben'
+            : `${forderungen.length} offene Guthaben`}
+        </p>
+        <span className="text-xs text-orange-600 dark:text-orange-400">Rücküberweisung ausstehend</span>
+      </div>
+      <div className="space-y-2">
+        {forderungen.map((f: Forderung) => (
+          <div key={f.id}>
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-orange-800 dark:text-orange-300">
+                    {fmt(f.betrag)}
+                  </span>
+                  <span className="text-[10px] bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded px-1">
+                    {f.typ === 'kundenguthaben' ? 'Kunde' : 'Lieferant'}
+                  </span>
+                </div>
+                {f.notiz && (
+                  <span className="text-orange-700 dark:text-orange-400 block truncate">{f.notiz}</span>
+                )}
+              </div>
+              <button
+                onClick={() => { setAusbuchenId(f.id); setKategorieId(''); setNotiz('') }}
+                className="px-2 py-1 border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400 rounded hover:bg-orange-100 dark:hover:bg-orange-900/50 whitespace-nowrap shrink-0"
+              >
+                Ausbuchen
+              </button>
+            </div>
+            {ausbuchenId === f.id && (
+              <div className="mt-2 p-3 bg-white dark:bg-zinc-800 rounded-lg border border-orange-200 dark:border-orange-700 space-y-2">
+                <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                  Forderungsausfall buchen ({fmt(f.betrag)})
+                </p>
+                <select
+                  value={kategorieId}
+                  onChange={e => setKategorieId(e.target.value)}
+                  className="w-full text-xs border rounded p-1.5 bg-white dark:bg-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+                >
+                  <option value="">Kategorie wählen …</option>
+                  {ausgabeKats.map((k: { id: number; name: string }) => (
+                    <option key={k.id} value={k.id}>{k.name}</option>
+                  ))}
+                </select>
+                <input
+                  value={notiz}
+                  onChange={e => setNotiz(e.target.value)}
+                  placeholder="Notiz (optional)"
+                  className="w-full text-xs border rounded p-1.5 bg-white dark:bg-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => ausbuchenMut.mutate({ id: f.id, katId: Number(kategorieId), n: notiz })}
+                    disabled={!kategorieId || ausbuchenMut.isPending}
+                    className="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 disabled:opacity-40"
+                  >
+                    Buchen & schließen
+                  </button>
+                  <button
+                    onClick={() => setAusbuchenId(null)}
+                    className="px-3 py-1 border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-400 rounded text-xs hover:bg-zinc-50 dark:hover:bg-zinc-700"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -593,6 +784,8 @@ export function Dashboard() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <BuchfuehrungspflichtWarnung />
+      <UeberzahlungWidget />
+      <LieferantenguthabenWidget />
       <KleinunternehmerWarnung />
       <LagerwarnungWidget />
       <SteuerFristenBanner />

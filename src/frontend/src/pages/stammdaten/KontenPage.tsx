@@ -17,42 +17,46 @@ const KONTOTYPEN: Record<Konto['kontotyp'], string> = {
 
 const schema = z.discriminatedUnion('kontoart', [
   z.object({
-    kontoart:     z.literal('bank'),
-    name:         z.string().min(1, 'Name erforderlich'),
-    anbieter:     z.string().min(1, 'Bank erforderlich'),
-    iban:         z.string().min(15, 'IBAN zu kurz').max(34, 'IBAN zu lang'),
-    bic:          z.string().optional().or(z.literal('')),
-    kennung:      z.string().optional(),
-    kontotyp:     z.enum(['geschaeftlich', 'mischkonto']),
-    ist_standard: z.boolean(),
+    kontoart:          z.literal('bank'),
+    name:              z.string().min(1, 'Name erforderlich'),
+    anbieter:          z.string().min(1, 'Bank erforderlich'),
+    iban:              z.string().min(15, 'IBAN zu kurz').max(34, 'IBAN zu lang'),
+    bic:               z.string().optional().or(z.literal('')),
+    kennung:           z.string().optional(),
+    kontotyp:          z.enum(['geschaeftlich', 'mischkonto']),
+    ist_standard:      z.boolean(),
+    datev_kontonummer: z.string().optional().or(z.literal('')),
   }),
   z.object({
-    kontoart:     z.literal('zahlungsdienstleister'),
-    name:         z.string().min(1, 'Name erforderlich'),
-    anbieter:     z.string().min(1, 'Anbieter erforderlich'),
-    iban:         z.string().optional(),
-    bic:          z.string().optional(),
-    kennung:      z.string().min(1, 'Kennung erforderlich (z.B. E-Mail-Adresse)'),
-    kontotyp:     z.enum(['geschaeftlich', 'mischkonto']),
-    ist_standard: z.boolean(),
+    kontoart:          z.literal('zahlungsdienstleister'),
+    name:              z.string().min(1, 'Name erforderlich'),
+    anbieter:          z.string().min(1, 'Anbieter erforderlich'),
+    iban:              z.string().optional(),
+    bic:               z.string().optional(),
+    kennung:           z.string().min(1, 'Kennung erforderlich (z.B. E-Mail-Adresse)'),
+    kontotyp:          z.enum(['geschaeftlich', 'mischkonto']),
+    ist_standard:      z.boolean(),
+    datev_kontonummer: z.string().optional().or(z.literal('')),
   }),
 ])
 type FormValues = z.infer<typeof schema>
 
 function defaultValues(konto: Konto | null): FormValues {
   if (konto) return {
-    kontoart:     konto.kontoart,
-    name:         konto.name,
-    anbieter:     konto.anbieter,
-    iban:         konto.iban ?? '',
-    bic:          konto.bic ?? '',
-    kennung:      konto.kennung ?? '',
-    kontotyp:     konto.kontotyp,
-    ist_standard: konto.ist_standard,
+    kontoart:          konto.kontoart,
+    name:              konto.name,
+    anbieter:          konto.anbieter,
+    iban:              konto.iban ?? '',
+    bic:               konto.bic ?? '',
+    kennung:           konto.kennung ?? '',
+    kontotyp:          konto.kontotyp,
+    ist_standard:      konto.ist_standard,
+    datev_kontonummer: konto.datev_kontonummer ?? '',
   }
   return {
     kontoart: 'bank', name: '', anbieter: '', iban: '', bic: '',
     kennung: '', kontotyp: 'geschaeftlich', ist_standard: false,
+    datev_kontonummer: '',
   }
 }
 
@@ -87,9 +91,10 @@ function KontoModal({ konto, onClose }: { konto: Konto | null; onClose: () => vo
   function onSubmit(data: FormValues) {
     const payload = {
       ...data,
-      bic:     data.bic     || undefined,
-      kennung: data.kennung || undefined,
-      iban:    data.iban    || undefined,
+      bic:               data.bic               || undefined,
+      kennung:           data.kennung           || undefined,
+      iban:              data.iban              || undefined,
+      datev_kontonummer: data.datev_kontonummer || undefined,
     }
     if (konto) update.mutate(payload as FormValues)
     else create.mutate(payload as FormValues)
@@ -182,6 +187,22 @@ function KontoModal({ konto, onClose }: { konto: Konto | null; onClose: () => vo
               <option value="geschaeftlich">Geschäftlich</option>
               <option value="mischkonto">Mischkonto (privat &amp; geschäftlich)</option>
             </select>
+          </div>
+
+          {/* DATEV-Kontonummer */}
+          <div>
+            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-0.5">
+              DATEV-Kontonummer (optional)
+            </label>
+            <input
+              {...register('datev_kontonummer')}
+              placeholder="z.B. 1200"
+              maxLength={8}
+              className={inp}
+            />
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Wird im DATEV-Export als Gegenkonto verwendet (überschreibt den globalen Wert unter Einstellungen → DATEV)
+            </p>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">

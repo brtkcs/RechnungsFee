@@ -100,6 +100,7 @@ class UnternehmenBase(BaseModel):
     datev_konto_paypal:     Optional[str] = None
     guv_aktiv: bool = False
     bank_import_aktiv: bool = False
+    bank_import_manuell: bool = False
 
     @field_validator("versteuerungsart")
     @classmethod
@@ -164,6 +165,7 @@ class KontoBase(BaseModel):
     kennung: Optional[str] = None   # PayPal-E-Mail, Stripe-ID etc.
     kontotyp: str = "geschaeftlich" # geschaeftlich|mischkonto|privat
     ist_standard: bool = False
+    datev_kontonummer: Optional[str] = None  # individuelles DATEV-Gegenkonto (z.B. 1200, 1210)
 
     @model_validator(mode="after")
     def check_felder(self) -> "KontoBase":
@@ -207,6 +209,7 @@ class KontoUpdate(BaseModel):
     kennung: Optional[str] = None
     kontotyp: Optional[str] = None
     ist_standard: Optional[bool] = None
+    datev_kontonummer: Optional[str] = None
     aktiv: Optional[bool] = None
 
 

@@ -54,7 +54,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 105` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 110` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -223,6 +223,11 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 103 | unternehmen.guv_aktiv BOOLEAN DEFAULT 0 – GuV / §141 AO Buchführungspflicht-Schwellenwert (800.000 € Umsatz oder 80.000 € Gewinn); Dashboard-Warnung ab 80 %; auto-Aktivierung bei Überschreitung für taetigkeitsart gewerbe/gemischt |
 | 104 | bank_transaktionen.dedupe_hash TEXT + UNIQUE INDEX uix_bank_tx_hash (konto_id, dedupe_hash) WHERE NOT NULL – Duplikat-Erkennung beim Bank-CSV-Import (SHA-256 aus Datum + Betrag + Partner-IBAN + Verwendungszweck) |
 | 105 | unternehmen.bank_import_aktiv BOOLEAN DEFAULT 0 – Bank CSV-Import aktivieren (Nav-Eintrag sichtbar) |
+| 106 | bank_transaktionen.journal_id INTEGER REFERENCES journal(id) ON DELETE SET NULL – Halbautomatik: verknüpft Transaktion mit erzeugtem Journaleintrag; „Gebucht"-Badge im Frontend |
+| 107 | rechnungen.ueberzahlung_anerkannt BOOLEAN DEFAULT 0 – Überzahlungsprotokoll: „Kein Handlungsbedarf" entfernt Rechnung aus Dashboard-Widget |
+| 108 | forderungen-Tabelle – Offene Verrechnungsposten (Fundament Forderungsmanagement): typ/status/betrag/partner_typ/partner_id/rechnung_id/journal_id/ausgleich_journal_id; Eingangsrechnung-Überzahlung → Split-Buchung + Lieferantenguthaben; Dashboard-Widget + Ausbuchen (Forderungsausfall) |
+| 109 | unternehmen.bank_import_manuell BOOLEAN DEFAULT 0 – persistenter Halbautomatik/Manuell-Modus; Score-3-Einzeltreffer wird bei Halbautomatik direkt gebucht; Manuell-Toggle in Einstellungen + per-Session-Override im Import |
+| 110 | konten.datev_kontonummer VARCHAR(8) – individuelles DATEV-Gegenkonto pro Bankkonto (überschreibt globales datev_konto_bank); journal.konto_id FK → konten – Bank-Import-Buchungen merken welches Konto; DATEV-Export nutzt konto.datev_kontonummer wenn gesetzt |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

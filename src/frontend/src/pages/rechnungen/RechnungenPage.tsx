@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getRechnungen, getRechnung, createRechnung, updateRechnung, deleteRechnung, barZahlungErstellen,
   stornoRechnung, finalisiereRechnung, createGutschrift, forderungsausbuchenRechnung,
+  getKundenguthaben, forderungVerrechnen, type Forderung,
   getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen, lieferscheinAusRechnung,
   getLieferadressen,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow, openPdfReadOnly, downloadPdfForMail,
@@ -922,6 +923,21 @@ function RechnungDetail({
     && rechnung.zahlungsstatus !== 'uneinbringlich'
     && rechnung.dokument_typ !== 'Lieferschein'
 
+  const { data: kundenguthaben } = useQuery({
+    queryKey: ['kundenguthaben', rechnung.kunde_id],
+    queryFn: () => getKundenguthaben(rechnung.kunde_id!),
+    enabled: rechnung.typ === 'ausgang' && !!rechnung.kunde_id && hatZahlungsoption,
+    staleTime: 1000 * 60,
+  })
+  const verrechneMut = useMutation({
+    mutationFn: (forderungId: number) => forderungVerrechnen(forderungId, rechnung.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      qc.invalidateQueries({ queryKey: ['kundenguthaben', rechnung.kunde_id] })
+      qc.invalidateQueries({ queryKey: ['forderungen'] })
+    },
+  })
+
   const partnerEmail = rechnung.typ === 'ausgang'
     ? rechnung.kunde_email
     : rechnung.lieferant_email
@@ -1649,6 +1665,29 @@ function RechnungDetail({
             </div>
           </div>
         </div>}
+
+        {/* Kundenguthaben verrechnen */}
+        {kundenguthaben && kundenguthaben.length > 0 && hatZahlungsoption && (
+          <div className="space-y-1.5">
+            {kundenguthaben.map((f: Forderung) => (
+              <div key={f.id} className="flex items-center justify-between gap-2 p-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
+                    Kundenguthaben verfügbar: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(parseFloat(String(f.betrag)))}
+                  </p>
+                  {f.notiz && <p className="text-[10px] text-blue-600 dark:text-blue-400 truncate">{f.notiz}</p>}
+                </div>
+                <button
+                  onClick={() => verrechneMut.mutate(f.id)}
+                  disabled={verrechneMut.isPending}
+                  className="shrink-0 px-2.5 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                >
+                  {verrechneMut.isPending ? '…' : 'Verrechnen'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Verknüpfte Zahlungen */}
         {rechnung.zahlungen.length > 0 && (

@@ -31,9 +31,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen
 
-SCHEMA_VERSION = 105
+SCHEMA_VERSION = 110
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -86,6 +86,7 @@ app.include_router(guv.router)
 app.include_router(bank_templates.router)
 app.include_router(bank_import.router)
 app.include_router(auto_filter.router)
+app.include_router(forderungen.router)
 
 
 @app.post("/api/shutdown")
@@ -2326,6 +2327,73 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 105"))
             conn.commit()
             print("[Migration] Schema auf Version 105 (unternehmen: bank_import_aktiv – Bank CSV-Import)")
+
+        if version < 106:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(bank_transaktionen)")).fetchall()}
+            if "journal_id" not in cols:
+                conn.execute(text(
+                    "ALTER TABLE bank_transaktionen ADD COLUMN journal_id INTEGER REFERENCES journal(id) ON DELETE SET NULL"
+                ))
+            conn.execute(text("PRAGMA user_version = 106"))
+            conn.commit()
+            print("[Migration] Schema auf Version 106 (bank_transaktionen: journal_id – Halbautomatik Journal-Buchung)")
+
+        if version < 107:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(rechnungen)")).fetchall()}
+            if "ueberzahlung_anerkannt" not in cols:
+                conn.execute(text(
+                    "ALTER TABLE rechnungen ADD COLUMN ueberzahlung_anerkannt INTEGER NOT NULL DEFAULT 0"
+                ))
+            conn.execute(text("PRAGMA user_version = 107"))
+            conn.commit()
+            print("[Migration] Schema auf Version 107 (rechnungen: ueberzahlung_anerkannt – Überzahlungsprotokoll)")
+
+        if version < 108:
+            tables = {r[0] for r in conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()}
+            if "forderungen" not in tables:
+                conn.execute(text("""
+                    CREATE TABLE forderungen (
+                        id INTEGER PRIMARY KEY,
+                        typ TEXT NOT NULL DEFAULT 'lieferantenguthaben',
+                        status TEXT NOT NULL DEFAULT 'offen',
+                        betrag NUMERIC(12,2) NOT NULL,
+                        waehrung TEXT NOT NULL DEFAULT 'EUR',
+                        faellig_am DATE,
+                        partner_typ TEXT,
+                        partner_id INTEGER,
+                        rechnung_id INTEGER REFERENCES rechnungen(id) ON DELETE SET NULL,
+                        journal_id INTEGER REFERENCES journal(id) ON DELETE SET NULL,
+                        ausgleich_journal_id INTEGER REFERENCES journal(id) ON DELETE SET NULL,
+                        notiz TEXT,
+                        erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+            conn.execute(text("PRAGMA user_version = 108"))
+            conn.commit()
+            print("[Migration] Schema auf Version 108 (forderungen – Offene Verrechnungsposten / Forderungsmanagement-Fundament)")
+
+        if version < 109:
+            cols = {r[1] for r in conn.execute(text("PRAGMA table_info(unternehmen)")).fetchall()}
+            if "bank_import_manuell" not in cols:
+                conn.execute(text(
+                    "ALTER TABLE unternehmen ADD COLUMN bank_import_manuell INTEGER NOT NULL DEFAULT 0"
+                ))
+            conn.execute(text("PRAGMA user_version = 109"))
+            conn.commit()
+            print("[Migration] Schema auf Version 109 (unternehmen: bank_import_manuell – Halbautomatik/Manuell-Modus)")
+
+        if version < 110:
+            konten_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(konten)")).fetchall()}
+            if "datev_kontonummer" not in konten_cols:
+                conn.execute(text("ALTER TABLE konten ADD COLUMN datev_kontonummer TEXT"))
+            journal_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(journal)")).fetchall()}
+            if "konto_id" not in journal_cols:
+                conn.execute(text(
+                    "ALTER TABLE journal ADD COLUMN konto_id INTEGER REFERENCES konten(id) ON DELETE SET NULL"
+                ))
+            conn.execute(text("PRAGMA user_version = 110"))
+            conn.commit()
+            print("[Migration] Schema auf Version 110 (konten: datev_kontonummer; journal: konto_id – DATEV Gegenkonto pro Bankkonto)")
 
 
 def _migrate_kategorien() -> None:
