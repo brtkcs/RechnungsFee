@@ -514,8 +514,9 @@ interface AbgleichDialogProps {
 }
 
 function AbgleichDialog({ tx, vorschlaege, onZuordnen, onOhneRechnung, onClose, buchePending }: AbgleichDialogProps) {
-  const guteMatches = vorschlaege.filter(v => v.score >= 2)
-  const schwacheMatches = vorschlaege.filter(v => v.score === 1)
+  const hatScore3 = vorschlaege.some(v => v.score === 3)
+  const guteMatches = vorschlaege.filter(v => hatScore3 ? v.score === 3 : v.score >= 2)
+  const schwacheMatches = hatScore3 ? [] : vorschlaege.filter(v => v.score === 1)
 
   function Chip({ label, aktiv }: { label: string; aktiv: boolean }) {
     return (

@@ -180,14 +180,23 @@ def _betrag_match(rechnung: Rechnung, tx_betrag: Decimal) -> bool:
     return abs(restbetrag - abs(tx_betrag)) <= Decimal("0.02")
 
 
+_TRENNER = str.maketrans('', '', '-/.:(),')
+
+def _norm(s: str) -> str:
+    return s.upper().translate(_TRENNER)
+
 def _nummer_match(rechnung: Rechnung, verwendungszweck: str | None) -> bool:
     if not verwendungszweck:
         return False
     vwz = verwendungszweck.upper()
-    if rechnung.rechnungsnummer and rechnung.rechnungsnummer.upper() in vwz:
-        return True
-    if rechnung.externe_belegnr and rechnung.externe_belegnr.upper() in vwz:
-        return True
+    vwz_norm = _norm(verwendungszweck)
+    for ref in filter(None, [rechnung.rechnungsnummer, rechnung.externe_belegnr]):
+        ref_up = ref.upper()
+        if ref_up in vwz:
+            return True
+        ref_norm = _norm(ref)
+        if ref_norm and ref_norm in vwz_norm:
+            return True
     return False
 
 
