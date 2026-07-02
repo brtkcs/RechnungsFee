@@ -29,7 +29,8 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Bank CSV-Import – Fundament: 7 System-Templates (Sparkasse MT940/CAMT, DKB, ING, Volksbank, Commerzbank, PayPal), automatische Encoding- und Format-Erkennung, Template-API für eigene Bank-Formate' },
       { typ: 'neu', text: 'Bank CSV-Import – Import-Backend: Vorschau-Endpoint (parst CSV ohne Speichern), Import-Endpoint (speichert bestätigte Transaktionen), Duplikat-Erkennung via SHA-256-Hash (Datum + Betrag + Partner-IBAN + Verwendungszweck)' },
       { typ: 'neu', text: 'Bank CSV-Import – Auto-Filter: CRUD für Klassifizierungsregeln (SQL-LIKE auf Partner/Verwendungszweck), Vorschlag-Engine (Keywords → User-Regeln → Verlauf → Heuristik), Vorschlag-Endpoint pro Transaktion' },
-      { typ: 'neu', text: 'Bank CSV-Import – Frontend: Import-Dialog (5-Schritt-Stepper: Konto+Datei → Template → Vorschau → Zusammenfassung → Fertig), Transaktionsliste mit Klassifizierungs-Badges, aktivierbar unter Einstellungen → Steuer & Recht' },
+      { typ: 'neu', text: 'Bank CSV-Import – Frontend: Import-Dialog (5-Schritt-Stepper: Konto+Datei → Template → Vorschau → Zusammenfassung → Fertig), Transaktionsliste mit Klassifizierungs-Badges, aktivierbar unter Einstellungen → Unternehmen → Funktionen' },
+      { typ: 'neu', text: 'Bank CSV-Import – Halbautomatik: „Als Buchung übernehmen"-Button pro Transaktion; auto-bucht wenn Kategorie gesetzt ist, öffnet BuchungForm (vorausgefüllt) wenn Kategorie fehlt; Toggle „Immer manuell bestätigen" (localStorage); „Gebucht"-Badge nach erfolgreicher Buchung' },
     ],
   },
   {

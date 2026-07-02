@@ -1,6 +1,6 @@
 # Bank-Integration – Implementierungsplan
 
-**Journal-Integration:** Option A (manuell) – User erstellt Journal-Buchung pro Transaktion über vorausgefülltes Formular. Kein bestehender Code wird verändert.
+**Journal-Integration:** Halbautomatik – auto-bucht wenn `kategorie_id` gesetzt, öffnet BuchungForm (vorausgefüllt) wenn nicht. Toggle „Immer manuell" in localStorage.
 
 ---
 
@@ -100,15 +100,26 @@
 
 ---
 
-## Phase 5 – Journal-Integration (Option A)
+## Phase 5 – Zahlungsabgleich (Automatischer Rechnungsabgleich) ✅
 
-- [ ] **5.1** Migration `version < 106`
+- [x] **5.1** Migration `version < 106`
   - `ALTER TABLE bank_transaktionen ADD COLUMN journal_id INTEGER REFERENCES journal(id) ON DELETE SET NULL`
-- [ ] **5.2** Endpoint `POST /api/bank-import/transaktion/{id}/buchen`
-  - Erstellt Journal-Eintrag aus Transaktion (Betrag, Datum, Partner vorbelegt)
-  - Setzt `bank_transaktionen.journal_id`
-  - Guard: `journal_id IS NULL` (kein Doppelbuchen)
-- [ ] **5.3** In Transaktionen-Liste: Status-Spalte zeigt „gebucht" wenn `journal_id IS NOT NULL`
+- [x] **5.2** `BankTransaktion` Model: `journal_id` + `rechnung_id` Felder (rechnung_id war bereits im Model)
+- [x] **5.3** `GET /api/bank-import/transaktion/{id}/abgleich`
+  - Sucht offene Rechnungen (nicht Entwurf, nicht storniert, zahlungsstatus != 'bezahlt', dokument_typ='Rechnung')
+  - Richtung: tx.betrag > 0 → Ausgangsrechnungen; tx.betrag < 0 → Eingangsrechnungen
+  - Score: Betrag ±0,02 € | Rechnungsnummer im Verwendungszweck | Name-Overlap
+  - Gibt alle Matches mit score ≥ 1 zurück (sortiert score desc)
+- [x] **5.4** `POST /api/bank-import/transaktion/{id}/buchen` (Body: `{ rechnung_id? }`)
+  - **Pfad A (rechnung_id gesetzt):** Erstellt Journaleintrag mit rechnung_id=…, immutable=True, korrekter USt aus Rechnungspositionen → `_aktualisiere_zahlungsstatus` → Rechnung auf bezahlt
+  - **Pfad B (kein rechnung_id):** Freie Buchung mit Kategorie (wie vorher)
+- [x] **5.5** `client.ts`: `rechnung_id` im `BankTransaktion`-Type, `BankAbgleichVorschlag`-Typ, `abgleichTransaktion()`, `bucheTransaktion(txId, rechnungId?)`
+- [x] **5.6** `BuchungForm.tsx`: optionale Prop `initialWerte` (datum, art, brutto_betrag, zahlungsart, beschreibung, kategorie_id)
+- [x] **5.7** `BankImportPage.tsx`:
+  - Klick → `abgleichTransaktion()` → bei Treffern: `AbgleichDialog` mit Chip-Ansicht (Betrag/Nummer/Name)
+  - Treffer auswählen → `bucheTransaktion(txId, rechnung_id)` → "Bezahlt"-Badge
+  - Kein Treffer / „Ohne Rechnungsbezug" → Pfad B (Auto mit Kategorie oder BuchungForm)
+  - Toggle „Immer manuell bestätigen" (localStorage `bank_import_manuell`) gilt nur für Pfad B
 
 ---
 

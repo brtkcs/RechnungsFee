@@ -61,11 +61,21 @@ const splitSchema = z.object({
 type SingleValues = z.infer<typeof singleSchema>
 type SplitValues = z.infer<typeof splitSchema>
 
+interface InitialWerte {
+  datum?: string
+  art?: 'Einnahme' | 'Ausgabe'
+  brutto_betrag?: string
+  zahlungsart?: 'Bar' | 'Karte' | 'Bank' | 'PayPal' | 'Keine'
+  beschreibung?: string
+  kategorie_id?: string
+}
+
 interface Props {
   onClose: () => void
   onSuccess: () => void
   bearbeiten?: JournalEintrag
   initialDatum?: string
+  initialWerte?: InitialWerte
 }
 
 function heute(): string {
@@ -80,7 +90,7 @@ function formatEuro(n: number): string {
 // Komponente
 // ---------------------------------------------------------------------------
 
-export function BuchungForm({ onClose, onSuccess, bearbeiten, initialDatum }: Props) {
+export function BuchungForm({ onClose, onSuccess, bearbeiten, initialDatum, initialWerte }: Props) {
   const qc = useQueryClient()
   const [isSplit, setIsSplit] = useState(false)
   const [eingabeModus, setEingabeModus] = useState<'brutto' | 'netto'>('brutto')
@@ -135,11 +145,14 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten, initialDatum }: Pr
       ust_sonderfall: bearbeiten.ust_sonderfall ?? '',
       externe_belegnr: bearbeiten.externe_belegnr ?? '',
     } : {
-      datum: initialDatum ?? heute(),
-      art: 'Einnahme',
-      zahlungsart: 'Bar',
+      datum: initialWerte?.datum ?? initialDatum ?? heute(),
+      art: initialWerte?.art ?? 'Einnahme',
+      zahlungsart: initialWerte?.zahlungsart ?? 'Bar',
       ust_satz: '0',
       vorsteuerabzug: true,
+      beschreibung: initialWerte?.beschreibung ?? '',
+      brutto_betrag: initialWerte?.brutto_betrag ?? '',
+      kategorie_id: initialWerte?.kategorie_id ?? '',
     },
   })
 

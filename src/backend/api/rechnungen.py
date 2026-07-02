@@ -503,6 +503,43 @@ def get_faellige_rechnungen(tage: int = Query(7, ge=0, le=365), db: Session = De
     return [RechnungResponse.from_orm_extended(r) for r in rechnungen]
 
 
+@router.get("/ueberzahlungen", response_model=list[RechnungResponse])
+def get_ueberzahlungen(db: Session = Depends(get_db)):
+    """Ausgangsrechnungen bei denen bezahlt_betrag > brutto_gesamt, keine Gutschrift vorhanden und nicht anerkannt."""
+    from sqlalchemy import exists as _exists, alias as _alias
+    GutschriftAlias = _alias(Rechnung.__table__, "gs")
+    rechnungen = (
+        db.query(Rechnung)
+        .filter(Rechnung.typ == "ausgang")
+        .filter(Rechnung.dokument_typ == "Rechnung")
+        .filter(Rechnung.storniert == False)
+        .filter(Rechnung.ist_entwurf == False)
+        .filter(Rechnung.bezahlt_betrag > Rechnung.brutto_gesamt + Decimal("0.01"))
+        .filter(Rechnung.ueberzahlung_anerkannt == False)
+        .filter(
+            ~_exists().where(
+                (GutschriftAlias.c.gutschrift_zu_rechnung_id == Rechnung.id) &
+                (GutschriftAlias.c.dokument_typ == "Gutschrift")
+            )
+        )
+        .order_by(Rechnung.datum.desc())
+        .all()
+    )
+    return [RechnungResponse.from_orm_extended(r) for r in rechnungen]
+
+
+@router.patch("/{rechnung_id}/ueberzahlung-anerkannt", response_model=RechnungResponse)
+def ueberzahlung_anerkennen(rechnung_id: int, db: Session = Depends(get_db)):
+    """Markiert eine Überzahlung als 'kein Handlungsbedarf' – entfernt sie aus dem Dashboard-Widget."""
+    rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
+    if not rechnung:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
+    rechnung.ueberzahlung_anerkannt = True
+    db.commit()
+    db.refresh(rechnung)
+    return RechnungResponse.from_orm_extended(rechnung)
+
+
 @router.get("/offene", response_model=list[RechnungResponse])
 def get_offene_rechnungen(db: Session = Depends(get_db)):
     """Offene und teilweise bezahlte Rechnungen (für Zahlungs-Vorschläge)."""
