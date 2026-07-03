@@ -172,6 +172,18 @@
 
 ---
 
+## 📋 Kontokorrent – Kunden & Lieferanten
+
+Laufendes Konto pro Geschäftspartner: alle Vorgänge (Rechnungen, Zahlungen, Gutschriften, Verrechnungen) in chronologischer Reihenfolge mit laufendem Saldo.
+
+- [ ] Kontokorrent-Ansicht pro Kunde: alle Ausgangsrechnungen, Zahlungen, Gutschriften, Guthaben-Verrechnungen als Buchungszeilen mit laufendem Saldo
+- [ ] Kontokorrent-Ansicht pro Lieferant: alle Eingangsrechnungen, Zahlungen, Lieferantenguthaben als Buchungszeilen mit laufendem Saldo
+- [ ] Saldoausweis: offen / ausgeglichen / Guthaben
+- [ ] PDF-Export des Kontokorrent-Auszugs (z. B. für Jahresabschluss oder Kundenrückfragen)
+- [ ] Kontokorrent-Widget im Kundenstamm / Lieferantenstamm (aktueller Saldo auf einen Blick)
+
+---
+
 ## 📋 v0.5.x – Forderungsmanagement
 
 Vollständige Übersicht und Verwaltung offener Forderungen gegenüber Kunden und Verbindlichkeiten gegenüber Lieferanten – über den bereits vorhandenen Guthaben-Mechanismus hinaus.
