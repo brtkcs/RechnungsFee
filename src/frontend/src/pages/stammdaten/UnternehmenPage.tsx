@@ -802,24 +802,6 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
             </div>
           </label>
 
-          {!!form.bank_import_aktiv && (
-            <label className="flex items-start gap-3 cursor-pointer ml-7">
-              <input
-                type="checkbox"
-                checked={!!form.bank_import_manuell}
-                onChange={ev => set('bank_import_manuell', ev.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600"
-              />
-              <div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  Manueller Abgleich-Modus
-                </span>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Standard (deaktiviert): eindeutige Treffer werden automatisch gebucht. Aktiviert: immer Abgleich-Dialog anzeigen, auch bei einem einzigen Treffer.
-                </p>
-              </div>
-            </label>
-          )}
 
           <div className="space-y-2 pt-2">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-200 block">
