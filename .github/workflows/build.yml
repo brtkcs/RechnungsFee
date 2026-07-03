@@ -501,24 +501,60 @@ jobs:
             --draft=false \
             --repo "$REPO"
 
-  # ── Website deployen (main → web mergen → löst website.yml aus) ─────────
+  # ── Website bauen und deployen ──────────────────────────────────────────
   deploy-web:
     needs: release-notes
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: main in web-Branch mergen und pushen
+      - name: Wiki klonen
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout web
-          git merge origin/main --no-edit
-          git push origin web
+          git clone https://github.com/nicolettas-muggelbude/RechnungsFee.wiki.git wiki-src
+          mkdir -p web/src/content/handbuch
+          cp wiki-src/*.md web/src/content/handbuch/ 2>/dev/null || true
+          rm -f web/src/content/handbuch/_Sidebar.md
+          rm -f web/src/content/handbuch/_Footer.md
+
+      - name: Changelog-Daten kopieren
+        run: |
+          mkdir -p web/src/data
+          cp src/frontend/src/data/changelog.ts web/src/data/changelog.ts
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+        working-directory: web
+
+      - name: Astro bauen
+        run: npm run build
+        working-directory: web
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pages Artifact hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+      - name: GitHub Pages deployen
+        id: deployment
+        uses: actions/deploy-pages@v4
 
