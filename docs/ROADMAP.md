@@ -154,18 +154,21 @@
 
 ---
 
-## 📋 v0.4.x – Bank CSV-Import & Zahlungsabgleich
+## ✅ v0.4.x – Bank CSV-Import & Zahlungsabgleich (abgeschlossen)
 
-- [x] System-Templates: Sparkasse MT940/CAMT, DKB, ING, Volksbank, Commerzbank, PayPal (v0.4.0)
-- [x] Automatische Encoding- und Format-Erkennung (charset-normalizer, kein pandas) (v0.4.0)
-- [x] Template-API: eigene Bank-Formate anlegen, bearbeiten, löschen (v0.4.0)
-- [x] CSV-Parser: Delimiter, Datum, Betrag, Duplikat-Hash-Grundlage (v0.4.0)
-- [ ] CSV-Kontoauszug-Import: Vorschau + Bestätigung (Phase 2)
-- [ ] Mischkonto-Klassifizierung: geschäftlich / privat / Privatentnahme (Phase 3)
-- [ ] Auto-Filter-Regeln (Empfänger/Verwendungszweck → Kategorie) (Phase 3)
-- [ ] Duplikat-Erkennung (Phase 2)
-- [ ] Import-Protokoll / Transaktionsliste (Phase 4)
-- [ ] Manuelle Journal-Buchung aus Transaktion – Option A (Phase 5)
+- [x] System-Templates: Sparkasse MT940/CAMT, DKB, ING, Volksbank, VR-Bank/Sparda/GLS, Commerzbank, Postbank, PayPal (9 Templates)
+- [x] Automatische Encoding- und Format-Erkennung (charset-normalizer, kein pandas)
+- [x] Template-API: eigene Bank-Formate anlegen, bearbeiten, löschen
+- [x] CSV-Parser: Delimiter, Datum, Betrag, Duplikat-Hash-Grundlage
+- [x] CSV-Kontoauszug-Import: Vorschau + Bestätigung; Duplikat-Erkennung (SHA-256)
+- [x] Mischkonto-Klassifizierung: geschäftlich / privat / Privatentnahme / Einlage
+- [x] Klassifizierungsregeln (Auto-Filter): Empfänger/Verwendungszweck → Kategorie für wiederkehrende Buchungen
+- [x] Import-Protokoll / Transaktionsliste mit Filter (Suche, Datum von/bis, Status)
+- [x] Halbautomatik: Score aus Betrag + Rechnungsnummer + Name; Direktbuchung bei Score 3; Abgleich-Dialog bei Score < 3
+- [x] Rechnungsnummer-Matching: vollständige Nummer (RE-24-0001) und Zahlenteil (240001); Trennzeichen + Leerzeichen werden ignoriert
+- [x] Überzahlungen: automatisches Kunden-/Lieferantenguthaben als offener Verrechnungsposten; Badge + Verrechnung bei nächster Rechnung
+- [x] Dashboard-Widget für offene Guthaben; Rückerstattungs-Erkennung beim Bank-Import
+- [x] Manuelle Journal-Buchung aus Transaktion (BuchungForm vorausgefüllt)
 
 ---
 

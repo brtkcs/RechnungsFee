@@ -54,7 +54,7 @@ Dann Browser: http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 110` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 111` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
