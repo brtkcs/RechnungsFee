@@ -318,7 +318,7 @@ function LieferantenguthabenWidget() {
       typeof v === 'string' ? parseFloat(v) : v
     )
 
-  const ausgabeKats = kategorien?.filter((k: { art: string }) => k.art === 'Ausgabe') ?? []
+  const ausgabeKats = kategorien?.filter(k => k.art === 'Ausgabe') ?? []
 
   return (
     <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 p-4 mb-4">

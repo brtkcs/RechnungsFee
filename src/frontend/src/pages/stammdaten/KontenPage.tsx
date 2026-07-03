@@ -14,6 +14,7 @@ const KONTOARTEN: Record<Konto['kontoart'], { label: string; cls: string }> = {
 const KONTOTYPEN: Record<Konto['kontotyp'], string> = {
   geschaeftlich: 'Geschäftlich',
   mischkonto:    'Mischkonto',
+  privat:        'Privat',
 }
 
 const schema = z.discriminatedUnion('kontoart', [
@@ -24,7 +25,7 @@ const schema = z.discriminatedUnion('kontoart', [
     iban:              z.string().min(15, 'IBAN zu kurz').max(34, 'IBAN zu lang'),
     bic:               z.string().optional().or(z.literal('')),
     kennung:           z.string().optional(),
-    kontotyp:          z.enum(['geschaeftlich', 'mischkonto']),
+    kontotyp:          z.enum(['geschaeftlich', 'mischkonto', 'privat']),
     ist_standard:      z.boolean(),
     datev_kontonummer: z.string().optional().or(z.literal('')),
   }),
@@ -35,7 +36,7 @@ const schema = z.discriminatedUnion('kontoart', [
     iban:              z.string().optional(),
     bic:               z.string().optional(),
     kennung:           z.string().min(1, 'Kennung erforderlich (z.B. E-Mail-Adresse)'),
-    kontotyp:          z.enum(['geschaeftlich', 'mischkonto']),
+    kontotyp:          z.enum(['geschaeftlich', 'mischkonto', 'privat']),
     ist_standard:      z.boolean(),
     datev_kontonummer: z.string().optional().or(z.literal('')),
   }),
