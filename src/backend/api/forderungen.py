@@ -1,7 +1,7 @@
 """
 API-Endpunkte für Forderungsmanagement (offene Verrechnungsposten).
 """
-from datetime import date as date_type
+from datetime import date as date_type, datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
@@ -48,7 +48,7 @@ class ForderungResponse(BaseModel):
     journal_id: Optional[int] = None
     ausgleich_journal_id: Optional[int] = None
     notiz: Optional[str] = None
-    erstellt_am: str
+    erstellt_am: datetime
 
     model_config = {"from_attributes": True}
 
