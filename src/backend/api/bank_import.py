@@ -190,22 +190,22 @@ def _betrag_match(rechnung: Rechnung, tx_betrag: Decimal) -> bool:
     return False
 
 
-_TRENNER = str.maketrans('', '', '-/.:(),')
+_TRENNER = str.maketrans('', '', '-/.:(), ')
 
 def _norm(s: str) -> str:
     return s.upper().translate(_TRENNER)
 
-def _nummer_match(rechnung: Rechnung, verwendungszweck: str | None) -> bool:
-    if not verwendungszweck:
+def _nummer_match(rechnung: Rechnung, verwendungszweck: str | None, buchungstext: str | None = None) -> bool:
+    """Prüft ob eine Rechnungsnummer im Verwendungszweck oder Buchungstext steht.
+    Normalisierung entfernt Trennzeichen inkl. Leerzeichen, damit 'RE 2024 001'
+    und 'RE-2024-001' beide treffen."""
+    suchtext = ' '.join(filter(None, [verwendungszweck, buchungstext]))
+    if not suchtext:
         return False
-    vwz = verwendungszweck.upper()
-    vwz_norm = _norm(verwendungszweck)
+    st_norm = _norm(suchtext)
     for ref in filter(None, [rechnung.rechnungsnummer, rechnung.externe_belegnr]):
-        ref_up = ref.upper()
-        if ref_up in vwz:
-            return True
         ref_norm = _norm(ref)
-        if ref_norm and ref_norm in vwz_norm:
+        if ref_norm and ref_norm in st_norm:
             return True
     return False
 
@@ -227,7 +227,7 @@ def _name_match(partner_rechnung: str, partner_tx: str | None) -> bool:
 def _abgleich_score(rechnung: Rechnung, tx: BankTransaktion) -> tuple[int, bool, bool, bool]:
     """Gibt (score, betrag_match, nummer_match, name_match) zurück."""
     bm = _betrag_match(rechnung, tx.betrag)
-    nm = _nummer_match(rechnung, tx.verwendungszweck)
+    nm = _nummer_match(rechnung, tx.verwendungszweck, tx.buchungstext)
     nam = _name_match(_partner_name(rechnung), tx.partner_name)
     return int(bm) + int(nm) + int(nam), bm, nm, nam
 
