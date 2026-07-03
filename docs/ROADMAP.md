@@ -172,6 +172,33 @@
 
 ---
 
+## 📋 v0.5.x – Forderungsmanagement
+
+Vollständige Übersicht und Verwaltung offener Forderungen gegenüber Kunden und Verbindlichkeiten gegenüber Lieferanten – über den bereits vorhandenen Guthaben-Mechanismus hinaus.
+
+### Grundlage (bereits vorhanden)
+- [x] `forderungen`-Tabelle: Überzahlungen (Kunden-/Lieferantenguthaben) als offene Verrechnungsposten
+- [x] Dashboard-Widget für offene Guthaben
+- [x] Verrechnung mit nächster Rechnung per Klick
+- [x] Forderungsausfall ausbuchen (Lieferantenguthaben)
+- [x] Rückerstattungs-Erkennung beim Bank-Import
+
+### Offene Forderungen (Ausgangsrechnungen)
+- [ ] Mahnwesen: Mahnstufen (1. / 2. / 3. Mahnung) mit konfigurierbaren Mahngebühren und Verzugszinsen (§ 288 BGB: 5 % über Basiszinssatz)
+- [ ] Mahnschreiben als PDF (eigene Vorlage, Mahngebühr + Zinsen ausgewiesen)
+- [ ] Übersicht „Offene Forderungen": alle unbezahlten Ausgangsrechnungen mit Alter (30/60/90 Tage-Ampel)
+- [ ] Forderungsausfall buchen: Teilwertabschreibung nach § 17 UStG mit USt-Korrektur, Journal-Eintrag
+
+### Verbindlichkeiten (Eingangsrechnungen)
+- [ ] Übersicht „Offene Verbindlichkeiten": alle unbezahlten Eingangsrechnungen mit Fälligkeit und Skonto-Frist
+- [ ] Zahlungsvorschlag: welche Eingangsrechnungen sind diese Woche fällig?
+
+### Auswertung
+- [ ] Debitorenliste / Kreditorenliste: Summe offener Posten pro Kunde / Lieferant
+- [ ] Forderungsspiegel: Altersgliederung (0–30 / 31–60 / 61–90 / > 90 Tage)
+
+---
+
 ## ♿ Barrierefreiheit (kein fester Zeitplan, aber Pflicht vor 1.0)
 
 Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigation (Combobox) sind vorhanden, aber Screenreader-Unterstützung fehlt weitgehend.
