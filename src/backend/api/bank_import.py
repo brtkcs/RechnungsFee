@@ -4,6 +4,7 @@ API-Endpunkte für Bank-CSV-Import.
 
 import hashlib
 import logging
+import re
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
@@ -197,15 +198,22 @@ def _norm(s: str) -> str:
 
 def _nummer_match(rechnung: Rechnung, verwendungszweck: str | None, buchungstext: str | None = None) -> bool:
     """Prüft ob eine Rechnungsnummer im Verwendungszweck oder Buchungstext steht.
-    Normalisierung entfernt Trennzeichen inkl. Leerzeichen, damit 'RE 2024 001'
-    und 'RE-2024-001' beide treffen."""
+    Normalisierung entfernt alle Trennzeichen inkl. Leerzeichen.
+    Kunden schreiben oft nur den Zahlenteil ohne Präfix (RE-24-0001 → 240001),
+    daher wird zusätzlich der numerische Suffix der Nummer geprüft."""
     suchtext = ' '.join(filter(None, [verwendungszweck, buchungstext]))
     if not suchtext:
         return False
     st_norm = _norm(suchtext)
     for ref in filter(None, [rechnung.rechnungsnummer, rechnung.externe_belegnr]):
         ref_norm = _norm(ref)
-        if ref_norm and ref_norm in st_norm:
+        if not ref_norm:
+            continue
+        if ref_norm in st_norm:
+            return True
+        # Nur der Zahlenteil am Ende (mind. 3 Ziffern), z.B. "RE240001" → "240001"
+        m = re.search(r'\d{3,}$', ref_norm)
+        if m and m.group() in st_norm:
             return True
     return False
 
