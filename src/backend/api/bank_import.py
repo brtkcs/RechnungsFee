@@ -177,7 +177,14 @@ def _vorhandene_hashes(db: Session, konto_id: int) -> set[str]:
 
 def _betrag_match(rechnung: Rechnung, tx_betrag: Decimal) -> bool:
     restbetrag = abs(rechnung.brutto_gesamt - rechnung.bezahlt_betrag)
-    return abs(restbetrag - abs(tx_betrag)) <= Decimal("0.02")
+    tx_abs = abs(tx_betrag)
+    # Exakter Treffer (±2 Cent)
+    if abs(restbetrag - tx_abs) <= Decimal("0.02"):
+        return True
+    # Überzahlung: tx deckt den Restbetrag vollständig → Surplus wird als Forderung gebucht
+    if tx_abs > restbetrag + Decimal("0.02"):
+        return True
+    return False
 
 
 _TRENNER = str.maketrans('', '', '-/.:(),')
