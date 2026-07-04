@@ -1547,6 +1547,8 @@ export const updateArtikel = (id: number, data: ArtikelUpdate) =>
   request<Artikel>(`/artikel/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const getArtikelRechnungen = (id: number) =>
   request<ArtikelRechnungKurz[]>(`/artikel/${id}/rechnungen`)
+export const deleteArtikel = (id: number) =>
+  request<void>(`/artikel/${id}`, { method: 'DELETE' })
 export const archiviereArtikel = (id: number) =>
   request<Artikel>(`/artikel/${id}/archivieren`, { method: 'PATCH' })
 

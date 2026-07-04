@@ -9,7 +9,7 @@ import {
   getLieferanten, getUstSaetze, type Artikel, type ArtikelTyp,
   getArtikelGruppen, createArtikelGruppe, updateArtikelGruppe,
   toggleArtikelGruppeAktiv, deleteArtikelGruppe, getUnternehmen,
-  archiviereArtikel,
+  archiviereArtikel, deleteArtikel,
 } from '../../api/client'
 
 // ---------------------------------------------------------------------------
@@ -766,16 +766,25 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
   })
   const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
 
-  const [archivFehler, setArchivFehler] = useState('')
+  const [aktionFehler, setAktionFehler] = useState('')
   const archiviereMut = useMutation({
     mutationFn: () => archiviereArtikel(artikel.id),
-    onSuccess: () => { setArchivFehler(''); qc.refetchQueries({ queryKey: ['artikel'] }) },
-    onError: (e: Error) => setArchivFehler(e.message),
+    onSuccess: () => { setAktionFehler(''); qc.refetchQueries({ queryKey: ['artikel'] }) },
+    onError: (e: Error) => setAktionFehler(e.message),
+  })
+  const loeschenMut = useMutation({
+    mutationFn: () => deleteArtikel(artikel.id),
+    onSuccess: () => { setAktionFehler(''); qc.refetchQueries({ queryKey: ['artikel'] }) },
+    onError: (e: Error) => setAktionFehler(e.message),
   })
   const aktiviereMut = useMutation({
     mutationFn: () => updateArtikel(artikel.id, { aktiv: true }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['artikel'] }),
+    onSuccess: () => qc.refetchQueries({ queryKey: ['artikel'] }),
   })
+
+  const bestand = parseFloat(String(artikel.bestand_aktuell ?? '0'))
+  const kannGeloescht = (rechnungen?.length ?? 0) === 0 && (!artikel.lager_aktiv || bestand === 0)
+  const istPending = archiviereMut.isPending || loeschenMut.isPending || aktiviereMut.isPending
 
   const [bestandEdit, setBestandEdit] = useState<string | null>(null)
   const bestandMut = useMutation({
@@ -1032,24 +1041,32 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
 
       {/* Footer */}
       <div className="shrink-0 border-t border-slate-200 dark:border-slate-700 px-5 py-3">
-        {archivFehler && (
-          <p className="text-xs text-red-600 dark:text-red-400 mb-2">{archivFehler}</p>
+        {aktionFehler && (
+          <p className="text-xs text-red-600 dark:text-red-400 mb-2">{aktionFehler}</p>
         )}
-        {artikel.aktiv ? (
+        {!artikel.aktiv ? (
           <button
-            onClick={() => { setArchivFehler(''); archiviereMut.mutate() }}
-            disabled={archiviereMut.isPending}
-            className="text-xs text-slate-400 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-50"
+            onClick={() => aktiviereMut.mutate()}
+            disabled={istPending}
+            className="text-xs text-green-600 dark:text-green-400 hover:text-green-700 disabled:opacity-50"
           >
-            {archiviereMut.isPending ? 'Archiviert…' : 'Archivieren'}
+            {aktiviereMut.isPending ? 'Wird aktiviert…' : 'Wieder aktivieren'}
+          </button>
+        ) : kannGeloescht ? (
+          <button
+            onClick={() => { setAktionFehler(''); loeschenMut.mutate() }}
+            disabled={istPending}
+            className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50"
+          >
+            {loeschenMut.isPending ? 'Wird gelöscht…' : 'Löschen'}
           </button>
         ) : (
           <button
-            onClick={() => aktiviereMut.mutate()}
-            disabled={aktiviereMut.isPending}
-            className="text-xs text-green-600 dark:text-green-400 hover:text-green-700 disabled:opacity-50"
+            onClick={() => { setAktionFehler(''); archiviereMut.mutate() }}
+            disabled={istPending}
+            className="text-xs text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 disabled:opacity-50"
           >
-            {aktiviereMut.isPending ? 'Aktiviert…' : 'Wieder aktivieren'}
+            {archiviereMut.isPending ? 'Wird archiviert…' : 'Archivieren'}
           </button>
         )}
       </div>
@@ -1156,14 +1173,14 @@ export function ArtikelPage() {
               </button>
             ))}
             <button
-              onClick={() => setAktiv(aktiv === true ? undefined : true)}
+              onClick={() => setAktiv(aktiv === true ? false : true)}
               className={`text-xs px-2.5 py-1 rounded-full border transition-colors ms-auto ${
                 aktiv === true
                   ? 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700'
-                  : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                  : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
               }`}
             >
-              {aktiv === true ? 'Nur aktive' : 'Alle'}
+              {aktiv === true ? 'Nur aktive' : 'Nur Archiv'}
             </button>
           </div>
           {alleGruppen.length > 0 && (

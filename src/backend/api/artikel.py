@@ -226,6 +226,20 @@ def get_artikel_rechnungen(artikel_id: int, db: Session = Depends(get_db)):
     return result
 
 
+@router.delete("/{artikel_id}", status_code=204)
+def delete_artikel(artikel_id: int, db: Session = Depends(get_db)):
+    artikel = db.query(Artikel).filter(Artikel.id == artikel_id).first()
+    if not artikel:
+        raise HTTPException(status_code=404, detail="Artikel nicht gefunden.")
+    links = db.query(Rechnungsposition).filter(Rechnungsposition.artikel_id == artikel_id).count()
+    if links > 0:
+        raise HTTPException(status_code=409, detail=f"Artikel ist in {links} Rechnung(en) verwendet und kann nicht gelöscht werden.")
+    if artikel.lager_aktiv and artikel.bestand_aktuell and artikel.bestand_aktuell != Decimal("0"):
+        raise HTTPException(status_code=409, detail=f"Lagerbestand ist {artikel.bestand_aktuell} – bitte zuerst auf 0 setzen.")
+    db.delete(artikel)
+    db.commit()
+
+
 @router.patch("/{artikel_id}/archivieren", response_model=ArtikelResponse)
 def archiviere_artikel(artikel_id: int, db: Session = Depends(get_db)):
     artikel = db.query(Artikel).filter(Artikel.id == artikel_id).first()
