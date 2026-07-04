@@ -60,6 +60,7 @@ interface ImportDialogProps {
 function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProps) {
   const [schritt, setSchritt] = useState<Schritt>(1)
   const [datei, setDatei] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
   const [templateId, setTemplateId] = useState<string>('')
   const [manuellKontoId, setManuellKontoId] = useState<number>(konten[0]?.id ?? 0)
   const [analyseStatus, setAnalyseStatus] = useState<AnalyseStatus>({ art: 'idle' })
@@ -188,8 +189,24 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
               {/* Datei-Upload */}
               <div
                 onClick={() => fileRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                onDragEnter={e => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={e => {
+                  e.preventDefault()
+                  setDragOver(false)
+                  const f = e.dataTransfer.files?.[0]
+                  if (f) {
+                    setDatei(f)
+                    setAnalyseStatus({ art: 'idle' })
+                    setVorschau(null)
+                    setFehler(null)
+                  }
+                }}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                  datei
+                  dragOver
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : datei
                     ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/10'
                     : 'border-slate-300 dark:border-slate-600 hover:border-blue-400'
                 }`}
@@ -197,14 +214,16 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
                 {datei ? (
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200">📄 {datei.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">Klicken um andere Datei zu wählen</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">Klicken oder Datei ablegen zum Wechseln</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">CSV-Datei hier ablegen oder klicken zum Auswählen</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {dragOver ? 'Datei loslassen …' : 'CSV-, XML- oder ZIP-Datei hier ablegen oder klicken'}
+                  </p>
                 )}
                 <input
                   ref={el => { fileRef.current = el }}
-                  type="file" accept=".csv,.txt" className="hidden"
+                  type="file" accept=".csv,.txt,.xml,.zip" className="hidden"
                   onChange={e => {
                     setDatei(e.target.files?.[0] ?? null)
                     setAnalyseStatus({ art: 'idle' })

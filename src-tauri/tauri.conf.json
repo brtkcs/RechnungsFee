@@ -10,7 +10,11 @@
     "beforeBuildCommand": "cd src/frontend && npm run build"
   },
   "app": {
-    "windows": [],
+    "windows": [
+      {
+        "fileDropEnabled": false
+      }
+    ],
     "security": {
       "csp": null
     }
