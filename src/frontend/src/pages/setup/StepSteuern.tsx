@@ -102,9 +102,9 @@ export function StepSteuern({ onNext, onBack, defaultValues }: Props) {
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Kontenrahmen</h3>
         <div className="space-y-2">
           {[
-            { value: 'SKR03', label: 'SKR03', desc: 'Standard für Freiberufler & Dienstleister' },
-            { value: 'SKR04', label: 'SKR04', desc: 'Standard für Handels- & Industrieunternehmen' },
-            { value: 'SKR49', label: 'SKR49', desc: 'Für eingetragene Vereine (e.V.)' },
+            { value: 'SKR03', label: 'SKR03', desc: 'Empfohlen für Freiberufler, Dienstleister & Gewerbetreibende (Handwerk, Handel, kleine Betriebe)' },
+            { value: 'SKR04', label: 'SKR04', desc: 'Empfohlen für Handels- & Industrieunternehmen (prozessorientiert)' },
+            { value: 'SKR49', label: 'SKR49', desc: 'Empfohlen für eingetragene Vereine (e.V.) & Non-Profits' },
           ].map(({ value, label, desc }) => (
             <label key={value} className="flex items-start gap-3 cursor-pointer">
               <input type="radio" {...register('kontenrahmen')} value={value}
@@ -116,6 +116,9 @@ export function StepSteuern({ onNext, onBack, defaultValues }: Props) {
             </label>
           ))}
         </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-700">
+          Diese Zuordnungen sind Empfehlungen. Du kannst jeden Kontenrahmen unabhängig von deiner Tätigkeit verwenden – entscheidend ist, was dein Steuerberater oder dein Finanzamt erwartet.
+        </p>
       </div>
 
       <label className="flex items-start gap-3 cursor-pointer">

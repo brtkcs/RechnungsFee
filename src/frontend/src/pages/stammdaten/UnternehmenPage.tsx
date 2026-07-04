@@ -526,13 +526,13 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label={<>Kontenrahmen <InfoTooltip text="SKR03: Standard für Dienstleister und Freiberufler. SKR04: Standard für Handel und produzierende Betriebe. SKR49: Für Vereine und Non-Profits." /></>}>
+          <Field label={<>Kontenrahmen <InfoTooltip text="Empfehlungen – du kannst jeden Kontenrahmen unabhängig von deiner Tätigkeit verwenden. SKR03: Freiberufler, Dienstleister & Gewerbetreibende (Handwerk, Handel, kleine Betriebe). SKR04: Handels- & Industrieunternehmen (prozessorientiert). SKR49: Vereine & Non-Profits." /></>}>
             <select
               value={form.kontenrahmen ?? 'SKR03'}
               onChange={ev => set('kontenrahmen', ev.target.value)}
               className={selectCls}
             >
-              <option value="SKR03">SKR03 – Freiberufler</option>
+              <option value="SKR03">SKR03 – Freiberufler & Gewerbe</option>
               <option value="SKR04">SKR04 – Handel/Industrie</option>
               <option value="SKR49">SKR49 – Vereine</option>
             </select>
