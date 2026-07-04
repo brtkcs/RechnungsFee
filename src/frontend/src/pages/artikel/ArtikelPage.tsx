@@ -785,6 +785,7 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
   const bestand = parseFloat(String(artikel.bestand_aktuell ?? '0'))
   const kannGeloescht = (rechnungen?.length ?? 0) === 0 && (!artikel.lager_aktiv || bestand === 0)
   const istPending = archiviereMut.isPending || loeschenMut.isPending || aktiviereMut.isPending
+  const [loeschenBestaetigung, setLoeschenBestaetigung] = useState(false)
 
   const [bestandEdit, setBestandEdit] = useState<string | null>(null)
   const bestandMut = useMutation({
@@ -1053,13 +1054,32 @@ function ArtikelDetail({ artikel, onEdit }: { artikel: Artikel; onEdit: () => vo
             {aktiviereMut.isPending ? 'Wird aktiviert…' : 'Wieder aktivieren'}
           </button>
         ) : kannGeloescht ? (
-          <button
-            onClick={() => { setAktionFehler(''); loeschenMut.mutate() }}
-            disabled={istPending}
-            className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50"
-          >
-            {loeschenMut.isPending ? 'Wird gelöscht…' : 'Löschen'}
-          </button>
+          loeschenBestaetigung ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-red-600 dark:text-red-400">Wirklich löschen?</span>
+              <button
+                onClick={() => { setAktionFehler(''); setLoeschenBestaetigung(false); loeschenMut.mutate() }}
+                disabled={istPending}
+                className="text-xs px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                Ja, löschen
+              </button>
+              <button
+                onClick={() => setLoeschenBestaetigung(false)}
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                Abbrechen
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setLoeschenBestaetigung(true)}
+              disabled={istPending}
+              className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50"
+            >
+              Löschen
+            </button>
+          )
         ) : (
           <button
             onClick={() => { setAktionFehler(''); archiviereMut.mutate() }}
