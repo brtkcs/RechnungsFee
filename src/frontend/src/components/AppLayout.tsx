@@ -113,8 +113,15 @@ function CollapsibleSection({
 
   useEffect(() => {
     if (aktiv) {
-      setOffen(true)
-      try { localStorage.setItem(storageKey, 'true') } catch {}
+      try {
+        const saved = localStorage.getItem(storageKey)
+        if (saved !== 'false') {
+          setOffen(true)
+          localStorage.setItem(storageKey, 'true')
+        }
+      } catch {
+        setOffen(true)
+      }
     }
   }, [aktiv, storageKey])
 
@@ -127,19 +134,19 @@ function CollapsibleSection({
   }
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-4 py-2 text-sm font-medium transition-colors ${
+    `flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded-md ${
       isActive
         ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-700'
-        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100'
     }`
 
   return (
-    <div className="mt-1">
+    <div className={`mt-1 mx-2 rounded-lg transition-colors ${offen ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}>
       <button
         onClick={toggle}
-        className={`w-full flex items-center justify-between px-4 py-2 text-sm font-medium transition-colors ${
-          aktiv
-            ? 'text-blue-700 dark:text-blue-300'
+        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+          offen
+            ? 'text-indigo-600 dark:text-indigo-400'
             : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
         }`}
       >
@@ -152,7 +159,7 @@ function CollapsibleSection({
       </button>
 
       {offen && (
-        <div className="border-l-2 border-slate-100 dark:border-slate-800 ml-6">
+        <div className="pb-1.5">
           {items.map(({ to, label: l, icon: ic, badge: itemBadge }) => (
             <NavLink key={to} to={to} className={navLinkClass}>
               <NavIcon name={ic} /><span className="flex-1">{l}</span>

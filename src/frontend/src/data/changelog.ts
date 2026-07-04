@@ -38,6 +38,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Rechnungen: Schwarzer Bildschirm beim Löschen des Rechnungsdatums behoben – leeres oder ungültiges Datum führt nicht mehr zu einem App-Absturz.' },
       { typ: 'fix', text: 'Kategorien: Vorsteuer-Prozentsatz für Bewirtungskosten korrigiert – per §15 UStG ist die Vorsteuer zu 100 % abzugsfähig (nicht 70 %); der 70 %-Abzug gilt nur ertragsteuerlich (§ 4 Abs. 5 Nr. 2 EStG). Betrifft beide Kategorien „Bewirtungskosten" und „Bewirtungskosten (nicht abzugsfähig)".' },
       { typ: 'fix', text: 'Bank-Import: Drag & Drop für CSV-, XML- und ZIP-Dateien funktioniert jetzt – die Drop-Handler fehlten vollständig. In der Desktop-App zusätzlich Tauri-Konfiguration korrigiert, die OS-Dateidrops bisher abgefangen hat.' },
+      { typ: 'verbesserung', text: 'Sidebar: Navigationsgruppen (Buchhaltung, Auswertung, Stammdaten, Einstellungen) werden jetzt als Card hervorgehoben – offene Sektionen erhalten einen dezenten Hintergrund und den Kategorienamen in Akzentfarbe. Navigationssymbole wurden auf Material Symbols Outlined umgestellt.' },
     ],
   },
   {
