@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.1',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'verbesserung', text: 'Rechnungen: Filtereinstellung (Monat/Jahr/Zeitraum/Alle) bleibt beim Navigieren erhalten und wird erst beim nächsten App-Start zurückgesetzt.' },
+    ],
+  },
+  {
     version: 'v0.4.0',
     datum: 'Juli 2026',
     eintraege: [
