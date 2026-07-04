@@ -2188,7 +2188,9 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
   useEffect(() => {
     if (initial) return
     if (prefillFromAnalyse) return  // Import ohne Fälligkeit → nicht berechnen
+    if (!datum) return
     const d = new Date(datum)
+    if (isNaN(d.getTime())) return
     d.setDate(d.getDate() + zahlungsziel)
     setFaelligAm(d.toISOString().slice(0, 10))
   }, [datum, zahlungsziel, initial, prefillFromAnalyse])

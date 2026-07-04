@@ -35,6 +35,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'App beenden: Im Beenden-Dialog (erscheint beim Klick auf das X-Symbol) gibt es jetzt einen „Abbrechen"-Button – so kann man versehentliches Schließen rückgängig machen, auch wenn das Backup bereits erstellt wurde.' },
       { typ: 'fix', text: 'Buchung: Steuerlicher Sonderfall (Reverse Charge) wird jetzt zurückgesetzt, wenn die Kategorie auf eine ohne Sonderfall-Zuordnung gewechselt wird (z. B. von Wareneinkauf EU auf Wareneinkauf).' },
       { typ: 'verbesserung', text: 'Stammdaten: IBAN-Eingabe wird automatisch in 4er-Gruppen formatiert (z. B. DE89 3704 0044 0532 0130 00) – auch bereits gespeicherte IBANs ohne Leerzeichen werden beim Öffnen korrekt dargestellt.' },
+      { typ: 'fix', text: 'Rechnungen: Schwarzer Bildschirm beim Löschen des Rechnungsdatums behoben – leeres oder ungültiges Datum führt nicht mehr zu einem App-Absturz.' },
     ],
   },
   {
