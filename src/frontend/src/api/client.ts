@@ -2287,6 +2287,24 @@ export async function vorschauBankImport(
   return res.json()
 }
 
+export async function vorschauBankImportPfad(
+  pfad: string,
+  kontoId?: number,
+  templateId?: string,
+): Promise<BankVorschauResponse> {
+  const base = await getBaseUrl()
+  const res = await fetch(`${base}/bank-import/vorschau-pfad`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pfad, konto_id: kontoId ?? null, template_id: templateId ?? null }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail ?? `Fehler ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function importiereBankTransaktionen(payload: {
   konto_id: number
   template_id: string

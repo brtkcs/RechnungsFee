@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.2',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Bank-Import: Drag & Drop in der Desktop-App behoben – die Drop-Zone reagiert jetzt auf Dateien die aus dem Datei-Explorer gezogen werden. Die Lösung nutzt Tauris natives Drag-Event-System (tauri://drag-drop); im Browser-Modus weiterhin HTML5-Drop-Events.' },
+    ],
+  },
+  {
     version: 'v0.4.1',
     datum: 'Juli 2026',
     eintraege: [

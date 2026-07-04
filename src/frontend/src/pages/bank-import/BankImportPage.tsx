@@ -1,16 +1,19 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { listen } from '@tauri-apps/api/event'
 import {
   getKonten,
   getBankTemplates,
   getBankTransaktionen,
   vorschauBankImport,
+  vorschauBankImportPfad,
   importiereBankTransaktionen,
   bucheTransaktion,
   abgleichTransaktion,
   autoBuchen,
   ueberzahlungAnerkennen,
+  isTauri,
   type Konto,
   type BankTemplate,
   type BankVorschauResponse,
@@ -66,6 +69,8 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
   const [vorschau, setVorschau] = useState<BankVorschauResponse | null>(null)
   const [auswahl, setAuswahl] = useState<Set<string>>(new Set())
   const [fehler, setFehler] = useState<string | null>(null)
+  const [tauriPfad, setTauriPfad] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const geschaeftskonten = konten.filter(k => k.kontotyp !== 'privat')
 
@@ -104,12 +109,67 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
     }
   }
 
+  // Tauri auf Windows: HTML5-Drop feuert nicht – stattdessen tauri://drag-drop hören
+  useEffect(() => {
+    if (!isTauri() || schritt !== 1) return
+    let unlisten: (() => void) | undefined
+    listen<{ paths: string[] }>('tauri://drag-drop', async (event) => {
+      const paths = event.payload?.paths ?? (event.payload as any) ?? []
+      const erlaubte = (Array.isArray(paths) ? paths : [])
+        .filter((p: string) => /\.(csv|txt|xml|zip)$/i.test(p))
+      if (erlaubte.length === 0) return
+      const pfad = erlaubte[0]
+      const name = pfad.replace(/\\/g, '/').split('/').pop() ?? 'import.csv'
+      setFehler(null)
+      setAnalyseStatus({ art: 'idle' })
+      setVorschau(null)
+      setTauriPfad(pfad)
+      try {
+        const result = await vorschauBankImportPfad(pfad, undefined, templateId || undefined)
+        if (result.erkanntes_template) setTemplateId(result.erkanntes_template)
+        setVorschau(result)
+        setAuswahl(new Set(result.transaktionen.filter(t => !t.ist_duplikat).map(t => t.dedupe_hash)))
+        setDatei(new File([new Blob()], name))
+        if (result.konto_iban && result.erkanntes_konto_id) {
+          const konto = geschaeftskonten.find(k => k.id === result.erkanntes_konto_id)
+          setAnalyseStatus({
+            art: 'iban_match',
+            iban: result.konto_iban,
+            kontoId: result.erkanntes_konto_id,
+            kontoName: konto?.name ?? `Konto #${result.erkanntes_konto_id}`,
+          })
+        } else if (result.konto_iban && !result.erkanntes_konto_id) {
+          setAnalyseStatus({ art: 'iban_kein_konto', iban: result.konto_iban })
+        } else {
+          setAnalyseStatus({ art: 'kein_iban' })
+        }
+      } catch (e: unknown) {
+        setFehler((e as Error).message)
+      }
+    }).then((fn) => { unlisten = fn })
+    return () => { unlisten?.() }
+  }, [schritt, templateId])
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const f = e.dataTransfer.files[0]
+    if (f) {
+      setDatei(f)
+      setTauriPfad(null)
+      setAnalyseStatus({ art: 'idle' })
+      setVorschau(null)
+      setFehler(null)
+    }
+  }
+
   // Bei manueller Kontoauswahl: Vorschau mit konto_id neu laden (Duplikat-Check)
   async function ladeVorschauMitKonto(kontoId: number) {
-    if (!datei) return
+    if (!datei && !tauriPfad) return
     setFehler(null)
     try {
-      const result = await vorschauBankImport(datei, kontoId, templateId || undefined)
+      const result = tauriPfad
+        ? await vorschauBankImportPfad(tauriPfad, kontoId, templateId || undefined)
+        : await vorschauBankImport(datei!, kontoId, templateId || undefined)
       setVorschau(result)
       setAuswahl(new Set(result.transaktionen.filter(t => !t.ist_duplikat).map(t => t.dedupe_hash)))
     } catch (e: unknown) {
@@ -185,9 +245,11 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
             <div className="space-y-4">
 
               {/* Datei-Upload */}
-              <label
-                htmlFor="bank-import-datei"
-                className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => inputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
                   datei
                     ? 'border-blue-400 bg-blue-50/50 dark:bg-blue-900/10'
                     : 'border-slate-300 dark:border-slate-600 hover:border-blue-400'
@@ -202,16 +264,17 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
                   <p className="text-sm text-slate-500 dark:text-slate-400">CSV-, XML- oder ZIP-Datei hier ablegen oder klicken</p>
                 )}
                 <input
-                  id="bank-import-datei"
+                  ref={inputRef}
                   type="file" accept=".csv,.txt,.xml,.zip" className="hidden"
                   onChange={e => {
                     setDatei(e.target.files?.[0] ?? null)
+                    setTauriPfad(null)
                     setAnalyseStatus({ art: 'idle' })
                     setVorschau(null)
                     setFehler(null)
                   }}
                 />
-              </label>
+              </div>
 
               {/* Template (immer sichtbar, klein) */}
               <div>
