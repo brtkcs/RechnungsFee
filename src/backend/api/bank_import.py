@@ -25,7 +25,12 @@ from utils.bank_csv_parser import (
     detect_delimiter,
     detect_encoding,
     extract_konto_iban,
+    extract_konto_iban_camt,
+    extract_xml_from_zip,
     find_best_template,
+    is_camt,
+    is_zip,
+    parse_camt,
     parse_csv_mit_template,
 )
 from utils.signatur import signatur_journaleintrag
@@ -497,6 +502,61 @@ async def vorschau_import(
         raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
 
     raw = await datei.read()
+
+    # -----------------------------------------------------------------------
+    # ZIP-Extraktion: CAMT-Export der Sparkasse kommt als ZIP mit XML-Dateien
+    # -----------------------------------------------------------------------
+    if is_zip(raw):
+        xml_raw = extract_xml_from_zip(raw)
+        if xml_raw is None:
+            raise HTTPException(status_code=422, detail="ZIP-Datei enthält keine XML-Dateien.")
+        raw = xml_raw
+
+    # -----------------------------------------------------------------------
+    # CAMT ISO 20022 XML (camt.053 / camt.054)
+    # -----------------------------------------------------------------------
+    if is_camt(raw):
+        konto_iban = extract_konto_iban_camt(raw)
+        erkanntes_konto_id = konto_id
+        if konto_iban and konto_id is None:
+            konto = db.query(Konto).filter(Konto.iban == konto_iban, Konto.aktiv == True).first()
+            if konto:
+                erkanntes_konto_id = konto.id
+
+        rohe = parse_camt(raw)
+        if not rohe:
+            raise HTTPException(status_code=422, detail="CAMT-Datei enthält keine Buchungen oder konnte nicht gelesen werden.")
+
+        hashes = _vorhandene_hashes(db, erkanntes_konto_id) if erkanntes_konto_id else set()
+        result = []
+        for tx in rohe:
+            h = _dedupe_hash(tx)
+            result.append(TransaktionVorschau(
+                datum=tx["datum"],
+                valuta=tx.get("valuta"),
+                buchungstext=tx.get("buchungstext"),
+                verwendungszweck=tx.get("verwendungszweck"),
+                partner_name=tx.get("partner_name"),
+                partner_iban=tx.get("partner_iban"),
+                betrag=tx["betrag"],
+                waehrung=tx.get("waehrung", "EUR"),
+                saldo=tx.get("saldo"),
+                referenz=tx.get("referenz"),
+                dedupe_hash=h,
+                ist_duplikat=h in hashes,
+            ))
+        return VorschauResponse(
+            erkanntes_template="CAMT_XML",
+            template_name="CAMT / ISO 20022 (automatisch erkannt)",
+            encoding="UTF-8",
+            konto_iban=konto_iban,
+            erkanntes_konto_id=erkanntes_konto_id,
+            transaktionen=result,
+        )
+
+    # -----------------------------------------------------------------------
+    # CSV-Pfad
+    # -----------------------------------------------------------------------
     templates = db.query(BankTemplate).all()
 
     if template_id:
@@ -566,7 +626,7 @@ async def vorschau_import(
 def importieren(data: ImportiereRequest, db: Session = Depends(get_db)):
     if not db.query(Konto).filter(Konto.id == data.konto_id).first():
         raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
-    if not db.query(BankTemplate).filter(BankTemplate.id == data.template_id).first():
+    if data.template_id != "CAMT_XML" and not db.query(BankTemplate).filter(BankTemplate.id == data.template_id).first():
         raise HTTPException(status_code=404, detail="Template nicht gefunden.")
 
     hashes = _vorhandene_hashes(db, data.konto_id)

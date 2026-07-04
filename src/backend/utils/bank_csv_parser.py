@@ -13,8 +13,9 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
-# IBAN-Muster: Länderkürzel + 2 Prüfziffern + 10–30 alphanumerische Zeichen (Leerzeichen erlaubt)
-_IBAN_RE = re.compile(r'[A-Z]{2}\d{2}(?:\s?[0-9A-Z]{4}){3,7}')
+# IBAN-Muster: Länderkürzel + Prüfziffern + volle 4er-Gruppen + optionale Restgruppe (1–4 Zeichen).
+# {2,6} volle Gruppen + Restgruppe deckt alle gängigen IBANs (DE 22 Stellen: 4 Gruppen + Rest "78").
+_IBAN_RE = re.compile(r'[A-Z]{2}\d{2}(?:\s?[0-9A-Z]{4}){2,6}\s?[0-9A-Z]{1,4}')
 
 from charset_normalizer import from_bytes
 
@@ -194,6 +195,156 @@ def extract_konto_iban(raw: bytes, template) -> Optional[str]:
         if len(iban) >= 15:
             return iban
     return None
+
+
+def is_camt(raw: bytes) -> bool:
+    """Erkennt CAMT ISO 20022 XML anhand der ersten 500 Bytes."""
+    sniff = raw[:500]
+    return b'<Document' in sniff and b'camt.' in sniff.lower()
+
+
+def is_zip(raw: bytes) -> bool:
+    return raw[:4] == b'PK\x03\x04'
+
+
+def extract_xml_from_zip(raw: bytes) -> Optional[bytes]:
+    """Gibt den Inhalt der ersten XML-Datei aus einem ZIP zurück."""
+    import zipfile, io as _io
+    try:
+        with zipfile.ZipFile(_io.BytesIO(raw)) as zf:
+            xml_names = [n for n in zf.namelist() if n.lower().endswith('.xml')]
+            if xml_names:
+                return zf.read(xml_names[0])
+    except Exception:
+        pass
+    return None
+
+
+def extract_konto_iban_camt(raw: bytes) -> Optional[str]:
+    """Extrahiert die eigene Konto-IBAN aus einem CAMT.053/054-XML."""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(raw)
+        ns_match = re.match(r'\{([^}]+)\}', root.tag)
+        p = f'{{{ns_match.group(1)}}}' if ns_match else ''
+        for path in [
+            f'.//{p}Stmt/{p}Acct/{p}Id/{p}IBAN',
+            f'.//{p}Ntfctn/{p}Acct/{p}Id/{p}IBAN',
+            f'.//{p}Acct/{p}Id/{p}IBAN',
+        ]:
+            el = root.find(path)
+            if el is not None and el.text:
+                return el.text.strip().replace(' ', '')
+    except Exception:
+        pass
+    return None
+
+
+def parse_camt(raw: bytes) -> list[dict]:
+    """Parst CAMT.053/054 ISO 20022 XML und gibt normalisierte Transaktionsdicts zurück."""
+    import xml.etree.ElementTree as ET
+    from decimal import InvalidOperation as _IE
+
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError:
+        return []
+
+    ns_match = re.match(r'\{([^}]+)\}', root.tag)
+    p = f'{{{ns_match.group(1)}}}' if ns_match else ''
+
+    ergebnis = []
+    for ntry in root.iter(f'{p}Ntry'):
+        tx: dict = {
+            'datum': None, 'valuta': None, 'buchungstext': None,
+            'verwendungszweck': None, 'partner_name': None, 'partner_iban': None,
+            'partner_bic': None, 'betrag': None, 'waehrung': 'EUR',
+            'saldo': None, 'referenz': None,
+        }
+
+        # Betrag + Vorzeichen
+        amt_el = ntry.find(f'{p}Amt')
+        if amt_el is None or not (amt_el.text or '').strip():
+            continue
+        try:
+            betrag = Decimal(amt_el.text.strip())
+        except (InvalidOperation, AttributeError):
+            continue
+        tx['waehrung'] = amt_el.get('Ccy', 'EUR')
+        ind = ntry.find(f'{p}CdtDbtInd')
+        if ind is not None and (ind.text or '').strip() == 'DBIT':
+            betrag = -betrag
+        tx['betrag'] = betrag
+
+        # Buchungsdatum
+        for date_tag in (f'{p}BookgDt/{p}Dt', f'{p}ValDt/{p}Dt'):
+            el = ntry.find(date_tag)
+            if el is not None and (el.text or '').strip():
+                try:
+                    tx['datum'] = datetime.strptime(el.text.strip(), '%Y-%m-%d').date()
+                    break
+                except ValueError:
+                    pass
+        if tx['datum'] is None:
+            continue
+
+        # Valutadatum
+        val_el = ntry.find(f'{p}ValDt/{p}Dt')
+        if val_el is not None and (val_el.text or '').strip():
+            try:
+                tx['valuta'] = datetime.strptime(val_el.text.strip(), '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        # Buchungstext
+        addtl = ntry.find(f'{p}AddtlNtryInf')
+        if addtl is not None and addtl.text:
+            tx['buchungstext'] = addtl.text.strip()[:255]
+
+        # Transaktionsdetails
+        for td in ntry.iter(f'{p}TxDtls'):
+            if not tx['verwendungszweck']:
+                el = td.find(f'{p}RmtInf/{p}Ustrd')
+                if el is not None and el.text:
+                    tx['verwendungszweck'] = el.text.strip()[:500]
+
+            if not tx['partner_name']:
+                for nm_path in (
+                    f'{p}RltdPties/{p}Cdtr/{p}Nm',
+                    f'{p}RltdPties/{p}Dbtr/{p}Nm',
+                ):
+                    el = td.find(nm_path)
+                    if el is not None and el.text:
+                        tx['partner_name'] = el.text.strip()[:200]
+                        break
+
+            if not tx['partner_iban']:
+                for iban_path in (
+                    f'{p}RltdPties/{p}CdtrAcct/{p}Id/{p}IBAN',
+                    f'{p}RltdPties/{p}DbtrAcct/{p}Id/{p}IBAN',
+                ):
+                    el = td.find(iban_path)
+                    if el is not None and el.text:
+                        tx['partner_iban'] = el.text.strip().replace(' ', '')
+                        break
+
+            if not tx['partner_bic']:
+                for bic_path in (
+                    f'{p}RltdAgts/{p}CdtrAgt/{p}FinInstnId/{p}BICFI',
+                    f'{p}RltdAgts/{p}DbtrAgt/{p}FinInstnId/{p}BICFI',
+                ):
+                    el = td.find(bic_path)
+                    if el is not None and el.text:
+                        tx['partner_bic'] = el.text.strip()
+                        break
+
+            if not tx['referenz']:
+                el = td.find(f'{p}Refs/{p}EndToEndId')
+                if el is not None and el.text:
+                    tx['referenz'] = el.text.strip()[:100]
+
+        ergebnis.append(tx)
+    return ergebnis
 
 
 def parse_csv_mit_template(raw: bytes, template) -> tuple[list[dict], str]:
