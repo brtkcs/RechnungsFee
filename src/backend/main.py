@@ -2309,6 +2309,46 @@ def _run_migrations() -> None:
             print("[Migration] Schema auf Version 103 (unternehmen: guv_aktiv – GuV / §141 AO Buchführungspflicht)")
 
         if version < 104:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS bank_imports (
+                    id INTEGER PRIMARY KEY,
+                    konto_id INTEGER NOT NULL REFERENCES konten(id),
+                    template_id TEXT NOT NULL REFERENCES bank_templates(id),
+                    dateiname VARCHAR(200) NOT NULL,
+                    anzahl_zeilen INTEGER NOT NULL DEFAULT 0,
+                    erfolg INTEGER NOT NULL DEFAULT 0,
+                    fehler INTEGER NOT NULL DEFAULT 0,
+                    duplikate INTEGER NOT NULL DEFAULT 0,
+                    importiert_am DATETIME DEFAULT (datetime('now'))
+                )
+            """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS bank_transaktionen (
+                    id INTEGER PRIMARY KEY,
+                    konto_id INTEGER NOT NULL REFERENCES konten(id),
+                    import_id INTEGER NOT NULL REFERENCES bank_imports(id),
+                    datum DATE NOT NULL,
+                    valuta DATE,
+                    buchungstext VARCHAR(500),
+                    verwendungszweck TEXT,
+                    partner_name VARCHAR(200),
+                    partner_iban VARCHAR(34),
+                    betrag NUMERIC(12,2) NOT NULL,
+                    waehrung VARCHAR(3) NOT NULL DEFAULT 'EUR',
+                    saldo NUMERIC(12,2),
+                    ist_geschaeftlich BOOLEAN NOT NULL DEFAULT 1,
+                    ist_privatentnahme BOOLEAN NOT NULL DEFAULT 0,
+                    ist_einlage BOOLEAN NOT NULL DEFAULT 0,
+                    ist_rueckerstattung BOOLEAN NOT NULL DEFAULT 0,
+                    auto_vorschlag VARCHAR(20),
+                    user_ueberschrieben BOOLEAN NOT NULL DEFAULT 0,
+                    dedupe_hash VARCHAR(64),
+                    kategorie_id INTEGER REFERENCES kategorien(id),
+                    rechnung_id INTEGER REFERENCES rechnungen(id),
+                    journal_id INTEGER REFERENCES journal(id) ON DELETE SET NULL,
+                    erstellt_am DATETIME DEFAULT (datetime('now'))
+                )
+            """))
             cols = {r[1] for r in conn.execute(text("PRAGMA table_info(bank_transaktionen)")).fetchall()}
             if "dedupe_hash" not in cols:
                 conn.execute(text("ALTER TABLE bank_transaktionen ADD COLUMN dedupe_hash TEXT"))
