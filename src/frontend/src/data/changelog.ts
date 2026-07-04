@@ -34,6 +34,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Bank-Import: IBAN im CSV-Header wurde bei deutschen Konten um die letzten 2 Stellen gekürzt – das zugehörige Konto wurde dadurch nicht erkannt. Außerdem werden jetzt CAMT-Exporte (ZIP mit XML oder direkte XML-Datei, ISO 20022 camt.053/054) direkt importiert – kein CSV-Template notwendig.' },
       { typ: 'verbesserung', text: 'App beenden: Im Beenden-Dialog (erscheint beim Klick auf das X-Symbol) gibt es jetzt einen „Abbrechen"-Button – so kann man versehentliches Schließen rückgängig machen, auch wenn das Backup bereits erstellt wurde.' },
       { typ: 'fix', text: 'Buchung: Steuerlicher Sonderfall (Reverse Charge) wird jetzt zurückgesetzt, wenn die Kategorie auf eine ohne Sonderfall-Zuordnung gewechselt wird (z. B. von Wareneinkauf EU auf Wareneinkauf).' },
+      { typ: 'verbesserung', text: 'Stammdaten: IBAN-Eingabe wird automatisch in 4er-Gruppen formatiert (z. B. DE89 3704 0044 0532 0130 00) – auch bereits gespeicherte IBANs ohne Leerzeichen werden beim Öffnen korrekt dargestellt.' },
     ],
   },
   {

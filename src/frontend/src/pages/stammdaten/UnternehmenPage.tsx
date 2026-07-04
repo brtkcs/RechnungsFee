@@ -166,6 +166,10 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
   const qc = useQueryClient()
   const [form, setForm] = useState<Partial<Unternehmen>>(() => {
     const { logo_pfad: _logo, ...rest } = data
+    if (rest.iban) {
+      const raw = rest.iban.replace(/\s/g, '').toUpperCase()
+      rest.iban = raw.replace(/(.{4})/g, '$1 ').trimEnd()
+    }
     return rest
   })
   const [gespeichert, setGespeichert] = useState(false)
@@ -594,7 +598,19 @@ function FirmendatenSektion({ data, activeTab }: { data: Unternehmen; activeTab:
 
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Bankverbindung</h3>
-          <Field label="IBAN *">{inp('iban', 'DE89 3704 0044 0532 0130 00')}</Field>
+          <Field label="IBAN *">
+            <input
+              type="text"
+              value={(form.iban as string) ?? ''}
+              onChange={ev => {
+                const raw = ev.target.value.replace(/\s/g, '').toUpperCase()
+                const formatted = raw.replace(/(.{4})/g, '$1 ').trimEnd()
+                set('iban', formatted)
+              }}
+              placeholder="DE89 3704 0044 0532 0130 00"
+              className={inputCls}
+            />
+          </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="BIC">{inp('bic', 'COBADEFFXXX')}</Field>
             <Field label="Bank">{inp('bank_name', 'Deutsche Bank')}</Field>
