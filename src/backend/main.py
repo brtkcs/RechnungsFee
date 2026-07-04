@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen
 
-SCHEMA_VERSION = 111
+SCHEMA_VERSION = 112
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -1191,8 +1191,8 @@ def _run_migrations() -> None:
                 "Reisekosten – Nebenkosten":    "z. B. Taxi, Mietwagen, Gepäckgebühren, Reiseversicherung auf Dienstreisen",
                 "Reisekosten – ÖPNV":           "z. B. Bahn, Bus, U-Bahn, Straßenbahn für betriebliche Fahrten",
                 "Verpflegungsmehraufwand":      "z. B. Tagespauschalen auf Dienstreisen: 8 € (bis 8 Std.), 14 € (ab 8 Std.), 28 € (ganztägig)",
-                "Bewirtungskosten":             "z. B. Geschäftsessen mit Kunden oder Partnern – 70 % abziehbar; Anlass und Teilnehmer auf dem Beleg notieren",
-                "Bewirtungskosten (nicht abzugsfähig)": "Der nicht abziehbare 30 %-Anteil von Bewirtungskosten (§ 4 Abs. 5 Nr. 2 EStG) – separat buchen, kein Vorsteuerabzug",
+                "Bewirtungskosten":             "z. B. Geschäftsessen mit Kunden oder Partnern; ertragsteuerlich 70 % abziehbar (§ 4 Abs. 5 Nr. 2 EStG), Vorsteuer zu 100 % abzugsfähig; Anlass und Teilnehmer auf dem Beleg notieren",
+                "Bewirtungskosten (nicht abzugsfähig)": "Der ertragsteuerlich nicht abziehbare 30 %-Anteil von Bewirtungskosten (§ 4 Abs. 5 Nr. 2 EStG); Vorsteuer trotzdem zu 100 % abzugsfähig",
                 "Steuerberatung":               "z. B. Steuerberater-Honorar, Jahresabschluss, Lohnbuchhaltung",
                 "Rechts- & Beratungskosten":   "z. B. Anwaltskosten, Unternehmensberatung, Notargebühren",
                 "Buchführungskosten":           "z. B. Buchhaltungssoftware-Abo, externe Buchführung",
@@ -2403,6 +2403,26 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 111 (bank_transaktionen: ist_rueckerstattung)")
 
+        if version < 112:
+            # Fix: Bewirtungskosten vorsteuer_prozent korrigiert (Issue #214)
+            # Per §15 UStG ist Vorsteuer auf Bewirtungskosten zu 100 % abzugsfähig.
+            # Der 70 %-Abzug gilt nur ertragsteuerlich (§ 4 Abs. 5 Nr. 2 EStG).
+            conn.execute(text("""
+                UPDATE kategorien SET
+                    vorsteuer_prozent = 100,
+                    beschreibung = 'z. B. Geschäftsessen mit Kunden oder Partnern; ertragsteuerlich 70 % abziehbar (§ 4 Abs. 5 Nr. 2 EStG), Vorsteuer zu 100 % abzugsfähig; Anlass und Teilnehmer auf dem Beleg notieren'
+                WHERE name = 'Bewirtungskosten'
+            """))
+            conn.execute(text("""
+                UPDATE kategorien SET
+                    vorsteuer_prozent = 100,
+                    beschreibung = 'Der ertragsteuerlich nicht abziehbare 30 %-Anteil von Bewirtungskosten (§ 4 Abs. 5 Nr. 2 EStG); Vorsteuer trotzdem zu 100 % abzugsfähig'
+                WHERE name = 'Bewirtungskosten (nicht abzugsfähig)'
+            """))
+            conn.execute(text("PRAGMA user_version = 112"))
+            conn.commit()
+            print("[Migration] Schema auf Version 112 (Bewirtungskosten: vorsteuer_prozent 70/0 → 100, Beschreibungen korrigiert)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -2566,7 +2586,7 @@ def _migrate_kategorien() -> None:
             {"name": "Gewährte Skonti",                  "kontenart": "Erlös",   "konto_skr03": "8736", "konto_skr04": "4310", "eks_kategorie": "A1",    "euer_zeile": None, "vorsteuer_prozent": 0,   "ust_satz_standard": 19},
             {"name": "Erhaltene Skonti",                 "kontenart": "Aufwand", "konto_skr03": "2401", "konto_skr04": "3401", "eks_kategorie": "B1",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Bewirtungskosten nicht abzugsfähiger Anteil
-            {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 0, "ust_satz_standard": 0},
+            {"name": "Bewirtungskosten (nicht abzugsfähig)", "kontenart": "Aufwand", "konto_skr03": "4654", "konto_skr04": "6644", "eks_kategorie": None,    "euer_zeile": 63, "vorsteuer_prozent": 100, "ust_satz_standard": 0},
             # Anlagevermögen KFZ (Anlage AVEÜR: eigene Kategorie „Kraftfahrzeuge")
             {"name": "KFZ (Kauf)",                           "kontenart": "Anlage",  "konto_skr03": "0320", "konto_skr04": "0540", "eks_kategorie": "B8",    "euer_zeile": None, "vorsteuer_prozent": 100, "ust_satz_standard": 19},
             # Digitale Wirtschaftsgüter: Wahlrecht Nutzungsdauer 1 Jahr (BMF 26.02.2021, § 7 Abs. 1 EStG)

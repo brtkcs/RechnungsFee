@@ -36,6 +36,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Buchung: Steuerlicher Sonderfall (Reverse Charge) wird jetzt zurückgesetzt, wenn die Kategorie auf eine ohne Sonderfall-Zuordnung gewechselt wird (z. B. von Wareneinkauf EU auf Wareneinkauf).' },
       { typ: 'verbesserung', text: 'Stammdaten: IBAN-Eingabe wird automatisch in 4er-Gruppen formatiert (z. B. DE89 3704 0044 0532 0130 00) – auch bereits gespeicherte IBANs ohne Leerzeichen werden beim Öffnen korrekt dargestellt.' },
       { typ: 'fix', text: 'Rechnungen: Schwarzer Bildschirm beim Löschen des Rechnungsdatums behoben – leeres oder ungültiges Datum führt nicht mehr zu einem App-Absturz.' },
+      { typ: 'fix', text: 'Kategorien: Vorsteuer-Prozentsatz für Bewirtungskosten korrigiert – per §15 UStG ist die Vorsteuer zu 100 % abzugsfähig (nicht 70 %); der 70 %-Abzug gilt nur ertragsteuerlich (§ 4 Abs. 5 Nr. 2 EStG). Betrifft beide Kategorien „Bewirtungskosten" und „Bewirtungskosten (nicht abzugsfähig)".' },
     ],
   },
   {
