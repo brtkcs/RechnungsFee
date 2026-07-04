@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juli 2026',
     eintraege: [
       { typ: 'verbesserung', text: 'Rechnungen: Filtereinstellung (Monat/Jahr/Zeitraum/Alle) bleibt beim Navigieren erhalten und wird erst beim nächsten App-Start zurückgesetzt.' },
+      { typ: 'verbesserung', text: 'App-Icon: Überarbeitetes Desktop-Icon mit Rahmen (Windows, Linux, macOS) – alle Größen 16–1024 px erneuert.' },
     ],
   },
   {
