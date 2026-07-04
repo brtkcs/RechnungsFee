@@ -63,3 +63,33 @@ export const dashboardFilter: DashboardFilterState = {
   datumVon: heute(),
   datumBis: heute(),
 }
+
+// ---------------------------------------------------------------------------
+// Rechnungen (Ausgangs-/Eingangsrechnungen + Lieferscheine)
+// ---------------------------------------------------------------------------
+
+export type RechnungenFilterModus = 'monat' | 'datum' | 'zeitraum' | 'alle' | 'jahr'
+
+export interface RechnungenFilterState {
+  modus:    RechnungenFilterModus
+  monat:    string
+  datum:    string
+  datumVon: string
+  datumBis: string
+}
+
+export const rechnungenFilter: RechnungenFilterState = {
+  modus:    'monat',
+  monat:    aktuellerMonat(),
+  datum:    heute(),
+  datumVon: heute(),
+  datumBis: heute(),
+}
+
+export const lieferscheinFilter: RechnungenFilterState = {
+  modus:    'monat',
+  monat:    aktuellerMonat(),
+  datum:    heute(),
+  datumVon: heute(),
+  datumBis: heute(),
+}

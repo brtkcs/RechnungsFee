@@ -25,6 +25,7 @@ import { MailDialog } from '../../components/MailDialog'
 import { StammdatenCombobox } from '../../components/StammdatenCombobox'
 import { DateInput } from '../../components/DateInput'
 import { getKontorahmenModus, katLabel, KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
+import { rechnungenFilter, lieferscheinFilter } from '../../store/filterStore'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -3504,11 +3505,17 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
   const [zahlungsstatus, setZahlungsstatus] = useState('')
   const [lsAbrechnungFilter, setLsAbrechnungFilter] = useState<'' | 'offen' | 'entwurf' | 'abgerechnet'>('')
   const [suche, setSuche] = useState('')
-  const [filterModus, setFilterModus] = useState<FilterModus>('monat')
-  const [monat, setMonat] = useState(aktuellerMonat())
-  const [datum, setDatum] = useState(heuteIso())
-  const [datumVon, setDatumVon] = useState(heuteIso())
-  const [datumBis, setDatumBis] = useState(heuteIso())
+  const store = istLieferscheinSeite ? lieferscheinFilter : rechnungenFilter
+  const [filterModus, _setFilterModus] = useState<FilterModus>(() => store.modus as FilterModus)
+  const setFilterModus = (m: FilterModus) => { store.modus = m; _setFilterModus(m) }
+  const [monat, _setMonat] = useState<string>(() => store.monat)
+  const setMonat = (m: string) => { store.monat = m; _setMonat(m) }
+  const [datum, _setDatum] = useState<string>(() => store.datum)
+  const setDatum = (d: string) => { store.datum = d; _setDatum(d) }
+  const [datumVon, _setDatumVon] = useState<string>(() => store.datumVon)
+  const setDatumVon = (d: string) => { store.datumVon = d; _setDatumVon(d) }
+  const [datumBis, _setDatumBis] = useState<string>(() => store.datumBis)
+  const setDatumBis = (d: string) => { store.datumBis = d; _setDatumBis(d) }
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [pendingEditRechnung, setPendingEditRechnung] = useState<Rechnung | null>(null)
   const [detailVersion, setDetailVersion] = useState(0)
