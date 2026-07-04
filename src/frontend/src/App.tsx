@@ -148,6 +148,7 @@ export default function App() {
   const [externFehler, setExternFehler] = useState<string[]>([])
   const [externKonfiguriert, setExternKonfiguriert] = useState(false)
   const closingRef = useRef(false)
+  const abgebrochenRef = useRef(false)
 
   useEffect(() => {
     if (!isTauri()) return
@@ -156,6 +157,7 @@ export default function App() {
       getCurrentWindow().onCloseRequested(async (event) => {
         if (closingRef.current) return  // zweiter Close nach confirm_close – durchlassen
         event.preventDefault()
+        abgebrochenRef.current = false
         setExternFehler([])
         setExternKonfiguriert(false)
         setPhase('backup-laeuft')
@@ -195,6 +197,7 @@ export default function App() {
         setExternKonfiguriert(json.extern_konfiguriert ?? false)
         const fehler: string[] = json.fehler ?? []
         if (fehler.length > 0) {
+          if (abgebrochenRef.current) return
           setExternFehler(fehler)
           setPhase('extern-fehler')
           setZeigSchliessen(true)
@@ -205,6 +208,11 @@ export default function App() {
       // Netzwerkfehler – lokal war OK, einfach schließen
     }
     setPhase('backup-ok')
+  }
+
+  function abbrechen() {
+    abgebrochenRef.current = true
+    setZeigSchliessen(false)
   }
 
   async function schliessenOhneBackup() {
@@ -256,7 +264,11 @@ export default function App() {
                     </Link>
                   </div>
                 )}
-                <div className="flex justify-end">
+                <div className="flex justify-between">
+                  <button onClick={abbrechen}
+                    className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    Abbrechen
+                  </button>
                   <button onClick={schliessenOhneBackup}
                     className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                     App beenden
@@ -277,15 +289,21 @@ export default function App() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Laufwerk anstecken oder NAS starten und dann erneut versuchen.
                 </p>
-                <div className="flex gap-2 justify-end">
-                  <button onClick={schliessenOhneBackup}
+                <div className="flex gap-2 justify-between">
+                  <button onClick={abbrechen}
                     className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-                    Trotzdem beenden
+                    Abbrechen
                   </button>
-                  <button onClick={führeBackupUndSchliesseDurch}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Erneut versuchen
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={schliessenOhneBackup}
+                      className="px-4 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      Trotzdem beenden
+                    </button>
+                    <button onClick={führeBackupUndSchliesseDurch}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                      Erneut versuchen
+                    </button>
+                  </div>
                 </div>
               </>
             )}

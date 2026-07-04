@@ -32,6 +32,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Artikel archivieren statt löschen: Artikel, Dienstleistungen und Fremdleistungen können jetzt archiviert (inaktiv gesetzt) werden. Archivierte Einträge verschwinden aus Auswahlfeldern, bleiben aber in bestehenden Rechnungen erhalten. Bei aktiver Lagerführung muss der Bestand zuerst auf 0 gebracht werden.' },
       { typ: 'verbesserung', text: 'Kontenrahmen-Auswahl (Setup & Stammdaten): SKR03 jetzt als Empfehlung für Freiberufler, Dienstleister und Gewerbetreibende (Handwerk, kleine Betriebe) beschrieben. Hinweis ergänzt, dass die Zuordnungen Empfehlungen sind und Steuerberater bzw. Finanzamt entscheidend sind.' },
       { typ: 'fix', text: 'Bank-Import: IBAN im CSV-Header wurde bei deutschen Konten um die letzten 2 Stellen gekürzt – das zugehörige Konto wurde dadurch nicht erkannt. Außerdem werden jetzt CAMT-Exporte (ZIP mit XML oder direkte XML-Datei, ISO 20022 camt.053/054) direkt importiert – kein CSV-Template notwendig.' },
+      { typ: 'verbesserung', text: 'App beenden: Im Beenden-Dialog (erscheint beim Klick auf das X-Symbol) gibt es jetzt einen „Abbrechen"-Button – so kann man versehentliches Schließen rückgängig machen, auch wenn das Backup bereits erstellt wurde.' },
     ],
   },
   {
