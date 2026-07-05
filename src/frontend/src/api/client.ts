@@ -2127,11 +2127,18 @@ export const getFristen = (monate: number) =>
 // GuV – Gewinn- und Verlustrechnung (§ 141 AO Schwellenwert-Prüfung)
 // ---------------------------------------------------------------------------
 
+export type GUVZeileBetrag = {
+  zeile: number
+  bezeichnung: string
+  betrag: string
+}
+
 export type GUVPosition = {
   nr: number
   bezeichnung: string
   typ: 'ertrag' | 'aufwand'
   betrag: string
+  euer_zeilen: GUVZeileBetrag[]
 }
 
 export type GUVErgebnis = {

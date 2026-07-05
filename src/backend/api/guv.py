@@ -51,11 +51,18 @@ _GUV_AUSGESCHLOSSEN = {17, 57, 106, 107}
 # Schemas
 # ---------------------------------------------------------------------------
 
+class GUVZeileBetrag(BaseModel):
+    zeile: int
+    bezeichnung: str
+    betrag: str
+
+
 class GUVPosition(BaseModel):
     nr: int
     bezeichnung: str
     typ: str  # "ertrag" | "aufwand"
     betrag: str
+    euer_zeilen: list[GUVZeileBetrag] = []
 
 
 class GUVErgebnis(BaseModel):
@@ -85,14 +92,23 @@ class GUVSchwellenwert(BaseModel):
 
 @router.get("/berechnen", response_model=GUVErgebnis)
 def berechne_guv(jahr: int = Query(...), db: Session = Depends(get_db)):
-    from api.euer import _berechne_euer
+    from api.euer import _berechne_euer, EUR_ZEILEN_META
     euer = _berechne_euer(jahr, db)
     zeilen: dict[int, Decimal] = euer["zeilen"]
 
     positionen: list[GUVPosition] = []
-    for nr, bezeichnung, typ, euer_zeilen in GUV_POSITIONEN:
-        betrag = sum(zeilen.get(z, ZERO) for z in euer_zeilen).quantize(Q, ROUND_HALF_UP)
-        positionen.append(GUVPosition(nr=nr, bezeichnung=bezeichnung, typ=typ, betrag=str(betrag)))
+    for nr, bezeichnung, typ, euer_zeilen_nrs in GUV_POSITIONEN:
+        betrag = sum(zeilen.get(z, ZERO) for z in euer_zeilen_nrs).quantize(Q, ROUND_HALF_UP)
+        zeilen_detail = [
+            GUVZeileBetrag(
+                zeile=z,
+                bezeichnung=EUR_ZEILEN_META.get(z, (str(z), ""))[0],
+                betrag=str(zeilen[z].quantize(Q, ROUND_HALF_UP)),
+            )
+            for z in euer_zeilen_nrs
+            if zeilen.get(z, ZERO) != ZERO
+        ]
+        positionen.append(GUVPosition(nr=nr, bezeichnung=bezeichnung, typ=typ, betrag=str(betrag), euer_zeilen=zeilen_detail))
 
     summe_ertraege     = sum(Decimal(p.betrag) for p in positionen if p.typ == "ertrag").quantize(Q, ROUND_HALF_UP)
     summe_aufwendungen = sum(Decimal(p.betrag) for p in positionen if p.typ == "aufwand").quantize(Q, ROUND_HALF_UP)

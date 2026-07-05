@@ -11,6 +11,7 @@ export function GUVPage() {
   const now = new Date()
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
+  const [detailansicht, setDetailansicht] = useState(false)
 
   const { data: ergebnis, isLoading, error } = useQuery<GUVErgebnis>({
     queryKey: ['guv-berechnen', jahr],
@@ -43,6 +44,19 @@ export function GUVPage() {
           </select>
         </div>
         {isLoading && <span className="text-sm text-slate-500 dark:text-slate-400">Berechne…</span>}
+        {ergebnis && !isLoading && (
+          <div className="ml-auto">
+            <button
+              onClick={() => setDetailansicht(v => !v)}
+              className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
+                detailansicht
+                  ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                  : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }`}>
+              🔍 Aufschlüsselung
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -60,10 +74,25 @@ export function GUVPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Erträge</span>
             </div>
             {ertraege.map(p => (
-              <div key={p.nr} className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300">
-                <span className="text-slate-400 dark:text-slate-500 mr-3 tabular-nums w-4 shrink-0">{p.nr}.</span>
-                <span className="flex-1">{p.bezeichnung}</span>
-                <span className="tabular-nums ml-4">{euroFmt(p.betrag)}</span>
+              <div key={p.nr}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-400 dark:text-slate-500 mr-3 tabular-nums w-4 shrink-0">{p.nr}.</span>
+                  <span className="flex-1">{p.bezeichnung}</span>
+                  <span className="tabular-nums ml-4">{euroFmt(p.betrag)}</span>
+                </div>
+                {detailansicht && p.euer_zeilen.length > 0 && (
+                  <div className="bg-slate-50 dark:bg-slate-900/40 divide-y divide-slate-100 dark:divide-slate-800 border-b border-slate-100 dark:border-slate-700">
+                    {p.euer_zeilen.map(z => (
+                      <div key={z.zeile} className="flex items-center gap-3 pl-10 pr-4 py-1.5">
+                        <span className="shrink-0 inline-flex items-center justify-center w-9 h-5 rounded text-xs font-bold text-white bg-blue-500 dark:bg-blue-700">
+                          Z.{z.zeile}
+                        </span>
+                        <span className="flex-1 text-xs text-slate-500 dark:text-slate-400">{z.bezeichnung}</span>
+                        <span className="tabular-nums text-xs text-slate-500 dark:text-slate-400">{euroFmt(z.betrag)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <div className="flex items-center justify-between px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 border-t border-emerald-200 dark:border-emerald-800 font-semibold text-sm text-emerald-800 dark:text-emerald-300">
@@ -76,12 +105,29 @@ export function GUVPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Aufwendungen</span>
             </div>
             {aufwendungen.map(p => (
-              <div key={p.nr} className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300">
-                <span className="text-slate-400 dark:text-slate-500 mr-3 tabular-nums w-4 shrink-0">{p.nr}.</span>
-                <span className="flex-1">{p.bezeichnung}</span>
-                <span className="tabular-nums ml-4 text-red-600 dark:text-red-400">
-                  {parseFloat(p.betrag) > 0 ? '−' : ''}{euroFmt(p.betrag)}
-                </span>
+              <div key={p.nr}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-400 dark:text-slate-500 mr-3 tabular-nums w-4 shrink-0">{p.nr}.</span>
+                  <span className="flex-1">{p.bezeichnung}</span>
+                  <span className="tabular-nums ml-4 text-red-600 dark:text-red-400">
+                    {parseFloat(p.betrag) > 0 ? '−' : ''}{euroFmt(p.betrag)}
+                  </span>
+                </div>
+                {detailansicht && p.euer_zeilen.length > 0 && (
+                  <div className="bg-slate-50 dark:bg-slate-900/40 divide-y divide-slate-100 dark:divide-slate-800 border-b border-slate-100 dark:border-slate-700">
+                    {p.euer_zeilen.map(z => (
+                      <div key={z.zeile} className="flex items-center gap-3 pl-10 pr-4 py-1.5">
+                        <span className="shrink-0 inline-flex items-center justify-center w-9 h-5 rounded text-xs font-bold text-white bg-blue-500 dark:bg-blue-700">
+                          Z.{z.zeile}
+                        </span>
+                        <span className="flex-1 text-xs text-slate-500 dark:text-slate-400">{z.bezeichnung}</span>
+                        <span className="tabular-nums text-xs text-red-500 dark:text-red-400">
+                          {parseFloat(z.betrag) > 0 ? '−' : ''}{euroFmt(z.betrag)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <div className="flex items-center justify-between px-4 py-2.5 bg-red-50 dark:bg-red-950/40 border-t border-red-200 dark:border-red-800 font-semibold text-sm text-red-800 dark:text-red-300">
