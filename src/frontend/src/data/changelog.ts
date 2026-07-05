@@ -26,7 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.4.4',
     datum: 'Juli 2026',
     eintraege: [
-      { typ: 'neu', text: 'GuV – Gewinn- und Verlustrechnung: Neuer „🔍 Aufschlüsselung"-Button zeigt zu jeder GuV-Position die zugrundeliegenden EÜR-Zeilen mit Einzelbeträgen – analog zur Aufschlüsselung in der EÜR-Auswertung.' },
+      { typ: 'verbesserung', text: 'GuV – Gewinn- und Verlustrechnung: Neuer „🔍 Aufschlüsselung"-Button zeigt zu jeder GuV-Position die zugrundeliegenden EÜR-Zeilen mit Einzelbeträgen – analog zur Aufschlüsselung in der EÜR-Auswertung.' },
     ],
   },
   {
