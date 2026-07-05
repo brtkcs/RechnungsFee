@@ -67,7 +67,7 @@ def fristen_berechnen(
             faellig_original = date(frist_ref.year, frist_ref.month, 10)
             faellig = naechster_werktag(faellig_original, bundesland)
 
-            if faellig < ab_datum:
+            if faellig < ab_datum or faellig > bis_datum:
                 continue
 
             hinweis = "Dauerfristverlängerung aktiv (+1 Monat)" if dauerfristverlaengerung else None
