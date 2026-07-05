@@ -28,6 +28,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'verbesserung', text: 'Sidebar: Alle Navigations-Einträge einheitlich abgerundet und gleichmäßig eingerückt. Aktiv-Farbe ist jetzt durchgehend die App-Akzentfarbe (Indigo) statt Blau.' },
       { typ: 'verbesserung', text: 'Anlage G & Anlage S: Gewinn/Verlust wird jetzt als eine Zeile dargestellt (KZ 10 = Gewinn, KZ 11 = Verlust in Anlage G; KZ 100 in Anlage S) – Verlust erscheint rot mit negativem Vorzeichen, analog zur Darstellung im ELSTER-Formular.' },
+      { typ: 'fix', text: 'Steuer-Fristenliste: UStVA-Fristen knapp außerhalb des gewählten Zeitfensters wurden fälschlicherweise angezeigt (fehlender oberer Datumsfilter). Betrifft z. B. Dezember-UStVA mit Fälligkeit 10.01. in einem 3-Monats-Fenster.' },
     ],
   },
   {
