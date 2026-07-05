@@ -23,6 +23,14 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.3',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'verbesserung', text: 'Sidebar: Alle Navigations-Einträge einheitlich abgerundet und gleichmäßig eingerückt. Aktiv-Farbe ist jetzt durchgehend die App-Akzentfarbe (Indigo) statt Blau.' },
+      { typ: 'verbesserung', text: 'Anlage G & Anlage S: Gewinn/Verlust wird jetzt als eine Zeile dargestellt (KZ 10 = Gewinn, KZ 11 = Verlust in Anlage G; KZ 100 in Anlage S) – Verlust erscheint rot mit negativem Vorzeichen, analog zur Darstellung im ELSTER-Formular.' },
+    ],
+  },
+  {
     version: 'v0.4.2',
     datum: 'Juli 2026',
     eintraege: [
