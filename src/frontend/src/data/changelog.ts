@@ -30,6 +30,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Anlage G & Anlage S: Gewinn/Verlust wird jetzt als eine Zeile dargestellt (KZ 10 = Gewinn, KZ 11 = Verlust in Anlage G; KZ 100 in Anlage S) – Verlust erscheint rot mit negativem Vorzeichen, analog zur Darstellung im ELSTER-Formular.' },
       { typ: 'fix', text: 'Steuer-Fristenliste: UStVA-Fristen knapp außerhalb des gewählten Zeitfensters wurden fälschlicherweise angezeigt (fehlender oberer Datumsfilter). Betrifft z. B. Dezember-UStVA mit Fälligkeit 10.01. in einem 3-Monats-Fenster.' },
       { typ: 'fix', text: 'Linux (Bazzite/Fedora + Wayland + AMD): Scrollen per Mausrad und Touch funktioniert jetzt. Ursache war WebKitGTKs DMA-BUF-Renderer, der Scroll-Events blockiert – WEBKIT_DISABLE_DMABUF_RENDERER=1 wird jetzt automatisch beim App-Start gesetzt.' },
+      { typ: 'fix', text: 'Bank-Import: CAMT-ZIP-Dateien mit mehreren XML-Dateien (z. B. Sparkasse, eine XML pro Monat) werden jetzt vollständig eingelesen – bisher wurde nur die erste XML ausgewertet. Außerdem wird eine Transaktion nach freier Buchung (BuchungForm) jetzt korrekt als gebucht markiert; sie erscheint nicht mehr als „Zuordnung nötig".' },
     ],
   },
   {

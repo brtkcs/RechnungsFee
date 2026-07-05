@@ -31,6 +31,7 @@ from utils.bank_csv_parser import (
     is_camt,
     is_zip,
     parse_camt,
+    parse_camt_from_zip,
     parse_csv_mit_template,
 )
 from utils.signatur import signatur_journaleintrag
@@ -500,13 +501,45 @@ def _vorschau_fuer_bytes(
     """Gemeinsame Logik für /vorschau und /vorschau-pfad."""
 
     # -----------------------------------------------------------------------
-    # ZIP-Extraktion: CAMT-Export der Sparkasse kommt als ZIP mit XML-Dateien
+    # ZIP-Extraktion: CAMT-Export der Sparkasse kommt als ZIP mit mehreren XMLs
+    # parse_camt_from_zip liest alle XMLs (eine pro Monat) und gibt alle Buchungen zurück.
     # -----------------------------------------------------------------------
     if is_zip(raw):
-        xml_raw = extract_xml_from_zip(raw)
-        if xml_raw is None:
-            raise HTTPException(status_code=422, detail="ZIP-Datei enthält keine XML-Dateien.")
-        raw = xml_raw
+        konto_iban, rohe = parse_camt_from_zip(raw)
+        if not rohe:
+            raise HTTPException(status_code=422, detail="ZIP-Datei enthält keine verwertbaren CAMT-XML-Dateien.")
+        erkanntes_konto_id = konto_id
+        if konto_iban and konto_id is None:
+            konto = db.query(Konto).filter(Konto.iban == konto_iban, Konto.aktiv == True).first()
+            if konto:
+                erkanntes_konto_id = konto.id
+
+        hashes = _vorhandene_hashes(db, erkanntes_konto_id) if erkanntes_konto_id else set()
+        result = []
+        for tx in rohe:
+            h = _dedupe_hash(tx)
+            result.append(TransaktionVorschau(
+                datum=tx["datum"],
+                valuta=tx.get("valuta"),
+                buchungstext=tx.get("buchungstext"),
+                verwendungszweck=tx.get("verwendungszweck"),
+                partner_name=tx.get("partner_name"),
+                partner_iban=tx.get("partner_iban"),
+                betrag=tx["betrag"],
+                waehrung=tx.get("waehrung", "EUR"),
+                saldo=tx.get("saldo"),
+                referenz=tx.get("referenz"),
+                dedupe_hash=h,
+                ist_duplikat=h in hashes,
+            ))
+        return VorschauResponse(
+            erkanntes_template="CAMT_XML",
+            template_name="CAMT / ISO 20022 (automatisch erkannt)",
+            encoding="UTF-8",
+            konto_iban=konto_iban,
+            erkanntes_konto_id=erkanntes_konto_id,
+            transaktionen=result,
+        )
 
     # -----------------------------------------------------------------------
     # CAMT ISO 20022 XML (camt.053 / camt.054)
@@ -936,3 +969,32 @@ def buche_transaktion(
         resp.forderung_id = forderung.id
 
     return resp
+
+
+class JournalVerknuepfenRequest(BaseModel):
+    journal_id: int
+
+
+@router.post("/transaktion/{tx_id}/journal-verknuepfen", response_model=BankTransaktionResponse)
+def journal_verknuepfen(
+    tx_id: int,
+    data: JournalVerknuepfenRequest = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Verknüpft eine Bank-Transaktion mit einem bereits erstellten Journaleintrag.
+    Wird genutzt wenn der Nutzer via BuchungForm direkt bucht (ohne buche_transaktion-Endpoint).
+    """
+    tx = db.query(BankTransaktion).filter(BankTransaktion.id == tx_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaktion nicht gefunden.")
+    if tx.journal_id:
+        raise HTTPException(status_code=409, detail="bereits_verknuepft")
+
+    eintrag = db.query(Journaleintrag).filter(Journaleintrag.id == data.journal_id).first()
+    if not eintrag:
+        raise HTTPException(status_code=404, detail="Journaleintrag nicht gefunden.")
+
+    tx.journal_id = data.journal_id
+    db.commit()
+    db.refresh(tx)
+    return _enriche_tx(tx, {}, {})

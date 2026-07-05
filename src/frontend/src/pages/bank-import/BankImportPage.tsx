@@ -10,6 +10,7 @@ import {
   vorschauBankImportPfad,
   importiereBankTransaktionen,
   bucheTransaktion,
+  verknuepfeBankTransaktionMitJournal,
   abgleichTransaktion,
   autoBuchen,
   ueberzahlungAnerkennen,
@@ -996,10 +997,16 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
             kategorie_id: buchungTx.kategorie_id ? String(buchungTx.kategorie_id) : '',
           }}
           onClose={() => setBuchungTx(null)}
-          onSuccess={() => {
+          onSuccess={(journalId) => {
+            const tx = buchungTx
             setBuchungTx(null)
             qc.invalidateQueries({ queryKey: ['bank-transaktionen', konto.id] })
             zeigToast('Buchung erstellt', true)
+            if (tx && journalId) {
+              verknuepfeBankTransaktionMitJournal(tx.id, journalId)
+                .then(() => qc.invalidateQueries({ queryKey: ['bank-transaktionen', konto.id] }))
+                .catch(() => {/* Buchung ist ok, Verknüpfung fehlgeschlagen */})
+            }
           }}
         />
       )}

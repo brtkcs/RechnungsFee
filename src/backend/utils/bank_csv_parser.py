@@ -208,16 +208,39 @@ def is_zip(raw: bytes) -> bool:
 
 
 def extract_xml_from_zip(raw: bytes) -> Optional[bytes]:
-    """Gibt den Inhalt der ersten XML-Datei aus einem ZIP zurück."""
+    """Gibt den Inhalt der ersten XML-Datei aus einem ZIP zurück (Legacy)."""
     import zipfile, io as _io
     try:
         with zipfile.ZipFile(_io.BytesIO(raw)) as zf:
-            xml_names = [n for n in zf.namelist() if n.lower().endswith('.xml')]
+            xml_names = sorted(n for n in zf.namelist() if n.lower().endswith('.xml'))
             if xml_names:
                 return zf.read(xml_names[0])
     except Exception:
         pass
     return None
+
+
+def parse_camt_from_zip(raw: bytes) -> tuple[Optional[str], list[dict]]:
+    """Parst alle CAMT-XMLs aus einem ZIP-Archiv und gibt (konto_iban, transaktionen) zurück.
+    Sparkasse und andere Banken liefern ZIP mit einer XML pro Monat.
+    """
+    import zipfile, io as _io
+    try:
+        with zipfile.ZipFile(_io.BytesIO(raw)) as zf:
+            xml_names = sorted(n for n in zf.namelist() if n.lower().endswith('.xml'))
+            if not xml_names:
+                return None, []
+            konto_iban: Optional[str] = None
+            alle: list[dict] = []
+            for name in xml_names:
+                xml_raw = zf.read(name)
+                if konto_iban is None:
+                    konto_iban = extract_konto_iban_camt(xml_raw)
+                alle.extend(parse_camt(xml_raw))
+            return konto_iban, alle
+    except Exception:
+        pass
+    return None, []
 
 
 def extract_konto_iban_camt(raw: bytes) -> Optional[str]:

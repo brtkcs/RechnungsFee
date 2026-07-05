@@ -2351,6 +2351,12 @@ export const bucheTransaktion = (
     body: JSON.stringify({ rechnung_id: rechnungId, betrag_zu_buchen: betragZuBuchen ?? null }),
   })
 
+export const verknuepfeBankTransaktionMitJournal = (txId: number, journalId: number) =>
+  request<BankTransaktion>(`/bank-import/transaktion/${txId}/journal-verknuepfen`, {
+    method: 'POST',
+    body: JSON.stringify({ journal_id: journalId }),
+  })
+
 // ---------------------------------------------------------------------------
 // Forderungen
 // ---------------------------------------------------------------------------

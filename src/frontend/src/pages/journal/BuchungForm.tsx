@@ -72,7 +72,7 @@ interface InitialWerte {
 
 interface Props {
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (journalId?: number) => void
   bearbeiten?: JournalEintrag
   initialDatum?: string
   initialWerte?: InitialWerte
@@ -375,11 +375,11 @@ export function BuchungForm({ onClose, onSuccess, bearbeiten, initialDatum, init
     mutationFn: bearbeiten
       ? (data: Parameters<typeof createJournaleintrag>[0]) => updateJournaleintrag(bearbeiten.id, data)
       : createJournaleintrag,
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['journal'] })
       qc.invalidateQueries({ queryKey: ['monats-uebersicht'] })
       qc.invalidateQueries({ queryKey: ['kassenstand'] })
-      onSuccess()
+      onSuccess(data.id)
     },
   })
 
