@@ -17,6 +17,11 @@ fn main() {
         std::env::set_var("GDK_BACKEND", "x11");
         std::env::remove_var("WAYLAND_DISPLAY");
 
+        // Bazzite/Fedora + Wayland + AMD: WebKitWebProcess versucht DMA-BUF-Rendering
+        // auch wenn GTK selbst im X11-Modus läuft – das blockiert Scroll- und Touch-Events.
+        // WEBKIT_DISABLE_DMABUF_RENDERER=1 zwingt WebKit auf Software-Compositing. (Issue #215)
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+
         // EGL-Shim via LD_PRELOAD für WebKitWebProcess setzen.
         //
         // Das AppRun-Skript des AppImages überschreibt LD_PRELOAD mit seinem
