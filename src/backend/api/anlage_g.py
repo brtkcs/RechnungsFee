@@ -223,9 +223,9 @@ def _generate_anlage_g_pdf(ergebnis: AnlageGErgebnis, messbetrag: float, hebesat
 
     gv = ergebnis.gewinn_verlust
     ist_gewinn = gv >= 0
-    section_header("Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG, ELSTER KZ 10/11)")
-    text_row("Gewinn 1. Betrieb", _euro(gv) if ist_gewinn else "—")
-    text_row("Verlust 1. Betrieb", _euro(gv) if not ist_gewinn else "—")
+    section_header("Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG)")
+    kz_label = "Gewinn 1. Betrieb  (ELSTER KZ 10)" if ist_gewinn else "Verlust 1. Betrieb  (ELSTER KZ 11)"
+    text_row(kz_label, _euro(gv))
     pdf.ln(2)
 
     if ergebnis.kfz_hinweise:

@@ -187,12 +187,17 @@ export function AnlageGPage() {
 
           {/* Laufende Einkünfte */}
           <Abschnitt titel="Laufende Einkünfte (aus EÜR §4 Abs. 3 EStG)">
-            <ElsterKz kz="KZ 10" label="Gewinn 1. Betrieb"
-              wert={istGewinn ? euroFmt(gv) : undefined}
-              leer={!istGewinn} />
-            <ElsterKz kz="KZ 11" label="Verlust 1. Betrieb"
-              wert={!istGewinn ? euroFmt(gv) : undefined}
-              leer={istGewinn} />
+            <div className="flex items-center gap-3 py-2">
+              <span className="shrink-0 inline-flex items-center justify-center w-11 h-6 rounded text-xs font-bold text-white bg-teal-600 dark:bg-teal-700">
+                {istGewinn ? 'KZ 10' : 'KZ 11'}
+              </span>
+              <span className="flex-1 text-sm text-slate-700 dark:text-slate-200">
+                {istGewinn ? 'Gewinn 1. Betrieb' : 'Verlust 1. Betrieb'}
+              </span>
+              <span className={`tabular-nums text-sm font-medium ${!istGewinn ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                {!istGewinn && '− '}{euroFmt(gv)}
+              </span>
+            </div>
           </Abschnitt>
 
           {/* KFZ */}
