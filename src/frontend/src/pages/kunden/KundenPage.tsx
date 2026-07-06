@@ -10,7 +10,7 @@ import {
   anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen, getAngebote, getUnternehmen,
   getLieferadressen, createLieferadresse, updateLieferadresse, deleteLieferadresse,
   getKundeBelege, uploadKundeBeleg, deleteKundeBeleg, updateKundeBeleg, getKundeBelegDownloadUrl,
-  getKontokorrentKunde, downloadKontokorrentPdf, sendeKontokorrentMail,
+  getKontokorrentKunde, downloadKontokorrentPdf, sendeKontokorrentMail, getNaechsteDebitorNr,
   type Kunde, type AnonymisierungResult, type Rechnung, type KundeLieferadresse, type KundeBeleg, type KontokorrentBewegung,
 } from '../../api/client'
 
@@ -165,6 +165,13 @@ function KundeKontokorrent({ kunde, debitorNr, setDebitorNr, debitorEdit, setDeb
   const [mailText, setMailText] = useState('')
   const [mailSent, setMailSent] = useState(false)
 
+  const { data: naechsteNr } = useQuery({
+    queryKey: ['naechste-debitor-nr'],
+    queryFn: getNaechsteDebitorNr,
+    staleTime: 1000 * 60,
+    enabled: !kunde.debitor_nr,
+  })
+
   const saveMut = useMutation({
     mutationFn: (nr: string) => updateKunde(kunde.id!, { debitor_nr: nr }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['kunden'] }); setDebitorEdit(false) },
@@ -212,6 +219,12 @@ function KundeKontokorrent({ kunde, debitorNr, setDebitorNr, debitorEdit, setDeb
                 className="text-sm font-mono border border-blue-400 rounded px-2 py-1 w-28 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 autoFocus
               />
+              {!debitorNr && naechsteNr?.naechste_nr && (
+                <button onClick={() => setDebitorNr(naechsteNr.naechste_nr!)}
+                  className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200 underline underline-offset-2">
+                  {naechsteNr.naechste_nr} übernehmen
+                </button>
+              )}
               <button onClick={() => saveMut.mutate(debitorNr)} disabled={saveMut.isPending}
                 className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                 Speichern
@@ -230,6 +243,9 @@ function KundeKontokorrent({ kunde, debitorNr, setDebitorNr, debitorEdit, setDeb
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors text-base leading-none">
                 🔒
               </button>
+              {!debitorNr && naechsteNr?.naechste_nr && (
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">Nächste freie: {naechsteNr.naechste_nr}</span>
+              )}
             </>
           )}
         </div>

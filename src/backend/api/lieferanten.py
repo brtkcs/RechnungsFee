@@ -59,6 +59,14 @@ def create_lieferant(data: LieferantCreate, db: Session = Depends(get_db)):
     return lieferant
 
 
+@router.get("/naechste-kreditor-nr")
+def naechste_kreditor_nr(db: Session = Depends(get_db)):
+    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "kreditor").first()
+    if not nk:
+        return {"naechste_nr": None}
+    return {"naechste_nr": _belegnr_aus_format(nk.format, _date.today(), nk.naechste_nr)}
+
+
 @router.get("/{lieferant_id}/dsgvo-export")
 def dsgvo_export(lieferant_id: int, db: Session = Depends(get_db)):
     """DSGVO Art. 15 (Auskunft) + Art. 20 (Datenportabilität):

@@ -69,6 +69,16 @@ def create_kunde(data: KundeCreate, db: Session = Depends(get_db)):
     return kunde
 
 
+@router.get("/naechste-debitor-nr")
+def naechste_debitor_nr(db: Session = Depends(get_db)):
+    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "debitor").first()
+    if not nk:
+        return {"naechste_nr": None}
+    from .journal import _belegnr_aus_format
+    from datetime import date as _date
+    return {"naechste_nr": _belegnr_aus_format(nk.format, _date.today(), nk.naechste_nr)}
+
+
 @router.get("/{kunde_id}/dsgvo-export")
 def dsgvo_export(kunde_id: int, db: Session = Depends(get_db)):
     """DSGVO Art. 15 (Auskunft) + Art. 20 (Datenportabilität):

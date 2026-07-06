@@ -7,6 +7,7 @@ import {
   getLieferanten, createLieferant, updateLieferant, deleteLieferant,
   anonymisiereLieferant, dsgvoExportLieferant, dsgvoExportLieferantPdf,
   getKontokorrentLieferant, downloadKontokorrentPdfLieferant, sendeKontokorrentMailLieferant,
+  getNaechsteKreditorNr,
   type Lieferant, type AnonymisierungResult, type KontokorrentBewegung,
 } from '../../api/client'
 
@@ -65,6 +66,13 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
   const [mailBetreff, setMailBetreff] = useState(`Kontokorrent-Auszug ${heute.slice(0, 4)}`)
   const [mailText, setMailText] = useState('')
   const [mailSent, setMailSent] = useState(false)
+
+  const { data: naechsteNr } = useQuery({
+    queryKey: ['naechste-kreditor-nr'],
+    queryFn: getNaechsteKreditorNr,
+    staleTime: 1000 * 60,
+    enabled: !lieferant.kreditor_nr,
+  })
 
   const saveMut = useMutation({
     mutationFn: (nr: string) => updateLieferant(lieferant.id!, { kreditor_nr: nr }),
@@ -140,6 +148,12 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
                       className="text-sm font-mono border border-blue-400 rounded px-2 py-1 w-28 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
                       autoFocus
                     />
+                    {!kreditorNr && naechsteNr?.naechste_nr && (
+                      <button onClick={() => setKreditorNr(naechsteNr.naechste_nr!)}
+                        className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200 underline underline-offset-2">
+                        {naechsteNr.naechste_nr} übernehmen
+                      </button>
+                    )}
                     <button
                       onClick={() => saveMut.mutate(kreditorNr)}
                       disabled={saveMut.isPending}
@@ -163,6 +177,9 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
                       className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors text-base leading-none">
                       🔒
                     </button>
+                    {!kreditorNr && naechsteNr?.naechste_nr && (
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">Nächste freie: {naechsteNr.naechste_nr}</span>
+                    )}
                   </>
                 )}
               </div>

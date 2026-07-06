@@ -739,6 +739,10 @@ export const getKontokorrentKunde = (id: number) =>
   request<KontokorrentBewegung[]>(`/kunden/${id}/kontokorrent`)
 export const getKontokorrentLieferant = (id: number) =>
   request<KontokorrentBewegung[]>(`/lieferanten/${id}/kontokorrent`)
+export const getNaechsteDebitorNr = () =>
+  request<{ naechste_nr: string | null }>('/kunden/naechste-debitor-nr')
+export const getNaechsteKreditorNr = () =>
+  request<{ naechste_nr: string | null }>('/lieferanten/naechste-kreditor-nr')
 
 export async function downloadKontokorrentPdf(id: number, von: string, bis: string) {
   const base = await getBaseUrl()
