@@ -492,6 +492,7 @@ class KundeBase(BaseModel):
     ist_verein: bool = False
     ist_gemeinnuetzig: bool = False
     kundennummer: Optional[str] = None
+    debitor_nr: Optional[str] = None
     z_hd: Optional[str] = None
     notizen: Optional[str] = None
     zugferd_aktiv: bool = False
@@ -534,6 +535,7 @@ class LieferantBase(BaseModel):
     email: Optional[str] = None
     telefon: Optional[str] = None
     lieferantennummer: Optional[str] = None
+    kreditor_nr: Optional[str] = None
     z_hd: Optional[str] = None
     notizen: Optional[str] = None
 

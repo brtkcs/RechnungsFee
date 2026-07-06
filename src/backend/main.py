@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen
 
-SCHEMA_VERSION = 114
+SCHEMA_VERSION = 115
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2479,6 +2479,34 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 114"))
             conn.commit()
             print("[Migration] Schema auf Version 114 (bank_templates: CAMT_XML-System-Eintrag – FK-Fix für CAMT-Import)")
+
+        if version < 115:
+            cols_k = {r[1] for r in conn.execute(text("PRAGMA table_info(kunden)")).fetchall()}
+            if "debitor_nr" not in cols_k:
+                conn.execute(text("ALTER TABLE kunden ADD COLUMN debitor_nr VARCHAR(20)"))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uix_kunden_debitor_nr "
+                    "ON kunden (debitor_nr) WHERE debitor_nr IS NOT NULL"
+                ))
+            cols_l = {r[1] for r in conn.execute(text("PRAGMA table_info(lieferanten)")).fetchall()}
+            if "kreditor_nr" not in cols_l:
+                conn.execute(text("ALTER TABLE lieferanten ADD COLUMN kreditor_nr VARCHAR(20)"))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uix_lieferanten_kreditor_nr "
+                    "ON lieferanten (kreditor_nr) WHERE kreditor_nr IS NOT NULL"
+                ))
+            # Nummernkreise für Debitoren/Kreditoren
+            conn.execute(text("""
+                INSERT OR IGNORE INTO nummernkreise (typ, bezeichnung, format, naechste_nr, reset_jaehrlich, aktiv)
+                VALUES ('debitor', 'Debitorennummern', '1####', 1, 0, 1)
+            """))
+            conn.execute(text("""
+                INSERT OR IGNORE INTO nummernkreise (typ, bezeichnung, format, naechste_nr, reset_jaehrlich, aktiv)
+                VALUES ('kreditor', 'Kreditorennummern', '7####', 1, 0, 1)
+            """))
+            conn.execute(text("PRAGMA user_version = 115"))
+            conn.commit()
+            print("[Migration] Schema auf Version 115 (kunden.debitor_nr, lieferanten.kreditor_nr – Kontokorrent Grundlage)")
 
 
 def _migrate_kategorien() -> None:

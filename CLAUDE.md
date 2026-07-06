@@ -56,7 +56,7 @@ cd src/frontend && npm run dev   # dann http://localhost:5173
 
 ## DB-Schema-Versionierung (`src/backend/main.py`)
 
-`SCHEMA_VERSION = 114` – zentrale Konstante (wird in `main.py` gepflegt).
+`SCHEMA_VERSION = 115` – zentrale Konstante (wird in `main.py` gepflegt).
 
 ### Ablauf beim App-Start
 ```
@@ -233,6 +233,7 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 112 | Bewirtungskosten: vorsteuer_prozent 70→100, (nicht abzugsfähig): 0→100 – Vorsteuer ist per §15 UStG zu 100% abzugsfähig; nur der Nettoanteil unterliegt dem 70%-Abzug nach §4 Abs. 5 Nr. 2 EStG (Issue #214) |
 | 113 | unternehmen.dashboard_config TEXT – konfigurierbares Dashboard (Widget-Reihenfolge, Sichtbarkeit, Schnellzugriff-Links als JSON) |
 | 114 | bank_templates: CAMT_XML-System-Eintrag – FK-Fix: bank_imports.template_id REFERENCES bank_templates(id), CAMT-Imports erzeugten IntegrityError weil 'CAMT_XML' nicht in bank_templates existierte (Issue #209) |
+| 115 | kunden.debitor_nr VARCHAR(20) + lieferanten.kreditor_nr VARCHAR(20) – Kontokorrent-Grundlage: Debitor-/Kreditorennummern (DATEV Personenkonten); Nummernkreise debitor (1####→10001…) + kreditor (7####→70001…); Auto-Vergabe beim Anlegen |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot
