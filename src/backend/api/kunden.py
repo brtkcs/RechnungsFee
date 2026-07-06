@@ -669,7 +669,7 @@ def kontokorrent_pdf(
     return _Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{dateiname}"'},
+        headers={"Content-Disposition": f'inline; filename="{dateiname}"'},
     )
 
 
