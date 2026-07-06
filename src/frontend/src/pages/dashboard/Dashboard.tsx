@@ -686,17 +686,18 @@ interface DashboardConfig {
   quicklinks: DashboardQuicklink[]
 }
 
-const WIDGET_DEFS: Array<{ id: string; label: string; warnung: boolean }> = [
-  { id: 'buchfuehrung',        label: 'Buchführungspflicht-Warnung',  warnung: true },
-  { id: 'ueberzahlung',        label: 'Überzahlung',                  warnung: false },
-  { id: 'lieferantenguthaben', label: 'Lieferantenguthaben',          warnung: false },
-  { id: 'kleinunternehmer',    label: 'Kleinunternehmer-Warnung',     warnung: true },
-  { id: 'lager',               label: 'Lagerwarnung',                 warnung: false },
-  { id: 'fristen',             label: 'Steuer-Fristen',               warnung: true },
-  { id: 'quicklinks',          label: 'Schnellzugriff',               warnung: false },
-  { id: 'kacheln',             label: 'Einnahmen / Ausgaben / Saldo', warnung: false },
-  { id: 'faellige',            label: 'Fällige Rechnungen',           warnung: false },
-  { id: 'letzte_buchungen',    label: 'Letzte Buchungen',             warnung: false },
+const WIDGET_DEFS: Array<{ id: string; label: string; warnung: boolean; nurTransferleistungen?: boolean }> = [
+  { id: 'buchfuehrung',        label: 'Buchführungspflicht-Warnung',        warnung: true },
+  { id: 'ueberzahlung',        label: 'Überzahlung',                        warnung: false },
+  { id: 'lieferantenguthaben', label: 'Lieferantenguthaben',                warnung: false },
+  { id: 'kleinunternehmer',    label: 'Kleinunternehmer-Warnung',           warnung: true },
+  { id: 'lager',               label: 'Lagerwarnung',                       warnung: false },
+  { id: 'fristen',             label: 'Steuer-Fristen',                     warnung: true },
+  { id: 'quicklinks',          label: 'Schnellzugriff',                     warnung: false },
+  { id: 'zufluss_monitor',     label: 'Zufluss-Monitor (Transferleistungen)', warnung: false, nurTransferleistungen: true },
+  { id: 'kacheln',             label: 'Einnahmen / Ausgaben / Saldo',       warnung: false },
+  { id: 'faellige',            label: 'Fällige Rechnungen',                 warnung: false },
+  { id: 'letzte_buchungen',    label: 'Letzte Buchungen',                   warnung: false },
 ]
 
 const NON_HIDEABLE = new Set(['buchfuehrung', 'kleinunternehmer', 'fristen', 'kacheln'])
@@ -705,7 +706,7 @@ const DEFAULT_CONFIG: DashboardConfig = {
   widget_order: WIDGET_DEFS.map(w => w.id),
   widget_visibility: {
     ueberzahlung: true, lieferantenguthaben: true, lager: true,
-    quicklinks: true, faellige: true, letzte_buchungen: true,
+    quicklinks: true, zufluss_monitor: true, faellige: true, letzte_buchungen: true,
   },
   quicklinks: [],
 }
@@ -774,11 +775,13 @@ function DashboardKonfigModal({
   onSave,
   onClose,
   saving,
+  hatTransferleistungen,
 }: {
   config: DashboardConfig
   onSave: (c: DashboardConfig) => void
   onClose: () => void
   saving: boolean
+  hatTransferleistungen: boolean
 }) {
   const [order, setOrder] = useState(config.widget_order)
   const [visibility, setVisibility] = useState(config.widget_visibility)
@@ -958,6 +961,7 @@ function DashboardKonfigModal({
               {order.map((id, idx) => {
                 const def = WIDGET_DEFS.find(w => w.id === id)
                 if (!def) return null
+                if (def.nurTransferleistungen && !hatTransferleistungen) return null
                 const canHide = !NON_HIDEABLE.has(id)
                 const isVisible = canHide ? (visibility[id] ?? true) : true
                 return (
@@ -1150,21 +1154,24 @@ export function Dashboard() {
         return (vis.quicklinks ?? true) && konfig.quicklinks.length > 0
           ? <QuicklinksWidget key="quicklinks" links={konfig.quicklinks} />
           : null
+      case 'zufluss_monitor':
+        if (!zeigeZuflussMonitor) return null
+        if (!(vis.zufluss_monitor ?? true)) return null
+        return (
+          <div key="zufluss_monitor" className="mb-6">
+            <ZuflussMonitor
+              zufluss={zufluss}
+              zeitraumLabel={zuflussLabel}
+              ansicht={zuflussAnsicht}
+              onAnsichtWechsel={setZuflussAnsicht}
+              hatZeitraum={hatZeitraum}
+              laedt={zeitraumLaedt && zuflussAnsicht === 'zeitraum'}
+            />
+          </div>
+        )
       case 'kacheln':
         return (
           <div key="kacheln">
-            {zeigeZuflussMonitor && (
-              <div className="mb-6">
-                <ZuflussMonitor
-                  zufluss={zufluss}
-                  zeitraumLabel={zuflussLabel}
-                  ansicht={zuflussAnsicht}
-                  onAnsichtWechsel={setZuflussAnsicht}
-                  hatZeitraum={hatZeitraum}
-                  laedt={zeitraumLaedt && zuflussAnsicht === 'zeitraum'}
-                />
-              </div>
-            )}
             <div className="grid grid-cols-3 gap-4 mb-2">
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Betriebseinnahmen</p>
@@ -1295,6 +1302,7 @@ export function Dashboard() {
           onSave={saveKonfig}
           onClose={() => setKonfModus(false)}
           saving={konfSaving}
+          hatTransferleistungen={zeigeZuflussMonitor}
         />
       )}
     </div>
