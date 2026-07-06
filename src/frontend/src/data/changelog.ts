@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.5',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Migration 115 (Kontokorrent): Upgrade von bestehenden Installationen schlug fehl, weil die Spalte nummernkreise.aktiv nur im Modell existierte, aber nie per Migration hinzugefügt wurde. Migration 115 rüstet sie jetzt nach. Außerdem: Migration 113 (dashboard_config) und 114 (bank_templates CAMT_XML) robuster gegen den create_all-Pfad bei Neuinstallationen gemacht.' },
+    ],
+  },
+  {
     version: 'v0.4.4',
     datum: 'Juli 2026',
     eintraege: [
