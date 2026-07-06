@@ -4,6 +4,7 @@ API-Endpunkte für Lieferantenverwaltung.
 
 import json as _json
 from datetime import date as _date
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response as _Response, StreamingResponse
@@ -12,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Journaleintrag, Lieferant, Rechnung, Nummernkreis
+from database.models import Journaleintrag, Lieferant, Rechnung, Nummernkreis, Unternehmen
 from .journal import _belegnr_aus_format
 from .schemas import LieferantCreate, LieferantUpdate, LieferantResponse
 from utils.pdf_dsgvo import generate_dsgvo_pdf
@@ -274,6 +275,139 @@ def kontokorrent_lieferant(lieferant_id: int, db: Session = Depends(get_db)):
         saldo += b["betrag"]
         ergebnis.append(KontokorrentBewegung(saldo=round(saldo, 2), **b))
     return ergebnis
+
+
+def _kontokorrent_bewegungen_lieferant(
+    lieferant_id: int, von: _date, bis: _date, db: Session
+) -> tuple[list[dict], str]:
+    """Gibt (bewegungen_dicts, partner_name) zurück, gefiltert nach Zeitraum."""
+    lieferant = db.query(Lieferant).filter(Lieferant.id == lieferant_id).first()
+    if not lieferant:
+        raise HTTPException(status_code=404, detail="Lieferant nicht gefunden.")
+    partner_name = (
+        lieferant.firmenname
+        or " ".join(t for t in [lieferant.vorname, lieferant.nachname] if t)
+        or f"Lieferant #{lieferant_id}"
+    )
+
+    rechnungen = (
+        db.query(Rechnung)
+        .filter(
+            Rechnung.lieferant_id == lieferant_id,
+            Rechnung.typ == "eingang",
+            Rechnung.ist_entwurf == False,
+        )
+        .all()
+    )
+    rechnung_ids = {r.id for r in rechnungen}
+
+    raw: list[dict] = []
+    for r in rechnungen:
+        datum = r.datum
+        if not (von <= datum <= bis):
+            continue
+        raw.append({
+            "datum": str(datum), "typ": "rechnung",
+            "belegnr": r.externe_belegnr or r.rechnungsnummer or str(r.id),
+            "beschreibung": f"Eingangsrechnung {r.externe_belegnr or r.rechnungsnummer or '—'}",
+            "betrag": float(r.brutto_gesamt),
+        })
+
+    zahlungen = (
+        db.query(Journaleintrag)
+        .filter(
+            Journaleintrag.rechnung_id.in_(rechnung_ids),
+            Journaleintrag.art == "Ausgabe",
+            Journaleintrag.datum >= von,
+            Journaleintrag.datum <= bis,
+        )
+        .all()
+    )
+    for j in zahlungen:
+        raw.append({
+            "datum": str(j.datum), "typ": "zahlung",
+            "belegnr": j.belegnr, "beschreibung": j.beschreibung,
+            "betrag": -float(j.brutto_betrag),
+        })
+
+    raw.sort(key=lambda b: b["datum"])
+    saldo = 0.0
+    bewegungen: list[dict] = []
+    for b in raw:
+        saldo += b["betrag"]
+        bewegungen.append({**b, "saldo": round(saldo, 2)})
+    return bewegungen, partner_name
+
+
+@router.get("/{lieferant_id}/kontokorrent/pdf")
+def kontokorrent_pdf_lieferant(
+    lieferant_id: int,
+    von: _date = None,
+    bis: _date = None,
+    db: Session = Depends(get_db),
+):
+    from utils.pdf_kontokorrent import erstelle_kontokorrent_pdf
+    if not von:
+        von = _date(_date.today().year, 1, 1)
+    if not bis:
+        bis = _date.today()
+    bewegungen, partner_name = _kontokorrent_bewegungen_lieferant(lieferant_id, von, bis, db)
+    unt = db.query(Unternehmen).first()
+    unt_dict = {c.name: getattr(unt, c.name) for c in unt.__table__.columns} if unt else {}
+
+    pdf_bytes = erstelle_kontokorrent_pdf(
+        unternehmen=unt_dict,
+        partner_name=partner_name,
+        von=str(von),
+        bis=str(bis),
+        bewegungen=bewegungen,
+    )
+    dateiname = f"Kontokorrent_{partner_name.replace(' ', '_')}_{von}_{bis}.pdf"
+    return _Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{dateiname}"'},
+    )
+
+
+class KontokorrentMailRequestLieferant(BaseModel):
+    an: str
+    cc: Optional[str] = None
+    betreff: str
+    text: str
+    von: Optional[_date] = None
+    bis: Optional[_date] = None
+
+
+@router.post("/{lieferant_id}/kontokorrent/mail")
+def kontokorrent_mail_lieferant(
+    lieferant_id: int,
+    data: KontokorrentMailRequestLieferant,
+    db: Session = Depends(get_db),
+):
+    from utils.pdf_kontokorrent import erstelle_kontokorrent_pdf
+    from api.mail import _build_message, _smtp_einstellungen, _sende
+    von = data.von or _date(_date.today().year, 1, 1)
+    bis = data.bis or _date.today()
+    bewegungen, partner_name = _kontokorrent_bewegungen_lieferant(lieferant_id, von, bis, db)
+    unt = _smtp_einstellungen(db)
+    unt_dict = {c.name: getattr(unt, c.name) for c in unt.__table__.columns}
+
+    pdf_bytes = erstelle_kontokorrent_pdf(
+        unternehmen=unt_dict,
+        partner_name=partner_name,
+        von=str(von),
+        bis=str(bis),
+        bewegungen=bewegungen,
+    )
+    dateiname = f"Kontokorrent_{partner_name.replace(' ', '_')}_{von}_{bis}.pdf"
+    empfaenger = [data.an]
+    if data.cc:
+        empfaenger.append(data.cc)
+    msg = _build_message(unt, data.an, data.cc, data.betreff, data.text,
+                         attachments=[(pdf_bytes, dateiname)])
+    _sende(unt, msg, empfaenger)
+    return {"ok": True}
 
 
 @router.get("/{lieferant_id}", response_model=LieferantResponse)

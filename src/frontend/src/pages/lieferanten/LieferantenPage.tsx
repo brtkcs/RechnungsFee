@@ -6,7 +6,7 @@ import { z } from 'zod'
 import {
   getLieferanten, createLieferant, updateLieferant, deleteLieferant,
   anonymisiereLieferant, dsgvoExportLieferant, dsgvoExportLieferantPdf,
-  getKontokorrentLieferant,
+  getKontokorrentLieferant, downloadKontokorrentPdfLieferant, sendeKontokorrentMailLieferant,
   type Lieferant, type AnonymisierungResult, type KontokorrentBewegung,
 } from '../../api/client'
 
@@ -55,9 +55,29 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
   const [kreditorEdit, setKreditorEdit] = useState(false)
   const [kreditorNr, setKreditorNr] = useState(lieferant.kreditor_nr ?? '')
 
+  const heute = new Date().toISOString().slice(0, 10)
+  const jahresStart = `${heute.slice(0, 4)}-01-01`
+  const [von, setVon] = useState(jahresStart)
+  const [bis, setBis] = useState(heute)
+  const [showMail, setShowMail] = useState(false)
+  const [mailAn, setMailAn] = useState(lieferant.email ?? '')
+  const [mailCc, setMailCc] = useState('')
+  const [mailBetreff, setMailBetreff] = useState(`Kontokorrent-Auszug ${heute.slice(0, 4)}`)
+  const [mailText, setMailText] = useState('')
+  const [mailSent, setMailSent] = useState(false)
+
   const saveMut = useMutation({
     mutationFn: (nr: string) => updateLieferant(lieferant.id!, { kreditor_nr: nr }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['lieferanten'] }); setKreditorEdit(false) },
+  })
+
+  const mailMut = useMutation({
+    mutationFn: () => sendeKontokorrentMailLieferant(lieferant.id!, {
+      an: mailAn, cc: mailCc || undefined,
+      betreff: mailBetreff, text: mailText,
+      von, bis,
+    }),
+    onSuccess: () => { setMailSent(true); setTimeout(() => { setShowMail(false); setMailSent(false) }, 1500) },
   })
 
   const { data: bewegungen, isLoading: laegtBewegungen } = useQuery({
@@ -66,6 +86,8 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
     enabled: tab === 'kontokorrent',
     staleTime: 1000 * 60,
   })
+
+  const gefilterteBewegungen = (bewegungen ?? []).filter(b => b.datum >= von && b.datum <= bis)
 
   const typLabel: Record<string, string> = {
     rechnung: 'Rechnung', zahlung: 'Zahlung', gutschrift: 'Gutschrift', storno: 'Storno',
@@ -149,14 +171,78 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
               )}
             </div>
 
+            {/* Zeitraum + Aktionen */}
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Von</p>
+                <input type="date" value={von} onChange={e => setVon(e.target.value)}
+                  className="text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Bis</p>
+                <input type="date" value={bis} onChange={e => setBis(e.target.value)}
+                  className="text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" />
+              </div>
+              <button
+                onClick={() => downloadKontokorrentPdfLieferant(lieferant.id!, von, bis)}
+                className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+                ↓ PDF
+              </button>
+              <button
+                onClick={() => setShowMail(true)}
+                className="text-xs px-2 py-1 rounded border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950">
+                ✉ Mail
+              </button>
+            </div>
+
+            {/* Mail-Dialog */}
+            {showMail && (
+              <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2 bg-blue-50/40 dark:bg-blue-950/30">
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">Kontokorrent-Auszug per Mail senden</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[10px] text-slate-400 mb-0.5">An</p>
+                    <input type="email" value={mailAn} onChange={e => setMailAn(e.target.value)}
+                      className="w-full text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 mb-0.5">CC (optional)</p>
+                    <input type="email" value={mailCc} onChange={e => setMailCc(e.target.value)}
+                      className="w-full text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 mb-0.5">Betreff</p>
+                  <input type="text" value={mailBetreff} onChange={e => setMailBetreff(e.target.value)}
+                    className="w-full text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 mb-0.5">Nachricht</p>
+                  <textarea value={mailText} onChange={e => setMailText(e.target.value)} rows={3}
+                    className="w-full text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 resize-none" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => mailMut.mutate()} disabled={mailMut.isPending || !mailAn}
+                    className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                    {mailSent ? '✓ Gesendet' : mailMut.isPending ? 'Sende…' : 'Senden'}
+                  </button>
+                  <button onClick={() => setShowMail(false)}
+                    className="text-xs px-3 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
+                    Abbrechen
+                  </button>
+                </div>
+                {mailMut.isError && <p className="text-xs text-red-500">Fehler beim Senden.</p>}
+              </div>
+            )}
+
             {/* Bewegungsliste */}
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Kontokorrent</p>
               {laegtBewegungen && <p className="text-xs text-slate-400 dark:text-slate-500">Lade…</p>}
-              {!laegtBewegungen && (!bewegungen || bewegungen.length === 0) && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 italic">Keine Bewegungen.</p>
+              {!laegtBewegungen && gefilterteBewegungen.length === 0 && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic">Keine Bewegungen im gewählten Zeitraum.</p>
               )}
-              {bewegungen && bewegungen.length > 0 && (
+              {gefilterteBewegungen.length > 0 && (
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden text-xs">
                   <table className="w-full">
                     <thead>
@@ -169,7 +255,7 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {bewegungen.map((b: KontokorrentBewegung, i: number) => (
+                      {gefilterteBewegungen.map((b: KontokorrentBewegung, i: number) => (
                         <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                           <td className="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{formatDatum(b.datum)}</td>
                           <td className="px-2 py-1.5">
@@ -190,8 +276,8 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
                     <tfoot>
                       <tr className="bg-slate-50 dark:bg-slate-800 font-semibold border-t border-slate-200 dark:border-slate-700">
                         <td colSpan={3} className="px-2 py-1.5 text-slate-500 dark:text-slate-400 text-[10px] uppercase">Offener Saldo</td>
-                        <td colSpan={2} className={`px-2 py-1.5 text-right font-mono ${(bewegungen.at(-1)?.saldo ?? 0) <= 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                          {formatEuro(bewegungen.at(-1)?.saldo ?? 0)}
+                        <td colSpan={2} className={`px-2 py-1.5 text-right font-mono ${(gefilterteBewegungen.at(-1)?.saldo ?? 0) <= 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                          {formatEuro(gefilterteBewegungen.at(-1)?.saldo ?? 0)}
                         </td>
                       </tr>
                     </tfoot>

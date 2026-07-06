@@ -759,6 +759,16 @@ export const sendeKontokorrentMail = (id: number, data: KontokorrentMailData) =>
     body: JSON.stringify(data),
   })
 
+export async function downloadKontokorrentPdfLieferant(id: number, von: string, bis: string) {
+  const base = await getBaseUrl()
+  await openUrl(`${base}/lieferanten/${id}/kontokorrent/pdf?von=${von}&bis=${bis}`)
+}
+export const sendeKontokorrentMailLieferant = (id: number, data: KontokorrentMailData) =>
+  request<{ ok: boolean }>(`/lieferanten/${id}/kontokorrent/mail`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+
 // --- Lieferanten ---
 export type Lieferant = {
   id?: number
