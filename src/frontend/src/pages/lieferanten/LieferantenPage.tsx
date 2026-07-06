@@ -475,7 +475,7 @@ export function LieferantenPage() {
 
       {/* ── Rechte Spalte (Detail oder Formular) ─────────────────────── */}
       {!showForm && (
-        <div className="w-96 shrink-0">
+        <div className="w-[28rem] shrink-0">
           {selected ? (
             <LieferantDetail key={selected.id} lieferant={selected} />
           ) : (
