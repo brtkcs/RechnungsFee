@@ -634,6 +634,7 @@ export type Kunde = {
   ist_verein: boolean
   ist_gemeinnuetzig: boolean
   kundennummer?: string
+  debitor_nr?: string | null
   z_hd?: string
   notizen?: string
   zugferd_aktiv?: boolean
@@ -741,6 +742,7 @@ export type Lieferant = {
   email?: string
   telefon?: string
   lieferantennummer?: string
+  kreditor_nr?: string | null
   z_hd?: string
   notizen?: string
   aktiv?: boolean

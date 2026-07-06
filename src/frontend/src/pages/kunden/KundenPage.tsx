@@ -141,6 +141,74 @@ function KundeLieferadressen({ kundeId }: { kundeId: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// Kontokorrent-Tab (Abschnitt 2: Nummernfeld + Lock; Bewegungsliste folgt in A3)
+// ---------------------------------------------------------------------------
+
+function KundeKontokorrent({ kunde, debitorNr, setDebitorNr, debitorEdit, setDebitorEdit, qc }: {
+  kunde: Kunde
+  debitorNr: string
+  setDebitorNr: (v: string) => void
+  debitorEdit: boolean
+  setDebitorEdit: (v: boolean) => void
+  qc: ReturnType<typeof useQueryClient>
+}) {
+  const saveMut = useMutation({
+    mutationFn: (nr: string) => updateKunde(kunde.id!, { debitor_nr: nr }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['kunden'] }); setDebitorEdit(false) },
+  })
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Debitorennummer</p>
+        <div className="flex items-center gap-2">
+          {debitorEdit ? (
+            <>
+              <input
+                type="text"
+                value={debitorNr}
+                onChange={e => setDebitorNr(e.target.value)}
+                className="text-sm font-mono border border-blue-400 rounded px-2 py-1 w-28 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                autoFocus
+              />
+              <button
+                onClick={() => saveMut.mutate(debitorNr)}
+                disabled={saveMut.isPending}
+                className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                Speichern
+              </button>
+              <button
+                onClick={() => { setDebitorNr(kunde.debitor_nr ?? ''); setDebitorEdit(false) }}
+                className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
+                Abbrechen
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-mono text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                {debitorNr || <span className="text-slate-400 italic">nicht vergeben</span>}
+              </span>
+              <button
+                onClick={() => setDebitorEdit(true)}
+                title="Debitorennummer bearbeiten"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors text-base leading-none">
+                🔒
+              </button>
+            </>
+          )}
+        </div>
+        {saveMut.isError && (
+          <p className="text-xs text-red-500 mt-1">Fehler beim Speichern.</p>
+        )}
+      </div>
+      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+        Kontokorrent-Bewegungsliste folgt in einem späteren Update.
+      </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Dokumente im Kundenstamm
 // ---------------------------------------------------------------------------
 
@@ -304,7 +372,10 @@ function KundeDokumente({ kundeId }: { kundeId: number }) {
 function KundeRechnungen({ kunde }: { kunde: Kunde }) {
   const navigate = useNavigate()
   const [offeneRechnung, setOffeneRechnung] = useState<number | null>(null)
-  const [tab, setTab] = useState<'rechnungen' | 'angebote' | 'dokumente'>('rechnungen')
+  const [tab, setTab] = useState<'rechnungen' | 'angebote' | 'dokumente' | 'kontokorrent'>('rechnungen')
+  const [debitorEdit, setDebitorEdit] = useState(false)
+  const [debitorNr, setDebitorNr] = useState(kunde.debitor_nr ?? '')
+  const qcKontokorrent = useQueryClient()
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen, staleTime: 1000 * 60 * 5 })
   const angeboteAktiv = !!unternehmen?.angebote_aktiv
@@ -348,9 +419,13 @@ function KundeRechnungen({ kunde }: { kunde: Kunde }) {
             className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'dokumente' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
             Dokumente
           </button>
+          <button onClick={() => setTab('kontokorrent')}
+            className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'kontokorrent' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+            Kontokorrent
+          </button>
         </div>
         {/* Aktions-Buttons – nur bei Rechnungen/Angebote-Tab */}
-        {tab !== 'dokumente' && (
+        {tab !== 'dokumente' && tab !== 'kontokorrent' && (
           <div className="flex flex-wrap gap-1">
             <button
               onClick={() => navigate(`/rechnungen?neue_aus_kunde=${kunde.id}`)}
@@ -389,7 +464,9 @@ function KundeRechnungen({ kunde }: { kunde: Kunde }) {
         )}
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        {tab === 'dokumente' ? (
+        {tab === 'kontokorrent' ? (
+          <KundeKontokorrent kunde={kunde} debitorNr={debitorNr} setDebitorNr={setDebitorNr} debitorEdit={debitorEdit} setDebitorEdit={setDebitorEdit} qc={qcKontokorrent} />
+        ) : tab === 'dokumente' ? (
           <KundeDokumente kundeId={kunde.id!} />
         ) : (<div className="space-y-1.5">
         {isLoading && <p className="text-xs text-slate-400 dark:text-slate-500 p-1">Lade…</p>}

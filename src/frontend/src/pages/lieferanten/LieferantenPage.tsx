@@ -39,6 +39,16 @@ const EMPTY: FormValues = {
 // ---------------------------------------------------------------------------
 
 function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
+  const qc = useQueryClient()
+  const [tab, setTab] = useState<'details' | 'kontokorrent'>('details')
+  const [kreditorEdit, setKreditorEdit] = useState(false)
+  const [kreditorNr, setKreditorNr] = useState(lieferant.kreditor_nr ?? '')
+
+  const saveMut = useMutation({
+    mutationFn: (nr: string) => updateLieferant(lieferant.id!, { kreditor_nr: nr }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['lieferanten'] }); setKreditorEdit(false) },
+  })
+
   return (
     <div className="h-full flex flex-col">
 
@@ -51,66 +61,128 @@ function LieferantDetail({ lieferant }: { lieferant: Lieferant }) {
         {lieferant.lieferantennummer && (
           <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{lieferant.lieferantennummer}</p>
         )}
+        {/* Tabs */}
+        <div className="flex gap-1 mt-3">
+          <button onClick={() => setTab('details')}
+            className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'details' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+            Details
+          </button>
+          <button onClick={() => setTab('kontokorrent')}
+            className={`flex-1 text-xs py-1 rounded border transition-colors ${tab === 'kontokorrent' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+            Kontokorrent
+          </button>
+        </div>
       </div>
 
       {/* Scrollbarer Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
-        {/* Adresse */}
-        {(lieferant.strasse || lieferant.ort) && (
-          <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Adresse</p>
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 space-y-0.5">
-              {lieferant.strasse && (
-                <p className="text-sm text-slate-700 dark:text-slate-200">{lieferant.strasse} {lieferant.hausnummer}</p>
-              )}
-              {lieferant.ort && (
-                <p className="text-sm text-slate-700 dark:text-slate-200">{lieferant.plz} {lieferant.ort}</p>
-              )}
-              {lieferant.land && lieferant.land !== 'DE' && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">{lieferant.land}</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Kontakt */}
-        {(lieferant.email || lieferant.telefon) && (
-          <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Kontakt</p>
-            <div className="grid grid-cols-1 gap-2">
-              {lieferant.email && (
-                <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">E-Mail</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200 break-all">{lieferant.email}</p>
-                </div>
-              )}
-              {lieferant.telefon && (
-                <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">Telefon</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-200">{lieferant.telefon}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Steuer / Nummern */}
-        {lieferant.ust_idnr && (
-          <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Steuer</p>
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {tab === 'kontokorrent' ? (
+          <div className="space-y-4">
             <div>
-              <p className="text-xs text-slate-400 dark:text-slate-500">USt-IdNr.</p>
-              <p className="text-sm text-slate-700 dark:text-slate-200 font-mono">{lieferant.ust_idnr}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Kreditorennummer</p>
+              <div className="flex items-center gap-2">
+                {kreditorEdit ? (
+                  <>
+                    <input
+                      type="text"
+                      value={kreditorNr}
+                      onChange={e => setKreditorNr(e.target.value)}
+                      className="text-sm font-mono border border-blue-400 rounded px-2 py-1 w-28 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => saveMut.mutate(kreditorNr)}
+                      disabled={saveMut.isPending}
+                      className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                      Speichern
+                    </button>
+                    <button
+                      onClick={() => { setKreditorNr(lieferant.kreditor_nr ?? ''); setKreditorEdit(false) }}
+                      className="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
+                      Abbrechen
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-mono text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                      {kreditorNr || <span className="text-slate-400 italic">nicht vergeben</span>}
+                    </span>
+                    <button
+                      onClick={() => setKreditorEdit(true)}
+                      title="Kreditorennummer bearbeiten"
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors text-base leading-none">
+                      🔒
+                    </button>
+                  </>
+                )}
+              </div>
+              {saveMut.isError && (
+                <p className="text-xs text-red-500 mt-1">Fehler beim Speichern.</p>
+              )}
             </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+              Kontokorrent-Bewegungsliste folgt in einem späteren Update.
+            </p>
           </div>
-        )}
+        ) : (
+          <div className="space-y-5">
+            {/* Adresse */}
+            {(lieferant.strasse || lieferant.ort) && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Adresse</p>
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 space-y-0.5">
+                  {lieferant.strasse && (
+                    <p className="text-sm text-slate-700 dark:text-slate-200">{lieferant.strasse} {lieferant.hausnummer}</p>
+                  )}
+                  {lieferant.ort && (
+                    <p className="text-sm text-slate-700 dark:text-slate-200">{lieferant.plz} {lieferant.ort}</p>
+                  )}
+                  {lieferant.land && lieferant.land !== 'DE' && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{lieferant.land}</p>
+                  )}
+                </div>
+              </div>
+            )}
 
-        {/* Notizen */}
-        {lieferant.notizen && (
-          <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Notizen</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 whitespace-pre-wrap">{lieferant.notizen}</p>
+            {/* Kontakt */}
+            {(lieferant.email || lieferant.telefon) && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Kontakt</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {lieferant.email && (
+                    <div>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">E-Mail</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-200 break-all">{lieferant.email}</p>
+                    </div>
+                  )}
+                  {lieferant.telefon && (
+                    <div>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Telefon</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-200">{lieferant.telefon}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Steuer / Nummern */}
+            {lieferant.ust_idnr && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Steuer</p>
+                <div>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">USt-IdNr.</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-200 font-mono">{lieferant.ust_idnr}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Notizen */}
+            {lieferant.notizen && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Notizen</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 whitespace-pre-wrap">{lieferant.notizen}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
