@@ -9,11 +9,15 @@
 
 Laufendes Konto pro Geschäftspartner: alle Vorgänge (Rechnungen, Zahlungen, Gutschriften, Verrechnungen) in chronologischer Reihenfolge mit laufendem Saldo.
 
-- [ ] Kontokorrent-Ansicht pro Kunde: alle Ausgangsrechnungen, Zahlungen, Gutschriften, Guthaben-Verrechnungen als Buchungszeilen mit laufendem Saldo
-- [ ] Kontokorrent-Ansicht pro Lieferant: alle Eingangsrechnungen, Zahlungen, Lieferantenguthaben als Buchungszeilen mit laufendem Saldo
-- [ ] Saldoausweis: offen / ausgeglichen / Guthaben
-- [ ] PDF-Export des Kontokorrent-Auszugs (z. B. für Jahresabschluss oder Kundenrückfragen)
-- [ ] Kontokorrent-Widget im Kundenstamm / Lieferantenstamm (aktueller Saldo auf einen Blick)
+- [x] Kontokorrent-Ansicht pro Kunde: alle Ausgangsrechnungen, Zahlungen, Gutschriften als Buchungszeilen mit laufendem Saldo
+- [x] Kontokorrent-Ansicht pro Lieferant: alle Eingangsrechnungen, Zahlungen als Buchungszeilen mit laufendem Saldo
+- [x] Saldoausweis: offen / ausgeglichen / Guthaben
+- [x] PDF-Export des Kontokorrent-Auszugs mit Von/Bis-Filter (Kunden & Lieferanten)
+- [x] Kontokorrent-Auszug per Mail versenden (Kunden & Lieferanten)
+- [x] Debitor-/Kreditorennummern: automatische Vergabe + manuelle Bearbeitung mit Hinweis auf nächste freie Nummer
+- [x] DATEV-Export Spalte 48 (Kreditoren-/Debitorennummer) automatisch befüllt
+- [ ] Kontokorrent-Übersicht (alle Partner mit offenem Saldo auf einen Blick)
+- [ ] Guthaben-Verrechnungen im Kontokorrent
 
 ---
 
