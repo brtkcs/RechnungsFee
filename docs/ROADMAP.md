@@ -295,3 +295,5 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 - **Docker-Version** – containerisiertes Deployment für Selbst-Hoster (Backend + Frontend als Docker-Image)
 
 - **Preiskalkulations-Modul** – Kalkulationsblatt pro Artikel/Leistung: Materialkosten, Stundensatz, Gemeinkosten-Aufschlag, Gewinnmarge → kalkulierter Verkaufspreis; Übernahme direkt in Rechnungsposition
+
+- **Datenübernahme aus anderen Programmen** – Importassistent für Kunden, Artikel, Rechnungen und Buchungen aus gängigen Programmen (z. B. lexoffice, sevDesk, FastBill, Excel/CSV); erleichtert den Umstieg auf RechnungsFee ohne Datenverlust
