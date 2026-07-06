@@ -297,3 +297,5 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 - **Preiskalkulations-Modul** – Kalkulationsblatt pro Artikel/Leistung: Materialkosten, Stundensatz, Gemeinkosten-Aufschlag, Gewinnmarge → kalkulierter Verkaufspreis; Übernahme direkt in Rechnungsposition
 
 - **Datenübernahme aus anderen Programmen** – Importassistent für Kunden, Artikel, Rechnungen und Buchungen aus gängigen Programmen (z. B. lexoffice, sevDesk, FastBill, Excel/CSV); erleichtert den Umstieg auf RechnungsFee ohne Datenverlust
+
+- **Offline-Handbuch** – eingebettetes Handbuch direkt in der App (Tauri-Webview oder lokale HTML-Seiten); kein Internetzugang nötig; synchronisiert mit der installierten Version
