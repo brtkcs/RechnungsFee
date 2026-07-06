@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.6',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Kontokorrent-PDF öffnete sich als schwarzes Fenster: Der Endpunkt lieferte Content-Disposition: attachment statt inline – Tauri versuchte die Datei herunterzuladen statt sie anzuzeigen. Betraf Kunden- und Lieferanten-Kontokorrent.' },
+    ],
+  },
+  {
     version: 'v0.4.5',
     datum: 'Juli 2026',
     eintraege: [
