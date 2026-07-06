@@ -10,7 +10,8 @@ import {
   anonymisiereKunde, dsgvoExportKunde, dsgvoExportKundePdf, getRechnungen, getAngebote, getUnternehmen,
   getLieferadressen, createLieferadresse, updateLieferadresse, deleteLieferadresse,
   getKundeBelege, uploadKundeBeleg, deleteKundeBeleg, updateKundeBeleg, getKundeBelegDownloadUrl,
-  type Kunde, type AnonymisierungResult, type Rechnung, type KundeLieferadresse, type KundeBeleg,
+  getKontokorrentKunde,
+  type Kunde, type AnonymisierungResult, type Rechnung, type KundeLieferadresse, type KundeBeleg, type KontokorrentBewegung,
 } from '../../api/client'
 
 function formatEuro(val: string | number): string {
@@ -157,8 +158,25 @@ function KundeKontokorrent({ kunde, debitorNr, setDebitorNr, debitorEdit, setDeb
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['kunden'] }); setDebitorEdit(false) },
   })
 
+  const { data: bewegungen, isLoading } = useQuery({
+    queryKey: ['kontokorrent-kunde', kunde.id],
+    queryFn: () => getKontokorrentKunde(kunde.id!),
+    staleTime: 1000 * 60,
+  })
+
+  const typLabel: Record<string, string> = {
+    rechnung: 'Rechnung', zahlung: 'Zahlung', gutschrift: 'Gutschrift', storno: 'Storno',
+  }
+  const typFarbe: Record<string, string> = {
+    rechnung: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
+    zahlung: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800',
+    gutschrift: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
+    storno: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800',
+  }
+
   return (
     <div className="space-y-4">
+      {/* Nummernfeld */}
       <div>
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Debitorennummer</p>
         <div className="flex items-center gap-2">
@@ -197,13 +215,59 @@ function KundeKontokorrent({ kunde, debitorNr, setDebitorNr, debitorEdit, setDeb
             </>
           )}
         </div>
-        {saveMut.isError && (
-          <p className="text-xs text-red-500 mt-1">Fehler beim Speichern.</p>
+        {saveMut.isError && <p className="text-xs text-red-500 mt-1">Fehler beim Speichern.</p>}
+      </div>
+
+      {/* Bewegungsliste */}
+      <div>
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Kontokorrent</p>
+        {isLoading && <p className="text-xs text-slate-400 dark:text-slate-500">Lade…</p>}
+        {!isLoading && (!bewegungen || bewegungen.length === 0) && (
+          <p className="text-xs text-slate-400 dark:text-slate-500 italic">Keine Bewegungen.</p>
+        )}
+        {bewegungen && bewegungen.length > 0 && (
+          <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden text-xs">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] uppercase tracking-wide">
+                  <th className="text-left px-2 py-1.5">Datum</th>
+                  <th className="text-left px-2 py-1.5">Typ</th>
+                  <th className="text-left px-2 py-1.5 hidden sm:table-cell">Beleg</th>
+                  <th className="text-right px-2 py-1.5">Betrag</th>
+                  <th className="text-right px-2 py-1.5">Saldo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {bewegungen.map((b: KontokorrentBewegung, i: number) => (
+                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td className="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{formatDatum(b.datum)}</td>
+                    <td className="px-2 py-1.5">
+                      <span className={`px-1.5 py-0.5 rounded border text-[10px] ${typFarbe[b.typ] ?? ''}`}>
+                        {typLabel[b.typ] ?? b.typ}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5 text-slate-400 dark:text-slate-500 font-mono hidden sm:table-cell">{b.belegnr}</td>
+                    <td className={`px-2 py-1.5 text-right font-mono whitespace-nowrap ${b.betrag < 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                      {b.betrag < 0 ? '-' : '+'}{formatEuro(Math.abs(b.betrag))}
+                    </td>
+                    <td className={`px-2 py-1.5 text-right font-mono font-semibold whitespace-nowrap ${b.saldo <= 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                      {formatEuro(b.saldo)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-50 dark:bg-slate-800 font-semibold border-t border-slate-200 dark:border-slate-700">
+                  <td colSpan={3} className="px-2 py-1.5 text-slate-500 dark:text-slate-400 text-[10px] uppercase">Offener Saldo</td>
+                  <td colSpan={2} className={`px-2 py-1.5 text-right font-mono ${(bewegungen.at(-1)?.saldo ?? 0) <= 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                    {formatEuro(bewegungen.at(-1)?.saldo ?? 0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         )}
       </div>
-      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-        Kontokorrent-Bewegungsliste folgt in einem späteren Update.
-      </p>
     </div>
   )
 }

@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.5',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Kontokorrent: Jedem Kunden wird automatisch eine Debitorennummer (10001, 10002 …) und jedem Lieferanten eine Kreditorennummer (70001, 70002 …) vergeben. Im neuen Tab „Kontokorrent" ist die Nummer sichtbar und kann bei Bedarf manuell geändert werden (Schloss-Icon). Die vollständige Bewegungsliste zeigt alle Rechnungen und Zahlungen mit laufendem Saldo.' },
+    ],
+  },
+  {
     version: 'v0.4.4',
     datum: 'Juli 2026',
     eintraege: [

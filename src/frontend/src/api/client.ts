@@ -727,6 +727,19 @@ export async function dsgvoExportKundePdf(id: number) {
   await openUrl(`${base}/kunden/${id}/dsgvo-export-pdf`)
 }
 
+export type KontokorrentBewegung = {
+  datum: string
+  typ: 'rechnung' | 'zahlung' | 'gutschrift' | 'storno'
+  belegnr: string
+  beschreibung: string
+  betrag: number
+  saldo: number
+}
+export const getKontokorrentKunde = (id: number) =>
+  request<KontokorrentBewegung[]>(`/kunden/${id}/kontokorrent`)
+export const getKontokorrentLieferant = (id: number) =>
+  request<KontokorrentBewegung[]>(`/lieferanten/${id}/kontokorrent`)
+
 // --- Lieferanten ---
 export type Lieferant = {
   id?: number

@@ -8,10 +8,11 @@ from datetime import date as _date
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response as _Response, StreamingResponse
 from io import BytesIO
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.models import Lieferant, Rechnung, Nummernkreis
+from database.models import Journaleintrag, Lieferant, Rechnung, Nummernkreis
 from .journal import _belegnr_aus_format
 from .schemas import LieferantCreate, LieferantUpdate, LieferantResponse
 from utils.pdf_dsgvo import generate_dsgvo_pdf
@@ -46,6 +47,8 @@ def create_lieferant(data: LieferantCreate, db: Session = Depends(get_db)):
     if not lieferant_data.get("lieferantennummer"):
         lieferant_data["lieferantennummer"] = _naechste_nummer("lieferant", db)
     nr = lieferant_data.get("lieferantennummer")
+    if not lieferant_data.get("kreditor_nr"):
+        lieferant_data["kreditor_nr"] = _naechste_nummer("kreditor", db)
     if nr and db.query(Lieferant).filter(Lieferant.lieferantennummer == nr).first():
         raise HTTPException(status_code=409, detail=f"Lieferantennummer '{nr}' ist bereits vergeben.")
     lieferant = Lieferant(**lieferant_data)
@@ -205,6 +208,72 @@ def anonymisiere_lieferant(lieferant_id: int, db: Session = Depends(get_db)):
         "unveraenderlich_verblieben": 0,
         "hinweis": "",
     }
+
+
+class KontokorrentBewegung(BaseModel):
+    datum: str
+    typ: str          # rechnung | zahlung | gutschrift | storno
+    belegnr: str
+    beschreibung: str
+    betrag: float     # positiv = Verbindlichkeit, negativ = Ausgleich
+    saldo: float
+
+
+@router.get("/{lieferant_id}/kontokorrent", response_model=list[KontokorrentBewegung])
+def kontokorrent_lieferant(lieferant_id: int, db: Session = Depends(get_db)):
+    lieferant = db.query(Lieferant).filter(Lieferant.id == lieferant_id).first()
+    if not lieferant:
+        raise HTTPException(status_code=404, detail="Lieferant nicht gefunden.")
+
+    bewegungen: list[dict] = []
+
+    # Eingangsrechnungen dieses Lieferanten
+    rechnungen = (
+        db.query(Rechnung)
+        .filter(
+            Rechnung.lieferant_id == lieferant_id,
+            Rechnung.typ == "eingang",
+            Rechnung.ist_entwurf == False,
+        )
+        .all()
+    )
+    rechnung_ids = {r.id for r in rechnungen}
+
+    for r in rechnungen:
+        bewegungen.append({
+            "datum": str(r.datum),
+            "typ": "rechnung",
+            "belegnr": r.externe_belegnr or r.rechnungsnummer or str(r.id),
+            "beschreibung": f"Eingangsrechnung {r.externe_belegnr or r.rechnungsnummer or '—'}",
+            "betrag": float(r.brutto_gesamt),
+        })
+
+    # Zahlungsausgänge aus dem Journal
+    zahlungen = (
+        db.query(Journaleintrag)
+        .filter(
+            Journaleintrag.rechnung_id.in_(rechnung_ids),
+            Journaleintrag.art == "Ausgabe",
+        )
+        .all()
+    )
+    for j in zahlungen:
+        bewegungen.append({
+            "datum": str(j.datum),
+            "typ": "zahlung",
+            "belegnr": j.belegnr,
+            "beschreibung": j.beschreibung,
+            "betrag": -float(j.brutto_betrag),
+        })
+
+    bewegungen.sort(key=lambda b: b["datum"])
+
+    saldo = 0.0
+    ergebnis: list[KontokorrentBewegung] = []
+    for b in bewegungen:
+        saldo += b["betrag"]
+        ergebnis.append(KontokorrentBewegung(saldo=round(saldo, 2), **b))
+    return ergebnis
 
 
 @router.get("/{lieferant_id}", response_model=LieferantResponse)

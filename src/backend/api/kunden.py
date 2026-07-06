@@ -57,6 +57,8 @@ def create_kunde(data: KundeCreate, db: Session = Depends(get_db)):
     if not kunde_data.get("kundennummer"):
         kunde_data["kundennummer"] = _naechste_nummer("kunde", db)
     nr = kunde_data.get("kundennummer")
+    if not kunde_data.get("debitor_nr"):
+        kunde_data["debitor_nr"] = _naechste_nummer("debitor", db)
     if nr and db.query(Kunde).filter(Kunde.kundennummer == nr).first():
         raise HTTPException(status_code=409, detail=f"Kundennummer '{nr}' ist bereits vergeben.")
     kunde = Kunde(**kunde_data)
@@ -482,6 +484,83 @@ def delete_kunde_beleg(kunde_id: int, kb_id: int, db: Session = Depends(get_db))
     db.delete(kb)
     db.delete(beleg)
     db.commit()
+
+
+class KontokorrentBewegung(BaseModel):
+    datum: str
+    typ: str          # rechnung | zahlung | gutschrift | storno
+    belegnr: str
+    beschreibung: str
+    betrag: float     # positiv = Forderung, negativ = Ausgleich
+    saldo: float
+
+
+@router.get("/{kunde_id}/kontokorrent", response_model=list[KontokorrentBewegung])
+def kontokorrent_kunde(kunde_id: int, db: Session = Depends(get_db)):
+    kunde = db.query(Kunde).filter(Kunde.id == kunde_id).first()
+    if not kunde:
+        raise HTTPException(status_code=404, detail="Kunde nicht gefunden.")
+
+    bewegungen: list[dict] = []
+
+    # Ausgangsrechnungen, Gutschriften, Stornorechnungen dieses Kunden
+    rechnungen = (
+        db.query(Rechnung)
+        .filter(
+            Rechnung.kunde_id == kunde_id,
+            Rechnung.typ == "ausgang",
+            Rechnung.ist_entwurf == False,
+            Rechnung.dokument_typ.in_(["Rechnung", "Gutschrift", "Stornorechnung"]),
+        )
+        .all()
+    )
+    rechnung_ids = {r.id for r in rechnungen}
+
+    for r in rechnungen:
+        if r.dokument_typ == "Rechnung":
+            typ = "rechnung"
+            betrag = float(r.brutto_gesamt)
+        elif r.dokument_typ == "Gutschrift":
+            typ = "gutschrift"
+            betrag = -float(r.brutto_gesamt)
+        else:  # Stornorechnung
+            typ = "storno"
+            betrag = -float(r.brutto_gesamt)
+        datum = r.ausgegeben_am.date() if r.ausgegeben_am else r.datum
+        bewegungen.append({
+            "datum": str(datum),
+            "typ": typ,
+            "belegnr": r.rechnungsnummer or str(r.id),
+            "beschreibung": f"{r.dokument_typ} {r.rechnungsnummer or '—'}",
+            "betrag": betrag,
+        })
+
+    # Zahlungseingänge aus dem Journal
+    zahlungen = (
+        db.query(Journaleintrag)
+        .filter(
+            Journaleintrag.rechnung_id.in_(rechnung_ids),
+            Journaleintrag.art == "Einnahme",
+        )
+        .all()
+    )
+    for j in zahlungen:
+        bewegungen.append({
+            "datum": str(j.datum),
+            "typ": "zahlung",
+            "belegnr": j.belegnr,
+            "beschreibung": j.beschreibung,
+            "betrag": -float(j.brutto_betrag),
+        })
+
+    bewegungen.sort(key=lambda b: b["datum"])
+
+    saldo = 0.0
+    ergebnis: list[KontokorrentBewegung] = []
+    for b in bewegungen:
+        saldo += b["betrag"]
+        ergebnis.append(KontokorrentBewegung(saldo=round(saldo, 2), **b))
+    return ergebnis
 
 
 @router.get("/{kunde_id}", response_model=KundeResponse)
