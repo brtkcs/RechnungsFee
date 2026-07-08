@@ -5,12 +5,28 @@ API-Endpunkte für Nummernkreise (Belegnummern-Konfiguration).
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError as _IntegrityError
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import Nummernkreis
 from .journal import _belegnr_aus_format
 from .schemas import NummernkreisUpdate, NummernkreisResponse
+
+
+def naechste_nummer(typ: str, db: Session) -> str | None:
+    """Generiert die nächste Nummer für den angegebenen Nummernkreis-Typ.
+    Inkrementiert naechste_nr in-memory; der Aufrufer muss committen."""
+    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == typ).first()
+    if not nk:
+        return None
+    heute = date.today()
+    if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != heute.year:
+        nk.naechste_nr = 1
+    nk.letztes_jahr = heute.year
+    nr = nk.naechste_nr
+    nk.naechste_nr += 1
+    return _belegnr_aus_format(nk.format, heute, nr)
 
 router = APIRouter(prefix="/api/nummernkreise", tags=["Stammdaten"])
 

@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Body, UploadFile
+from sqlalchemy.exc import IntegrityError as _IntegrityError
+from .nummernkreise import naechste_nummer as _naechste_nummer
 from fastapi.responses import FileResponse as _FileResponse, Response as _Response, StreamingResponse
 from io import BytesIO
 from pydantic import BaseModel
@@ -17,7 +19,6 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db, APP_DATA_DIR
 from database.models import Beleg, Kunde, KundeBeleg, KundeLieferadresse, Journaleintrag, Rechnung, Nummernkreis, Unternehmen
-from .journal import _belegnr_aus_format
 from .schemas import KundeCreate, KundeUpdate, KundeResponse
 from .schemas_rechnungen import BelegResponse
 from utils.pdf_dsgvo import generate_dsgvo_pdf
@@ -28,18 +29,6 @@ _ERLAUBTE_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff", "i
                   "application/msword",
                   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
 
-
-def _naechste_nummer(typ: str, db: Session) -> str | None:
-    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == typ).first()
-    if not nk:
-        return None
-    heute = _date.today()
-    if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != heute.year:
-        nk.naechste_nr = 1
-    nk.letztes_jahr = heute.year
-    nr = nk.naechste_nr
-    nk.naechste_nr += 1
-    return _belegnr_aus_format(nk.format, heute, nr)
 
 router = APIRouter(prefix="/api/kunden", tags=["Stammdaten"])
 
@@ -62,9 +51,16 @@ def create_kunde(data: KundeCreate, db: Session = Depends(get_db)):
         kunde_data["debitor_nr"] = _naechste_nummer("debitor", db)
     if nr and db.query(Kunde).filter(Kunde.kundennummer == nr).first():
         raise HTTPException(status_code=409, detail=f"Kundennummer '{nr}' ist bereits vergeben.")
+    debitor = kunde_data.get("debitor_nr")
+    if debitor and db.query(Kunde).filter(Kunde.debitor_nr == debitor).first():
+        raise HTTPException(status_code=409, detail=f"Debitorennummer '{debitor}' ist bereits vergeben. Bitte Nummernkreis prüfen.")
     kunde = Kunde(**kunde_data)
     db.add(kunde)
-    db.commit()
+    try:
+        db.commit()
+    except _IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Datenbank-Konflikt beim Anlegen des Kunden: {e.orig}")
     db.refresh(kunde)
     return kunde
 

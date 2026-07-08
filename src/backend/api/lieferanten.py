@@ -10,26 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response as _Response, StreamingResponse
 from io import BytesIO
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError as _IntegrityError
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import Journaleintrag, Lieferant, Rechnung, Nummernkreis, Unternehmen
-from .journal import _belegnr_aus_format
+from .nummernkreise import naechste_nummer as _naechste_nummer
 from .schemas import LieferantCreate, LieferantUpdate, LieferantResponse
 from utils.pdf_dsgvo import generate_dsgvo_pdf
 
-
-def _naechste_nummer(typ: str, db: Session) -> str | None:
-    nk = db.query(Nummernkreis).filter(Nummernkreis.typ == typ).first()
-    if not nk:
-        return None
-    heute = _date.today()
-    if nk.reset_jaehrlich and nk.letztes_jahr and nk.letztes_jahr != heute.year:
-        nk.naechste_nr = 1
-    nk.letztes_jahr = heute.year
-    nr = nk.naechste_nr
-    nk.naechste_nr += 1
-    return _belegnr_aus_format(nk.format, heute, nr)
 
 router = APIRouter(prefix="/api/lieferanten", tags=["Stammdaten"])
 
@@ -52,9 +41,16 @@ def create_lieferant(data: LieferantCreate, db: Session = Depends(get_db)):
         lieferant_data["kreditor_nr"] = _naechste_nummer("kreditor", db)
     if nr and db.query(Lieferant).filter(Lieferant.lieferantennummer == nr).first():
         raise HTTPException(status_code=409, detail=f"Lieferantennummer '{nr}' ist bereits vergeben.")
+    kreditor = lieferant_data.get("kreditor_nr")
+    if kreditor and db.query(Lieferant).filter(Lieferant.kreditor_nr == kreditor).first():
+        raise HTTPException(status_code=409, detail=f"Kreditorennummer '{kreditor}' ist bereits vergeben. Bitte Nummernkreis prüfen.")
     lieferant = Lieferant(**lieferant_data)
     db.add(lieferant)
-    db.commit()
+    try:
+        db.commit()
+    except _IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Datenbank-Konflikt beim Anlegen des Lieferanten: {e.orig}")
     db.refresh(lieferant)
     return lieferant
 
@@ -64,6 +60,7 @@ def naechste_kreditor_nr(db: Session = Depends(get_db)):
     nk = db.query(Nummernkreis).filter(Nummernkreis.typ == "kreditor").first()
     if not nk:
         return {"naechste_nr": None}
+    from .journal import _belegnr_aus_format
     return {"naechste_nr": _belegnr_aus_format(nk.format, _date.today(), nk.naechste_nr)}
 
 
