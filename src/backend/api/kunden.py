@@ -68,7 +68,14 @@ def naechste_debitor_nr(db: Session = Depends(get_db)):
         return {"naechste_nr": None}
     from .journal import _belegnr_aus_format
     from datetime import date as _date
-    return {"naechste_nr": _belegnr_aus_format(nk.format, _date.today(), nk.naechste_nr)}
+    heute = _date.today()
+    kandidat_nr = nk.naechste_nr
+    for _ in range(100):
+        kandidat = _belegnr_aus_format(nk.format, heute, kandidat_nr)
+        if not db.query(Kunde).filter(Kunde.debitor_nr == kandidat).first():
+            return {"naechste_nr": kandidat}
+        kandidat_nr += 1
+    return {"naechste_nr": None}
 
 
 @router.get("/{kunde_id}/dsgvo-export")
