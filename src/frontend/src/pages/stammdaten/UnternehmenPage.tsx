@@ -8,6 +8,7 @@ import {
 import { InfoTooltip } from '../../components/InfoTooltip'
 import { DateInput } from '../../components/DateInput'
 import { KONTORAHMEN_LS_KEY, type KontorahmenModus } from '../../utils/kontorahmen'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 // ---------------------------------------------------------------------------
 // Hilfskomponenten
@@ -1591,6 +1592,7 @@ function UnterschriftSektion({ data }: { data: Unternehmen }) {
 // ---------------------------------------------------------------------------
 
 export function UnternehmenPage() {
+  const mxAuto = useMxAuto()
   const [searchParams] = useSearchParams()
   const tabParam = searchParams.get('tab') as TabId | null
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -1625,7 +1627,7 @@ export function UnternehmenPage() {
   const isFormTab = activeTab === 'firma' || activeTab === 'steuer' || activeTab === 'rechnungen' || activeTab === 'artikel'
 
   return (
-    <div className="p-6 max-w-4xl space-y-0">
+    <div className={`p-6 max-w-4xl ${mxAuto} space-y-0`}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Unternehmen</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">Stammdaten, Steuer, Rechnungseinstellungen und Kommunikation</p>

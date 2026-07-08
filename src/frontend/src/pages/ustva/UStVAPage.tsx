@@ -5,6 +5,7 @@ import {
   getUnternehmen, openUrl,
   type UStVAErgebnis,
 } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 // ---------------------------------------------------------------------------
 // KZ-Metadaten – Reihenfolge wie im amtlichen Formular USt 1 A 2026
@@ -85,6 +86,7 @@ function Abschnitt({ titel, children }: { titel: string; children: React.ReactNo
 }
 
 export function UStVAPage() {
+  const mxAuto = useMxAuto()
   const qc = useQueryClient()
   const now = new Date()
   const [modus, setModus] = useState<'monat' | 'quartal'>('quartal')
@@ -187,7 +189,7 @@ export function UStVAPage() {
   const zahllast = ergebnis ? berechneZahllast() : null
   const gruppen = ergebnis && !ergebnis.ist_kleinunternehmer ? renderKZTabelle() : []
   return (
-    <div className="max-w-2xl px-6 py-8">
+    <div className={`max-w-2xl ${mxAuto} px-6 py-8`}>
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">UStVA – Anzeigehilfe</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Berechnet Kennziffern aus deinen Journalbuchungen (Ist-Versteuerung).

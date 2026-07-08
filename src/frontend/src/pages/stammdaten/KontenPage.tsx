@@ -5,6 +5,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { getKontenAlle, createKonto, updateKonto, deleteKonto, type Konto } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 const KONTOARTEN: Record<Konto['kontoart'], { label: string; cls: string }> = {
   bank:                  { label: 'Bankkonto',             cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
@@ -238,6 +239,7 @@ function KontoModal({ konto, initialIban, onClose }: { konto: Konto | null; init
 // ---------------------------------------------------------------------------
 
 export function KontenPage() {
+  const mxAuto = useMxAuto()
   const qc = useQueryClient()
   const [modal, setModal] = useState<'neu' | Konto | null>(null)
   const [initialIban, setInitialIban] = useState<string | undefined>()
@@ -271,7 +273,7 @@ export function KontenPage() {
   })
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className={`p-6 max-w-2xl ${mxAuto}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

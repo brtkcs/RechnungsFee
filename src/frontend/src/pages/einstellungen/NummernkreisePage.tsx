@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getNummernkreise, updateNummernkreis, getNummernkreisVorschau, getUnternehmen, type Nummernkreis } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 const FORMAT_BEISPIELE = [
   { label: 'YY#### (z.B. 260001)', value: 'YY####' },
@@ -19,6 +20,7 @@ interface EditState {
 }
 
 export function NummernkreisePage() {
+  const mxAuto = useMxAuto()
   const qc = useQueryClient()
   const [editId, setEditId] = useState<number | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
@@ -69,7 +71,7 @@ export function NummernkreisePage() {
   const liveVorschau = vorschauQuery.data?.vorschau ?? ''
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className={`p-6 max-w-2xl ${mxAuto}`}>
       <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Nummernkreise</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Lege fest, wie Belegnummern aufgebaut werden.

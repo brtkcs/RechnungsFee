@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DateInput } from '../components/DateInput'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMxAuto } from '../hooks/useAnsicht'
 import {
   downloadGobdExport,
   downloadDatevBuchungsstapel,
@@ -97,6 +98,7 @@ function Fehler({ text }: { text: string }) {
 }
 
 export function ExportPage() {
+  const mxAuto = useMxAuto()
   const [aktTab, setAktTab] = useState<Tab>('gobd')
 
   // GoBD
@@ -207,7 +209,7 @@ export function ExportPage() {
                           'bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300'
 
   return (
-    <div className="p-6 max-w-4xl space-y-4">
+    <div className={`p-6 max-w-4xl ${mxAuto} space-y-4`}>
       <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Exporte</h1>
 
       {/* Tab-Leiste */}

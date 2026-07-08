@@ -6,6 +6,7 @@ import {
   type DokumentenPaket, type PaketDatei,
 } from '../../api/client'
 import { openUrl } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:placeholder-slate-400"
 
@@ -290,6 +291,7 @@ function GruppenKarte({ paket }: { paket: DokumentenPaket }) {
 // ---------------------------------------------------------------------------
 
 export function DokumentenpaketePage() {
+  const mxAuto = useMxAuto()
   const qc = useQueryClient()
   const [zeigeNeuForm, setZeigeNeuForm] = useState(false)
   const [neuName, setNeuName] = useState('')
@@ -314,7 +316,7 @@ export function DokumentenpaketePage() {
   })
 
   return (
-    <div className="p-6 max-w-3xl space-y-6">
+    <div className={`p-6 max-w-3xl ${mxAuto} space-y-6`}>
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Dokumentenpakete</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">

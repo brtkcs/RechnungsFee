@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { berechneAnlageG, getAnlageGPdfUrl, isTauri, openInPdfWindow, openUrl, type AnlageGErgebnis } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 function euroFmt(v: string | number): string {
   const n = typeof v === 'string' ? parseFloat(v) : v
@@ -61,6 +62,7 @@ function SummenZeile({ label, betrag }: { label: string; betrag: number }) {
 }
 
 export function AnlageGPage() {
+  const mxAuto = useMxAuto()
   const now = new Date()
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const jahre = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i)
@@ -111,7 +113,7 @@ export function AnlageGPage() {
   }
 
   return (
-    <div className="max-w-2xl px-6 py-8">
+    <div className={`max-w-2xl ${mxAuto} px-6 py-8`}>
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
         Anlage G – Einkünfte aus Gewerbebetrieb
       </h1>

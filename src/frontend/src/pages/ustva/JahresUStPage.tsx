@@ -4,6 +4,7 @@ import {
   berechneJahresUStVA, getJahresUStVAPdfUrl,
   getUnternehmen, openUrl,
 } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 const KZ_META: [string, string, string, boolean][] = [
   ['A. Steuerpflichtige Ausgangsumsätze', '81', 'Umsätze 19 % – Bemessungsgrundlage', false],
@@ -60,6 +61,7 @@ function Abschnitt({ titel, children }: { titel: string; children: React.ReactNo
 }
 
 export function JahresUStPage() {
+  const mxAuto = useMxAuto()
   const now = new Date()
   const jahre = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i)
   const [jahr, setJahr] = useState(now.getFullYear() - 1)
@@ -104,7 +106,7 @@ export function JahresUStPage() {
   })() : []
 
   return (
-    <div className="p-6 max-w-4xl space-y-0">
+    <div className={`p-6 max-w-4xl ${mxAuto} space-y-0`}>
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1 mt-2">Jahresumsatzsteuererklärung</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Anzeigehilfe für die USt 2A – berechnet aus allen Journalbuchungen des Wirtschaftsjahres (Ist-Versteuerung).

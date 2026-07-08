@@ -25,6 +25,7 @@ import {
   type BankAbgleichVorschlag,
 } from '../../api/client'
 import { BuchungForm } from '../journal/BuchungForm'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
@@ -1150,6 +1151,7 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
 // ---------------------------------------------------------------------------
 
 export function BankImportPage() {
+  const mxAuto = useMxAuto()
   const qc = useQueryClient()
   const [dialogOffen, setDialogOffen] = useState(false)
   const [aktivesKontoId, setAktivesKontoId] = useState<number | null>(null)
@@ -1168,7 +1170,7 @@ export function BankImportPage() {
   }, [qc])
 
   return (
-    <div className="max-w-5xl px-6 py-8">
+    <div className={`max-w-5xl ${mxAuto} px-6 py-8`}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Bank CSV-Import</h1>

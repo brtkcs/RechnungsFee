@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getUnternehmen, updateUnternehmen, getPdfVorlagen, openDemoPdf } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 export function VorlagenPage() {
+  const mxAuto = useMxAuto()
   const qc = useQueryClient()
 
   const { data: unt } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
@@ -15,7 +17,7 @@ export function VorlagenPage() {
   const aktuelleVorlage = unt?.pdf_vorlage ?? 0
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className={`p-6 max-w-3xl ${mxAuto}`}>
       <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-1">Rechnungsvorlagen</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Wähle die Vorlage die für alle Ausgangsrechnungen verwendet wird.

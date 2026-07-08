@@ -1,4 +1,4 @@
-import { useAnsicht, type AnsichtEinstellungen } from '../../hooks/useAnsicht'
+import { useAnsicht, useMxAuto, type AnsichtEinstellungen } from '../../hooks/useAnsicht'
 
 function OptionCard({
   aktiv,
@@ -38,13 +38,14 @@ function OptionCard({
 
 export function AnsichtPage() {
   const { einstellungen, setEinstellungen } = useAnsicht()
+  const mxAuto = useMxAuto()
 
   function set(patch: Partial<AnsichtEinstellungen>) {
     setEinstellungen({ ...einstellungen, ...patch })
   }
 
   return (
-    <div className="p-6 max-w-2xl space-y-8">
+    <div className={`p-6 max-w-2xl ${mxAuto} space-y-8`}>
       <div>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Ansicht</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">Einstellungen werden sofort übernommen und pro Gerät gespeichert.</p>

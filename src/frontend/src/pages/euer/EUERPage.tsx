@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { berechneEUER, berechneEUERDetail, getEUERPdfUrl, openUrl, type EUERErgebnis, type EUERDetailErgebnis } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 const ABSCHNITT_LABEL: Record<string, string> = {
   A: 'A – Betriebseinnahmen',
@@ -32,6 +33,7 @@ function SummenZeile({ label, betrag, hervorgehoben = false }: {
 }
 
 export function EUERPage() {
+  const mxAuto = useMxAuto()
   const now = new Date()
   const [jahr, setJahr] = useState(now.getFullYear() - (now.getMonth() < 3 ? 1 : 0))
   const [pdfLaedt, setPdfLaedt] = useState(false)
@@ -73,7 +75,7 @@ export function EUERPage() {
     : {}
 
   return (
-    <div className="max-w-2xl px-6 py-8">
+    <div className={`max-w-2xl ${mxAuto} px-6 py-8`}>
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">
         EÜR – Einnahmen-Überschuss-Rechnung
       </h1>

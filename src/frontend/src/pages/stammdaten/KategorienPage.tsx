@@ -7,6 +7,7 @@ import {
   type Kategorie, type KategorieCreate,
 } from '../../api/client'
 import { InfoTooltip } from '../../components/InfoTooltip'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 const KONTENART_META: Record<string, { label: string; cls: string; beschreibung: string }> = {
   Erlös:   { label: 'Erlöse',   cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300', beschreibung: 'Betriebseinnahmen' },
@@ -345,6 +346,7 @@ function EuerZeileEdit({
 // ---------------------------------------------------------------------------
 
 export function KategorienPage() {
+  const mxAuto = useMxAuto()
   const [filter, setFilter] = useState('')
   const [nurAktive, setNurAktive] = useState(false)
   const [editModus, setEditModus] = useState(false)
@@ -410,7 +412,7 @@ export function KategorienPage() {
     .filter(g => g.liste.length > 0)
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className={`p-6 max-w-4xl ${mxAuto}`}>
       {neuDialog && <NeuDialog onClose={() => setNeuDialog(false)} hatEks={hatEks} />}
       {bearbeitenKat && <NeuDialog onClose={() => setBearbeitenKat(null)} bearbeiten={bearbeitenKat} hatEks={hatEks} />}
 

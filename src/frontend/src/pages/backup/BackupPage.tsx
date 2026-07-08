@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { downloadBackup, getUnternehmen, updateUnternehmen, uploadBackupWiederherstellen, getBackupListe, wiederherstellenLokal, isTauri } from '../../api/client'
 import type { BackupEintrag } from '../../api/client'
+import { useMxAuto } from '../../hooks/useAnsicht'
 
 type TabId = 'backup' | 'wiederherstellung'
 
@@ -638,10 +639,11 @@ function WiederherstellungTab() {
 // ---------------------------------------------------------------------------
 
 export function BackupPage() {
+  const mxAuto = useMxAuto()
   const [activeTab, setActiveTab] = useState<TabId>('backup')
 
   return (
-    <div className="p-6 max-w-4xl space-y-6">
+    <div className={`p-6 max-w-4xl ${mxAuto} space-y-6`}>
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Backup & Wiederherstellung</h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Deine Daten sichern und im Notfall wiederherstellen.</p>
