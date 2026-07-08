@@ -27,6 +27,11 @@ export function useAnsicht() {
   return useContext(AnsichtContext)
 }
 
+export function useMxAuto(): string {
+  const { einstellungen } = useContext(AnsichtContext)
+  return einstellungen.ausrichtung === 'zentriert' ? 'mx-auto' : ''
+}
+
 export function useAnsichtState() {
   const [einstellungen, setEinstellungenState] = useState<AnsichtEinstellungen>(laden)
 
