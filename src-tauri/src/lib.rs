@@ -114,6 +114,7 @@ fn confirm_close(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
@@ -236,7 +237,7 @@ pub fn run() {
                 tauri::WebviewUrl::App("index.html".into()),
             )
             .title("RechnungsFee")
-            .inner_size(1280.0, 800.0)
+            .inner_size(1548.0, 904.0)
             .min_inner_size(900.0, 600.0)
             .resizable(true)
             .build()
@@ -257,6 +258,10 @@ pub fn run() {
                     }
                 });
             }
+
+            // Gespeicherte Fenstergröße/-position wiederherstellen.
+            use tauri_plugin_window_state::{WindowExt, StateFlags};
+            let _ = main_window.restore_state(StateFlags::all());
 
             // Schließen wird vollständig vom JS-seitigen onCloseRequested behandelt.
 
