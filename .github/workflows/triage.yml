@@ -46,7 +46,7 @@ jobs:
             1. **RechnungsFee-Version** (Einstellungen → Info) – bereits angegeben: super!
             2. **Betriebssystem** – bereits angegeben: super!
             3. **Backend-Log**: Starte RechnungsFee über das Terminal und kopiere die Ausgabe ab dem Zeitpunkt des Fehlers:
-               - Windows: \`%APPDATA%\\RechnungsFee\\\` oder Konsole beim Start
+               - Windows: \`%AppData%\\Roaming\\RechnungsFee\\logs\\\` oder Konsole beim Start
                - Linux: \`journalctl --user -u rechnungsfee -n 100\` oder Konsolenausgabe
             4. **Lässt sich der Fehler immer reproduzieren?** Bei welchen genauen Eingaben?
 
