@@ -209,6 +209,40 @@ export function AppLayout() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  // Strg+Mausrad / Strg++ / Strg+- / Strg+0 → App-Zoom
+  useEffect(() => {
+    const STEP = 0.1
+    const MIN = 0.5
+    const MAX = 2.0
+    const applyZoom = (z: number) => {
+      const clamped = Math.round(Math.min(MAX, Math.max(MIN, z)) * 10) / 10
+      document.documentElement.style.zoom = String(clamped)
+      localStorage.setItem('appZoom', String(clamped))
+    }
+    applyZoom(parseFloat(localStorage.getItem('appZoom') ?? '1'))
+
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      const current = parseFloat(document.documentElement.style.zoom || '1')
+      applyZoom(current + (e.deltaY < 0 ? STEP : -STEP))
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) return
+      const current = parseFloat(document.documentElement.style.zoom || '1')
+      if (e.key === '+' || e.key === '=') { e.preventDefault(); applyZoom(current + STEP) }
+      else if (e.key === '-')             { e.preventDefault(); applyZoom(current - STEP) }
+      else if (e.key === '0')             { e.preventDefault(); applyZoom(1) }
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
+
   const [abschlussDialog, setAbschlussDialog] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const [wiederErgebnisse, setWiederErgebnisse] = useState<EntwurfErgebnis[]>([])
