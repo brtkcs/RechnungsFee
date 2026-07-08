@@ -36,6 +36,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'verbesserung', text: 'Einstellungen → Ansicht: Spaltenbreite in allen Listen mit Detail-Panel (Rechnungen, Kunden, Lieferanten, Angebote, Aufträge, Proforma, Wiederkehrend, Buchungsvorlagen, Artikel, Anlageverzeichnis) jetzt manuell verschiebbar. Die Trennlinie lässt sich per Maus ziehen – die Breite wird pro Seite gespeichert.' },
       { typ: 'fix', text: 'Zufluss-Monitor zeigte kurzzeitig 0,00 € während die Buchungsdaten noch geladen wurden (React Query Cache-Timing). Der Monitor zeigt jetzt einen Lade-Spinner und „…" als Platzhalter bis die Daten vollständig vorliegen.' },
       { typ: 'fix', text: 'Neuen Kunden oder Lieferanten anlegen schlug mit „Failed to fetch" fehl wenn die automatisch vergebene Debitor- oder Kreditorennummer bereits belegt war (z. B. nach einer Nummernkreis-Formatänderung). Die nächste freie Nummer wird jetzt automatisch gesucht und vergeben.' },
+      { typ: 'fix', text: 'Kontokorrent-Tab: Der angezeigte Nummernvorschlag (nächste freie Debitor-/Kreditorennummer) konnte eine bereits manuell vergebene Nummer anzeigen. Die Vorschau überspringt jetzt belegte Nummern und zeigt immer die tatsächlich nächste freie Nummer an (Issue #219).' },
     ],
   },
   {
