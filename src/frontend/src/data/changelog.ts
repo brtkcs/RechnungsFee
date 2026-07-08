@@ -33,6 +33,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Kunden- und Lieferantennummer fehlte auf allen PDF-Dokumenten (Rechnungen, Angebote, Aufträge, Proforma, Lieferscheine, Gutschriften). Die Nummer erscheint jetzt im Metadaten-Block rechts über der Dokumentnummer.' },
       { typ: 'fix', text: 'Kontokorrent-PDF öffnete sich als schwarzes Fenster: Der Endpunkt lieferte Content-Disposition: attachment statt inline – Tauri versuchte die Datei herunterzuladen statt sie anzuzeigen. Betraf Kunden- und Lieferanten-Kontokorrent.' },
       { typ: 'fix', text: 'Zufluss-Monitor zeigte kurzzeitig 0,00 € während die Buchungsdaten noch geladen wurden (React Query Cache-Timing). Der Monitor zeigt jetzt einen Lade-Spinner und „…" als Platzhalter bis die Daten vollständig vorliegen.' },
+      { typ: 'fix', text: 'Neuen Kunden oder Lieferanten anlegen schlug mit „Failed to fetch" fehl wenn die automatisch vergebene Debitor- oder Kreditorennummer bereits belegt war (z. B. nach einer Nummernkreis-Formatänderung). Die nächste freie Nummer wird jetzt automatisch gesucht und vergeben.' },
     ],
   },
   {
