@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.4.6',
     datum: 'Juli 2026',
     eintraege: [
+      { typ: 'neu', text: 'App-Zoom: Strg+Mausrad, Strg++ und Strg+– zoomen die gesamte Oberfläche (50–200 %). Strg+0 setzt den Zoom zurück. Der Zoom-Level wird gespeichert und beim nächsten Start wiederhergestellt.' },
       { typ: 'fix', text: 'Kontokorrent-PDF öffnete sich als schwarzes Fenster: Der Endpunkt lieferte Content-Disposition: attachment statt inline – Tauri versuchte die Datei herunterzuladen statt sie anzuzeigen. Betraf Kunden- und Lieferanten-Kontokorrent.' },
       { typ: 'fix', text: 'Zufluss-Monitor zeigte kurzzeitig 0,00 € während die Buchungsdaten noch geladen wurden (React Query Cache-Timing). Der Monitor zeigt jetzt einen Lade-Spinner und „…" als Platzhalter bis die Daten vollständig vorliegen.' },
     ],
