@@ -513,6 +513,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAGES_TOKEN }}
 
       - name: main in web-Branch mergen und pushen
         run: |
