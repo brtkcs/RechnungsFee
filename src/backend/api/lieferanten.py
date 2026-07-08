@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response as _Response, StreamingResponse
 from io import BytesIO
 from pydantic import BaseModel
-from sqlalchemy.exc import IntegrityError as _IntegrityError
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
@@ -37,20 +36,17 @@ def create_lieferant(data: LieferantCreate, db: Session = Depends(get_db)):
     if not lieferant_data.get("lieferantennummer"):
         lieferant_data["lieferantennummer"] = _naechste_nummer("lieferant", db)
     nr = lieferant_data.get("lieferantennummer")
-    if not lieferant_data.get("kreditor_nr"):
-        lieferant_data["kreditor_nr"] = _naechste_nummer("kreditor", db)
     if nr and db.query(Lieferant).filter(Lieferant.lieferantennummer == nr).first():
         raise HTTPException(status_code=409, detail=f"Lieferantennummer '{nr}' ist bereits vergeben.")
-    kreditor = lieferant_data.get("kreditor_nr")
-    if kreditor and db.query(Lieferant).filter(Lieferant.kreditor_nr == kreditor).first():
-        raise HTTPException(status_code=409, detail=f"Kreditorennummer '{kreditor}' ist bereits vergeben. Bitte Nummernkreis prüfen.")
+    if not lieferant_data.get("kreditor_nr"):
+        for _ in range(10):
+            kandidat = _naechste_nummer("kreditor", db)
+            if not db.query(Lieferant).filter(Lieferant.kreditor_nr == kandidat).first():
+                lieferant_data["kreditor_nr"] = kandidat
+                break
     lieferant = Lieferant(**lieferant_data)
     db.add(lieferant)
-    try:
-        db.commit()
-    except _IntegrityError as e:
-        db.rollback()
-        raise HTTPException(status_code=409, detail=f"Datenbank-Konflikt beim Anlegen des Lieferanten: {e.orig}")
+    db.commit()
     db.refresh(lieferant)
     return lieferant
 

@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Body, UploadFile
-from sqlalchemy.exc import IntegrityError as _IntegrityError
 from .nummernkreise import naechste_nummer as _naechste_nummer
 from fastapi.responses import FileResponse as _FileResponse, Response as _Response, StreamingResponse
 from io import BytesIO
@@ -47,20 +46,17 @@ def create_kunde(data: KundeCreate, db: Session = Depends(get_db)):
     if not kunde_data.get("kundennummer"):
         kunde_data["kundennummer"] = _naechste_nummer("kunde", db)
     nr = kunde_data.get("kundennummer")
-    if not kunde_data.get("debitor_nr"):
-        kunde_data["debitor_nr"] = _naechste_nummer("debitor", db)
     if nr and db.query(Kunde).filter(Kunde.kundennummer == nr).first():
         raise HTTPException(status_code=409, detail=f"Kundennummer '{nr}' ist bereits vergeben.")
-    debitor = kunde_data.get("debitor_nr")
-    if debitor and db.query(Kunde).filter(Kunde.debitor_nr == debitor).first():
-        raise HTTPException(status_code=409, detail=f"Debitorennummer '{debitor}' ist bereits vergeben. Bitte Nummernkreis prüfen.")
+    if not kunde_data.get("debitor_nr"):
+        for _ in range(10):
+            kandidat = _naechste_nummer("debitor", db)
+            if not db.query(Kunde).filter(Kunde.debitor_nr == kandidat).first():
+                kunde_data["debitor_nr"] = kandidat
+                break
     kunde = Kunde(**kunde_data)
     db.add(kunde)
-    try:
-        db.commit()
-    except _IntegrityError as e:
-        db.rollback()
-        raise HTTPException(status_code=409, detail=f"Datenbank-Konflikt beim Anlegen des Kunden: {e.orig}")
+    db.commit()
     db.refresh(kunde)
     return kunde
 
