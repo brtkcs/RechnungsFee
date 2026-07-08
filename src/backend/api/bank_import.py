@@ -998,3 +998,32 @@ def journal_verknuepfen(
     db.commit()
     db.refresh(tx)
     return _enriche_tx(tx, {}, {})
+
+
+@router.delete("/transaktion/{tx_id}", status_code=204)
+def loesche_transaktion(tx_id: int, db: Session = Depends(get_db)):
+    tx = db.query(BankTransaktion).filter(BankTransaktion.id == tx_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaktion nicht gefunden.")
+    db.delete(tx)
+    db.commit()
+
+
+@router.delete("/{konto_id}/gebuchte", status_code=204)
+def loesche_gebuchte(konto_id: int, db: Session = Depends(get_db)):
+    """Löscht alle gebuchten Transaktionen eines Kontos (Bereinigung)."""
+    db.query(BankTransaktion).filter(
+        BankTransaktion.konto_id == konto_id,
+        BankTransaktion.journal_id.isnot(None),
+    ).delete()
+    db.commit()
+
+
+@router.delete("/{konto_id}/ungebuchte", status_code=204)
+def loesche_ungebuchte(konto_id: int, db: Session = Depends(get_db)):
+    """Löscht alle ungebuchten Transaktionen eines Kontos (Import-Abbruch)."""
+    db.query(BankTransaktion).filter(
+        BankTransaktion.konto_id == konto_id,
+        BankTransaktion.journal_id.is_(None),
+    ).delete()
+    db.commit()

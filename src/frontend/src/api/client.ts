@@ -2394,6 +2394,15 @@ export const klassifiziereBankTransaktion = (
 export const loescheBankImport = (importId: number) =>
   request<void>(`/bank-import/import/${importId}`, { method: 'DELETE' })
 
+export const loescheTransaktion = (txId: number) =>
+  request<void>(`/bank-import/transaktion/${txId}`, { method: 'DELETE' })
+
+export const loescheGebuchte = (kontoId: number) =>
+  request<void>(`/bank-import/${kontoId}/gebuchte`, { method: 'DELETE' })
+
+export const loescheUngebuchte = (kontoId: number) =>
+  request<void>(`/bank-import/${kontoId}/ungebuchte`, { method: 'DELETE' })
+
 export const abgleichTransaktion = (txId: number) =>
   request<BankAbgleichVorschlag[]>(`/bank-import/transaktion/${txId}/abgleich`)
 

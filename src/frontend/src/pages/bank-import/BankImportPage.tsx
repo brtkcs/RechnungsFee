@@ -14,6 +14,9 @@ import {
   abgleichTransaktion,
   autoBuchen,
   ueberzahlungAnerkennen,
+  loescheTransaktion,
+  loescheGebuchte,
+  loescheUngebuchte,
   isTauri,
   type Konto,
   type BankTemplate,
@@ -779,6 +782,26 @@ function BuchungsCelle({ tx, ladendeTxId, buchePending, onBuchen }: BuchungsCell
 }
 
 // ---------------------------------------------------------------------------
+// Bereinigungslogik
+// ---------------------------------------------------------------------------
+
+type BereinigungKonfig = { tage: number | null; maxN: number | null }
+
+function bereinigungsIds(txs: BankTransaktion[], k: BereinigungKonfig): number[] {
+  const gebuchte = [...txs.filter(tx => !!tx.journal_id)]
+    .sort((a, b) => a.datum.localeCompare(b.datum)) // älteste zuerst
+  const ids = new Set<number>()
+  if (k.tage) {
+    const grenze = new Date(Date.now() - k.tage * 86400000).toISOString().slice(0, 10)
+    gebuchte.forEach(tx => { if (tx.datum < grenze) ids.add(tx.id) })
+  }
+  if (k.maxN !== null && gebuchte.length > k.maxN) {
+    gebuchte.slice(0, gebuchte.length - k.maxN).forEach(tx => ids.add(tx.id))
+  }
+  return [...ids]
+}
+
+// ---------------------------------------------------------------------------
 // Transaktionsliste
 // ---------------------------------------------------------------------------
 
@@ -795,6 +818,12 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
   const [statusFilter, setStatusFilter] = useState<'alle' | 'offen' | 'gebucht' | 'privat'>('alle')
   const [datumVon, setDatumVon] = useState('')
   const [datumBis, setDatumBis] = useState('')
+  const [berKonfig, setBerKonfig] = useState<BereinigungKonfig>(() => {
+    try { return JSON.parse(localStorage.getItem('bankBereinigung') ?? 'null') ?? { tage: null, maxN: null } }
+    catch { return { tage: null, maxN: null } }
+  })
+  const [zahnradOffen, setZahnradOffen] = useState(false)
+  const autoCleanupRan = useRef(false)
 
   const { data: txs = [], isLoading } = useQuery({
     queryKey: ['bank-transaktionen', konto.id],
@@ -837,6 +866,24 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
     onError: (e: Error) => zeigToast(e.message || 'Fehler beim Buchen.', false),
   })
 
+  const bereinigeMut = useMutation({
+    mutationFn: async (ids: number[]) => { for (const id of ids) await loescheTransaktion(id) },
+    onSuccess: (_, ids) => {
+      qc.invalidateQueries({ queryKey: ['bank-transaktionen', konto.id] })
+      zeigToast(`${ids.length} gebuchte Transaktionen bereinigt`, true)
+    },
+    onError: () => zeigToast('Fehler beim Bereinigen', false),
+  })
+
+  const loescheUngebuechteMut = useMutation({
+    mutationFn: () => loescheUngebuchte(konto.id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bank-transaktionen', konto.id] })
+      zeigToast('Ungebuchte Transaktionen gelöscht', true)
+    },
+    onError: () => zeigToast('Fehler beim Löschen', false),
+  })
+
   const abgleichMut = useMutation({
     mutationFn: (tx: BankTransaktion) => abgleichTransaktion(tx.id),
     onSuccess: (vorschlaege, tx) => {
@@ -860,13 +907,32 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
     setTimeout(() => setToast(null), 3500)
   }
 
+  function saveBerKonfig(k: BereinigungKonfig) {
+    setBerKonfig(k)
+    localStorage.setItem('bankBereinigung', JSON.stringify(k))
+  }
+
+  // Auto-Bereinigung einmalig beim ersten Laden (wenn Regeln konfiguriert)
+  useEffect(() => {
+    if (autoCleanupRan.current || !txs.length) return
+    if (!berKonfig.tage && berKonfig.maxN === null) return
+    autoCleanupRan.current = true
+    const ids = bereinigungsIds(txs, berKonfig)
+    if (ids.length) bereinigeMut.mutate(ids)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txs.length])
+
   if (isLoading) return <p className="text-sm text-slate-500 dark:text-slate-400 py-4">Lade Transaktionen…</p>
   if (txs.length === 0) return (
     <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-sm">Noch keine Transaktionen importiert.</div>
   )
 
   const offene = txs.filter(tx => tx.ist_geschaeftlich && !tx.ist_privatentnahme && !tx.ist_einlage && !tx.journal_id)
-  const gebuchte = txs.filter(tx => !!tx.journal_id).length
+  const gebuchteList = txs.filter(tx => !!tx.journal_id)
+  const gebuchte = gebuchteList.length
+  const ungebuchteAnzahl = txs.filter(tx => !tx.journal_id).length
+  const berVorschauIds = bereinigungsIds(txs, berKonfig)
+  const bereinigenAnzahl = (berKonfig.tage || berKonfig.maxN !== null) ? berVorschauIds.length : gebuchte
   const ladendeTxId = abgleichMut.isPending && abgleichMut.variables ? abgleichMut.variables.id : null
 
   const gefilterteTxs = txs.filter(tx => {
@@ -918,12 +984,77 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
             <option value="gebucht">Gebucht</option>
             <option value="privat">Privat</option>
           </select>
+          <button
+            onClick={() => setZahnradOffen(v => !v)}
+            title="Bereinigungseinstellungen"
+            className={`p-1.5 rounded-lg border transition-colors ${zahnradOffen ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400' : 'border-slate-200 dark:border-slate-600 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 bg-white dark:bg-slate-800'}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
           <span>{gefilterteTxs.length} von {txs.length} Transaktionen</span>
           {gebuchte > 0 && <span className="text-green-600 dark:text-green-400">{gebuchte} gebucht</span>}
           {offene.length > 0 && <span className="text-amber-600 dark:text-amber-400">{offene.length} offen</span>}
         </div>
+
+        {zahnradOffen && (
+          <div className="mt-1 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Bereinigung gebuchter Transaktionen</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mb-4">
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                Automatisch löschen nach
+                <input
+                  type="number" min="1" placeholder="—"
+                  value={berKonfig.tage ?? ''}
+                  onChange={e => saveBerKonfig({ ...berKonfig, tage: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-16 text-sm px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-center"
+                />
+                Tagen
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                Maximal
+                <input
+                  type="number" min="0" placeholder="—"
+                  value={berKonfig.maxN ?? ''}
+                  onChange={e => saveBerKonfig({ ...berKonfig, maxN: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-16 text-sm px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-center"
+                />
+                gebuchte behalten
+              </label>
+            </div>
+            {(berKonfig.tage || berKonfig.maxN !== null) && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+                {berVorschauIds.length > 0
+                  ? `${berVorschauIds.length} Einträge würden bei der nächsten automatischen Bereinigung gelöscht`
+                  : 'Kein Eintrag erfüllt die Regeln – nichts zu bereinigen'}
+              </p>
+            )}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                disabled={bereinigenAnzahl === 0 || bereinigeMut.isPending}
+                onClick={() => bereinigeMut.mutate(
+                  (berKonfig.tage || berKonfig.maxN !== null) ? berVorschauIds : gebuchteList.map(t => t.id)
+                )}
+                className="text-sm px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 disabled:opacity-40 transition-colors"
+              >
+                {bereinigeMut.isPending ? 'Bereinige…' : `Jetzt bereinigen (${bereinigenAnzahl} Einträge)`}
+              </button>
+              {ungebuchteAnzahl > 0 && (
+                <button
+                  disabled={loescheUngebuechteMut.isPending}
+                  onClick={() => loescheUngebuechteMut.mutate()}
+                  className="text-sm px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-40 transition-colors"
+                >
+                  {loescheUngebuechteMut.isPending ? 'Lösche…' : `Ungebuchte löschen (${ungebuchteAnzahl})`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {toast && (
