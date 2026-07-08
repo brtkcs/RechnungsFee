@@ -657,6 +657,11 @@ def kontokorrent_pdf(
     bewegungen, partner_name = _kontokorrent_bewegungen(kunde_id, von, bis, db)
     unt = db.query(Unternehmen).first()
     unt_dict = {c.name: getattr(unt, c.name) for c in unt.__table__.columns} if unt else {}
+    kunde = db.query(Kunde).filter(Kunde.id == kunde_id).first()
+    adresse = [z for z in [
+        " ".join(filter(None, [getattr(kunde, "strasse", None), getattr(kunde, "hausnummer", None)])),
+        " ".join(filter(None, [getattr(kunde, "plz", None), getattr(kunde, "ort", None)])),
+    ] if z.strip()] if kunde else []
 
     pdf_bytes = erstelle_kontokorrent_pdf(
         unternehmen=unt_dict,
@@ -664,6 +669,9 @@ def kontokorrent_pdf(
         von=str(von),
         bis=str(bis),
         bewegungen=bewegungen,
+        partner_nr=getattr(kunde, "debitor_nr", None),
+        partner_adresse=adresse,
+        nr_label="Debitorennr.",
     )
     dateiname = f"Kontokorrent_{partner_name.replace(' ', '_')}_{von}_{bis}.pdf"
     return _Response(
@@ -694,6 +702,11 @@ def kontokorrent_mail(
     bewegungen, partner_name = _kontokorrent_bewegungen(kunde_id, von, bis, db)
     unt = _smtp_einstellungen(db)
     unt_dict = {c.name: getattr(unt, c.name) for c in unt.__table__.columns}
+    kunde = db.query(Kunde).filter(Kunde.id == kunde_id).first()
+    adresse = [z for z in [
+        " ".join(filter(None, [getattr(kunde, "strasse", None), getattr(kunde, "hausnummer", None)])),
+        " ".join(filter(None, [getattr(kunde, "plz", None), getattr(kunde, "ort", None)])),
+    ] if z.strip()] if kunde else []
 
     pdf_bytes = erstelle_kontokorrent_pdf(
         unternehmen=unt_dict,
@@ -701,6 +714,9 @@ def kontokorrent_mail(
         von=str(von),
         bis=str(bis),
         bewegungen=bewegungen,
+        partner_nr=getattr(kunde, "debitor_nr", None),
+        partner_adresse=adresse,
+        nr_label="Debitorennr.",
     )
     dateiname = f"Kontokorrent_{partner_name.replace(' ', '_')}_{von}_{bis}.pdf"
     empfaenger = [data.an]

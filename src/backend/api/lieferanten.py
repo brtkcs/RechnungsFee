@@ -362,6 +362,11 @@ def kontokorrent_pdf_lieferant(
     bewegungen, partner_name = _kontokorrent_bewegungen_lieferant(lieferant_id, von, bis, db)
     unt = db.query(Unternehmen).first()
     unt_dict = {c.name: getattr(unt, c.name) for c in unt.__table__.columns} if unt else {}
+    lieferant = db.query(Lieferant).filter(Lieferant.id == lieferant_id).first()
+    adresse = [z for z in [
+        " ".join(filter(None, [getattr(lieferant, "strasse", None), getattr(lieferant, "hausnummer", None)])),
+        " ".join(filter(None, [getattr(lieferant, "plz", None), getattr(lieferant, "ort", None)])),
+    ] if z.strip()] if lieferant else []
 
     pdf_bytes = erstelle_kontokorrent_pdf(
         unternehmen=unt_dict,
@@ -369,6 +374,9 @@ def kontokorrent_pdf_lieferant(
         von=str(von),
         bis=str(bis),
         bewegungen=bewegungen,
+        partner_nr=getattr(lieferant, "kreditor_nr", None),
+        partner_adresse=adresse,
+        nr_label="Kreditorennr.",
     )
     dateiname = f"Kontokorrent_{partner_name.replace(' ', '_')}_{von}_{bis}.pdf"
     return _Response(
@@ -400,6 +408,11 @@ def kontokorrent_mail_lieferant(
     bewegungen, partner_name = _kontokorrent_bewegungen_lieferant(lieferant_id, von, bis, db)
     unt = _smtp_einstellungen(db)
     unt_dict = {c.name: getattr(unt, c.name) for c in unt.__table__.columns}
+    lieferant = db.query(Lieferant).filter(Lieferant.id == lieferant_id).first()
+    adresse = [z for z in [
+        " ".join(filter(None, [getattr(lieferant, "strasse", None), getattr(lieferant, "hausnummer", None)])),
+        " ".join(filter(None, [getattr(lieferant, "plz", None), getattr(lieferant, "ort", None)])),
+    ] if z.strip()] if lieferant else []
 
     pdf_bytes = erstelle_kontokorrent_pdf(
         unternehmen=unt_dict,
@@ -407,6 +420,9 @@ def kontokorrent_mail_lieferant(
         von=str(von),
         bis=str(bis),
         bewegungen=bewegungen,
+        partner_nr=getattr(lieferant, "kreditor_nr", None),
+        partner_adresse=adresse,
+        nr_label="Kreditorennr.",
     )
     dateiname = f"Kontokorrent_{partner_name.replace(' ', '_')}_{von}_{bis}.pdf"
     empfaenger = [data.an]

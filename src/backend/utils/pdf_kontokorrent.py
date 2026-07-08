@@ -67,12 +67,17 @@ ROW_H = 6
 
 
 class KontokorrentPDF(FPDF):
-    def __init__(self, unternehmen: dict, partner_name: str, von: str, bis: str):
+    def __init__(self, unternehmen: dict, partner_name: str, von: str, bis: str,
+                 partner_nr: str | None = None, partner_adresse: list[str] | None = None,
+                 nr_label: str = "Debitorennr."):
         super().__init__(orientation="P", unit="mm", format="A4")
         self.unt = unternehmen
         self.partner_name = partner_name
         self.von = von
         self.bis = bis
+        self.partner_nr = partner_nr
+        self.partner_adresse = partner_adresse or []
+        self.nr_label = nr_label
         font_dir = _find_dejavu_dir()
         self.add_font("DejaVu", "",  str(font_dir / "DejaVuSans.ttf"))
         self.add_font("DejaVu", "B", str(font_dir / "DejaVuSans-Bold.ttf"))
@@ -82,10 +87,15 @@ class KontokorrentPDF(FPDF):
     def header(self):
         self.set_font("DejaVu", "B", 11)
         self.cell(0, 7, self.unt.get("firmenname", ""), ln=True)
-        self.set_font("DejaVu", "", 9)
+        self.set_font("DejaVu", "B", 9)
         self.cell(0, 5, f"Kontokorrent-Auszug: {self.partner_name}", ln=True)
         self.set_font("DejaVu", "", 8)
-        self.set_text_color(100, 100, 100)
+        self.set_text_color(80, 80, 80)
+        for zeile in self.partner_adresse:
+            self.cell(0, 4, zeile, ln=True)
+        if self.partner_nr:
+            self.cell(0, 4, f"{self.nr_label} {self.partner_nr}", ln=True)
+        self.ln(1)
         self.cell(0, 4, f"Zeitraum: {_fmt_datum(self.von)} – {_fmt_datum(self.bis)}", ln=True)
         self.set_text_color(0, 0, 0)
         self.ln(2)
@@ -122,8 +132,13 @@ def erstelle_kontokorrent_pdf(
     von: str,
     bis: str,
     bewegungen: list[dict],
+    partner_nr: str | None = None,
+    partner_adresse: list[str] | None = None,
+    nr_label: str = "Debitorennr.",
 ) -> bytes:
-    pdf = KontokorrentPDF(unternehmen, partner_name, von, bis)
+    pdf = KontokorrentPDF(unternehmen, partner_name, von, bis,
+                          partner_nr=partner_nr, partner_adresse=partner_adresse,
+                          nr_label=nr_label)
 
     # Kopfzeile
     _zeile(pdf, "Datum", "Typ", "Beleg-Nr.", "Beschreibung", "Betrag", "Saldo",
