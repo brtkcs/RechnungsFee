@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM, pruefenWiederkehrend, getFaelligeBuchungsvorlagen, openUrl, type EntwurfErgebnis } from '../api/client'
+import { getTagesabschlussFehltGestern, getUnternehmen, pruefZM, pruefenWiederkehrend, getFaelligeBuchungsvorlagen, openUrl, isTauri, type EntwurfErgebnis } from '../api/client'
 import { TagesabschlussDialog } from '../pages/journal/TagesabschlussDialog'
 import { useUpdateCheck } from '../hooks/useUpdateCheck'
 import { useAnsicht } from '../hooks/useAnsicht'
@@ -218,9 +218,14 @@ export function AppLayout() {
     const STEP = 0.1
     const MIN = 0.5
     const MAX = 2.0
-    const applyZoom = (z: number) => {
+    const applyZoom = async (z: number) => {
       const clamped = Math.round(Math.min(MAX, Math.max(MIN, z)) * 10) / 10
-      document.documentElement.style.zoom = String(clamped)
+      if (isTauri()) {
+        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+        getCurrentWebviewWindow().setZoom(clamped)
+      } else {
+        document.documentElement.style.zoom = String(clamped)
+      }
       localStorage.setItem('appZoom', String(clamped))
     }
     applyZoom(parseFloat(localStorage.getItem('appZoom') ?? '1'))
