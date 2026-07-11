@@ -29,6 +29,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Unternehmer-Cockpit (Auswertungen) – BWA-Light mit KPI-Kacheln, Balken- und Liniendiagramm, Ausgaben-Donut und USt-Satz-Aufschlüsselung. Zeitraum frei wählbar: Monat, Quartal oder Jahr. Alle Beträge netto mit erklärenden Tooltips (Issue #232).' },
       { typ: 'neu', text: 'Dashboard-Widget „Cockpit": zeigt Einnahmen, Ausgaben und Gewinn des aktuellen Monats mit Pfeil-Trendanzeige gegenüber dem Vorjahresmonat.' },
       { typ: 'neu', text: 'Strg+Shift+D springt direkt zum Dashboard.' },
+      { typ: 'neu', text: 'Sidebar-Eintrag „Community" – öffnet community.rechnungsfee.app im Browser, direkt über dem Handbuch-Link.' },
       { typ: 'fix', text: 'Dashboard – Widgets hatten keinen Abstand zueinander; außerdem fehlte beim Widget „Letzte Buchungen" der untere Innenabstand (Issue #226).' },
     ],
   },
