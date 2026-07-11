@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { getJournal, getUnternehmen, updateUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, getFristen, getGUVSchwellenwert, getUeberzahlungen, ueberzahlungAnerkennen, getOffeneForderungen, forderungAusbuchen, getKategorien, type Rechnung, type Forderung } from '../../api/client'
+import { getJournal, getUnternehmen, updateUnternehmen, getKleinunternehmerUmsatz, getFaelligeRechnungen, pruefZM, getLagerwarnungListe, getFristen, getGUVSchwellenwert, getUeberzahlungen, ueberzahlungAnerkennen, getOffeneForderungen, forderungAusbuchen, getKategorien, getCockpit, type Rechnung, type Forderung, type CockpitDaten } from '../../api/client'
 import { DateInput } from '../../components/DateInput'
 import { dashboardFilter } from '../../store/filterStore'
 import { useMxAuto } from '../../hooks/useAnsicht'
@@ -696,6 +696,7 @@ const WIDGET_DEFS: Array<{ id: string; label: string; warnung: boolean; nurTrans
   { id: 'fristen',             label: 'Steuer-Fristen',                     warnung: true },
   { id: 'quicklinks',          label: 'Schnellzugriff',                     warnung: false },
   { id: 'zufluss_monitor',     label: 'Zufluss-Monitor (Transferleistungen)', warnung: false, nurTransferleistungen: true },
+  { id: 'cockpit_widget',      label: 'Cockpit (Monatsvergleich)',          warnung: false },
   { id: 'kacheln',             label: 'Einnahmen / Ausgaben / Saldo',       warnung: false },
   { id: 'faellige',            label: 'Fällige Rechnungen',                 warnung: false },
   { id: 'letzte_buchungen',    label: 'Letzte Buchungen',                   warnung: false },
@@ -1015,6 +1016,99 @@ function DashboardKonfigModal({
   )
 }
 
+// ── Cockpit-Widget ─────────────────────────────────────────────────────────────
+
+function trendPfeil(jetzt: number, vorjahr: number): { pfeil: string; farbe: string; diff: string } {
+  if (vorjahr === 0) return { pfeil: '—', farbe: 'text-slate-400', diff: '' }
+  const delta = ((jetzt - vorjahr) / Math.abs(vorjahr)) * 100
+  const abs = Math.abs(delta).toFixed(1)
+  if (delta > 0.5)  return { pfeil: '↑', farbe: 'text-emerald-500', diff: `+${abs} %` }
+  if (delta < -0.5) return { pfeil: '↓', farbe: 'text-red-500',     diff: `−${abs} %` }
+  return { pfeil: '→', farbe: 'text-slate-400', diff: `±0 %` }
+}
+
+function CockpitWidget() {
+  const navigate = useNavigate()
+  const now      = new Date()
+  const jahr     = now.getFullYear()
+  const monat    = now.getMonth() + 1
+  const wertAkt  = `${jahr}-${String(monat).padStart(2, '0')}`
+  const wertVj   = `${jahr - 1}-${String(monat).padStart(2, '0')}`
+
+  const { data: akt } = useQuery<CockpitDaten>({
+    queryKey: ['cockpit', 'monat', wertAkt],
+    queryFn: () => getCockpit('monat', wertAkt),
+    staleTime: 60_000,
+  })
+  const { data: vj } = useQuery<CockpitDaten>({
+    queryKey: ['cockpit', 'monat', wertVj],
+    queryFn: () => getCockpit('monat', wertVj),
+    staleTime: 60_000,
+  })
+
+  const monate_de = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez']
+  const monatLabel = `${monate_de[monat - 1]} ${jahr}`
+
+  const kpis = [
+    {
+      label: 'Einnahmen',
+      jetzt: akt?.kpis.einnahmen ?? null,
+      vj:    vj?.kpis.einnahmen  ?? 0,
+      farbe: 'text-emerald-600 dark:text-emerald-400',
+    },
+    {
+      label: 'Ausgaben',
+      jetzt: akt?.kpis.ausgaben ?? null,
+      vj:    vj?.kpis.ausgaben  ?? 0,
+      farbe: 'text-red-500 dark:text-red-400',
+    },
+    {
+      label: 'Gewinn',
+      jetzt: akt?.kpis.gewinn ?? null,
+      vj:    vj?.kpis.gewinn  ?? 0,
+      farbe: (akt?.kpis.gewinn ?? 0) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400',
+    },
+  ]
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+      <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-slate-700 dark:text-slate-200">Cockpit</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{monatLabel} · netto</p>
+        </div>
+        <button
+          onClick={() => navigate('/cockpit')}
+          className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+        >
+          Zum Cockpit →
+        </button>
+      </div>
+      <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-700">
+        {kpis.map(k => {
+          const trend = k.jetzt !== null ? trendPfeil(k.jetzt, k.vj) : null
+          return (
+            <div key={k.label} className="px-4 py-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{k.label}</p>
+              <p className={`text-lg font-bold tabular-nums ${k.farbe}`}>
+                {k.jetzt !== null
+                  ? new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(k.jetzt)
+                  : '—'}
+              </p>
+              {trend && (
+                <p className={`text-xs tabular-nums mt-0.5 ${trend.farbe}`}>
+                  {trend.pfeil} {trend.diff}
+                  <span className="text-slate-400 dark:text-slate-500 ml-1">vs. Vorjahr</span>
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function Dashboard() {
   const mxAuto = useMxAuto()
   const navigate = useNavigate()
@@ -1147,6 +1241,7 @@ export function Dashboard() {
     const vis = konfig.widget_visibility
     switch (id) {
       case 'buchfuehrung': return <BuchfuehrungspflichtWarnung key="buchfuehrung" />
+      case 'cockpit_widget': return (vis.cockpit_widget ?? true) ? <CockpitWidget key="cockpit_widget" /> : null
       case 'ueberzahlung': return (vis.ueberzahlung ?? true) ? <UeberzahlungWidget key="ueberzahlung" /> : null
       case 'lieferantenguthaben': return (vis.lieferantenguthaben ?? true) ? <LieferantenguthabenWidget key="lieferantenguthaben" /> : null
       case 'kleinunternehmer': return <KleinunternehmerWarnung key="kleinunternehmer" />

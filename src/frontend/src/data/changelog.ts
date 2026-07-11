@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juli 2026',
     eintraege: [
       { typ: 'neu', text: 'Unternehmer-Cockpit (Auswertungen) – BWA-Light mit KPI-Kacheln, Balken- und Liniendiagramm, Ausgaben-Donut und USt-Satz-Aufschlüsselung. Zeitraum frei wählbar: Monat, Quartal oder Jahr. Alle Beträge netto mit erklärenden Tooltips (Issue #232).' },
+      { typ: 'neu', text: 'Dashboard-Widget „Cockpit": zeigt Einnahmen, Ausgaben und Gewinn des aktuellen Monats mit Pfeil-Trendanzeige gegenüber dem Vorjahresmonat.' },
       { typ: 'neu', text: 'Strg+Shift+D springt direkt zum Dashboard.' },
       { typ: 'fix', text: 'Dashboard – Widgets hatten keinen Abstand zueinander; außerdem fehlte beim Widget „Letzte Buchungen" der untere Innenabstand (Issue #226).' },
     ],
