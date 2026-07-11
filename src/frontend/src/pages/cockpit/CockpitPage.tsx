@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -362,7 +362,7 @@ export function CockpitPage() {
             </div>
           </div>
 
-          {/* Einnahmen nach USt-Satz + Detailtabelle */}
+          {/* Einnahmen nach USt-Satz */}
           {data.einnahmen_nach_ust.length > 0 && (
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
               <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-4">
@@ -382,8 +382,127 @@ export function CockpitPage() {
             </div>
           )}
 
+          {/* Detailtabelle */}
+          <KategorienTabelle
+            einnahmen={data.einnahmen_nach_ust.reduce((s, u) => s + u.betrag, 0)}
+            ausgaben_kategorien={data.ausgaben_kategorien}
+            zeitraum_label={data.zeitraum_label}
+          />
+
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Detailtabelle ──────────────────────────────────────────────────────────────
+
+function KategorienTabelle({
+  einnahmen,
+  ausgaben_kategorien,
+  zeitraum_label,
+}: {
+  einnahmen: number
+  ausgaben_kategorien: { name: string; betrag: number }[]
+  zeitraum_label: string
+}) {
+  const [offen, setOffen] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  const ausgaben_gesamt = ausgaben_kategorien.reduce((s, k) => s + k.betrag, 0)
+  const gewinn = einnahmen - ausgaben_gesamt
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+      <button
+        onClick={() => setOffen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors rounded-xl"
+      >
+        <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+          Detailansicht – {zeitraum_label}
+        </h2>
+        <span className={`material-symbols-outlined text-slate-400 transition-transform duration-200 ${offen ? 'rotate-180' : ''}`}>
+          expand_more
+        </span>
+      </button>
+
+      <div
+        ref={contentRef}
+        className="overflow-hidden transition-all duration-200"
+        style={{ maxHeight: offen ? (contentRef.current?.scrollHeight ?? 2000) + 'px' : '0px' }}
+      >
+        <div className="px-5 pb-5">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <th className="text-left py-2 text-xs font-medium text-slate-500 dark:text-slate-400">Kategorie</th>
+                <th className="text-right py-2 text-xs font-medium text-slate-500 dark:text-slate-400">Betrag (netto)</th>
+                <th className="text-right py-2 text-xs font-medium text-slate-500 dark:text-slate-400">Anteil</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Einnahmen-Zeile */}
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <td colSpan={3} className="py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                  Einnahmen
+                </td>
+              </tr>
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <td className="py-2 text-slate-700 dark:text-slate-200 pl-3">Betriebseinnahmen gesamt</td>
+                <td className="py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
+                  {eur(einnahmen)}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-400">100 %</td>
+              </tr>
+
+              {/* Ausgaben */}
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <td colSpan={3} className="py-2 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wide">
+                  Ausgaben
+                </td>
+              </tr>
+              {ausgaben_kategorien.map(k => (
+                <tr key={k.name} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                  <td className="py-1.5 text-slate-600 dark:text-slate-300 pl-3">{k.name}</td>
+                  <td className="py-1.5 text-right tabular-nums text-slate-700 dark:text-slate-200">
+                    {eur(k.betrag)}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums text-slate-400">
+                    {einnahmen > 0 ? ((k.betrag / einnahmen) * 100).toFixed(1) + ' %' : '—'}
+                  </td>
+                </tr>
+              ))}
+              {ausgaben_kategorien.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-3 text-center text-slate-400 text-xs pl-3">
+                    Keine Ausgaben im gewählten Zeitraum
+                  </td>
+                </tr>
+              )}
+
+              {/* Summenzeilen */}
+              <tr className="border-t-2 border-slate-200 dark:border-slate-600">
+                <td className="py-2 text-slate-500 dark:text-slate-400 text-xs">Ausgaben gesamt</td>
+                <td className="py-2 text-right tabular-nums text-red-500 dark:text-red-400 font-medium">
+                  {eur(ausgaben_gesamt)}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-400">
+                  {einnahmen > 0 ? ((ausgaben_gesamt / einnahmen) * 100).toFixed(1) + ' %' : '—'}
+                </td>
+              </tr>
+              <tr className="bg-slate-50 dark:bg-slate-700/50 rounded">
+                <td className="py-2.5 font-bold text-slate-700 dark:text-slate-100 pl-1">Gewinn / Verlust</td>
+                <td className={`py-2.5 text-right tabular-nums font-bold ${gewinn >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {eur(gewinn)}
+                </td>
+                <td className={`py-2.5 text-right tabular-nums font-bold ${gewinn >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {einnahmen > 0 ? ((gewinn / einnahmen) * 100).toFixed(1) + ' %' : '—'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }
