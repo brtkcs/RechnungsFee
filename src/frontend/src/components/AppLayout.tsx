@@ -185,6 +185,18 @@ export function AppLayout() {
   const qc = useQueryClient()
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
+  // Ctrl+Shift+D (Strg+Shift+D) → Dashboard
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        navigate('/')
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [navigate])
+
   // Ctrl+Shift+E (Strg+Shift+E) → Eingangsrechnungen
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

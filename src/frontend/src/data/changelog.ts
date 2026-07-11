@@ -23,11 +23,18 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.8',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'neu', text: 'Strg+Shift+D springt direkt zum Dashboard.' },
+      { typ: 'fix', text: 'Dashboard – Widgets hatten keinen Abstand zueinander; außerdem fehlte beim Widget „Letzte Buchungen" der untere Innenabstand (Issue #226).' },
+    ],
+  },
+  {
     version: 'v0.4.7',
     datum: 'Juli 2026',
     eintraege: [
       { typ: 'fix', text: 'App-Zoom: Beim Verkleinern (Strg+–) entstand ein ungenutzter Leerbereich am unteren und rechten Rand – Sidebar und Inhalt rutschten nach oben. Ursache war CSS zoom auf dem HTML-Element, das die Webview-Viewport-Größe nicht anpasst. Zoom nutzt jetzt die native Tauri-Webview-Skalierung (setZoom), die den gesamten Anzeigebereich korrekt füllt.' },
-      { typ: 'fix', text: 'Dashboard – Widget „Letzte Buchungen": Fehlender Innenabstand am unteren Rand ließ die letzte Tabellenzeile direkt am Kartenrand enden (Issue #226).' },
       { typ: 'neu', text: 'F1 öffnet das Online-Handbuch (Erste Schritte) im Browser (Issue #225).' },
       { typ: 'neu', text: 'Info & Updates – Link zum Community-Forum (community.rechnungsfee.app) ergänzt (Issue #229).' },
       { typ: 'fix', text: 'Setup-Wizard schlug mit „load failed" fehl: Das Feld bank_import_manuell fehlte im SQLAlchemy-Modell, war aber im Pydantic-Schema vorhanden – POST /api/unternehmen crashte beim ersten Start mit TypeError (Issue #227).' },
