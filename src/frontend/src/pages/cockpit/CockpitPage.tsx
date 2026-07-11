@@ -23,19 +23,25 @@ const DONUT_FARBEN = [
 
 // ── Info-Tooltip ───────────────────────────────────────────────────────────────
 
-function InfoTooltip({ text }: { text: string }) {
+function InfoTooltip({ text, direction = 'down' }: { text: string; direction?: 'up' | 'down' }) {
+  const box = direction === 'down'
+    ? 'top-full left-1/2 -translate-x-1/2 mt-2'
+    : 'bottom-full left-1/2 -translate-x-1/2 mb-2'
+  const arrow = direction === 'down'
+    ? 'absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800 dark:border-b-slate-700'
+    : 'absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700'
   return (
     <span className="group relative inline-flex items-center ml-1 cursor-help">
       <span className="material-symbols-outlined text-base text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 select-none">
         info
       </span>
-      <span className="
-        pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50
+      <span className={`
+        pointer-events-none absolute ${box} z-50
         w-64 rounded-lg bg-slate-800 dark:bg-slate-700 text-white text-xs px-3 py-2 shadow-xl
         opacity-0 group-hover:opacity-100 transition-opacity duration-150
-      ">
+      `}>
         {text}
-        <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700" />
+        <span className={arrow} />
       </span>
     </span>
   )
