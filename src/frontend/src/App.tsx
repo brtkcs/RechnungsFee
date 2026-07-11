@@ -27,6 +27,7 @@ import { UStVAPage } from './pages/ustva/UStVAPage'
 import { JahresUStPage } from './pages/ustva/JahresUStPage'
 import { ZMPage } from './pages/zm/ZMPage'
 import { EUERPage } from './pages/euer/EUERPage'
+import { CockpitPage } from './pages/cockpit/CockpitPage'
 import { GUVPage } from './pages/guv/GUVPage'
 import { AnlageverzeichnisPage } from './pages/anlageverzeichnis/AnlageverzeichnisPage'
 import { AnlageSPage } from './pages/anlage-s/AnlageSPage'
@@ -124,6 +125,7 @@ function AppRoutes() {
           <Route path="/jahres-ust" element={<JahresUStPage />} />
           <Route path="/zm" element={<ZMPage />} />
           <Route path="/euer" element={<EUERPage />} />
+          <Route path="/cockpit" element={<CockpitPage />} />
           <Route path="/guv" element={<GUVPage />} />
           <Route path="/anlageverzeichnis" element={<AnlageverzeichnisPage />} />
           <Route path="/anlage-s" element={<AnlageSPage />} />

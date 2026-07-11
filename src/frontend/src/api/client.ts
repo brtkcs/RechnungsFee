@@ -2484,3 +2484,40 @@ export const getBankVorschlag = (data: {
   verwendungszweck?: string | null
   betrag?: number | null
 }) => request<AutoFilterVorschlag>('/auto-filter/vorschlag', { method: 'POST', body: JSON.stringify(data) })
+
+// ── Cockpit ────────────────────────────────────────────────────────────────────
+
+export type CockpitMonatsbalken = {
+  monat: string
+  monat_nr: number
+  einnahmen: number
+  ausgaben: number
+  gewinn: number
+  in_periode: boolean
+}
+
+export type CockpitKategorie = {
+  name: string
+  betrag: number
+}
+
+export type CockpitUStSatz = {
+  satz: string
+  betrag: number
+}
+
+export type CockpitDaten = {
+  zeitraum_label: string
+  kpis: {
+    einnahmen: number
+    ausgaben: number
+    gewinn: number
+    gewinn_marge_prozent: number
+  }
+  monatsbalken: CockpitMonatsbalken[]
+  ausgaben_kategorien: CockpitKategorie[]
+  einnahmen_nach_ust: CockpitUStSatz[]
+}
+
+export const getCockpit = (zeitraum: 'monat' | 'quartal' | 'jahr', wert: string) =>
+  request<CockpitDaten>(`/cockpit?zeitraum=${zeitraum}&wert=${encodeURIComponent(wert)}`)

@@ -34,6 +34,7 @@ type NavKontext = { unt: Unternehmen | undefined; zm: ZMPruefung | undefined }
 type ZeigenFn = (k: NavKontext) => boolean
 
 const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: ZeigenFn }[] = [
+  { to: '/cockpit',           label: 'Cockpit',      icon: 'dashboard',       zeigen: () => true },
   { to: '/euer',              label: 'EÜR',          icon: 'bar_chart',       zeigen: () => true },
   { to: '/anlageverzeichnis', label: 'AVEÜR',         icon: 'domain',          zeigen: () => true },
   { to: '/guv',               label: 'GuV',           icon: 'trending_up',     zeigen: ({ unt }) => !!unt?.guv_aktiv },
