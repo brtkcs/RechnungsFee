@@ -336,7 +336,7 @@ export function CockpitPage() {
                         ))}
                       </Pie>
                       <RechartsTip
-                        formatter={(v: number, name: string) => [eur(v) + ' (netto)', name]}
+                        formatter={((v: number, name: string) => [eur(v) + ' (netto)', name]) as any}
                       />
                     </PieChart>
                   </ResponsiveContainer>
