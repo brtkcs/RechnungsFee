@@ -28,6 +28,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     eintraege: [
       { typ: 'fix', text: 'Cockpit – Storno-Buchungen wurden in der USt-Satz-Aufschlüsselung nicht abgezogen; KPI-Kacheln waren korrekt (Issue #241).' },
       { typ: 'fix', text: 'Windows-Deinstallation – Bestätigungsdialog erschien nicht und Daten in %AppData%\\RechnungsFee wurden nicht gelöscht; Fallback-Erkennung ergänzt (Issue #206).' },
+      { typ: 'neu', text: 'Dark-Mode-Toggle unter Einstellungen → Ansicht: Farbschema zwischen Systemeinstellung, Hell und Dunkel wählen (Issue #243).' },
     ],
   },
   {
