@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "material-symbols/outlined.css";
 
+/* dark: Variante auf data-theme-Attribut umstellen (statt prefers-color-scheme).
+   data-theme wird vom Anti-Flash-Script (index.html) und applyTheme() (useAnsicht.ts)
+   immer gesetzt, bevor React rendert. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Basis-Schrift */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -8,42 +13,40 @@ body {
   color: #1e293b;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #0f172a;
-    color: #f1f5f9;
-    color-scheme: dark;
-  }
+html[data-theme="dark"] body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  color-scheme: dark;
+}
 
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #1e293b; /* slate-800 */
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #475569; /* slate-600 */
-    border-radius: 4px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #64748b; /* slate-500 */
-  }
+html[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
 
-  /* Formular-Elemente: Browser-Default ist weiß – global auf Dark-Palette setzen.
-     Tailwind-Utility-Classes (.dark:bg-slate-700 etc.) haben höhere Spezifität
-     und überschreiben diese Basis-Werte wo nötig. */
-  select,
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-  textarea {
-    background-color: #334155; /* slate-700 */
-    color: #f1f5f9;            /* slate-100 */
-    border-color: #475569;     /* slate-600 */
-    color-scheme: dark;
-  }
+/* Formular-Elemente: Browser-Default ist weiß – global auf Dark-Palette setzen.
+   Tailwind-Utility-Classes (dark:bg-slate-700 etc.) haben höhere Spezifität
+   und überschreiben diese Basis-Werte wo nötig. */
+html[data-theme="dark"] select,
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html[data-theme="dark"] textarea {
+  background-color: #334155;
+  color: #f1f5f9;
+  border-color: #475569;
+  color-scheme: dark;
+}
 
-  select option {
-    background-color: #1e293b; /* slate-800 */
-    color: #f1f5f9;
-  }
+html[data-theme="dark"] select option {
+  background-color: #1e293b;
+  color: #f1f5f9;
 }
