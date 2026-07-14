@@ -197,7 +197,7 @@ def _kunde_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] = 
         "notizen": daten.get("notizen") or None,
     }
     try:
-        felder["skonto_prozent"] = Decimal(daten["skonto_prozent"]) if daten.get("skonto_prozent") else None
+        felder["skonto_prozent"] = float(Decimal(daten["skonto_prozent"])) if daten.get("skonto_prozent") else None
         felder["skonto_tage"] = int(daten["skonto_tage"]) if daten.get("skonto_tage") else None
     except (InvalidOperation, ValueError):
         felder["skonto_prozent"] = None
@@ -288,10 +288,10 @@ def _artikel_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] 
         "typ": typ,
         "bezeichnung": daten.get("bezeichnung") or "Unbekannt",
         "einheit": daten.get("einheit") or "Stück",
-        "steuersatz": steuersatz,
-        "vk_brutto": vk_brutto,
-        "vk_netto": vk_netto,
-        "ek_netto": ek_netto,
+        "steuersatz": float(steuersatz),
+        "vk_brutto": float(vk_brutto),
+        "vk_netto": float(vk_netto),
+        "ek_netto": float(ek_netto) if ek_netto is not None else None,
         "artikelcode": daten.get("artikelcode") or None,
         "hersteller": daten.get("hersteller") or None,
         "beschreibung": daten.get("beschreibung") or None,

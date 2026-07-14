@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.10',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Datenübernahme – Artikel-Import schlug fehl wegen nicht unterstütztem Decimal-Typ beim Datenbankinsert (Issue #245).' },
+    ],
+  },
+  {
     version: 'v0.4.9',
     datum: 'Juli 2026',
     eintraege: [
