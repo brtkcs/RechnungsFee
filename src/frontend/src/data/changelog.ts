@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.4.9',
     datum: 'Juli 2026',
     eintraege: [
+      { typ: 'neu', text: 'Bank-Import: Deutsche Bank CSV wird jetzt automatisch erkannt und importiert (Issue #247).' },
       { typ: 'neu', text: 'Datenübernahme: Kunden, Lieferanten und Artikel per CSV aus anderen Programmen importieren – manuelle Feldzuordnung, Header-Toggle, Duplikatstrategie (ignorieren / überschreiben), gespeicherte Mapping-Vorlagen. Erreichbar über Einstellungen → Unternehmen → Funktionen (Issue #245).' },
       { typ: 'neu', text: 'Import-Button in den Listen Kunden, Lieferanten und Artikel – gleicher 5-Schritt-Ablauf als Modal ohne Seitenwechsel.' },
       { typ: 'fix', text: 'Cockpit – Storno-Buchungen wurden in der USt-Satz-Aufschlüsselung nicht abgezogen; KPI-Kacheln waren korrekt (Issue #241).' },
