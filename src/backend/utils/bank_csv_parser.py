@@ -78,11 +78,22 @@ def parse_datum(wert: str, fmt: str) -> Optional[date]:
     try:
         return datetime.strptime(wert, fmt).date()
     except ValueError:
-        for fallback in ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y"):
-            try:
-                return datetime.strptime(wert, fallback).date()
-            except ValueError:
-                continue
+        pass
+    # Nicht-null-gepolsterte Datumsangaben: D.M.YYYY oder D/M/YYYY (z. B. Deutsche Bank)
+    m = re.match(r'^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$', wert)
+    if m:
+        try:
+            d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if y < 100:
+                y += 2000
+            return date(y, mo, d)
+        except ValueError:
+            pass
+    for fallback in ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(wert, fallback).date()
+        except ValueError:
+            continue
     return None
 
 
