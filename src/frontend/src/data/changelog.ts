@@ -27,7 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juli 2026',
     eintraege: [
       { typ: 'neu', text: 'Datenübernahme: Kunden, Lieferanten und Artikel per CSV aus anderen Programmen importieren – manuelle Feldzuordnung, Header-Toggle, Duplikatstrategie (ignorieren / überschreiben), gespeicherte Mapping-Vorlagen. Erreichbar über Einstellungen → Unternehmen → Funktionen (Issue #245).' },
-      { typ: 'neu', text: 'Import-Button in den Listen Kunden, Lieferanten und Artikel – gleicher 5-Schritt-Ablauf als Modal ohne Seitenwechsel (Issue #245).' },
+      { typ: 'neu', text: 'Import-Button in den Listen Kunden, Lieferanten und Artikel – gleicher 5-Schritt-Ablauf als Modal ohne Seitenwechsel.' },
       { typ: 'fix', text: 'Cockpit – Storno-Buchungen wurden in der USt-Satz-Aufschlüsselung nicht abgezogen; KPI-Kacheln waren korrekt (Issue #241).' },
       { typ: 'fix', text: 'Windows-Deinstallation – Bestätigungsdialog erschien nicht und Daten in %AppData%\\RechnungsFee wurden nicht gelöscht; Fallback-Erkennung ergänzt (Issue #206).' },
       { typ: 'neu', text: 'Dark-Mode-Toggle unter Einstellungen → Ansicht: Farbschema zwischen Systemeinstellung, Hell und Dunkel wählen (Issue #243).' },
