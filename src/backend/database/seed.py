@@ -427,14 +427,13 @@ SYSTEM_BANK_TEMPLATES = [
         "column_mapping": {
             "Datum":          "datum",
             "Uhrzeit":        "uhrzeit",
+            "Beschreibung":   "buchungstext",
             "Name":           "partner_name",
-            "Typ":            "buchungstext",
-            "Betreff":        "verwendungszweck",
             "Brutto":         "betrag",
             "Währung":        "waehrung",
             "Transaktionscode": "referenz",
         },
-        "erkennungs_spalten": ["Datum", "Uhrzeit", "Name", "Typ", "Währung", "Brutto", "Transaktionscode"],
+        "erkennungs_spalten": ["Datum", "Uhrzeit", "Beschreibung", "Brutto", "Währung", "Transaktionscode"],
     },
 ]
 

@@ -23,6 +23,15 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.11',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Bank-Import – PayPal-CSV erkannte das Konto korrekt, importierte aber 0 Transaktionen: Das Template erwartete die Spalten „Typ" und „Betreff", der reale PayPal-Business-Export (accountStatements) nutzt stattdessen „Beschreibung" (Issue #248).' },
+      { typ: 'fix', text: 'Datenübernahme – Kunden- und Artikel-Import schlugen mit „NOT NULL constraint failed" fehl: Neuere Tabellenspalten ohne Datenbank-Standardwert (z. B. artikel.differenzbesteuerung, kunden.zugferd_aktiv) fehlten in der Insert-Spaltenliste (Issue #245, #250).' },
+      { typ: 'fix', text: 'CSV-Import (Datenübernahme & Bank-Import) – bei sehr wenig Nicht-ASCII-Text erkannte die automatische Kodierungserkennung manchmal fälschlich eine DOS-Codepage statt cp1252, wodurch Umlaute verstümmelt wurden (z. B. „natürl." → „nat³rl." bei DATEV-Exporten, Issue #250).' },
+    ],
+  },
+  {
     version: 'v0.4.10',
     datum: 'Juli 2026',
     eintraege: [

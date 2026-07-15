@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen, cockpit, datenmigration
 
-SCHEMA_VERSION = 116
+SCHEMA_VERSION = 117
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2538,6 +2538,16 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 116"))
             conn.commit()
             print("[Migration] Schema auf Version 116 (datenmigration_aktiv, import_mapping_vorlagen)")
+
+        if version < 117:
+            conn.execute(text("""
+                UPDATE bank_templates
+                SET column_mapping = '{"__erkennungs__": ["Datum", "Uhrzeit", "Beschreibung", "Brutto", "Währung", "Transaktionscode"], "Datum": "datum", "Uhrzeit": "uhrzeit", "Beschreibung": "buchungstext", "Name": "partner_name", "Brutto": "betrag", "Währung": "waehrung", "Transaktionscode": "referenz"}'
+                WHERE id = 'paypal'
+            """))
+            conn.execute(text("PRAGMA user_version = 117"))
+            conn.commit()
+            print("[Migration] Schema auf Version 117 (PayPal-Template: Spalte 'Beschreibung' statt 'Typ'/'Betreff' – Issue #248)")
 
 
 def _migrate_kategorien() -> None:

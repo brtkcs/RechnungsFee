@@ -123,7 +123,6 @@ Die App ist aktuell **nicht barrierefrei**. Dark/Light Mode und Keyboard-Navigat
 - **hellocash-Anbindung** – REST-API (Issue #13)
 - **Docker-Version** – containerisiertes Deployment für Selbst-Hoster (Backend + Frontend als Docker-Image)
 - **Preiskalkulations-Modul** – Kalkulationsblatt pro Artikel/Leistung: Materialkosten, Stundensatz, Gemeinkosten-Aufschlag, Gewinnmarge → kalkulierter Verkaufspreis; Übernahme direkt in Rechnungsposition
-- **Datenübernahme aus anderen Programmen** – Importassistent für Kunden, Artikel, Rechnungen und Buchungen aus gängigen Programmen (z. B. lexoffice, sevDesk, FastBill, Excel/CSV); erleichtert den Umstieg auf RechnungsFee ohne Datenverlust
 - **Offline-Handbuch** – eingebettetes Handbuch direkt in der App (Tauri-Webview oder lokale HTML-Seiten); kein Internetzugang nötig; synchronisiert mit der installierten Version
 
 - **Vollständige BWA: Betriebswirtschaftliche Auswertung** – Erweiterung des Cockpits um Vorjahresvergleich als zweite Spalte (aktueller Monat / Quartal / Jahr vs. Vorjahresperiode), Exportfunktion als PDF im klassischen BWA-Format; für Nutzer die monatlich mit Steuerberater oder Bank kommunizieren (Issue #232)

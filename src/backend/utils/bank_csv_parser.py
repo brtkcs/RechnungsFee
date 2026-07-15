@@ -24,11 +24,29 @@ from charset_normalizer import from_bytes
 # Encoding & Delimiter
 # ---------------------------------------------------------------------------
 
+# Bei sehr wenig Nicht-ASCII-Text (z.B. DATEV-Exporte mit nur vereinzelten Umlauten)
+# rät charset_normalizer mangels Signal manchmal auf exotische DOS-Codepages.
+# Deutsche Business-Exporte (DATEV, Banken) sind praktisch nie DOS-kodiert,
+# sondern cp1252/iso-8859-1 – bei so einem Treffer daher cp1252 bevorzugen (Issue #250).
+_UNPLAUSIBLE_DOS_CODEPAGES = {
+    "cp437", "cp720", "cp737", "cp775", "cp850", "cp852", "cp855",
+    "cp857", "cp858", "cp860", "cp861", "cp862", "cp863", "cp864",
+    "cp865", "cp866", "cp869", "cp874",
+}
+
+
 def detect_encoding(raw: bytes) -> str:
     result = from_bytes(raw).best()
     if result is None:
         return "UTF-8"
-    return result.encoding or "UTF-8"
+    encoding = result.encoding or "UTF-8"
+    if encoding.lower() in _UNPLAUSIBLE_DOS_CODEPAGES:
+        try:
+            raw.decode("cp1252")
+            return "cp1252"
+        except UnicodeDecodeError:
+            pass
+    return encoding
 
 
 def detect_delimiter(text: str) -> str:

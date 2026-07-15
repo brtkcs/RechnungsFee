@@ -218,10 +218,11 @@ def _kunde_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] = 
     db.execute(
         text("""INSERT INTO kunden (firmenname, vorname, nachname, strasse, hausnummer, plz, ort, land,
                 email, telefon, ust_idnr, kundennummer, z_hd, notizen, skonto_prozent, skonto_tage,
-                aktiv, erstellt_am, aktualisiert_am)
+                aktiv, ust_idnr_validiert, ist_verein, ist_gemeinnuetzig, zugferd_aktiv,
+                erstellt_am, aktualisiert_am)
                 VALUES (:firmenname, :vorname, :nachname, :strasse, :hausnummer, :plz, :ort, :land,
                 :email, :telefon, :ust_idnr, :kundennummer, :z_hd, :notizen, :skonto_prozent, :skonto_tage,
-                1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"""),
+                1, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"""),
         {**felder, "kundennummer": kundennummer},
     )
     return "importiert"
@@ -312,10 +313,10 @@ def _artikel_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] 
     db.execute(
         text("""INSERT INTO artikel (artikelnummer, typ, bezeichnung, einheit, steuersatz,
                 vk_brutto, vk_netto, ek_netto, artikelcode, hersteller, beschreibung,
-                aktiv, erstellt_am, aktualisiert_am)
+                aktiv, differenzbesteuerung, erstellt_am, aktualisiert_am)
                 VALUES (:artikelnummer, :typ, :bezeichnung, :einheit, :steuersatz,
                 :vk_brutto, :vk_netto, :ek_netto, :artikelcode, :hersteller, :beschreibung,
-                1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"""),
+                1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"""),
         {**felder, "artikelnummer": artikelnummer},
     )
     return "importiert"
