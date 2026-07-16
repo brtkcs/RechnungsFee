@@ -26,6 +26,11 @@ import {
 import { BuchungForm } from '../journal/BuchungForm'
 import { useMxAuto } from '../../hooks/useAnsicht'
 
+// Bei sehr großen Import-Dateien werden nur die ersten N Zeilen gerendert – ungebremstes
+// Rendern mehrerer Tausend Tabellenzeilen macht die App auf schwacher Hardware unbenutzbar.
+// Die Auswahl (Checkbox „Alle") wirkt weiterhin auf die vollständige Menge.
+const VORSCHAU_MAX_ZEILEN = 500
+
 // ---------------------------------------------------------------------------
 // Hilfsfunktionen
 // ---------------------------------------------------------------------------
@@ -417,7 +422,7 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
                     </tr>
                   </thead>
                   <tbody>
-                    {vorschau.transaktionen.map(tx => (
+                    {vorschau.transaktionen.slice(0, VORSCHAU_MAX_ZEILEN).map(tx => (
                       <tr key={tx.dedupe_hash}
                         className={`border-t border-slate-100 dark:border-slate-700/50 ${
                           tx.ist_duplikat ? 'opacity-40' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'
@@ -442,6 +447,11 @@ function ImportDialog({ konten, templates, onClose, onErfolg }: ImportDialogProp
                   </tbody>
                 </table>
               </div>
+              {vorschau.transaktionen.length > VORSCHAU_MAX_ZEILEN && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+                  Zeige die ersten {VORSCHAU_MAX_ZEILEN} von {vorschau.transaktionen.length} Zeilen – die restlichen {vorschau.transaktionen.length - VORSCHAU_MAX_ZEILEN} werden beim Import ebenfalls berücksichtigt.
+                </p>
+              )}
             </div>
           )}
 
@@ -818,6 +828,7 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
   const [statusFilter, setStatusFilter] = useState<'alle' | 'offen' | 'gebucht' | 'privat'>('alle')
   const [datumVon, setDatumVon] = useState('')
   const [datumBis, setDatumBis] = useState('')
+  const [limit, setLimit] = useState(200)
   const [berKonfig, setBerKonfig] = useState<BereinigungKonfig>(() => {
     try { return JSON.parse(localStorage.getItem('bankBereinigung') ?? 'null') ?? { tage: null, maxN: null } }
     catch { return { tage: null, maxN: null } }
@@ -825,11 +836,18 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
   const [zahnradOffen, setZahnradOffen] = useState(false)
   const autoCleanupRan = useRef(false)
 
-  const { data: txs = [], isLoading } = useQuery({
-    queryKey: ['bank-transaktionen', konto.id],
-    queryFn: () => getBankTransaktionen(konto.id!),
+  const { data: txListe, isLoading } = useQuery({
+    queryKey: ['bank-transaktionen', konto.id, limit, datumVon, datumBis],
+    queryFn: () => getBankTransaktionen(konto.id!, { limit, von: datumVon || undefined, bis: datumBis || undefined }),
     enabled: !!konto.id,
   })
+  const txs = txListe?.transaktionen ?? []
+  const txsGesamt = txListe?.total ?? 0
+
+  function datumFilterAendern(setter: (v: string) => void, wert: string) {
+    setter(wert)
+    setLimit(200)
+  }
 
   const anerkenneMut = useMutation({
     mutationFn: (rechnungId: number) => ueberzahlungAnerkennen(rechnungId),
@@ -939,8 +957,6 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
     if (statusFilter === 'offen' && !(tx.ist_geschaeftlich && !tx.ist_privatentnahme && !tx.ist_einlage && !tx.journal_id)) return false
     if (statusFilter === 'gebucht' && !tx.journal_id) return false
     if (statusFilter === 'privat' && (tx.ist_geschaeftlich && !tx.ist_privatentnahme && !tx.ist_einlage)) return false
-    if (datumVon && tx.datum < datumVon) return false
-    if (datumBis && tx.datum > datumBis) return false
     if (suche) {
       const s = suche.toLowerCase()
       if (!((tx.partner_name ?? '').toLowerCase().includes(s) ||
@@ -964,14 +980,14 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
           <input
             type="date"
             value={datumVon}
-            onChange={e => setDatumVon(e.target.value)}
+            onChange={e => datumFilterAendern(setDatumVon, e.target.value)}
             className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           />
           <span className="text-xs text-slate-400">–</span>
           <input
             type="date"
             value={datumBis}
-            onChange={e => setDatumBis(e.target.value)}
+            onChange={e => datumFilterAendern(setDatumBis, e.target.value)}
             className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           />
           <select
@@ -996,9 +1012,17 @@ function Transaktionsliste({ konto }: { konto: Konto }) {
           </button>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>{gefilterteTxs.length} von {txs.length} Transaktionen</span>
+          <span>{gefilterteTxs.length} von {txsGesamt} Transaktionen</span>
           {gebuchte > 0 && <span className="text-green-600 dark:text-green-400">{gebuchte} gebucht</span>}
           {offene.length > 0 && <span className="text-amber-600 dark:text-amber-400">{offene.length} offen</span>}
+          {txs.length < txsGesamt && (
+            <button
+              onClick={() => setLimit(l => l + 200)}
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Weitere laden ({txsGesamt - txs.length})
+            </button>
+          )}
         </div>
 
         {zahnradOffen && (

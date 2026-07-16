@@ -30,6 +30,8 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'neu', text: 'Datenübernahme – Artikel-Import unterstützt jetzt die Warengruppe: Wird die Gruppe der CSV-Spalte zugeordnet, legt RechnungsFee sie automatisch an, falls sie noch nicht existiert (Issue #245).' },
       { typ: 'fix', text: 'Bank-Import & Datenübernahme – CSV-Dateien mit BOM (Byte Order Mark) am Dateianfang, z. B. bei manchen PayPal-Exporten, führten zu 0 erkannten Transaktionen: Die erste Spalte wurde durch das unsichtbare BOM-Zeichen nicht mehr erkannt (Issue #248).' },
       { typ: 'fix', text: 'Bank-Import – PayPal-Transaktionen ohne IBAN und Verwendungszweck konnten bei gleichem Datum und Betrag fälschlich als Duplikat erkannt und übersprungen werden. Der eindeutige PayPal-Transaktionscode fließt jetzt zusätzlich in die Dublettenprüfung ein (Issue #248).' },
+      { typ: 'fix', text: 'Bank-Import – Transaktionsliste war fest auf 200 Einträge begrenzt, der Datumsfilter wirkte nur auf die bereits geladenen Datensätze statt auf alle. Der Datumsfilter fragt jetzt serverseitig ab, ein „Weitere laden"-Button ergänzt ältere Transaktionen, der Zähler zeigt die echte Gesamtzahl (Issue #251).' },
+      { typ: 'verbesserung', text: 'Bank-Import & Datenübernahme – bei sehr großen Import-Dateien (mehrere Tausend Zeilen) wird die Vorschau-Tabelle auf 500 sichtbare Zeilen begrenzt, um die App auf schwacher Hardware reaktionsfähig zu halten; alle Zeilen werden trotzdem importiert. Der Import selbst committet jetzt in Batches statt in einer einzigen Transaktion.' },
     ],
   },
   {

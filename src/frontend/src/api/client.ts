@@ -2374,8 +2374,21 @@ export async function importiereBankTransaktionen(payload: {
   })
 }
 
-export const getBankTransaktionen = (kontoId: number, limit = 200, offset = 0) =>
-  request<BankTransaktion[]>(`/bank-import/${kontoId}?limit=${limit}&offset=${offset}`)
+export type BankTransaktionenListe = {
+  total: number
+  transaktionen: BankTransaktion[]
+}
+
+export const getBankTransaktionen = (
+  kontoId: number,
+  opts: { limit?: number; offset?: number; von?: string; bis?: string } = {},
+) => {
+  const { limit = 200, offset = 0, von, bis } = opts
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  if (von) params.set('von', von)
+  if (bis) params.set('bis', bis)
+  return request<BankTransaktionenListe>(`/bank-import/${kontoId}?${params.toString()}`)
+}
 
 export type AutoBuchenResult = {
   gebucht: number

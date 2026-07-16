@@ -134,6 +134,11 @@ class BankTransaktionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BankTransaktionenListResponse(BaseModel):
+    total: int
+    transaktionen: list[BankTransaktionResponse]
+
+
 class BuchungsRequest(BaseModel):
     rechnung_id: Optional[int] = None
     betrag_zu_buchen: Optional[Decimal] = None
@@ -709,8 +714,9 @@ def importieren(data: ImportiereRequest, db: Session = Depends(get_db)):
     db.flush()
 
     erfolg = duplikate = fehler = 0
+    BATCH_GROESSE = 500  # Zwischen-Commits bei großen Importdateien – begrenzt Speicherdruck durch die WAL
 
-    for tx in data.transaktionen:
+    for i, tx in enumerate(data.transaktionen, start=1):
         if tx.dedupe_hash in hashes:
             duplikate += 1
             continue
@@ -736,6 +742,9 @@ def importieren(data: ImportiereRequest, db: Session = Depends(get_db)):
         except Exception:
             db.rollback()
             fehler += 1
+
+        if i % BATCH_GROESSE == 0:
+            db.commit()
 
     bank_import.erfolg = erfolg
     bank_import.duplikate = duplikate
@@ -829,24 +838,26 @@ def auto_buchen(konto_id: int, import_id: Optional[int] = None, db: Session = De
     return AutoBuchenResult(gebucht=gebucht, offen=offen, forderungen=forderungen, fehler=fehler, import_id=import_id)
 
 
-@router.get("/{konto_id}", response_model=list[BankTransaktionResponse])
+@router.get("/{konto_id}", response_model=BankTransaktionenListResponse)
 def get_transaktionen(
     konto_id: int,
     limit: int = 200,
     offset: int = 0,
+    von: Optional[date] = None,
+    bis: Optional[date] = None,
     db: Session = Depends(get_db),
 ):
     if not db.query(Konto).filter(Konto.id == konto_id).first():
         raise HTTPException(status_code=404, detail="Konto nicht gefunden.")
 
-    txs = (
-        db.query(BankTransaktion)
-        .filter(BankTransaktion.konto_id == konto_id)
-        .order_by(BankTransaktion.datum.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    q = db.query(BankTransaktion).filter(BankTransaktion.konto_id == konto_id)
+    if von is not None:
+        q = q.filter(BankTransaktion.datum >= von)
+    if bis is not None:
+        q = q.filter(BankTransaktion.datum <= bis)
+
+    total = q.count()
+    txs = q.order_by(BankTransaktion.datum.desc()).offset(offset).limit(limit).all()
 
     rechnung_ids = [tx.rechnung_id for tx in txs if tx.rechnung_id]
     journal_ids = [tx.journal_id for tx in txs if tx.journal_id and tx.rechnung_id]
@@ -854,7 +865,10 @@ def get_transaktionen(
     rechnungen_map = {r.id: r for r in db.query(Rechnung).filter(Rechnung.id.in_(rechnung_ids)).all()} if rechnung_ids else {}
     journale_map = {j.id: j for j in db.query(Journaleintrag).filter(Journaleintrag.id.in_(journal_ids)).all()} if journal_ids else {}
 
-    return [_enriche_tx(tx, rechnungen_map, journale_map) for tx in txs]
+    return BankTransaktionenListResponse(
+        total=total,
+        transaktionen=[_enriche_tx(tx, rechnungen_map, journale_map) for tx in txs],
+    )
 
 
 @router.patch("/transaktion/{tx_id}", response_model=BankTransaktionResponse)

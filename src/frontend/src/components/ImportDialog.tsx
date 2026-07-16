@@ -16,6 +16,11 @@ import {
 type ImportTyp = 'kunden' | 'lieferanten' | 'artikel'
 type Schritt = 1 | 2 | 3 | 4
 
+// Bei sehr großen Import-Dateien werden nur die ersten N Zeilen gerendert – ungebremstes
+// Rendern mehrerer Tausend Tabellenzeilen macht die App auf schwacher Hardware unbenutzbar.
+// Alle Zeilen erhalten trotzdem ihre Standard-Aktion und werden beim Import berücksichtigt.
+const VORSCHAU_MAX_ZEILEN = 500
+
 const ZIELFELDER: Record<ImportTyp, { key: string; label: string }[]> = {
   kunden: [
     { key: 'firmenname', label: 'Firmenname' },
@@ -282,7 +287,7 @@ export function ImportDialog({ typ, onClose }: ImportDialogProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {vorschauZeilen.map(z => (
+                    {vorschauZeilen.slice(0, VORSCHAU_MAX_ZEILEN).map(z => (
                       <tr key={z.zeile}>
                         <td className="py-1.5 pr-3 text-slate-400">{z.zeile}</td>
                         <td className="py-1.5 pr-3"><StatusBadge status={z.status} /></td>
@@ -304,6 +309,11 @@ export function ImportDialog({ typ, onClose }: ImportDialogProps) {
                   </tbody>
                 </table>
               </div>
+              {vorschauZeilen.length > VORSCHAU_MAX_ZEILEN && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+                  Zeige die ersten {VORSCHAU_MAX_ZEILEN} von {vorschauZeilen.length} Zeilen – die restlichen {vorschauZeilen.length - VORSCHAU_MAX_ZEILEN} werden mit ihrer Standard-Aktion ebenfalls importiert.
+                </p>
+              )}
             </div>
           )}
 
