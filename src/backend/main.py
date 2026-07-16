@@ -33,7 +33,7 @@ logging.root.addHandler(_log_handler)
 from database.seed import run_all_seeds
 from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen, cockpit, datenmigration
 
-SCHEMA_VERSION = 117
+SCHEMA_VERSION = 118
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -2552,6 +2552,23 @@ def _run_migrations() -> None:
             conn.execute(text("PRAGMA user_version = 117"))
             conn.commit()
             print("[Migration] Schema auf Version 117 (PayPal-Template: Spalte 'Beschreibung' statt 'Typ'/'Betreff' – Issue #248)")
+
+        if version < 118:
+            tables_118 = {r[0] for r in conn.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )).fetchall()}
+            if 'bank_templates' in tables_118:
+                conn.execute(text("""
+                    INSERT OR IGNORE INTO bank_templates
+                        (id, name, bank, format, delimiter, encoding, decimal_separator, date_format, skip_rows, column_mapping, ist_system)
+                    VALUES
+                        ('vivid', 'Vivid', 'Vivid', 'Standard', ',', 'UTF-8', '.', '%d.%m.%Y', 0,
+                        '{"__erkennungs__": ["Completed date", "Counterparty name", "Reference", "Payment amount", "Payment currency"], "Completed date": "datum", "Counterparty name": "partner_name", "Reference": "verwendungszweck", "Payment amount": "betrag", "Payment currency": "waehrung"}',
+                        1)
+                """))
+            conn.execute(text("PRAGMA user_version = 118"))
+            conn.commit()
+            print("[Migration] Schema auf Version 118 (bank_templates: Vivid-Template ergänzt, Issue #248)")
 
 
 def _migrate_kategorien() -> None:

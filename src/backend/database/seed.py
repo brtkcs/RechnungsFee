@@ -435,6 +435,25 @@ SYSTEM_BANK_TEMPLATES = [
         },
         "erkennungs_spalten": ["Datum", "Uhrzeit", "Beschreibung", "Brutto", "Währung", "Transaktionscode"],
     },
+    {
+        "id": "vivid",
+        "name": "Vivid",
+        "bank": "Vivid",
+        "format": "Standard",
+        "delimiter": ",",
+        "encoding": "UTF-8",
+        "decimal_separator": ".",
+        "date_format": "%d.%m.%Y",
+        "skip_rows": 0,
+        "column_mapping": {
+            "Completed date":     "datum",
+            "Counterparty name":  "partner_name",
+            "Reference":          "verwendungszweck",
+            "Payment amount":     "betrag",
+            "Payment currency":   "waehrung",
+        },
+        "erkennungs_spalten": ["Completed date", "Counterparty name", "Reference", "Payment amount", "Payment currency"],
+    },
 ]
 
 

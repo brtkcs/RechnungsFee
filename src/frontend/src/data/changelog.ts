@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.4.12',
     datum: 'Juli 2026',
     eintraege: [
+      { typ: 'neu', text: 'Bank-Import: Vivid-Girokonto wird jetzt automatisch erkannt und importiert (Issue #248).' },
       { typ: 'fix', text: 'Bank-Import & Datenübernahme – CSV-Dateien mit BOM (Byte Order Mark) am Dateianfang, z. B. bei manchen PayPal-Exporten, führten zu 0 erkannten Transaktionen: Die erste Spalte wurde durch das unsichtbare BOM-Zeichen nicht mehr erkannt (Issue #248).' },
     ],
   },
