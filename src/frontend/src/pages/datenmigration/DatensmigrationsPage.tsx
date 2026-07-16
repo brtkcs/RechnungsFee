@@ -64,6 +64,7 @@ const ZIELFELDER: Record<ImportTyp, { key: string; label: string }[]> = {
     { key: 'artikelcode', label: 'Artikelcode' },
     { key: 'hersteller', label: 'Hersteller' },
     { key: 'beschreibung', label: 'Beschreibung' },
+    { key: 'gruppe', label: 'Warengruppe (wird automatisch angelegt)' },
   ],
   gemischt: [
     { key: 'firmenname', label: 'Firmenname' },

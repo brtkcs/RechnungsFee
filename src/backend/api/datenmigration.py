@@ -267,10 +267,28 @@ def _lieferant_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int
     return "importiert"
 
 
+def _gruppe_id_finden_oder_anlegen(db: Session, typ: str, name: str) -> int:
+    row = db.execute(
+        text("SELECT id FROM artikel_gruppen WHERE typ = :typ AND name = :name"),
+        {"typ": typ, "name": name},
+    ).fetchone()
+    if row:
+        return row[0]
+    result = db.execute(
+        text("INSERT INTO artikel_gruppen (typ, name, aktiv) VALUES (:typ, :name, 1)"),
+        {"typ": typ, "name": name},
+    )
+    return result.lastrowid
+
+
 def _artikel_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] = None):
     typ = daten.get("typ", "artikel").strip().lower()
     if typ not in ("artikel", "dienstleistung", "fremdleistung"):
         typ = "artikel"
+
+    gruppe_name = (daten.get("gruppe") or "").strip()
+    gruppe_id = _gruppe_id_finden_oder_anlegen(db, typ, gruppe_name) if gruppe_name else None
+
     try:
         vk_brutto = Decimal(daten.get("vk_brutto", "0").replace(",", "."))
     except InvalidOperation:
@@ -296,6 +314,7 @@ def _artikel_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] 
         "artikelcode": daten.get("artikelcode") or None,
         "hersteller": daten.get("hersteller") or None,
         "beschreibung": daten.get("beschreibung") or None,
+        "gruppe_id": gruppe_id,
     }
 
     if ueberschreiben_id:
@@ -303,7 +322,7 @@ def _artikel_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] 
             text("""UPDATE artikel SET typ=:typ, bezeichnung=:bezeichnung, einheit=:einheit,
                     steuersatz=:steuersatz, vk_brutto=:vk_brutto, vk_netto=:vk_netto,
                     ek_netto=:ek_netto, artikelcode=:artikelcode, hersteller=:hersteller,
-                    beschreibung=:beschreibung, aktualisiert_am=CURRENT_TIMESTAMP
+                    beschreibung=:beschreibung, gruppe_id=:gruppe_id, aktualisiert_am=CURRENT_TIMESTAMP
                     WHERE id=:id"""),
             {**felder, "id": ueberschreiben_id},
         )
@@ -312,10 +331,10 @@ def _artikel_anlegen(db: Session, daten: dict, ueberschreiben_id: Optional[int] 
     artikelnummer = daten.get("artikelnummer") or _naechste_nummer(db, "artikel")
     db.execute(
         text("""INSERT INTO artikel (artikelnummer, typ, bezeichnung, einheit, steuersatz,
-                vk_brutto, vk_netto, ek_netto, artikelcode, hersteller, beschreibung,
+                vk_brutto, vk_netto, ek_netto, artikelcode, hersteller, beschreibung, gruppe_id,
                 aktiv, differenzbesteuerung, erstellt_am, aktualisiert_am)
                 VALUES (:artikelnummer, :typ, :bezeichnung, :einheit, :steuersatz,
-                :vk_brutto, :vk_netto, :ek_netto, :artikelcode, :hersteller, :beschreibung,
+                :vk_brutto, :vk_netto, :ek_netto, :artikelcode, :hersteller, :beschreibung, :gruppe_id,
                 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"""),
         {**felder, "artikelnummer": artikelnummer},
     )
@@ -377,9 +396,10 @@ _MUSTER_CSVS = {
         "# artikelcode: Eigene Artikelnummer/EAN (leer = automatisch)\n"
         "# hersteller: Herstellername\n"
         "# beschreibung: Langbeschreibung\n"
-        "typ;bezeichnung;einheit;steuersatz_prozent;vk_brutto;ek_netto;artikelcode;hersteller;beschreibung\n"
-        "artikel;Schrauben M6x20;Stück;19;0.25;0.10;SCH-M6-20;Würth;Sechskantschrauben galvanisch verzinkt\n"
-        "dienstleistung;Beratungsstunde;Stunden;19;120.00;;;;Beratung und Konzeption\n"
+        "# gruppe: Warengruppe/Servicegruppe (leer = keine); wird automatisch angelegt wenn sie noch nicht existiert\n"
+        "typ;bezeichnung;einheit;steuersatz_prozent;vk_brutto;ek_netto;artikelcode;hersteller;beschreibung;gruppe\n"
+        "artikel;Schrauben M6x20;Stück;19;0.25;0.10;SCH-M6-20;Würth;Sechskantschrauben galvanisch verzinkt;Kleinteile\n"
+        "dienstleistung;Beratungsstunde;Stunden;19;120.00;;;;Beratung und Konzeption;\n"
     ),
 }
 
