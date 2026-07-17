@@ -23,6 +23,13 @@ export type ChangelogVersion = {
 
 export const CHANGELOG: ChangelogVersion[] = [
   {
+    version: 'v0.4.13',
+    datum: 'Juli 2026',
+    eintraege: [
+      { typ: 'fix', text: 'Datenübernahme – Warengruppe-Feld fehlte im Import-Button der Artikel-Liste: Die Feldliste war zwischen der Datenübernahme-Seite und dem Import-Button in den Listen dupliziert, die Ergänzung war nur an einer Stelle erfolgt (Issue #245).' },
+    ],
+  },
+  {
     version: 'v0.4.12',
     datum: 'Juli 2026',
     eintraege: [
