@@ -884,6 +884,7 @@ function RechnungDetail({
   const [pdfLaeuft, setPdfLaeuft] = useState(false)
   const [pdfHinweis, setPdfHinweis] = useState(false)
   const [belegFehler, setBelegFehler] = useState<string | null>(null)
+  const [fehler, setFehler] = useState<string | null>(null)
   const qc = useQueryClient()
 
   const belegUploadMutation = useMutation({
@@ -973,7 +974,7 @@ function RechnungDetail({
       qc.invalidateQueries({ queryKey: ['vorlage-rechnungen'] })
       onFinalisiert?.(updated)
     },
-    onError: (e: Error) => alert(e.message),
+    onError: (e: Error) => setFehler(e.message),
   })
 
   const gutschriftMutation = useMutation({
@@ -982,7 +983,7 @@ function RechnungDetail({
       qc.invalidateQueries({ queryKey: ['rechnungen'] })
       onGutschriftCreated?.(gs)
     },
-    onError: (e: Error) => alert(e.message),
+    onError: (e: Error) => setFehler(e.message),
   })
 
   const forderungsausfallMutation = useMutation({
@@ -992,7 +993,7 @@ function RechnungDetail({
       qc.invalidateQueries({ queryKey: ['vorlage-rechnungen'] })
       setZeigForderungsausfall(false)
     },
-    onError: (e: Error) => alert(e.message),
+    onError: (e: Error) => setFehler(e.message),
   })
 
   /** Lädt das PDF als Blob. Das Backend entscheidet anhand original_pdf_pfad ob Original oder Kopie. */
@@ -1225,6 +1226,13 @@ function RechnungDetail({
             <span className="self-center text-xs text-slate-400 italic">Storniert</span>
           )}
         </div>
+
+        {fehler && (
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-xl px-4 py-2.5 text-sm text-red-700 dark:text-red-300 flex items-center justify-between">
+            <span>{fehler}</span>
+            <button onClick={() => setFehler(null)} className="text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-300">×</button>
+          </div>
+        )}
 
         {zeigSmtpHinweis && (
           <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl p-4 shadow-lg flex gap-3 items-start">
