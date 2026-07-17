@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     datum: 'Juli 2026',
     eintraege: [
       { typ: 'fix', text: 'Datenübernahme – Warengruppe-Feld fehlte im Import-Button der Artikel-Liste: Die Feldliste war zwischen der Datenübernahme-Seite und dem Import-Button in den Listen dupliziert, die Ergänzung war nur an einer Stelle erfolgt (Issue #245).' },
+      { typ: 'fix', text: 'Bank-Import – CSV-Zeilen mit weniger Spalten als die Kopfzeile (z. B. bei Deutsche-Bank-Exporten) führten zu „Load failed" (500 Internal Server Error). Fehlende Spalten werden jetzt als leer statt als Absturz behandelt (Issue #247).' },
     ],
   },
   {

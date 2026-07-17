@@ -184,7 +184,9 @@ def parse_csv(
         }
 
         for csv_spalte, ziel_feld in mapping.items():
-            wert = row.get(csv_spalte, "").strip()
+            # csv.DictReader füllt zu kurze Zeilen mit None statt "" auf (restval) –
+            # row.get(..., "") hilft dort nicht, da der Schlüssel existiert, nur der Wert None ist (Issue #247)
+            wert = (row.get(csv_spalte) or "").strip()
             if not wert:
                 continue
 
