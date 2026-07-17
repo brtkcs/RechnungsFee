@@ -29,7 +29,6 @@ Vollständige Übersicht und Verwaltung offener Forderungen gegenüber Kunden un
 - [ ] Mahnwesen: Mahnstufen (1. / 2. / 3. Mahnung) mit konfigurierbaren Mahngebühren und Verzugszinsen (§ 288 BGB: 5 % über Basiszinssatz)
 - [ ] Mahnschreiben als PDF (eigene Vorlage, Mahngebühr + Zinsen ausgewiesen)
 - [ ] Übersicht „Offene Forderungen": alle unbezahlten Ausgangsrechnungen mit Alter (30/60/90 Tage-Ampel)
-- [ ] Forderungsausfall buchen: Teilwertabschreibung nach § 17 UStG mit USt-Korrektur, Journal-Eintrag
 
 ### Verbindlichkeiten (Eingangsrechnungen)
 - [ ] Übersicht „Offene Verbindlichkeiten": alle unbezahlten Eingangsrechnungen mit Fälligkeit und Skonto-Frist
