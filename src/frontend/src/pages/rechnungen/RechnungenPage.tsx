@@ -1362,8 +1362,7 @@ function RechnungDetail({
               Forderung als uneinbringlich ausbuchen?
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Restbetrag: <strong>{formatEuro(Math.abs(parseFloat(rechnung.brutto_gesamt) - parseFloat(rechnung.bezahlt_betrag)))}</strong>
-              {!(unternehmen?.ist_kleinunternehmer) && ' · USt-Korrekturbuchung nach §17 UStG wird automatisch erstellt (zahlungsart=Keine)'}
+              Restbetrag: <strong>{formatEuro(Math.abs(parseFloat(rechnung.brutto_gesamt) - parseFloat(rechnung.bezahlt_betrag)))}</strong> – wird ohne Buchung als uneinbringlich markiert (Ist-Versteuerung: nie gezahltes Geld wurde nie versteuert)
             </p>
             <div className="flex gap-2 pt-0.5">
               <button

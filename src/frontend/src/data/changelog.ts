@@ -30,6 +30,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Bank-Import – CSV-Zeilen mit weniger Spalten als die Kopfzeile (z. B. bei Deutsche-Bank-Exporten) führten zu „Load failed" (500 Internal Server Error). Fehlende Spalten werden jetzt als leer statt als Absturz behandelt (Issue #247).' },
       { typ: 'neu', text: 'Bank-Import erkennt jetzt automatisch Zahlungen mit Skontoabzug: Entspricht der Überweisungsbetrag dem Rechnungsbetrag abzüglich des hinterlegten Skontos und wurde die Skonto-Frist eingehalten, wird die Rechnung automatisch als vollständig bezahlt gebucht – inklusive korrekter Skonto-Journalbuchung mit USt-Korrektur (Issue #252).' },
       { typ: 'fix', text: 'Rechnungen – Finalisieren mit einem Rechnungsdatum in der Zukunft wird jetzt verweigert (§14 Abs. 4 UStG: das Ausstellungsdatum muss dem tatsächlichen Tag der Rechnungsstellung entsprechen). Im Entwurf bleibt ein Zukunftsdatum weiterhin möglich (Issue #253).' },
+      { typ: 'fix', text: 'Forderungsausfall – das Ausbuchen eines nie gezahlten Restbetrags erzeugte fälschlich eine §17-UStG-Korrekturbuchung und minderte dadurch Umsatz und Umsatzsteuer in EÜR/UStVA unter den tatsächlich erhaltenen Betrag. Da RechnungsFee ausschließlich Ist-Versteuerung unterstützt, entsteht für nie gezahltes Geld nie eine USt-Schuld – Forderungsausfall ändert jetzt nur noch den Zahlungsstatus, ohne Buchung (Issue #252).' },
     ],
   },
   {
