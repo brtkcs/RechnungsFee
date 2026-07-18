@@ -360,7 +360,7 @@ export function AppLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 py-2 overflow-y-auto">
+        <nav className="flex-1 py-2 overflow-y-auto overflow-x-hidden">
 
           {/* Dashboard */}
           <NavLink to="/" end className={navLinkClass}>
