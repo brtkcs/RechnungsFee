@@ -38,6 +38,7 @@ const auswertungNavAlle: { to: string; label: string; icon: string; zeigen: Zeig
   { to: '/euer',              label: 'EÜR',          icon: 'bar_chart',       zeigen: () => true },
   { to: '/anlageverzeichnis', label: 'AVEÜR',         icon: 'domain',          zeigen: () => true },
   { to: '/guv',               label: 'GuV',           icon: 'trending_up',     zeigen: ({ unt }) => !!unt?.guv_aktiv },
+  { to: '/kontenuebersicht',  label: 'Kontenübersicht', icon: 'view_list',     zeigen: ({ unt }) => !!unt?.kontenuebersicht_aktiv },
   { to: '/ustva',             label: 'UStVA',         icon: 'account_balance', zeigen: ({ unt }) => !unt?.ist_kleinunternehmer },
   { to: '/jahres-ust',        label: 'Jahres-USt',    icon: 'calendar_month',  zeigen: () => true },
   { to: '/zm',                label: 'ZM',            icon: 'public',          zeigen: ({ zm }) => !!zm?.hat_ig_eintraege },

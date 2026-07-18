@@ -2221,6 +2221,36 @@ export const getGUVSchwellenwert = () =>
 
 
 // ---------------------------------------------------------------------------
+// Kontenübersicht
+// ---------------------------------------------------------------------------
+
+export type KontenuebersichtZeile = {
+  kategorie_id: number
+  kategorie_name: string
+  kontonummer: string | null
+  anzahl: number
+  summe: string
+}
+
+export type KontenuebersichtErgebnis = {
+  kontenrahmen: string
+  von: string
+  bis: string
+  zeilen: KontenuebersichtZeile[]
+}
+
+export const berechneKontenuebersicht = (von: string, bis: string) =>
+  request<KontenuebersichtErgebnis>(`/kontenuebersicht/berechnen?von=${von}&bis=${bis}`)
+
+export const getKontenuebersichtExportUrl = async (
+  von: string, bis: string, format: 'pdf' | 'csv'
+): Promise<string> => {
+  const base = await getApiBase()
+  return `${base}/kontenuebersicht/export?von=${von}&bis=${bis}&format=${format}`
+}
+
+
+// ---------------------------------------------------------------------------
 // Bank CSV-Import
 // ---------------------------------------------------------------------------
 

@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogVersion[] = [
     version: 'v0.4.14',
     datum: 'Juli 2026',
     eintraege: [
+      { typ: 'neu', text: 'Kontenübersicht – neue Auswertung zeigt alle im gewählten Zeitraum (Jahr, Monat oder freier Zeitraum) gebuchten Kategorien mit Kontonummer, Anzahl Buchungen und Summe; als PDF oder CSV exportierbar. Aktivierbar unter Einstellungen → Unternehmen → Steuer & Recht (Issue #255).' },
       { typ: 'fix', text: 'Sidebar – unnötiger horizontaler Scrollbalken entfernt.' },
     ],
   },
