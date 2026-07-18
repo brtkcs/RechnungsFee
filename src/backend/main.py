@@ -31,9 +31,9 @@ logging.root.setLevel(logging.INFO)
 logging.root.addHandler(_log_handler)
 # ─────────────────────────────────────────────────────────────────────────────
 from database.seed import run_all_seeds
-from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen, cockpit, datenmigration, kontenuebersicht
+from api import unternehmen, konten, kategorien, setup, journal, kunden, lieferanten, tagesabschluss, nummernkreise, export, rechnungen, backup, artikel, artikel_gruppen, ust_saetze, pdf_vorlagen, eks, system, ustva, zm, euer, dokumentenpakete, mail, wiederkehrend, buchungsvorlagen, anlageverzeichnis, datev, anlage_s, anlage_g, fristen_api, guv, bank_templates, bank_import, auto_filter, forderungen, cockpit, datenmigration, kontenuebersicht, schnellbuchungen
 
-SCHEMA_VERSION = 119
+SCHEMA_VERSION = 121
 
 app = FastAPI(title="RechnungsFee API", version="0.1.0")
 
@@ -84,6 +84,7 @@ app.include_router(anlage_g.router)
 app.include_router(fristen_api.router)
 app.include_router(guv.router)
 app.include_router(kontenuebersicht.router)
+app.include_router(schnellbuchungen.router)
 app.include_router(bank_templates.router)
 app.include_router(bank_import.router)
 app.include_router(auto_filter.router)
@@ -2579,6 +2580,34 @@ def _run_migrations() -> None:
             conn.commit()
             print("[Migration] Schema auf Version 119 (unternehmen: kontenuebersicht_aktiv – Kategorien-Summenliste, Issue #255)")
 
+        if version < 120:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS schnellbuchungen (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    art TEXT NOT NULL,
+                    kategorie_id INTEGER NOT NULL REFERENCES kategorien(id),
+                    zahlungsart TEXT NOT NULL,
+                    beschreibung TEXT NOT NULL,
+                    reihenfolge INTEGER NOT NULL DEFAULT 0,
+                    erstellt_am DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("PRAGMA user_version = 120"))
+            conn.commit()
+            print("[Migration] Schema auf Version 120 (schnellbuchungen-Tabelle – Journal-Schnellzugriff, Issue #256)")
+
+        if version < 121:
+            # Anlagenverzeichnis-AfA lief bisher fälschlich in Zeile 36 (GWG) statt Zeile 33
+            # (AfA bewegliche WG) – gleicher Fehler bei der manuellen Kategorie "Abschreibungen (AfA)".
+            conn.execute(text("""
+                UPDATE kategorien SET euer_zeile = 33
+                WHERE name = 'Abschreibungen (AfA)' AND ist_system = 1 AND euer_zeile = 36
+            """))
+            conn.execute(text("PRAGMA user_version = 121"))
+            conn.commit()
+            print("[Migration] Schema auf Version 121 (Abschreibungen (AfA): euer_zeile 36→33, Issue #265)")
+
 
 def _migrate_kategorien() -> None:
     """EKS-Zuordnungen auf offizielles Formular (04/2025) bringen und fehlende Kategorien eintragen."""
@@ -2733,7 +2762,7 @@ def _migrate_kategorien() -> None:
             # Issue #61 – Forderungsausfall
             {"name": "Forderungsausfall",                "kontenart": "Aufwand", "konto_skr03": "4803", "konto_skr04": "6403", "eks_kategorie": None,    "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             # Issue #106 – fehlende EÜR-Zeilen
-            {"name": "Abschreibungen (AfA)",             "kontenart": "Aufwand", "konto_skr03": "4830", "konto_skr04": "6220", "eks_kategorie": None,    "euer_zeile": 36,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
+            {"name": "Abschreibungen (AfA)",             "kontenart": "Aufwand", "konto_skr03": "4830", "konto_skr04": "6220", "eks_kategorie": None,    "euer_zeile": 33,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Fahrtkosten Privat-PKW (0,10 €/km)", "kontenart": "Aufwand", "konto_skr03": "4560", "konto_skr04": "6530", "eks_kategorie": "B6_5",  "euer_zeile": 70,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Verpflegungsmehraufwand",          "kontenart": "Aufwand", "konto_skr03": "4661", "konto_skr04": "6645", "eks_kategorie": "B7_2",  "euer_zeile": 44,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},
             {"name": "Mitgliedsbeiträge",               "kontenart": "Aufwand", "konto_skr03": "4390", "konto_skr04": "6405", "eks_kategorie": "B14_5", "euer_zeile": 60,   "vorsteuer_prozent": 0,   "ust_satz_standard": 0},

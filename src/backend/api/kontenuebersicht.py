@@ -18,7 +18,6 @@ from decimal import Decimal, ROUND_HALF_UP
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
@@ -53,33 +52,52 @@ class KontenuebersichtErgebnis(BaseModel):
 def _kontenuebersicht_zeilen(von: date, bis: date, db: Session) -> tuple[str, list[KontenuebersichtZeile]]:
     unt = db.query(Unternehmen).filter(Unternehmen.id == 1).first()
     skr = (unt.kontenrahmen if unt else None) or "SKR04"
-    konto_spalte = _KONTO_SPALTEN.get(skr, Kategorie.konto_skr04)
+    konto_spalte_attr = "konto_skr03" if skr == "SKR03" else "konto_skr49" if skr == "SKR49" else "konto_skr04"
 
-    rows = (
-        db.query(
-            Kategorie.id,
-            Kategorie.name,
-            konto_spalte.label("kontonummer"),
-            func.count(Journaleintrag.id).label("anzahl"),
-            func.sum(Journaleintrag.brutto_betrag).label("summe"),
-        )
-        .join(Journaleintrag, Journaleintrag.kategorie_id == Kategorie.id)
-        .filter(Journaleintrag.datum >= von, Journaleintrag.datum <= bis)
-        .group_by(Kategorie.id, Kategorie.name, konto_spalte)
-        .order_by(konto_spalte.is_(None), konto_spalte, Kategorie.name)
+    eintraege = (
+        db.query(Journaleintrag)
+        .filter(Journaleintrag.datum >= von, Journaleintrag.datum <= bis, Journaleintrag.kategorie_id.isnot(None))
         .all()
     )
 
+    # Ein Storno behält dieselbe Kategorie und denselben (positiven) Betrag, nur die Art
+    # dreht sich um (s. journal.py update_eintrag). Bei einer naiven Summe ohne Art-Filter
+    # würde eine stornierte Buchung doppelt statt netto null zählen – daher werden Storno-
+    # Gegenbuchungen UND die dadurch stornierten Original-Buchungen ausgeschlossen.
+    storno_ziele = {
+        e.beschreibung[len("STORNO "):].split(":")[0].strip()
+        for e in eintraege if e.beschreibung.startswith("STORNO ")
+    }
+    aktive = [
+        e for e in eintraege
+        if not e.beschreibung.startswith("STORNO ") and e.belegnr not in storno_ziele
+    ]
+
+    gruppen: dict[int, dict] = {}
+    for e in aktive:
+        kat: Kategorie | None = e.kategorie
+        if not kat:
+            continue
+        g = gruppen.setdefault(kat.id, {
+            "name": kat.name,
+            "kontonummer": getattr(kat, konto_spalte_attr),
+            "anzahl": 0,
+            "summe": Decimal("0"),
+        })
+        g["anzahl"] += 1
+        g["summe"] += e.brutto_betrag
+
     zeilen = [
         KontenuebersichtZeile(
-            kategorie_id=r.id,
-            kategorie_name=r.name,
-            kontonummer=r.kontonummer,
-            anzahl=r.anzahl,
-            summe=str(Decimal(str(r.summe)).quantize(Q, ROUND_HALF_UP)),
+            kategorie_id=kat_id,
+            kategorie_name=g["name"],
+            kontonummer=g["kontonummer"],
+            anzahl=g["anzahl"],
+            summe=str(g["summe"].quantize(Q, ROUND_HALF_UP)),
         )
-        for r in rows
+        for kat_id, g in gruppen.items()
     ]
+    zeilen.sort(key=lambda z: (z.kontonummer is None, z.kontonummer or "", z.kategorie_name))
     return skr, zeilen
 
 

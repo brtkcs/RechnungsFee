@@ -256,7 +256,19 @@ def _aktualisiere_zahlungsstatus(rechnung: Rechnung) -> None:
     if abs_bezahlt >= abs_gesamt:
         rechnung.zahlungsstatus = "bezahlt"
         rechnung.bezahlt = True
-        rechnung.zahlungsdatum = date.today()
+        # Datum der (letzten) tatsächlichen Zahlungsbuchung – nicht "heute" (Issue #261:
+        # sonst überschreibt jede spätere Korrektur/Statusneuberechnung ein bewusst
+        # rückdatiertes Zahlungsdatum wieder mit dem aktuellen Tagesdatum). Storno-Gegen-
+        # buchungen UND die dadurch stornierten Original-Einträge zählen nicht mehr mit.
+        storno_ziele = {
+            e.beschreibung[len("STORNO "):].split(":")[0].strip()
+            for e in rechnung.journaleintraege if e.beschreibung.startswith("STORNO ")
+        }
+        echte_eintraege = [
+            e for e in rechnung.journaleintraege
+            if not e.beschreibung.startswith("STORNO ") and e.belegnr not in storno_ziele
+        ]
+        rechnung.zahlungsdatum = max((e.datum for e in echte_eintraege), default=date.today())
         # Automatisch: verknüpfter Auftrag → abgeschlossen
         # Pfad 1: Rechnung direkt aus Auftrag (rechnung_zu_auftrag_id)
         # Pfad 2: Auftrag → Proforma → Rechnung (proforma_zu_auftrag_id + rechnung_zu_proforma_id)
@@ -553,18 +565,17 @@ def get_offene_rechnungen(db: Session = Depends(get_db)):
     return [RechnungResponse.from_orm_extended(r) for r in rechnungen]
 
 
-@router.get("", response_model=list[RechnungResponse])
-def list_rechnungen(
-    typ: Optional[str] = Query(None, description="eingang|ausgang"),
-    zahlungsstatus: Optional[str] = Query(None, description="offen|teilweise|bezahlt|entwurf|storniert"),
-    monat: Optional[str] = Query(None, description="YYYY-MM"),
-    datum_von: Optional[date] = Query(None, description="YYYY-MM-DD"),
-    datum_bis: Optional[date] = Query(None, description="YYYY-MM-DD"),
-    kunde_id: Optional[int] = Query(None),
-    lieferant_id: Optional[int] = Query(None),
-    dokument_typ: Optional[str] = Query(None, description="Rechnung|Gutschrift|Lieferschein"),
-    db: Session = Depends(get_db),
-):
+def _rechnungen_gefiltert(
+    db: Session,
+    typ: Optional[str] = None,
+    zahlungsstatus: Optional[str] = None,
+    monat: Optional[str] = None,
+    datum_von: Optional[date] = None,
+    datum_bis: Optional[date] = None,
+    kunde_id: Optional[int] = None,
+    lieferant_id: Optional[int] = None,
+    dokument_typ: Optional[str] = None,
+) -> list[Rechnung]:
     q = db.query(Rechnung)
     if dokument_typ:
         q = q.filter(Rechnung.dokument_typ == dokument_typ)
@@ -603,8 +614,117 @@ def list_rechnungen(
         q = q.filter(Rechnung.kunde_id == kunde_id)
     if lieferant_id is not None:
         q = q.filter(Rechnung.lieferant_id == lieferant_id)
-    rechnungen = q.order_by(Rechnung.datum.desc(), Rechnung.id.desc()).all()
+    return q.order_by(Rechnung.datum.desc(), Rechnung.id.desc()).all()
+
+
+@router.get("", response_model=list[RechnungResponse])
+def list_rechnungen(
+    typ: Optional[str] = Query(None, description="eingang|ausgang"),
+    zahlungsstatus: Optional[str] = Query(None, description="offen|teilweise|bezahlt|entwurf|storniert"),
+    monat: Optional[str] = Query(None, description="YYYY-MM"),
+    datum_von: Optional[date] = Query(None, description="YYYY-MM-DD"),
+    datum_bis: Optional[date] = Query(None, description="YYYY-MM-DD"),
+    kunde_id: Optional[int] = Query(None),
+    lieferant_id: Optional[int] = Query(None),
+    dokument_typ: Optional[str] = Query(None, description="Rechnung|Gutschrift|Lieferschein"),
+    db: Session = Depends(get_db),
+):
+    rechnungen = _rechnungen_gefiltert(
+        db, typ, zahlungsstatus, monat, datum_von, datum_bis, kunde_id, lieferant_id, dokument_typ,
+    )
     return [RechnungResponse.from_orm_extended(r) for r in rechnungen]
+
+
+@router.get("/export")
+def rechnungen_export(
+    typ: Optional[str] = Query(None, description="eingang|ausgang"),
+    zahlungsstatus: Optional[str] = Query(None, description="offen|teilweise|bezahlt|entwurf|storniert"),
+    monat: Optional[str] = Query(None, description="YYYY-MM"),
+    datum_von: Optional[date] = Query(None, description="YYYY-MM-DD"),
+    datum_bis: Optional[date] = Query(None, description="YYYY-MM-DD"),
+    kunde_id: Optional[int] = Query(None),
+    lieferant_id: Optional[int] = Query(None),
+    dokument_typ: Optional[str] = Query(None, description="Rechnung|Gutschrift|Lieferschein"),
+    format: str = Query("pdf", description="pdf oder csv"),
+    db: Session = Depends(get_db),
+):
+    """Export der (gefilterten) Rechnungsliste als PDF oder CSV – z.B. Offene-Posten-Liste."""
+    rechnungen = _rechnungen_gefiltert(
+        db, typ, zahlungsstatus, monat, datum_von, datum_bis, kunde_id, lieferant_id, dokument_typ,
+    )
+    zeilen = []
+    for r in rechnungen:
+        resp = RechnungResponse.from_orm_extended(r)
+        partner_nr = (r.kunde.debitor_nr if r.kunde else None) or (r.lieferant.kreditor_nr if r.lieferant else None)
+        zeilen.append({"resp": resp, "partner_nr": partner_nr or ""})
+
+    filter_teile = []
+    if typ:
+        filter_teile.append("Eingangsrechnungen" if typ == "eingang" else "Ausgangsrechnungen")
+    if zahlungsstatus:
+        filter_teile.append(f"Status: {zahlungsstatus.capitalize()}")
+    if kunde_id is not None:
+        kunde = db.query(Kunde).filter(Kunde.id == kunde_id).first()
+        filter_teile.append(f"Kunde: {kunde.firmenname if kunde else kunde_id}")
+    if lieferant_id is not None:
+        lieferant = db.query(Lieferant).filter(Lieferant.id == lieferant_id).first()
+        filter_teile.append(f"Lieferant: {lieferant.firmenname if lieferant else lieferant_id}")
+    filter_zeile = " · ".join(filter_teile) if filter_teile else "Alle Rechnungen"
+
+    if monat:
+        datei_suffix = monat
+    elif datum_von and datum_bis:
+        datei_suffix = f"{datum_von}_{datum_bis}"
+    elif datum_von:
+        datei_suffix = f"ab_{datum_von}"
+    elif datum_bis:
+        datei_suffix = f"bis_{datum_bis}"
+    else:
+        datei_suffix = "gesamt"
+
+    if format == "csv":
+        import csv
+        import io
+        out = io.StringIO()
+        writer = csv.writer(out, delimiter=";")
+        writer.writerow(["Filter:", filter_zeile])
+        writer.writerow([])
+        writer.writerow(["Rechnungsnr.", "Datum", "Fällig am", "Debitor-/Kreditor-Nr.", "Partner", "Status", "Betrag (EUR)", "Offen (EUR)"])
+        for z in zeilen:
+            r = z["resp"]
+            partner = r.kunde_name or r.lieferant_name or r.partner_freitext or "—"
+            offen = (r.brutto_gesamt - r.bezahlt_betrag) if r.zahlungsstatus in ("offen", "teilweise") else Decimal("0")
+            writer.writerow([
+                r.rechnungsnummer or "", str(r.datum), str(r.faellig_am) if r.faellig_am else "",
+                z["partner_nr"], partner, r.zahlungsstatus,
+                f"{r.brutto_gesamt:.2f}".replace(".", ","), f"{offen:.2f}".replace(".", ","),
+            ])
+        csv_bytes = ("﻿" + out.getvalue()).encode("utf-8")
+        return Response(
+            content=csv_bytes,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="Rechnungen_{datei_suffix}.csv"'},
+        )
+
+    unt = db.query(Unternehmen).filter(Unternehmen.id == 1).first()
+    unt_dict = {
+        "firmenname": unt.firmenname if unt else "",
+        "vorname": unt.vorname if unt else "",
+        "nachname": unt.nachname if unt else "",
+        "strasse": unt.strasse if unt else "",
+        "hausnummer": unt.hausnummer if unt else "",
+        "plz": unt.plz if unt else "",
+        "ort": unt.ort if unt else "",
+        "steuernummer": unt.steuernummer if unt else "",
+    }
+
+    from utils.pdf_rechnungsliste import erstelle_rechnungsliste_pdf
+    pdf_bytes = erstelle_rechnungsliste_pdf(unt_dict, zeilen, filter_zeile)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Rechnungen_{datei_suffix}.pdf"'},
+    )
 
 
 @router.get("/auftraege", response_model=list[RechnungResponse])
@@ -1855,6 +1975,132 @@ def zahlung_bar_erstellen(rechnung_id: int, data: BarZahlungCreate, db: Session 
         journaleintrag_belegnr=eintrag.belegnr,
         rechnung=RechnungResponse.from_orm_extended(rechnung),
     )
+
+
+class ZahlungKorrigieren(BaseModel):
+    neues_datum: date
+    neuer_betrag: Decimal | None = None  # None = Betrag unverändert
+
+
+@router.put("/{rechnung_id}/zahlung/{journal_id}/korrigieren", response_model=RechnungResponse)
+def zahlung_korrigieren(
+    rechnung_id: int, journal_id: int, data: ZahlungKorrigieren, db: Session = Depends(get_db),
+):
+    """Korrigiert Datum und/oder Betrag einer einzelnen Zahlungsbuchung (Issue #261).
+
+    Rechnungsbuchungen sind immer immutable=True (kein Korrekturfenster wie im Journal
+    möglich, s. journal.py update_eintrag) – jede Korrektur läuft daher über Storno +
+    Neubuchung, unabhängig davon wie kurz die ursprüngliche Buchung zurückliegt.
+    Korrigiert wird bewusst nur die eine ausgewählte Buchung – bei Split-Zahlungen oder
+    einer Skonto-Zweitbuchung müssen Geschwister-Einträge einzeln korrigiert werden, da
+    sich bei einer Betragsänderung nicht automatisch ableiten lässt wie sich das auf
+    andere Positionen auswirken soll.
+    """
+    rechnung = db.query(Rechnung).filter(Rechnung.id == rechnung_id).first()
+    if not rechnung:
+        raise HTTPException(status_code=404, detail="Rechnung nicht gefunden.")
+    if rechnung.storniert:
+        raise HTTPException(status_code=409, detail="Zahlungen einer stornierten Rechnung können nicht korrigiert werden.")
+
+    e = db.query(Journaleintrag).filter(
+        Journaleintrag.id == journal_id, Journaleintrag.rechnung_id == rechnung_id,
+    ).first()
+    if not e:
+        raise HTTPException(status_code=404, detail="Journalbuchung nicht gefunden.")
+    if e.beschreibung.startswith("STORNO "):
+        raise HTTPException(status_code=409, detail="Storno-Einträge können nicht korrigiert werden.")
+    bereits_storniert = db.query(Journaleintrag).filter(
+        Journaleintrag.beschreibung.like(f"STORNO {e.belegnr}:%")
+    ).first()
+    if bereits_storniert:
+        raise HTTPException(status_code=409, detail=f"Buchung {e.belegnr} wurde bereits korrigiert/storniert.")
+    if e.marge_25a_brutto:
+        raise HTTPException(
+            status_code=409,
+            detail="§25a-Differenzbesteuerungs-Buchungen können hier nicht korrigiert werden – bitte stornieren und neu buchen.",
+        )
+
+    if data.neuer_betrag is not None and data.neuer_betrag != abs(e.brutto_betrag):
+        neuer_brutto_abs = data.neuer_betrag.quantize(Decimal("0.01"), ROUND_HALF_UP)
+        if neuer_brutto_abs <= 0:
+            raise HTTPException(status_code=422, detail="Betrag muss größer als 0 sein.")
+
+        # Verfügbarer Restbetrag inkl. des Betrags, der gerade ersetzt wird
+        restbetrag_ohne_diese = abs(rechnung.brutto_gesamt) - (abs(rechnung.bezahlt_betrag) - abs(e.brutto_betrag))
+        if neuer_brutto_abs > restbetrag_ohne_diese + Decimal("0.01"):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Betrag ({neuer_brutto_abs} €) übersteigt den verfügbaren Restbetrag ({restbetrag_ohne_diese:.2f} €).",
+            )
+        if e.zahlungsart == "Bar" and e.art == "Ausgabe" and neuer_brutto_abs > abs(e.brutto_betrag):
+            einnahmen = db.query(func.sum(Journaleintrag.brutto_betrag)).filter(
+                Journaleintrag.art == "Einnahme", Journaleintrag.zahlungsart == "Bar").scalar() or Decimal("0")
+            ausgaben = db.query(func.sum(Journaleintrag.brutto_betrag)).filter(
+                Journaleintrag.art == "Ausgabe", Journaleintrag.zahlungsart == "Bar").scalar() or Decimal("0")
+            kassenstand = Decimal(str(einnahmen)) - Decimal(str(ausgaben))
+            mehrbetrag = neuer_brutto_abs - abs(e.brutto_betrag)
+            if mehrbetrag > kassenstand:
+                raise HTTPException(status_code=409,
+                    detail=f"Kassenstand nicht ausreichend. Aktueller Kassenstand: {kassenstand:.2f} €, zusätzlich benötigt: {mehrbetrag:.2f} €.")
+
+        neuer_brutto = neuer_brutto_abs if e.brutto_betrag >= 0 else -neuer_brutto_abs
+        if e.ust_satz > 0:
+            neuer_netto = (neuer_brutto_abs * 100 / (100 + e.ust_satz)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            neuer_ust = (neuer_brutto_abs - neuer_netto).quantize(Decimal("0.01"), ROUND_HALF_UP)
+            if e.brutto_betrag < 0:
+                neuer_netto, neuer_ust = -neuer_netto, -neuer_ust
+        else:
+            neuer_netto, neuer_ust = neuer_brutto, Decimal("0.00")
+        neue_vorsteuer = _berechne_vorsteuer(neuer_ust, e.vorsteuerabzug, e.kategorie)
+    else:
+        neuer_brutto, neuer_netto, neuer_ust, neue_vorsteuer = e.brutto_betrag, e.netto_betrag, e.ust_betrag, e.vorsteuer_betrag
+
+    heute = date.today()
+
+    # Art bleibt gleich, alle Beträge werden negiert: _aktualisiere_zahlungsstatus()
+    # summiert brutto_betrag über alle verknüpften Einträge OHNE Art-Filter (wie bei
+    # Gutschriften) – nur ein echtes Vorzeichen-Gegenstück hebt den Original-Betrag auf.
+    storno = Journaleintrag(
+        datum=heute,
+        belegnr=_naechste_belegnr_journal(db, heute),
+        beschreibung=f"STORNO {e.belegnr}: Korrektur",
+        kategorie_id=e.kategorie_id,
+        konto_skr03=e.konto_skr03, konto_skr04=e.konto_skr04,
+        konto_ust_skr03=e.konto_ust_skr03, konto_ust_skr04=e.konto_ust_skr04,
+        zahlungsart=e.zahlungsart, art=e.art,
+        netto_betrag=-e.netto_betrag, ust_satz=e.ust_satz, ust_betrag=-e.ust_betrag,
+        vorsteuer_betrag=-e.vorsteuer_betrag, brutto_betrag=-e.brutto_betrag,
+        vorsteuerabzug=e.vorsteuerabzug,
+        ist_ig_erwerb=e.ist_ig_erwerb, ust_sonderfall=e.ust_sonderfall,
+        rechnung_id=rechnung_id, immutable=True,
+    )
+    storno.signatur = signatur_journaleintrag(storno)
+    db.add(storno)
+
+    neu = Journaleintrag(
+        datum=data.neues_datum,
+        belegnr=_naechste_belegnr_journal(db, data.neues_datum),
+        beschreibung=e.beschreibung,
+        kategorie_id=e.kategorie_id,
+        konto_skr03=e.konto_skr03, konto_skr04=e.konto_skr04,
+        konto_ust_skr03=e.konto_ust_skr03, konto_ust_skr04=e.konto_ust_skr04,
+        zahlungsart=e.zahlungsart, art=e.art,
+        netto_betrag=neuer_netto, ust_satz=e.ust_satz, ust_betrag=neuer_ust,
+        vorsteuer_betrag=neue_vorsteuer, brutto_betrag=neuer_brutto,
+        vorsteuerabzug=e.vorsteuerabzug,
+        steuerbefreiung_grund=e.steuerbefreiung_grund,
+        ist_ig_erwerb=e.ist_ig_erwerb, ust_sonderfall=e.ust_sonderfall,
+        rechnung_id=rechnung_id, immutable=True,
+    )
+    neu.signatur = signatur_journaleintrag(neu)
+    db.add(neu)
+
+    db.flush()
+    db.expire(rechnung, ["journaleintraege"])
+    _aktualisiere_zahlungsstatus(rechnung)
+    db.commit()
+    db.refresh(rechnung)
+    return RechnungResponse.from_orm_extended(rechnung)
 
 
 @router.post("/{rechnung_id}/storno", response_model=RechnungResponse)

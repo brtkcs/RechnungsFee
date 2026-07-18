@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getJournal, getKategorien, getKassenbuchExportUrl, getJournalExportUrl, openUrl, type JournalEintrag } from '../../api/client'
+import { getJournal, getKategorien, getKassenbuchExportUrl, getJournalExportUrl, openUrl, type JournalEintrag, type Schnellbuchung } from '../../api/client'
 import { BuchungForm } from './BuchungForm'
 import { TagesabschlussDialog } from './TagesabschlussDialog'
 import { BuchungDetail } from './BuchungDetail'
+import { SchnellbuchungenLeiste } from './SchnellbuchungenLeiste'
 import { DateInput } from '../../components/DateInput'
 import { journalFilter } from '../../store/filterStore'
 
@@ -60,6 +61,7 @@ export function JournalPage() {
   const [nurBebuchte, _setNurBebuchte] = useState<boolean>(() => journalFilter.nurBebuchte)
   const setNurBebuchte = (v: boolean) => { journalFilter.nurBebuchte = v; _setNurBebuchte(v) }
   const [showBuchung, setShowBuchung] = useState(false)
+  const [schnellbuchungWerte, setSchnellbuchungWerte] = useState<Schnellbuchung | null>(null)
   const [showAbschluss, setShowAbschluss] = useState(false)
   const [bearbeitenEintrag, setBearbeitenEintrag] = useState<JournalEintrag | null>(null)
   const [aktiverEintragId, setAktiverEintragId] = useState<number | null>(null)
@@ -68,6 +70,12 @@ export function JournalPage() {
   const [csvErfolg, setCsvErfolg] = useState<string | null>(null)
 
   const aktivesJahr = new Date().getFullYear()
+
+  function handleSchnellbuchung(preset: Schnellbuchung) {
+    setSchnellbuchungWerte(preset)
+    setBearbeitenEintrag(null)
+    setShowBuchung(true)
+  }
 
   function datumVorschlagFuerNeueBuchung(): string {
     const t = new Date().toISOString().slice(0, 10)
@@ -191,7 +199,7 @@ export function JournalPage() {
       <div className="shrink-0 px-6 pt-6 pb-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Journal</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Journal-Export immer sichtbar */}
           <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
             <button
@@ -245,6 +253,7 @@ export function JournalPage() {
           >
             + Neue Buchung
           </button>
+          <SchnellbuchungenLeiste onAuswahl={handleSchnellbuchung} />
         </div>
       </div>
 
@@ -512,8 +521,14 @@ export function JournalPage() {
         <BuchungForm
           bearbeiten={bearbeitenEintrag ?? undefined}
           initialDatum={bearbeitenEintrag ? undefined : datumVorschlagFuerNeueBuchung()}
-          onClose={() => { setShowBuchung(false); setBearbeitenEintrag(null) }}
-          onSuccess={() => { setShowBuchung(false); setBearbeitenEintrag(null) }}
+          initialWerte={schnellbuchungWerte ? {
+            art: schnellbuchungWerte.art,
+            zahlungsart: schnellbuchungWerte.zahlungsart,
+            beschreibung: schnellbuchungWerte.beschreibung,
+            kategorie_id: String(schnellbuchungWerte.kategorie_id),
+          } : undefined}
+          onClose={() => { setShowBuchung(false); setBearbeitenEintrag(null); setSchnellbuchungWerte(null) }}
+          onSuccess={() => { setShowBuchung(false); setBearbeitenEintrag(null); setSchnellbuchungWerte(null) }}
         />
       )}
       {showAbschluss && (

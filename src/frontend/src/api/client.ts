@@ -562,6 +562,40 @@ export const getJournalExportUrl = async (
   return `${base}/journal/export?${p.toString()}`
 }
 
+export const korrigiereZahlung = (
+  rechnungId: number, journalId: number, neuesDatum: string, neuerBetrag?: string
+) =>
+  request<Rechnung>(`/rechnungen/${rechnungId}/zahlung/${journalId}/korrigieren`, {
+    method: 'PUT', body: JSON.stringify({ neues_datum: neuesDatum, neuer_betrag: neuerBetrag || undefined }),
+  })
+
+export const getRechnungenExportUrl = async (
+  params: {
+    typ?: string
+    zahlungsstatus?: string
+    monat?: string
+    datum_von?: string
+    datum_bis?: string
+    kunde_id?: number
+    lieferant_id?: number
+    dokument_typ?: string
+    format: 'pdf' | 'csv'
+  }
+): Promise<string> => {
+  const base = await getApiBase()
+  const p = new URLSearchParams()
+  if (params.typ) p.set('typ', params.typ)
+  if (params.zahlungsstatus) p.set('zahlungsstatus', params.zahlungsstatus)
+  if (params.monat) p.set('monat', params.monat)
+  if (params.datum_von) p.set('datum_von', params.datum_von)
+  if (params.datum_bis) p.set('datum_bis', params.datum_bis)
+  if (params.kunde_id) p.set('kunde_id', String(params.kunde_id))
+  if (params.lieferant_id) p.set('lieferant_id', String(params.lieferant_id))
+  if (params.dokument_typ) p.set('dokument_typ', params.dokument_typ)
+  p.set('format', params.format)
+  return `${base}/rechnungen/export?${p.toString()}`
+}
+
 // --- Tagesabschluss ---
 export type Tagesabschluss = {
   id: number
@@ -1130,6 +1164,7 @@ export type RechnungspositionCreate = {
 export type ZahlungKompakt = {
   id: number
   belegnr: string
+  beschreibung: string
   datum: string
   brutto_betrag: string
   art: 'Einnahme' | 'Ausgabe'
@@ -2248,6 +2283,39 @@ export const getKontenuebersichtExportUrl = async (
   const base = await getApiBase()
   return `${base}/kontenuebersicht/export?von=${von}&bis=${bis}&format=${format}`
 }
+
+
+// ---------------------------------------------------------------------------
+// Schnellbuchungen (Journal-Presets)
+// ---------------------------------------------------------------------------
+
+export type Schnellbuchung = {
+  id: number
+  name: string
+  art: 'Einnahme' | 'Ausgabe'
+  kategorie_id: number
+  kategorie_name: string
+  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal'
+  beschreibung: string
+  reihenfolge: number
+}
+
+export type SchnellbuchungCreate = {
+  name: string
+  art: 'Einnahme' | 'Ausgabe'
+  kategorie_id: number
+  zahlungsart: 'Bar' | 'Karte' | 'Bank' | 'PayPal'
+  beschreibung: string
+}
+
+export const getSchnellbuchungen = () =>
+  request<Schnellbuchung[]>('/schnellbuchungen')
+export const createSchnellbuchung = (data: SchnellbuchungCreate) =>
+  request<Schnellbuchung>('/schnellbuchungen', { method: 'POST', body: JSON.stringify(data) })
+export const updateSchnellbuchung = (id: number, data: SchnellbuchungCreate) =>
+  request<Schnellbuchung>(`/schnellbuchungen/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteSchnellbuchung = (id: number) =>
+  request<void>(`/schnellbuchungen/${id}`, { method: 'DELETE' })
 
 
 // ---------------------------------------------------------------------------

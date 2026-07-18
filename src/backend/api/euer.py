@@ -48,6 +48,7 @@ EUR_ZEILEN_META: dict[int, tuple[str, str]] = {
     28:  ("Bezogene Leistungen (ohne USt)",                                     "B"),
     29:  ("Fremdleistungen (ohne USt)",                                         "B"),
     30:  ("Löhne, Gehälter, Sozialversicherung",                               "B"),
+    33:  ("AfA für bewegliche Wirtschaftsgüter",                                 "B"),
     36:  ("Geringwertige Wirtschaftsgüter (GWG)",                               "B"),
     39:  ("Miete / Pacht für Geschäftsräume",                                   "B"),
     41:  ("Nebenkosten für Geschäftsräume",                                     "B"),
@@ -138,12 +139,13 @@ def _berechne_euer(jahr: int, db: Session) -> dict:
         if e.vorsteuer_betrag and e.vorsteuer_betrag != 0:
             zeilen[57] = zeilen.get(57, ZERO) + e.vorsteuer_betrag
 
-    # AVEÜR: AfA aus dem Anlagenverzeichnis automatisch in Zeile 36 eintragen
+    # AVEÜR: AfA aus dem Anlagenverzeichnis automatisch in Zeile 33 eintragen
+    # (Zeile 33 = AfA bewegliche WG, nicht Zeile 36 = GWG – Issue #265)
     from api.anlageverzeichnis import _afa_fuer_jahr
     gueter = db.query(Anlagegut).filter(Anlagegut.aktiv == True).all()
     aveur_afa = sum((_afa_fuer_jahr(g, jahr) for g in gueter), ZERO)
     if aveur_afa:
-        zeilen[36] = zeilen.get(36, ZERO) + aveur_afa
+        zeilen[33] = zeilen.get(33, ZERO) + aveur_afa
 
     # Runden
     q = Decimal("0.01")

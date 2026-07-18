@@ -205,6 +205,27 @@ class Kategorie(Base):
     transaktionen: Mapped[list["BankTransaktion"]] = relationship(back_populates="kategorie")
 
 
+class Schnellbuchung(Base):
+    """Wiederverwendbare Vorlage für häufige manuelle Journalbuchungen (Issue #256).
+
+    Anders als Buchungsvorlagen (terminiert/automatisch) ist dies ein reiner
+    Schnellzugriff im Journal: Kategorie, Zahlungsart und Buchungstext sind
+    fest hinterlegt, nur Betrag und Datum werden beim Buchen noch eingegeben.
+    """
+    __tablename__ = "schnellbuchungen"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)  # Button-Beschriftung, z.B. "Tankquittung"
+    art: Mapped[str] = mapped_column(String(10), nullable=False)  # Einnahme|Ausgabe
+    kategorie_id: Mapped[int] = mapped_column(ForeignKey("kategorien.id"), nullable=False)
+    zahlungsart: Mapped[str] = mapped_column(String(20), nullable=False)  # Bar|Karte|Bank|PayPal
+    beschreibung: Mapped[str] = mapped_column(String(500), nullable=False)  # Buchungstext-Vorlage
+    reihenfolge: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    erstellt_am: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    kategorie: Mapped["Kategorie"] = relationship()
+
+
 # ---------------------------------------------------------------------------
 # Nummernkreise
 # ---------------------------------------------------------------------------

@@ -26,6 +26,12 @@ function fmt(iso: string) {
   return `${d}.${m}.${y}`
 }
 
+// Degressive AfA (§7 Abs. 2 EStG, Investitionsbooster): nur für Anschaffungen 01.07.2025–31.12.2027
+function istDegressivMoeglich(kaufdatum: string): boolean {
+  if (!kaufdatum) return false
+  return kaufdatum >= '2025-07-01' && kaufdatum <= '2027-12-31'
+}
+
 function euro(v: number | string) {
   return parseFloat(String(v)).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 }
@@ -72,6 +78,9 @@ function AnlagegutFormular({
         next.nutzungsdauer_jahre = ND_VORSCHLAEGE[val as AnlagegutTyp] ?? 5
         if (val !== 'kfz') { next.kennzeichen = null; next.privat_anteil_prozent = '0' }
       }
+      if (key === 'kaufdatum' && next.afa_methode === 'degressiv' && !istDegressivMoeglich(val as string)) {
+        next.afa_methode = 'linear'
+      }
       return next
     })
   }
@@ -111,6 +120,26 @@ function AnlagegutFormular({
           <input type="number" min="1" max="50" className={inputCls} value={form.nutzungsdauer_jahre} onChange={e => set('nutzungsdauer_jahre', parseInt(e.target.value) || 1)} />
           <p className="text-xs text-slate-400 mt-1">AfA-Tabelle BMF: KFZ=6, PC/Laptop=3, Büromöbel=13</p>
         </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>AfA-Methode</label>
+        <select
+          className={inputCls}
+          value={form.afa_methode}
+          disabled={!istDegressivMoeglich(form.kaufdatum) && form.afa_methode !== 'degressiv'}
+          onChange={e => set('afa_methode', e.target.value)}
+        >
+          <option value="linear">Linear</option>
+          <option value="degressiv" disabled={!istDegressivMoeglich(form.kaufdatum)}>
+            Degressiv (bis zu 30 % vom Restbuchwert)
+          </option>
+        </select>
+        <p className="text-xs text-slate-400 mt-1">
+          {istDegressivMoeglich(form.kaufdatum)
+            ? 'Investitionsbooster §7 Abs. 2 EStG: wechselt automatisch zu linear, sobald das günstiger ist.'
+            : 'Degressive AfA nur für Anschaffungen zwischen 01.07.2025 und 31.12.2027 (Investitionsbooster §7 Abs. 2 EStG).'}
+        </p>
       </div>
 
       {form.typ === 'kfz' && (
@@ -183,6 +212,7 @@ function AfaPlanModal({ gut, onClose }: { gut: Anlagegut; onClose: () => void })
             <h3 className="font-semibold text-slate-800 dark:text-slate-100">{gut.bezeichnung}</h3>
             <p className="text-xs text-slate-500 mt-0.5">
               {TYP_LABEL[gut.typ]} · Kaufpreis {euro(gut.kaufpreis_netto)} · {gut.nutzungsdauer_jahre} Jahre ND
+              · {gut.afa_methode === 'degressiv' ? 'Degressiv' : 'Linear'}
               {privat > 0 && ` · ${privat.toFixed(0)} % Privatanteil`}
             </p>
           </div>

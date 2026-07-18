@@ -11,6 +11,7 @@ import {
   getLieferscheine, rechnungAusLieferschein, sammelrechnungErstellen, lieferscheinAusRechnung,
   getLieferadressen,
   getKunden, getLieferanten, getKategorien, getUnternehmen, getApiBase, isTauri, openUrl, openInPdfWindow, openPdfReadOnly, downloadPdfForMail,
+  getRechnungenExportUrl, korrigiereZahlung,
   getUstSaetze, getKassenstand,
   uploadBeleg, getBelegUrl, getBelegPdfaUrl, deleteBeleg, analysiereRechnung, analysiereRechnungPfad,
   getBuchungsvorlage, erledigtVorlage,
@@ -885,6 +886,9 @@ function RechnungDetail({
   const [pdfHinweis, setPdfHinweis] = useState(false)
   const [belegFehler, setBelegFehler] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
+  const [korrigiereZahlungId, setKorrigiereZahlungId] = useState<number | null>(null)
+  const [korrigiereDatum, setKorrigiereDatum] = useState('')
+  const [korrigiereBetrag, setKorrigiereBetrag] = useState('')
   const qc = useQueryClient()
 
   const belegUploadMutation = useMutation({
@@ -900,6 +904,16 @@ function RechnungDetail({
     mutationFn: () => deleteBeleg(rechnung.id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['rechnungen'] }),
     onError: (e: Error) => setBelegFehler(e.message),
+  })
+
+  const korrigiereZahlungMutation = useMutation({
+    mutationFn: () => korrigiereZahlung(rechnung.id, korrigiereZahlungId!, korrigiereDatum, korrigiereBetrag || undefined),
+    onSuccess: (r) => {
+      setKorrigiereZahlungId(null)
+      qc.invalidateQueries({ queryKey: ['rechnungen'] })
+      onZahlungErfasst?.(r)
+    },
+    onError: (e: Error) => setFehler(e.message),
   })
 
   async function _openBeleg() {
@@ -1713,18 +1727,73 @@ function RechnungDetail({
               Verknüpfte Journalbuchungen
             </p>
             <div className="space-y-1">
-              {rechnung.zahlungen.map((z) => (
-                <div key={z.id} className="flex items-center justify-between text-sm bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-2">
-                  <div>
-                    <span className="font-mono text-xs text-slate-400 dark:text-slate-500 mr-2">{z.belegnr}</span>
-                    <span className="text-slate-600 dark:text-slate-300">{formatDatum(z.datum)}</span>
-                    <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">{z.zahlungsart}</span>
-                  </div>
-                  <span className={`font-medium ${z.art === 'Einnahme' ? 'text-green-600' : 'text-red-600'}`}>
-                    {z.art === 'Ausgabe' ? '−' : '+'}{formatEuro(z.brutto_betrag)}
-                  </span>
-                </div>
-              ))}
+              {(() => {
+                const stornierteBelegnrs = new Set(
+                  rechnung.zahlungen
+                    .filter(z => z.beschreibung.startsWith('STORNO '))
+                    .map(z => z.beschreibung.slice('STORNO '.length).split(':')[0].trim())
+                )
+                return rechnung.zahlungen.map((z) => {
+                  const istStorno = z.beschreibung.startsWith('STORNO ')
+                  const istKorrigierbar = !istStorno && !stornierteBelegnrs.has(z.belegnr)
+                  return (
+                    <div key={z.id}>
+                      <div className={`flex items-center justify-between text-sm rounded-lg px-3 py-2 ${istStorno ? 'bg-red-50 dark:bg-red-950/30' : 'bg-slate-50 dark:bg-slate-900'}`}>
+                        <div>
+                          <span className="font-mono text-xs text-slate-400 dark:text-slate-500 mr-2">{z.belegnr}</span>
+                          <span className="text-slate-600 dark:text-slate-300">{formatDatum(z.datum)}</span>
+                          <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">{z.zahlungsart}</span>
+                          {istStorno && <span className="ml-1.5 text-xs text-red-500">Storno</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${z.art === 'Einnahme' ? 'text-green-600' : 'text-red-600'}`}>
+                            {parseFloat(z.brutto_betrag) < 0 ? '−' : (z.art === 'Ausgabe' ? '−' : '+')}{formatEuro(Math.abs(parseFloat(z.brutto_betrag)))}
+                          </span>
+                          {istKorrigierbar && (
+                            <button
+                              onClick={() => { setKorrigiereZahlungId(z.id); setKorrigiereDatum(z.datum); setKorrigiereBetrag(String(Math.abs(parseFloat(z.brutto_betrag)))) }}
+                              title="Zahlung korrigieren (Datum/Betrag)"
+                              className="text-slate-400 hover:text-blue-600"
+                            >
+                              <span className="material-symbols-outlined text-base">edit</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {korrigiereZahlungId === z.id && (
+                        <div className="flex items-center gap-2 mt-1.5 mb-1 px-3">
+                          <DateInput
+                            value={korrigiereDatum}
+                            onChange={setKorrigiereDatum}
+                            className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={korrigiereBetrag}
+                            onChange={(e) => setKorrigiereBetrag(e.target.value)}
+                            className="w-24 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
+                          />
+                          <button
+                            onClick={() => korrigiereZahlungMutation.mutate()}
+                            disabled={korrigiereZahlungMutation.isPending}
+                            className="bg-blue-600 text-white rounded-lg px-3 py-1 text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            Speichern
+                          </button>
+                          <button
+                            onClick={() => setKorrigiereZahlungId(null)}
+                            className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          >
+                            Abbrechen
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              })()}
             </div>
           </div>
         )}
@@ -1959,6 +2028,8 @@ function RechnungForm({
 }) {
   const pf = prefillFromAnalyse?.felder
   const pfRing = (key: string) => pf?.konfidenz?.[key] === 'warnung' ? 'ring-2 ring-amber-400 rounded-lg' : ''
+  const [zeigeValidierung, setZeigeValidierung] = useState(false)
+  const fehlerRing = (fehlt: boolean) => (zeigeValidierung && fehlt) ? 'ring-2 ring-red-500 rounded-lg' : ''
   const formatLabel: Record<string, string> = {
     zugferd: 'ZUGFeRD', xrechnung: 'XRechnung', pdf: 'PDF', unbekannt: 'Unbekannt', xml: 'XML',
   }
@@ -2410,14 +2481,13 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
     }
   }
 
+  const partnerFehlt = !partnerId && !partnerFreitext.trim()
+  const positionenFehlen = positionen.every((p) => !p.beschreibung.trim())
+
   function handleSubmit(e: React.FormEvent, istEntwurf: boolean) {
     e.preventDefault()
-    if (typ === 'ausgang' && !partnerId && !partnerFreitext.trim()) {
-      alert('Bitte einen Kunden auswählen oder einen Namen im Kundenfeld eingeben.')
-      return
-    }
-    if (positionen.every((p) => !p.beschreibung.trim())) {
-      alert('Bitte mindestens eine Position mit Beschreibung eingeben.')
+    if (partnerFehlt || positionenFehlen) {
+      setZeigeValidierung(true)
       return
     }
     onSave(buildData(istEntwurf))
@@ -2612,7 +2682,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
           {typ === 'ausgang' ? 'Kunde' : 'Lieferant'}
         </label>
         <div className="flex gap-1">
-          <div className={`flex-1 ${pfRing('lieferant_name')}`}>
+          <div className={`flex-1 ${pfRing('lieferant_name')} ${fehlerRing(partnerFehlt)}`}>
             <StammdatenCombobox
               items={partnerListe.map((p: any) => ({
                 id: p.id as number,
@@ -2656,6 +2726,11 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
             </button>
           )}
         </div>
+        {zeigeValidierung && partnerFehlt && (
+          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+            {typ === 'ausgang' ? 'Bitte einen Kunden auswählen oder einen Namen eingeben.' : 'Bitte einen Lieferanten auswählen oder einen Namen eingeben.'}
+          </p>
+        )}
         {showNeuLieferant && (
           <LieferantErstellenModal
             onClose={() => setShowNeuLieferant(false)}
@@ -2949,7 +3024,7 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
             <tbody>
               {positionen.map((pos, i) => (
                 <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
-                  <td className="px-2 py-1.5">
+                  <td className={`px-2 py-1.5 ${fehlerRing(positionenFehlen && !pos.beschreibung.trim())}`}>
                     <ArtikelAutocomplete
                       value={pos.beschreibung}
                       onChange={(v) => updatePosition(i, 'beschreibung', v)}
@@ -3094,6 +3169,11 @@ const kundeIdNum = partnerId ? parseInt(partnerId) : null
             )}
           </table>
         </div>
+        )}
+        {zeigeValidierung && positionenFehlen && (
+          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+            Bitte mindestens eine Position mit Beschreibung eingeben.
+          </p>
         )}
       </div>
 
@@ -3641,6 +3721,7 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
   const [srLeistungBis, setSrLeistungBis] = useState('')
   const [lsFilterRechnungId, setLsFilterRechnungId] = useState<number | null>(null)
   const [lsFilterLabel, setLsFilterLabel] = useState<string>('')
+  const [exportLaedt, setExportLaedt] = useState(false)
 
   const aktivesJahr = new Date().getFullYear()
   const filterParams =
@@ -3653,6 +3734,18 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
           : filterModus === 'alle'
             ? {}  // kein Datumsfilter – alle Rechnungen
             : { datum_von: `${aktivesJahr}-01-01`, datum_bis: `${aktivesJahr}-12-31` }
+
+  async function handleRechnungenExport(format: 'pdf' | 'csv') {
+    setExportLaedt(true)
+    try {
+      const url = await getRechnungenExportUrl({
+        typ, zahlungsstatus: zahlungsstatus || undefined, ...filterParams, format,
+      })
+      await openUrl(url)
+    } finally {
+      setExportLaedt(false)
+    }
+  }
 
   const { data: unternehmen } = useQuery({ queryKey: ['unternehmen'], queryFn: getUnternehmen })
   const lieferscheinAktiv = !!unternehmen?.lieferschein_aktiv
@@ -3856,6 +3949,27 @@ export function RechnungenPage({ modus = 'rechnungen' }: { modus?: 'rechnungen' 
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{lieferscheinModus ? 'Lieferscheine' : 'Rechnungen'}</h2>
             <div className="flex gap-2">
+              {!lieferscheinModus && (
+                <div className="flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600">
+                  <button
+                    onClick={() => handleRechnungenExport('pdf')}
+                    disabled={exportLaedt}
+                    title="Rechnungsliste als PDF exportieren"
+                    className="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {exportLaedt ? '⏳' : '📄'} PDF
+                  </button>
+                  <div className="w-px bg-slate-300 dark:bg-slate-600" />
+                  <button
+                    onClick={() => handleRechnungenExport('csv')}
+                    disabled={exportLaedt}
+                    title="Rechnungsliste als CSV exportieren"
+                    className="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    CSV
+                  </button>
+                </div>
+              )}
               {typ === 'eingang' && (
                 <button
                   onClick={() => setZeigImport(true)}

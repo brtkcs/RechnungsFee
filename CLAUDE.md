@@ -252,6 +252,8 @@ Jede Änderung an Kategorien muss an **drei Stellen** gleichzeitig erfolgen:
 | 117 | Datenfix: bank_templates PayPal-Mapping korrigiert – reale PayPal-Business-CSV (accountStatements) hat Spalte „Beschreibung" statt „Typ"/„Betreff" (die es gar nicht gibt); Import ergab 0 Transaktionen (Issue #248) |
 | 118 | bank_templates: Vivid-Template ergänzt (Completed date/Counterparty name/Reference/Payment amount/Payment currency) (Issue #248) |
 | 119 | unternehmen.kontenuebersicht_aktiv BOOLEAN – Kategorien-Summenliste mit SKR03/04-Kontonummer (Issue #255) |
+| 120 | schnellbuchungen-Tabelle – Journal-Presets für häufige Bar-Buchungen (Issue #256) |
+| 121 | Datenfix: Kategorie „Abschreibungen (AfA)" euer_zeile 36→33 (AfA bewegliche WG statt GWG); Anlagenverzeichnis-AfA (`aveur_afa`) in `euer.py` ebenfalls auf Zeile 33 umgeleitet (Issue #265) |
 
 ### `_backup_datenbank()`
 - `sqlite3.connect().backup()` – WAL-sicher, konsistentes Snapshot

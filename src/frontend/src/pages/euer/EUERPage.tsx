@@ -197,7 +197,6 @@ export function EUERPage() {
 
           <p className="text-xs text-slate-400 dark:text-slate-500">
             Grundlage: Journalbuchungen {ergebnis.jahr} · Ist-Versteuerung (Zahlungsdatum).
-            Zeile 15 = vereinnahmte USt · Zeile 48 = abziehbare Vorsteuer.
           </p>
         </div>
       )}

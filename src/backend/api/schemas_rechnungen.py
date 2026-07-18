@@ -201,6 +201,7 @@ class RechnungUpdate(BaseModel):
 class ZahlungKompakt(BaseModel):
     id: int
     belegnr: str
+    beschreibung: str
     datum: date
     brutto_betrag: Decimal
     art: str
@@ -328,6 +329,7 @@ class RechnungResponse(BaseModel):
             ZahlungKompakt(
                 id=e.id,
                 belegnr=e.belegnr,
+                beschreibung=e.beschreibung,
                 datum=e.datum,
                 brutto_betrag=e.brutto_betrag,
                 art=e.art,

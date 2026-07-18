@@ -17,7 +17,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
@@ -46,6 +46,16 @@ class AnlagegutBase(BaseModel):
     notizen: Optional[str] = None
     aktiv: bool = True
 
+    @model_validator(mode="after")
+    def check_afa_methode(self) -> "AnlagegutBase":
+        if self.afa_methode not in ("linear", "degressiv"):
+            raise ValueError("afa_methode muss 'linear' oder 'degressiv' sein")
+        if self.afa_methode == "degressiv" and not degressiv_moeglich(self.kaufdatum):
+            raise ValueError(
+                "Degressive AfA gilt nur für Anschaffungen zwischen 01.07.2025 und 31.12.2027 (§7 Abs. 2 EStG)."
+            )
+        return self
+
 class AnlagegutCreate(AnlagegutBase):
     pass
 
@@ -62,6 +72,19 @@ class AnlagegutOut(AnlagegutBase):
 # AfA-Berechnung
 # ---------------------------------------------------------------------------
 
+# Degressive AfA ("Investitionsbooster", §7 Abs. 2 EStG): bewegliche Wirtschaftsgüter,
+# angeschafft zwischen 01.07.2025 und 31.12.2027. Satz: bis zum 3-fachen der linearen
+# AfA, gedeckelt auf 30 % vom (jeweiligen) Restbuchwert. Wechsel zu linear ist jederzeit
+# möglich (und Pflicht sobald linear auf den Restbuchwert günstiger ist) – umgekehrt
+# (linear→degressiv) ist nicht zulässig.
+DEGRESSIV_AB = date(2025, 7, 1)
+DEGRESSIV_BIS = date(2027, 12, 31)
+
+
+def degressiv_moeglich(kaufdatum: date) -> bool:
+    return DEGRESSIV_AB <= kaufdatum <= DEGRESSIV_BIS
+
+
 def _afa_jahresplan(gut: Anlagegut, bis_jahr: Optional[int] = None) -> list[dict]:
     """
     Gibt den vollständigen Abschreibungsplan zurück.
@@ -69,41 +92,56 @@ def _afa_jahresplan(gut: Anlagegut, bis_jahr: Optional[int] = None) -> list[dict
 
     Monatsprinzip im Kaufjahr: AfA nur für die Monate ab Kaufmonat (inkl.).
     Für KFZ: abziehbarer Anteil = brutto * (1 - privat_anteil_prozent / 100).
+    Bei afa_methode="degressiv": jährlicher Wechsel-Check auf linear (s.o.).
     """
     kauf = gut.kaufdatum
     preis = Decimal(str(gut.kaufpreis_netto))
     nd = gut.nutzungsdauer_jahre
     privat = Decimal(str(gut.privat_anteil_prozent)) / 100
     betrieb = Decimal("1") - privat
+    ist_degressiv = gut.afa_methode == "degressiv"
 
-    afa_voll = (preis / nd).quantize(ONE_CENT, ROUND_HALF_UP)
+    afa_voll_linear = (preis / nd).quantize(ONE_CENT, ROUND_HALF_UP)
+    degressiv_satz = min(Decimal("3") / nd, Decimal("0.30")) if ist_degressiv else None
 
     # Monate im Kaufjahr (inkl. Kaufmonat bis Dezember)
     monate_kaufjahr = 12 - kauf.month + 1
-    afa_kaufjahr = (afa_voll * monate_kaufjahr / 12).quantize(ONE_CENT, ROUND_HALF_UP)
 
     # Restjahr: was nach ND vollständigen Jahren noch übrig bleibt
-    # Gesamtabschreibung ohne Restjahr: afa_kaufjahr + (nd-1) * afa_voll
-    # Restjahr = preis - das = Restbuchwert nach ND Jahren
     ende_jahr = kauf.year + nd  # das Jahr in dem ggf. ein kleiner Rest abgeschrieben wird
 
     plan = []
     restbuchwert = preis
+    linear_aktiv = not ist_degressiv  # sobald True, bleibt es (Wechsel degressiv→linear ist einseitig)
+    afa_jahr_voll = afa_voll_linear  # voller Jahresbetrag vor Monatsanteil; für degressiv pro Jahr neu ermittelt
 
     year = kauf.year
     max_year = bis_jahr if bis_jahr else (kauf.year + nd + 1)
 
     while restbuchwert > ZERO and year <= max_year + 1:
+        if year < ende_jahr and ist_degressiv:
+            verbleibende_jahre = max(nd - (year - kauf.year), 1)
+            if linear_aktiv:
+                afa_jahr_voll = (restbuchwert / verbleibende_jahre).quantize(ONE_CENT, ROUND_HALF_UP)
+            else:
+                afa_degressiv = (restbuchwert * degressiv_satz).quantize(ONE_CENT, ROUND_HALF_UP)
+                afa_linear_rest = (restbuchwert / verbleibende_jahre).quantize(ONE_CENT, ROUND_HALF_UP)
+                if afa_linear_rest >= afa_degressiv:
+                    linear_aktiv = True
+                    afa_jahr_voll = afa_linear_rest
+                else:
+                    afa_jahr_voll = afa_degressiv
+
         if year == kauf.year:
-            afa = min(afa_kaufjahr, restbuchwert)
+            afa = min((afa_jahr_voll * monate_kaufjahr / 12).quantize(ONE_CENT, ROUND_HALF_UP), restbuchwert)
         elif year == ende_jahr and monate_kaufjahr < 12:
             # Restjahr: übrige Monate aus dem ersten Jahr
             restmonate = 12 - monate_kaufjahr
-            afa = min((afa_voll * restmonate / 12).quantize(ONE_CENT, ROUND_HALF_UP), restbuchwert)
+            afa = min((afa_jahr_voll * restmonate / 12).quantize(ONE_CENT, ROUND_HALF_UP), restbuchwert)
         elif year > ende_jahr:
             break
         else:
-            afa = min(afa_voll, restbuchwert)
+            afa = min(afa_jahr_voll, restbuchwert)
 
         if afa <= ZERO:
             break
@@ -316,9 +354,8 @@ def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
             plan_jahr = next((z for z in plan if z["jahr"] == jahr), None)
             preis = Decimal(str(g.kaufpreis_netto))
             nd = g.nutzungsdauer_jahre
-            afa_brutto = (preis / nd).quantize(ONE_CENT, ROUND_HALF_UP)
             privat = Decimal(str(g.privat_anteil_prozent))
-            afa_abziehbar = (afa_brutto * (1 - privat / 100)).quantize(ONE_CENT, ROUND_HALF_UP)
+            ist_degressiv = g.afa_methode == "degressiv"
             afa_j = Decimal(str(plan_jahr["afa_abziehbar"])) if plan_jahr else ZERO
             rbw_ende = Decimal(str(plan_jahr["restbuchwert_ende"])) if plan_jahr else ZERO
 
@@ -330,6 +367,15 @@ def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
             pdf.set_text_color(*DUNKEL)
             pdf.set_font("DejaVu", "", 8)
 
+            if ist_degressiv:
+                satz = min(Decimal("3") / nd, Decimal("0.30")) * 100
+                afa_jahr_spalte = f"degressiv {satz:.0f}%"
+                afa_abziehbar_spalte = "—"
+            else:
+                afa_brutto = (preis / nd).quantize(ONE_CENT, ROUND_HALF_UP)
+                afa_jahr_spalte = euro(afa_brutto)
+                afa_abziehbar_spalte = euro((afa_brutto * (1 - privat / 100)).quantize(ONE_CENT, ROUND_HALF_UP))
+
             x = 15
             y = pdf.get_y()
             vals = [
@@ -338,9 +384,9 @@ def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
                 (fmt_date(g.kaufdatum), "L"),
                 (euro(g.kaufpreis_netto), "R"),
                 (str(nd), "R"),
-                (euro(afa_brutto), "R"),
+                (afa_jahr_spalte, "R"),
                 (f"{privat:.0f} %" if privat > 0 else "—", "R"),
-                (euro(afa_abziehbar), "R"),
+                (afa_abziehbar_spalte, "R"),
                 (euro(afa_j) if plan_jahr else "—", "R"),
                 (euro(rbw_ende) if plan_jahr else "—", "R"),
             ]
@@ -390,8 +436,9 @@ def pdf_export(jahr: int = Query(...), db: Session = Depends(get_db)):
     pdf.set_text_color(120, 80, 0)
     pdf.multi_cell(267, 5,
         "Hinweis: Anzeigehilfe auf Basis des Anlagenverzeichnisses. Bitte Werte in ELSTER (Anlage AVEÜR) oder mit dem "
-        "Steuerberater übertragen. Nutzungsdauer nach AfA-Tabellen des BMF. Nur lineare AfA. "
-        "Halbjahres-AfA im Kaufjahr nach Monatsprinzip (ab Kaufmonat).", fill=True)
+        "Steuerberater übertragen. Nutzungsdauer nach AfA-Tabellen des BMF. Lineare oder degressive AfA "
+        "(§7 Abs. 2 EStG, Investitionsbooster, nur für Anschaffungen 01.07.2025-31.12.2027; automatischer "
+        "Wechsel zu linear sobald günstiger). Monatsprinzip im Kaufjahr (ab Kaufmonat).", fill=True)
 
     # Footer
     pdf.set_y(-15)
