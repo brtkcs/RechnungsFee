@@ -81,7 +81,7 @@ Nutzer brauchen ein installierbares Programm, nicht manuelles `uvicorn` + `npm r
   - [x] Outputs: `.msi` + `.AppImage`
 - [x] App-Icon aus Logo ableiten (alle Plattform-Größen: 16–512px, `.ico`, `.icns`, `.png`)
 - [x] Erster Start: Auto-Setup wenn keine DB vorhanden (bereits implementiert)
-- [x] Backend-Port Konflikt abfangen (8001 belegt → nächsten freien Port wählen)
+- [x] Backend-Port Konflikt abfangen (8002 belegt → nächsten freien Port wählen)
 - [ ] Code Signing Windows: selbstsigniertes Zertifikat für Beta (Hinweis im Installer)
 - [ ] Flatpak-Manifest (`org.rechnungsfee.App.yaml`) + Flathub-Einreichung nach Beta
 

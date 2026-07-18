@@ -13,7 +13,7 @@ Laufend aktualisiertes Protokoll umgesetzter Features und technischer Entscheidu
 | Desktop | Tauri 2.10.0 (`de.rechnungsfee.app`) |
 | PDF | fpdf2 + Pillow (Aspect Ratio für Logos) |
 | DB-Pfad | `~/.local/share/RechnungsFee/rechnungsfee.db` |
-| Backend-Port | 8001 |
+| Backend-Port | 8002 |
 
 ---
 

@@ -132,10 +132,10 @@ cd src/backend
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --port 8001 --reload
+uvicorn main:app --port 8002 --reload
 ```
 
-API läuft unter `http://localhost:8001` · Swagger-Docs: `http://localhost:8001/docs`
+API läuft unter `http://localhost:8002` · Swagger-Docs: `http://localhost:8002/docs`
 
 ### Frontend starten
 
