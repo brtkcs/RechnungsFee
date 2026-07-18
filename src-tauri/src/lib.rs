@@ -20,11 +20,21 @@ fn get_backend_port(state: tauri::State<BackendPort>) -> u16 {
 }
 
 /// Backend-Prozessbaum beenden.
-/// Strategie (Windows):
-///   1. POST /api/shutdown  → uvicorn beendet sich selbst sauber (Handles frei)
-///      curl.exe ist seit Windows 10 eingebaut, kein extra Prozess nötig.
+///
+/// Wichtig: Das Sidecar wird mit PyInstaller `--onefile` gebaut. Auf Linux/macOS
+/// forkt der Onefile-Bootloader beim Start einen Kindprozess (das eigentliche
+/// uvicorn) und wartet darauf – die von Tauri gehaltene PID ist die des
+/// Bootloaders, NICHT die des Kindes. Ein simples `child.kill()` beendet daher
+/// nur den Bootloader; das geforkte uvicorn bleibt als verwaister Prozess im
+/// Task-Manager zurück (Issue: Zombie-Backend nach Beenden unter Linux).
+///
+/// Strategie (alle Plattformen):
+///   1. POST /api/shutdown  → uvicorn beendet sich selbst sauber (Handles frei);
+///      auf Linux/macOS beendet sich dadurch auch der wartende Bootloader.
 ///   2. 1,5 s warten – uvicorn + Bootloader beenden sich in der Regel in < 300 ms
-///   3. taskkill /F /T /PID als Fallback falls noch alive
+///   3. Fallback falls noch alive:
+///      - Windows: taskkill /F /T /PID (Tree-Kill)
+///      - Linux/macOS: pkill -9 -P <bootloader-pid> (geforktes Kind) + kill -9 <pid> (Bootloader)
 ///
 /// wait=true  → blockiert komplett (IPC vor exit(0), NSIS wartet)
 /// wait=false → non-blocking (CloseRequested / RunEvent::Exit)
@@ -73,8 +83,47 @@ fn kill_backend_inner(child: CommandChild, port: u16, wait: bool) {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = child.kill();
-        log::info!("Backend-Sidecar beendet");
+        let pid = child.pid();
+        drop(child);
+
+        let shutdown_url = format!("http://127.0.0.1:{}/api/shutdown", port);
+        log::info!("Sende Shutdown-Request an {} (PID {})", shutdown_url, pid);
+
+        if wait {
+            // 1. Graceful: HTTP POST an /api/shutdown
+            let status = std::process::Command::new("curl")
+                .args(["-s", "-m", "3", "-X", "POST", &shutdown_url])
+                .output();
+            match &status {
+                Ok(o) if o.status.success() => log::info!("Graceful shutdown OK"),
+                _ => log::warn!("Graceful shutdown fehlgeschlagen – fahre mit Kill fort"),
+            }
+
+            // 2. Kurz warten: Bootloader beendet sich nach /shutdown selbst (wartet auf sein Kind)
+            std::thread::sleep(std::time::Duration::from_millis(1500));
+
+            // 3. Fallback: geforktes uvicorn-Kind + Bootloader selbst hart beenden falls noch alive
+            let _ = std::process::Command::new("pkill")
+                .args(["-9", "-P", &pid.to_string()])
+                .output();
+            let _ = std::process::Command::new("kill")
+                .args(["-9", &pid.to_string()])
+                .output();
+
+            log::info!("Backend (PID {}) beendet (wait=true)", pid);
+        } else {
+            // Non-blocking: Shutdown-Request feuern und nicht warten
+            let _ = std::process::Command::new("curl")
+                .args(["-s", "-m", "2", "-X", "POST", &shutdown_url])
+                .spawn();
+            let _ = std::process::Command::new("pkill")
+                .args(["-9", "-P", &pid.to_string()])
+                .spawn();
+            let _ = std::process::Command::new("kill")
+                .args(["-9", &pid.to_string()])
+                .spawn();
+            log::info!("Backend (PID {}) beendet (wait=false)", pid);
+        }
     }
 }
 

@@ -29,6 +29,7 @@ export const CHANGELOG: ChangelogVersion[] = [
       { typ: 'fix', text: 'Logo – SVG-Glüheffekt entfernt, der unter Linux (WebKitGTK, insbesondere Cinnamon-Desktop) fehlerhaft dargestellt wurde. Auf Windows, macOS und im Browser bereits unauffällig.' },
       { typ: 'fix', text: 'install-linux.sh – veraltetes eingebettetes App-Icon (mit weißem Rand) durch das aktuelle transparente Icon ersetzt.' },
       { typ: 'verbesserung', text: 'PDF-/CSV-Export-Buttons in allen Auswertungen (EÜR, UStVA, Jahres-USt, Anlage S/G, Anlagenverzeichnis, EKS, Tagesabschluss, Kontenübersicht) vereinheitlicht: gleicher Pillenbutton-Stil, immer rechtsbündig in der Filterkarte (Issue #259).' },
+      { typ: 'fix', text: 'Linux/macOS – Backend-Prozess blieb nach Beenden der App als Waise zurück (PyInstaller-Onefile-Bootloader forkt einen Kindprozess, das bisherige Kill traf nur den Bootloader). Backend wird jetzt wie unter Windows sauber per Shutdown-Request beendet.' },
     ],
   },
   {
